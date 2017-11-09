@@ -3,13 +3,21 @@ import dicom
 import dicom_numpy
 import os
 import shelve
-from RigidPatchingUpdate import*
+from utils.Patching import*
 import cProfile
 
-def fPreprocessData(mrt_Folder,proband, model, patchSize, patchOverlap, ratio_labeling):
+def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling):
 
+    # set variables
+    model = os.path.basename(os.path.dirname(pathDicom))
+    dir = os.path.dirname(os.path.dirname(pathDicom))
+    if os.path.basename(dir) == 'dicom_sorted':
+        proband = os.path.basename(os.path.dirname(dir))
+    else:
+        proband = os.path.basename(dir)
+    #pathDicom = mrt_Folder + "/" + proband + "/dicom_sorted/" + model + "/"
     # Creation of dicom_numpy_array and mask_numpy_array
-    dicom_numpy_array = create_DICOM_Array(mrt_Folder, proband, model)
+    dicom_numpy_array = create_DICOM_Array(os.path.join(pathDicom, ''))
     mask_numpy_array = create_MASK_Array(proband, model, dicom_numpy_array.shape[0], dicom_numpy_array.shape[1],
                                      dicom_numpy_array.shape[2])
     # Normalisation
@@ -61,9 +69,9 @@ def mask_lasso(p, layer_mask, art_no):
 
     return mask_lay
 
-def create_DICOM_Array(mrt_Folder, proband, model):
+def create_DICOM_Array(PathDicom):
     filenames_list = []
-    PathDicom = mrt_Folder + "/" + proband + "/dicom_sorted/" + model + "/"
+
     file_list = os.listdir(PathDicom)
     for file in file_list:
         filenames_list.append(PathDicom + file)
@@ -84,6 +92,7 @@ def create_DICOM_Array(mrt_Folder, proband, model):
 
 def create_MASK_Array(proband, model, mrt_height, mrt_width, mrt_depth):
     mask = np.zeros((mrt_height, mrt_width, mrt_depth))
+    # TODO: adapt path
     loadMark = shelve.open("C:/Users/Sebastian Milde/Pictures/Universitaet/Masterarbeit/Markings/" + proband + ".slv")
     print(model)
     if loadMark.has_key(model):

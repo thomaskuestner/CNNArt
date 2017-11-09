@@ -30,6 +30,8 @@ class Artefact_Labeling_GUI():
         self.optionlist = []
         self.mrt_layer_names = []
 
+        # TODO: replace by dbinfo = DatabaseInfo()
+        # self.mrt_model = dbinfo.get_mrt_model
         self.mrt_model = {'t1_tse_tra_fs_Becken_0008': '0008',
                           't1_tse_tra_fs_Becken_Motion_0010': '0010',
                           't1_tse_tra_fs_mbh_Leber_0004': '0004',
@@ -57,6 +59,7 @@ class Artefact_Labeling_GUI():
         self.artefact_list = ["Movement-Artefact", "Shim-Artefact", "Noise-Artefact"]
         self.mark_list = ["Rectangle", "Ellipse", "Lasso"]
         self.list_of_images = ["icons/Move.png", "icons/Rectangle.png", "icons/Ellipse.png", "icons/Lasso.png", "icons/Lupe.png", "icons/3D.png"]
+        # TODO: adapt paths
         self.sFolder = "C:/Users/Sebastian Milde/Pictures/MRT"
         self.Path_marking = "C:/Users/Sebastian Milde/Pictures/Universitaet/Masterarbeit/Markings/"
         self.proband = os.listdir(self.sFolder)

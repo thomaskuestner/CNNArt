@@ -1,0 +1,53 @@
+# Models
+motion_head: &id001
+   name      : "motion_head"
+   dataref   : "t1_tse_tra_Kopf_0002"
+   dataart   : "t1_tse_tra_Kopf_Motion_0003"
+   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Headcross"
+   bestmodel : {2DCNN: "head_4040_lr_0.0001_bs_64", 3DCNN: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
+	 
+motion_abd: &id002
+   name      : "motion_abd" 
+   dataref   : "t1_tse_tra_fs_mbh_Leber_0004"
+   dataart   : "t1_tse_tra_fs_mbh_Leber_Motion_0005"
+   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Abdcross"
+   bestmodel : {2DCNN: "abdomen_4040_lr_0.0001_bs_64", 3DCNN: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
+   
+motion_all: &id003
+   name      : "motion_all" 
+   dataref   : {"t1_tse_tra_Kopf_0002", "t1_tse_tra_fs_mbh_Leber_0004"}
+   dataart   : {"t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_mbh_Leber_Motion_0005"}
+   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Allcross"
+   bestmodel : {2DCNN: "all_4040_lr_0.0001_bs_64", 3DCNN: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
+
+#### set parameters ####
+# database name
+MRdatabase : MRPhysics
+# subdirectories in database, patient
+subdirs : {"newProtocol", "dicom_sorted"}
+# CNN database to be modeled
+selectedModel: *id001
+# network architecture (if existing for chosen database!)
+# 2DCNN, 3DCNN, MNetArt, VNetArt
+network : "2DCNN"
+
+# scaling range
+range : [0 1]
+# patches
+patchSize : [40 40] # x,y
+patchOverlap : 0.5 # 50%
+# splitting strategy
+# 'normal': percentage splitting
+# 'crossvalidation_patient': cross validation on patient (leave one patient out)
+# 'crossvalidation_data': cross validation on data
+sSplitting : "crossvalidation_patient"
+# number of folds
+nFolds : 15
+# splitting in training and test set
+dSplitval : 0.1
+# optimization type in keras: 'grid', 'hyperas', 'none'
+sOpti : "grid"
+# optimized parameters
+# -> hardcoded in *.py -> adapt
+batchSize : 128
+lr : [0.1, 0.01, 0.05, 0.005, 0.001]

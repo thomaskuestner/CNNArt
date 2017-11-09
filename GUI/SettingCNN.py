@@ -6,13 +6,14 @@ import dicom_numpy
 import shelve
 import numpy as np
 import scipy.io
-from RigidPatching import*
+from utils.Patching import*
 from Training_Test_Split import *
 from Data_Preprocessing import*
 import cProfile
 
 class CNN_Preprocessing():
     def __init__(self, sFolder, artefact, proband):
+        # TODO: replace by DatabaseInfo
         self.mrt_model = {'t1_tse_tra_fs_Becken_0008': 'Becken_0008',
                           't1_tse_tra_fs_Becken_Motion_0010': 'Becken_Motion_0010',
                           't1_tse_tra_fs_mbh_Leber_0004': 'Leber_0004',
@@ -27,7 +28,7 @@ class CNN_Preprocessing():
         self.Folder = sFolder
         self.artefact = artefact
         self.proband = proband
-        self.sFolder = "C:/Users/Sebastian Milde/Pictures/MRT"
+        self.sFolder = "C:/Users/Sebastian Milde/Pictures/MRT" # TODO: adapt path!
         self.proband = os.listdir(self.sFolder)
         self.model = os.listdir(self.sFolder + "/ab/dicom_sorted")
         self.win = Tk()
@@ -265,7 +266,7 @@ class CNN_Preprocessing():
                         allLabels = np.concatenate((allLabels, dLabel))
                         print(allLabels.shape)
 
-        Path = "C:/Users/Sebastian Milde/Pictures/Universitaet/Masterarbeit/Patches and Labels/test_patches.h5"
+        Path = "C:/Users/Sebastian Milde/Pictures/Universitaet/Masterarbeit/Patches and Labels/test_patches.h5" # TODO: adapt path!
         with h5py.File(Path, 'w') as hf:
             hf.create_dataset('AllPatches', data=allPatches)
             hf.create_dataset('AllLabels', data=allLabels)

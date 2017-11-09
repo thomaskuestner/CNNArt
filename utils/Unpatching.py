@@ -1,7 +1,8 @@
 import numpy as np
 import math
 
-def fUnpatch(PatchSize, PatchOverlap, dImg, prob_test):
+# rigid unpatching
+def fRigidUnpatching(PatchSize, PatchOverlap, dImg, prob_test):
     dActSize = np.round(PatchOverlap * PatchSize)
     iPadSize_x = math.ceil(dImg.shape[1] / dActSize[1]) * dActSize[1]
     iPadSize_y = math.ceil(dImg.shape[0] / dActSize[0]) * dActSize[0]

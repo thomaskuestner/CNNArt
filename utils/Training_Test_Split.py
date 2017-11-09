@@ -12,6 +12,7 @@ from sklearn.model_selection import KFold
 import os
 
 def fSplitDataset(allPatches, allY, sSplitting, patchSize, patchOverlap, split_ratio):
+    # TODO: adapt path
     sFolder = 'C:/Users/Sebastian Milde/Pictures/Universitaet/Masterarbeit/Data_train_test/'
     if allPatches.shape[0] == patchSize[0] and allPatches.shape[1] == patchSize[1]:
         allPatches = np.transpose(allPatches, (2, 0, 1))

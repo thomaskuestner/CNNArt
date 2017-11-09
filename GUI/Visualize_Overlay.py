@@ -2,9 +2,10 @@ import os
 from matplotlib import pyplot as plt
 import dicom
 import dicom_numpy
-from Unpatching import*
+from utils.Unpatching import*
 import scipy.io as sio
 
+# TODO: adapt path
 PathDicom = "C:/Users/Sebastian Milde/Pictures/MRT/ab/dicom_sorted/t1_tse_tra_Kopf_0002"
 
 #load Dicom_Array
@@ -34,7 +35,7 @@ Path = "C:/Users/Sebastian Milde/Documents/MATLAB/IQA/Codes_FeatureLearning/best
 conten = sio.loadmat(Path)
 prob_test = conten['prob_test']
 prob_test = prob_test[0:8000, 0]
-imglay = fUnpatch(PatchSize, PatchOverlay, voxel_ndarray, prob_test)
+imglay = fRigidUnpatching(PatchSize, PatchOverlay, voxel_ndarray, prob_test)
 x_1d = dx * np.arange(voxel_ndarray.shape[0])
 y_1d = dy * np.arange(voxel_ndarray.shape[1])
 z_1d = dz * np.arange(voxel_ndarray.shape[2])
