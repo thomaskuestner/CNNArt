@@ -2,21 +2,27 @@
 motion_head: &id001
    name      : "motion_head"
    dataref   : "t1_tse_tra_Kopf_0002"
+   labelref  : 0
    dataart   : "t1_tse_tra_Kopf_Motion_0003"
+   labelart  : 1
    pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Headcross"
    bestmodel : {2DCNN: "head_4040_lr_0.0001_bs_64", 3DCNN: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 	 
 motion_abd: &id002
    name      : "motion_abd" 
    dataref   : "t1_tse_tra_fs_mbh_Leber_0004"
+   labelref  : 0
    dataart   : "t1_tse_tra_fs_mbh_Leber_Motion_0005"
+   labelart  : 1
    pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Abdcross"
    bestmodel : {2DCNN: "abdomen_4040_lr_0.0001_bs_64", 3DCNN: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
    
 motion_all: &id003
    name      : "motion_all" 
    dataref   : {"t1_tse_tra_Kopf_0002", "t1_tse_tra_fs_mbh_Leber_0004"}
+   labelref  : [0 0]
    dataart   : {"t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_mbh_Leber_Motion_0005"}
+   labelart  : [1 1]
    pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Allcross"
    bestmodel : {2DCNN: "all_4040_lr_0.0001_bs_64", 3DCNN: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 

@@ -6,8 +6,8 @@ import shelve
 from utils.Patching import*
 import cProfile
 
-def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling):
 
+def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling):
     # set variables
     model = os.path.basename(os.path.dirname(pathDicom))
     dir = os.path.dirname(os.path.dirname(pathDicom))
@@ -28,7 +28,6 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling):
     dPatches, dLabel = fRigidPatching(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling)
 
     return dPatches, dLabel
-
 
 def mask_rectangle(x_coo1, y_coo1, x_coo2, y_coo2, layer_mask, art_no):
     x_coo1 = round(x_coo1)

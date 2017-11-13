@@ -7,8 +7,8 @@ import shelve
 import numpy as np
 import scipy.io
 from utils.Patching import*
-from Training_Test_Split import *
-from Data_Preprocessing import*
+from utils.Training_Test_Split import *
+from utils.Data_Preprocessing import*
 import cProfile
 
 class CNN_Preprocessing():
@@ -241,6 +241,7 @@ class CNN_Preprocessing():
     def preprocess_data(self):
         allLabels = []
         allPatches = None
+        allPats = []
         patch_Size = np.array(([int(self.patchsize1.get()), int(self.patchsize2.get())]))  # dType = float
         patch_overlap = float(self.patchOver.get())
         for pnd in range(0, len(self.proband), 1):
@@ -254,7 +255,8 @@ class CNN_Preprocessing():
                         proband = self.list_proband[pnd]['text']
                         model = self.list_modell[mod]['text']
                         print(proband, model)
-                        dPatches, dLabel = fPreprocessData(self.sFolder, proband, model, patch_Size, patch_overlap, float(self.split_rat_lab.get()))
+                        # TODO: adapt first argument!
+                        dPatches, dLabel = fPreprocessData([self.sFolder, os.sep, proband, os.sep, model], patch_Size, patch_overlap, float(self.split_rat_lab.get()))
                         cProfile.run("fPreprocessData(self.sFolder, proband, model, patch_Size, patch_overlap, float(self.split_rat_lab.get()))")
 
                         if allPatches is None:
@@ -264,6 +266,7 @@ class CNN_Preprocessing():
                             allPatches = np.concatenate((allPatches, dPatches), axis=2)
                             print(allPatches.shape)
                         allLabels = np.concatenate((allLabels, dLabel))
+                        allPats = np.concatenate((allPats, pnd*np.ones((dLabel.shape[0],1), dtype=np.int)))
                         print(allLabels.shape)
 
         Path = "C:/Users/Sebastian Milde/Pictures/Universitaet/Masterarbeit/Patches and Labels/test_patches.h5" # TODO: adapt path!
@@ -276,7 +279,7 @@ class CNN_Preprocessing():
         matFile = {label_name: allLabels,patches_name: allPatches}
         scipy.io.savemat("Dicom_mask.mat", matFile)
         # Data Splitting
-        fSplitDataset(allPatches, allLabels, self.data_split.get(), patch_Size, patch_overlap, float(self.split_rat.get()))
+        fSplitDataset(allPatches, allLabels, allPats, self.data_split.get(), patch_Size, patch_overlap, float(self.split_rat.get()))
         print("Done")
 
     def exit(self):

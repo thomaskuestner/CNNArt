@@ -8,12 +8,30 @@ Created on Thu Mar 02 15:59:36 2017
 import math
 import numpy as np
 import h5py
+import inspect
+import dis
 from sklearn.model_selection import KFold
 import os
 
-def fSplitDataset(allPatches, allY, sSplitting, patchSize, patchOverlap, split_ratio):
+def expecting():
+    """Return how many values the caller is expecting"""
+    f = inspect.currentframe()
+    f = f.f_back.f_back
+    c = f.f_code
+    i = f.f_lasti
+    bytecode = c.co_code
+    instruction = bytecode[i+3]
+    if instruction == dis.opmap['UNPACK_SEQUENCE']:
+        howmany = bytecode[i+4]
+        return howmany
+    elif instruction == dis.opmap['POP_TOP']:
+        return 0
+    return 1
+
+def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap, split_ratio, sFolder, nfolds = 0):
     # TODO: adapt path
-    sFolder = 'C:/Users/Sebastian Milde/Pictures/Universitaet/Masterarbeit/Data_train_test/'
+    iReturn = expecting()
+
     if allPatches.shape[0] == patchSize[0] and allPatches.shape[1] == patchSize[1]:
         allPatches = np.transpose(allPatches, (2, 0, 1))
         print(allPatches.shape)
@@ -37,60 +55,106 @@ def fSplitDataset(allPatches, allY, sSplitting, patchSize, patchOverlap, split_r
         print(y_train.shape)
         print(y_test.shape)
 
-        folder = sFolder + 'normal/' + str(patchSize[0]) + str(patchSize[1])
-        if os.path.isdir(folder):
-            pass
-        else:
-            os.makedirs(folder)
+        if (iReturn == 0):
+            folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
+            Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'normal_' + str(
+                patchSize[0]) + str(patchSize[1]) + '.h5'
 
-        Path = sFolder + 'normal/' + str(patchSize[0]) + str(patchSize[1]) + '/normal_data' +  str(patchSize[0]) + str(patchSize[1]) +'.h5'
-        print(Path)
-        with h5py.File(Path, 'w') as hf:
-            hf.create_dataset('X_train', data=X_train)
-            hf.create_dataset('X_test', data=X_test)
-            hf.create_dataset('y_train', data=y_train)
-            hf.create_dataset('y_test', data=y_test)
-            hf.create_dataset('patchSize', data=patchSize)
-            hf.create_dataset('patchOverlap', data=patchOverlap)
+            if os.path.isdir(folder):
+                pass
+            else:
+                os.makedirs(folder)
+
+            print(Path)
+            with h5py.File(Path, 'w') as hf:
+                hf.create_dataset('X_train', data=X_train)
+                hf.create_dataset('X_test', data=X_test)
+                hf.create_dataset('y_train', data=y_train)
+                hf.create_dataset('y_test', data=y_test)
+                hf.create_dataset('patchSize', data=patchSize)
+                hf.create_dataset('patchOverlap', data=patchOverlap)
+        else:
+            return X_train, y_train, X_test, y_test
 
     elif sSplitting == "crossvalidation_data":
-        kf = KFold(n_splits = 15)
+        if(nfolds==0):
+            kf = KFold(n_splits = len(np.unique(allPats)))
+        else:
+            kf = KFold(n_splits = nfolds)
         ind_split = 0
+        X_trainFold = {}
+        X_testFold = {}
+        y_trainFold = {}
+        y_testFold = {}
         for train_index, test_index in kf.split(allPatches):
             # print("TRAIN:", train_index, "TEST:", test_index)
             X_train, X_test = allPatches[train_index], allPatches[test_index]
             y_train, y_test = allY[train_index], allY[test_index]
             print(X_train.shape, X_test.shape)
             print(y_train.shape, y_test.shape)
-            folder = sFolder + 'crossvalidation_data/' + str(patchSize[0]) + str(patchSize[1])
-            Path = sFolder + 'crossvalidation_data/' + str(patchSize[0]) + str(patchSize[1]) + '/crossVal_data' + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
-            os.makedirs(folder)
+
+            if (iReturn == 0):
+                folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
+                Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'crossVal_data' + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
+                if os.path.isdir(folder):
+                    pass
+                else:
+                    os.makedirs(folder)
+
+                with h5py.File(Path, 'w') as hf:
+                    hf.create_dataset('X_train', data=X_train)
+                    hf.create_dataset('X_test', data=X_test)
+                    hf.create_dataset('y_train', data=y_train)
+                    hf.create_dataset('y_test', data=y_test)
+                    hf.create_dataset('patchSize', data=patchSize)
+                    hf.create_dataset('patchOverlap', data=patchOverlap)
+            else:
+                X_trainFold[ind_split] = X_train
+                X_testFold[ind_split] = X_test
+                y_trainFold[ind_split] = y_train
+                y_testFold[ind_split] = y_test
+
             ind_split += 1
-            with h5py.File(Path, 'w') as hf:
-                hf.create_dataset('X_train', data=X_train)
-                hf.create_dataset('X_test', data=X_test)
-                hf.create_dataset('y_train', data=y_train)
-                hf.create_dataset('y_test', data=y_test)
-                hf.create_dataset('patchSize', data=patchSize)
-                hf.create_dataset('patchOverlap', data=patchOverlap)
+
+        if(iReturn > 0):
+            return X_trainFold, y_trainFold, X_testFold, y_testFold
 
     elif sSplitting == "crossvalidation_patient":
-        kf = KFold(n_splits=15)
-        ind_split = 0
-        for train_index, test_index in kf.split(allPatches):
+        n_splits = len(np.unique(allPats))
+        X_trainFold = {}
+        X_testFold = {}
+        y_trainFold = {}
+        y_testFold = {}
+        for ind_split in xrange(0, n_splits-1):
+            train_index = allPats != ind_split
+            test_index = allPats == ind_split
             X_train, X_test = allPatches[train_index], allPatches[test_index]
             y_train, y_test = allY[train_index], allY[test_index]
             print(X_train.shape, X_test.shape)
             print(y_train.shape, y_test.shape)
-            folder = sFolder + 'crossvalidation_patient/' + str(patchSize[0]) + str(patchSize[1])
-            Path = sFolder + 'crossvalidation_patient/' + str(patchSize[0]) + str(patchSize[1]) + '/crossVal_data' + str(
-                ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
-            os.makedirs(folder)
-            ind_split += 1
-            with h5py.File(Path, 'w') as hf:
-                hf.create_dataset('X_train', data=X_train)
-                hf.create_dataset('X_test', data=X_test)
-                hf.create_dataset('y_train', data=y_train)
-                hf.create_dataset('y_test', data=y_test)
-                hf.create_dataset('patchSize', data=patchSize)
-                hf.create_dataset('patchOverlap', data=patchOverlap)
+
+            if (iReturn == 0):
+                folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
+                Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'crossVal' + str(
+                    ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
+                if os.path.isdir(folder):
+                    pass
+                else:
+                    os.makedirs(folder)
+
+                with h5py.File(Path, 'w') as hf:
+                    hf.create_dataset('X_train', data=X_train)
+                    hf.create_dataset('X_test', data=X_test)
+                    hf.create_dataset('y_train', data=y_train)
+                    hf.create_dataset('y_test', data=y_test)
+                    hf.create_dataset('patchSize', data=patchSize)
+                    hf.create_dataset('patchOverlap', data=patchOverlap)
+
+            else:
+                X_trainFold[ind_split] = X_train
+                X_testFold[ind_split] = X_test
+                y_trainFold[ind_split] = y_train
+                y_testFold[ind_split] = y_test
+
+        if (iReturn > 0):
+            return X_trainFold, y_trainFold, X_testFold, y_testFold
