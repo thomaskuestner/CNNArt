@@ -88,7 +88,13 @@ def createModel(patchSize):
     cnn.add(Activation('softmax'))
     return cnn
 
-def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None):  
+def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes, learningRates, iEpochs):
+    # grid search on batch_sizes and learning rates
+    for iBatch in batchSizes:
+        for iLearn in learningRates:
+            fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs)
+
+def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None):
     # parse inputs
     batchSize = 64 if batchSize is None else batchSize
     learningRate = 0.01 if learningRate is None else learningRate
@@ -284,15 +290,6 @@ def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
     score_test, acc_test = cnn.evaluate(X_test, Y_test, verbose=0)
     
     return {'loss': -acc_test, 'status': STATUS_OK, 'model': cnn, 'trainresult': result, 'score_test': score_test}
-    
-def fGridTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes, learningRates, iEpochs):
-    
-    # grid search on batch_sizes and learning rates
-    for j in batchSizes :          
-        for i in learningRates :
-            fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, j, i, iEpochs)
-            
-
     
 ## helper functions    
 def drange(start, stop, step):
