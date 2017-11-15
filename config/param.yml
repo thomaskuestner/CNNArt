@@ -1,4 +1,4 @@
-# Models
+# Datasets
 motion_head: &id001
    name      : "motion_head"
    dataref   : "t1_tse_tra_Kopf_0002"
@@ -29,13 +29,15 @@ motion_all: &id003
 #### set parameters ####
 # database name
 MRdatabase : MRPhysics
-# subdirectories in database, patient
-subdirs : {"newProtocol", "dicom_sorted"}
+# subdirectories in database, patient, output directory
+subdirs : {"newProtocol", "dicom_sorted", "testout"}
 # CNN database to be modeled
-selectedModel: *id001
+selectedDatabase: *id001
 # network architecture (if existing for chosen database!)
-# 2DCNN, 3DCNN, MNetArt, VNetArt
-network : "2DCNN"
+# see *.py files in subfolders of "./networks"
+# naming convention: artifactType_bodyRegion_network OR artifactType_network
+# CNN2D, CNN3D, MNetArt, VNetArt
+network : "motion_all_CNN2D"
 
 # scaling range
 range : [0 1]
@@ -52,8 +54,10 @@ nFolds : 15
 # splitting in training and test set
 dSplitval : 0.1
 # optimization type in keras: 'grid', 'hyperas', 'none'
+# v1.1: grid and none are the same -> automatic switching if batchSize|learningRate are arrays, then 'grid', else 'none'
 sOpti : "grid"
 # optimized parameters
-# -> hardcoded in *.py -> adapt
 batchSize : 128
 lr : [0.1, 0.01, 0.05, 0.005, 0.001]
+# amount of epochs
+epochs : 300

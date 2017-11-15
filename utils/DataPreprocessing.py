@@ -1,3 +1,7 @@
+"""
+@author: Sebastian Milde, Thomas Kuestner
+"""
+
 import numpy as np
 import dicom
 import dicom_numpy
@@ -121,11 +125,4 @@ def create_MASK_Array(proband, model, mrt_height, mrt_width, mrt_depth):
     loadMark.close()
 
     return mask
-
-patch_Size = np.array(([40.0, 40.0]))
-patch_overlap = 0.5
-proband = 'ab'
-model = 't1_tse_tra_Kopf_Motion_0003'
-Folder = 'C:/Users/Sebastian Milde/Pictures/MRT/'
-cProfile.run("fPreprocessData(Folder, proband, model, patch_Size, patch_overlap, 0.0)")
 

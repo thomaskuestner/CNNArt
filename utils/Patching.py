@@ -1,3 +1,6 @@
+"""
+@author: Sebastian Milde, Thomas Kuestner
+"""
 import numpy as np
 import math
 
