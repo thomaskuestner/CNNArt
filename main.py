@@ -5,7 +5,7 @@ import yaml
 import numpy as np
 import scipy.io as sio
 import h5py
-import DatabaseInfo
+from DatabaseInfo import DatabaseInfo
 import utils.DataPreprocessing as datapre
 import utils.Training_Test_Split as ttsplit
 import cnn_main
@@ -14,12 +14,12 @@ import cnn_main
 # training or prediction
 lTrain = True
 lSave = False # save intermediate test, training sets
-with open(os.path.join('config', os.sep, 'param.yml'), 'r') as ymlfile:
+with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
 
 # initiate info objects
 # default database: MRPhysics with ['newProtocol','dicom_sorted']
-dbinfo = DatabaseInfo()
+dbinfo = DatabaseInfo(cfg['MRdatabase'],cfg['subdirs'])
 
 
 # load/create input data
@@ -32,12 +32,12 @@ elif cfg['sSplitting'] == 'crossvalidation_patient':
     sFSname = 'crossVal'
 
 sOutsubdir = cfg['subdirs'][2]
-sOutPath = cfg[cfg['selectedModel']]['pathout'] + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + sOutsubdir # + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
-sDatafile = sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '.h5'
+sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(patchSize).replace(" ", "") + os.sep + sOutsubdir # + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
+sDatafile = sOutPath + os.sep + sFSname + ''.join(patchSize).replace(" ", "") + '.h5'
 # check if file is already existing -> skip patching
 
-if glob.glob(sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '*_input.mat'): # deprecated
-    sDatafile = sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '_input.mat'
+if glob.glob(sOutPath + os.sep + sFSname + ''.join(patchSize).replace(" ", "") + '*_input.mat'): # deprecated
+    sDatafile = sOutPath + os.sep + sFSname + ''.join(patchSize).replace(" ", "") + '_input.mat'
     try:
         conten = sio.loadmat(sDatafile)
     except:
