@@ -12,8 +12,8 @@ from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Flatten#, Layer  Dropout, Flatten
 #from keras.layers import containers
 from keras.models import model_from_json
-from hyperas.distributions import choice, uniform, conditional
-from hyperopt import Trials, STATUS_OK
+#from hyperas.distributions import choice, uniform, conditional
+#from hyperopt import Trials, STATUS_OK
 
 from keras.layers.convolutional import Convolution2D
 #from keras.layers.convolutional import MaxPooling2D as pool2
@@ -297,5 +297,4 @@ def drange(start, stop, step):
     r = start
     while r < stop:
         yield r
-	r += step
-    
+    r += step

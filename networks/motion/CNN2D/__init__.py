@@ -1,1 +1,1 @@
-__all__ = ["motion_abd_2DCNN", "motion_all_2DCNN", "motion_head_2DCNN"]
+__all__ = ['motion_abd_CNN2D', 'motion_all_CNN2D', 'motion_head_CNN2D']
