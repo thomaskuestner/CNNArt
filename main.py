@@ -32,12 +32,12 @@ elif cfg['sSplitting'] == 'crossvalidation_patient':
     sFSname = 'crossVal'
 
 sOutsubdir = cfg['subdirs'][2]
-sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(patchSize).replace(" ", "") + os.sep + sOutsubdir # + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
-sDatafile = sOutPath + os.sep + sFSname + ''.join(patchSize).replace(" ", "") + '.h5'
+sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(map(str,patchSize)).replace(" ", "") + os.sep + sOutsubdir # + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
+sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '.h5'
 # check if file is already existing -> skip patching
 
-if glob.glob(sOutPath + os.sep + sFSname + ''.join(patchSize).replace(" ", "") + '*_input.mat'): # deprecated
-    sDatafile = sOutPath + os.sep + sFSname + ''.join(patchSize).replace(" ", "") + '_input.mat'
+if glob.glob(sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '*_input.mat'): # deprecated
+    sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '_input.mat'
     try:
         conten = sio.loadmat(sDatafile)
     except:
