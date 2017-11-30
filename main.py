@@ -71,7 +71,7 @@ else: # perform patching
     for ipat, pat in enumerate(dbinfo.lPats):
         for iseq, seq in enumerate(lDatasets):
             # patches and labels of reference/artifact
-            tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, os.sep, pat, os.sep, dbinfo.sSubDirs[1], os.sep, seq), cfg['patchSize'], cfg['patchOverlap'], 1 )
+            tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), cfg['patchSize'], cfg['patchOverlap'], 1 )
             dAllPatches = np.concatenate((dAllPatches, tmpPatches), axis=2)
             dAllLabels = np.concatenate((dAllLabels, iLabels[iseq]*tmpLabels), axis=0)
             dAllPats = np.concatenate((dAllPats,ipat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)

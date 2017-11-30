@@ -22,8 +22,7 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling):
     #pathDicom = mrt_Folder + "/" + proband + "/dicom_sorted/" + model + "/"
     # Creation of dicom_numpy_array and mask_numpy_array
     dicom_numpy_array = create_DICOM_Array(os.path.join(pathDicom, ''))
-    mask_numpy_array = create_MASK_Array(proband, model, dicom_numpy_array.shape[0], dicom_numpy_array.shape[1],
-                                     dicom_numpy_array.shape[2])
+    #mask_numpy_array = create_MASK_Array(proband, model, dicom_numpy_array.shape[0], dicom_numpy_array.shape[1], dicom_numpy_array.shape[2])
     # Normalisation
     range_norm = [0, 1]
     scale_dicom_numpy_array = (dicom_numpy_array - np.min(dicom_numpy_array)) * (range_norm[1] - range_norm[0]) / (np.max(dicom_numpy_array) - np.min(dicom_numpy_array))
