@@ -66,8 +66,8 @@ else: # perform patching
     dAllPatches = []
     dAllLabels = []
     dAllPats = []
-    lDatasets = cfg[cfg['selectedModel']]['dataref'] + cfg[cfg['selectedDatabase']]['dataart']
-    iLabels = cfg[cfg['selectedModel']]['labelref'] + cfg[cfg['selectedDatabase']]['labelart']
+    lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
+    iLabels = cfg['selectedDatabase']['labelref'] + cfg['selectedDatabase']['labelart']
     for ipat, pat in enumerate(dbinfo.lPats):
         for iseq, seq in enumerate(lDatasets):
             # patches and labels of reference/artifact
