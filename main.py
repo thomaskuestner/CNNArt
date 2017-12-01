@@ -63,9 +63,9 @@ elif glob.glob(sDatafile):
         patchSize = hf['patchSize'][:]
 
 else: # perform patching
-    dAllPatches = []
-    dAllLabels = []
-    dAllPats = []
+    dAllPatches = np.zeros((patchSize[0], patchSize[1], 0))
+    dAllLabels = np.zeros(0)
+    dAllPats = np.zeros((0, 1))
     lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
     iLabels = cfg['selectedDatabase']['labelref'] + cfg['selectedDatabase']['labelart']
     for ipat, pat in enumerate(dbinfo.lPats):
