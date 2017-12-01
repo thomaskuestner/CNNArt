@@ -2,18 +2,18 @@
 motion_head: &id001
    name      : "motion_head"
    dataref   : ["t1_tse_tra_Kopf_0002"]
-   labelref  : 0
+   labelref  : [0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003"]
-   labelart  : 1
+   labelart  : [1]
    pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Headcross"
    bestmodel : {CNN2D: "head_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_abd: &id002
    name      : "motion_abd" 
    dataref   : ["t1_tse_tra_fs_mbh_Leber_0004"]
-   labelref  : 0
+   labelref  : [0]
    dataart   : ["t1_tse_tra_fs_mbh_Leber_Motion_0005"]
-   labelart  : 1
+   labelart  : [1]
    pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Abdcross"
    bestmodel : {CNN2D: "abdomen_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
