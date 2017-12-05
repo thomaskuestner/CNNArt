@@ -69,12 +69,13 @@ else: # perform patching
     lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
     iLabels = cfg['selectedDatabase']['labelref'] + cfg['selectedDatabase']['labelart']
     for ipat, pat in enumerate(dbinfo.lPats):
-        for iseq, seq in enumerate(lDatasets):
-            # patches and labels of reference/artifact
-            tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), cfg['patchSize'], cfg['patchOverlap'], 1 )
-            dAllPatches = np.concatenate((dAllPatches, tmpPatches), axis=2)
-            dAllLabels = np.concatenate((dAllLabels, iLabels[iseq]*tmpLabels), axis=0)
-            dAllPats = np.concatenate((dAllPats,ipat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)
+        if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
+            for iseq, seq in enumerate(lDatasets):
+                # patches and labels of reference/artifact
+                tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), cfg['patchSize'], cfg['patchOverlap'], 1 )
+                dAllPatches = np.concatenate((dAllPatches, tmpPatches), axis=2)
+                dAllLabels = np.concatenate((dAllLabels, iLabels[iseq]*tmpLabels), axis=0)
+                dAllPats = np.concatenate((dAllPats,ipat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)
 
     # perform splitting
     X_train, y_train, X_test, y_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], patchSize, cfg['patchOverlap'], cfg['dSplitval'], '')
