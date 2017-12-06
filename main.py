@@ -95,5 +95,5 @@ else: # perform patching
         hf.create_dataset('patchOverlap', data=cfg['patchOverlap'])
 
 # perform training
-for iFold in range(0,len(X_train)-1):
+for iFold in range(0,len(X_train)):
     cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])
