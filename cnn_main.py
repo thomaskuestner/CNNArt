@@ -97,18 +97,18 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
     # check model
     if 'motion' in sModelIn:
         if 'CNN2D' in sModelIn:
-            sModel = 'networks.motion.CNN2D' + sModelIn
+            sModel = 'networks.motion.CNN2D.' + sModelIn
         elif 'motion_3DCNN' in sModelIn:
-            sModel = 'networks.motion.CNN3D' + sModelIn
+            sModel = 'networks.motion.CNN3D.' + sModelIn
         elif 'motion_MNetArt' in sModelIn:
-            sModel = 'networks.motion.MNetArt' + sModelIn
+            sModel = 'networks.motion.MNetArt.' + sModelIn
         elif 'motion_VNetArt' in sModelIn:
-            sModel = 'networks.motion.VNetArt' + sModelIn
+            sModel = 'networks.motion.VNetArt.' + sModelIn
     elif 'multi' in sModelIn:
         if 'multi_DenseResNet' in sModelIn:
-            sModel = 'networks.multiclass.DenseResNet' + sModelIn
+            sModel = 'networks.multiclass.DenseResNet.' + sModelIn
         elif 'multi_InceptionNet' in sModelIn:
-            sModel = 'networks.multiclass.InceptionNet' + sModelIn
+            sModel = 'networks.multiclass.InceptionNet.' + sModelIn
     else:
         sys.exit("Model is not supported")
 
