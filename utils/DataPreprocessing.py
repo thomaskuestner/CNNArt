@@ -22,7 +22,7 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling):
     #pathDicom = mrt_Folder + "/" + proband + "/dicom_sorted/" + model + "/"
     # Creation of dicom_numpy_array and mask_numpy_array
     dicom_numpy_array = create_DICOM_Array(os.path.join(pathDicom, ''))
-    #mask_numpy_array = create_MASK_Array(proband, model, dicom_numpy_array.shape[0], dicom_numpy_array.shape[1], dicom_numpy_array.shape[2])
+    mask_numpy_array = create_MASK_Array(proband, model, dicom_numpy_array.shape[0], dicom_numpy_array.shape[1], dicom_numpy_array.shape[2])
     # Normalisation
     range_norm = [0, 1]
     scale_dicom_numpy_array = (dicom_numpy_array - np.min(dicom_numpy_array)) * (range_norm[1] - range_norm[0]) / (np.max(dicom_numpy_array) - np.min(dicom_numpy_array))
@@ -95,33 +95,35 @@ def create_DICOM_Array(PathDicom):
 def create_MASK_Array(proband, model, mrt_height, mrt_width, mrt_depth):
     mask = np.zeros((mrt_height, mrt_width, mrt_depth))
     # TODO: adapt path
-    loadMark = shelve.open("C:/Users/Sebastian Milde/Pictures/Universitaet/Masterarbeit/Markings/" + proband + ".slv")
-    print(model)
-    if loadMark.has_key(model):
-        marks = loadMark[model]
-        for key in marks:
-            num = int(key.find("_"))
-            img_no = int(key[0:num])
-            key2 = key[num + 1:len(key)]
-            num = int(key2.find("_"))
-            str_no = key2[0:num]
-            tool_no = int(str_no[0])
-            art_no = int(str_no[1])
-            mask_lay = mask[:, :, img_no]
-            p = marks[key]
-            print(p)
-            if tool_no == 1:
-                mask_lay = mask_rectangle(p[0], p[1], p[2], p[3], mask_lay, art_no)
-            elif tool_no == 2:
-                mask_lay = mask_ellipse(p[0], p[1], p[2], p[3], mask_lay, art_no)
-            elif tool_no == 3:
-                mask_lay = mask_lasso(p, mask_lay, art_no)
+    try:
+        loadMark = shelve.open("C:/Users/Sebastian Milde/Pictures/Universitaet/Masterarbeit/Markings/" + proband + ".slv")
+        print(model)
+        if loadMark.has_key(model):
+            marks = loadMark[model]
+            for key in marks:
+                num = int(key.find("_"))
+                img_no = int(key[0:num])
+                key2 = key[num + 1:len(key)]
+                num = int(key2.find("_"))
+                str_no = key2[0:num]
+                tool_no = int(str_no[0])
+                art_no = int(str_no[1])
+                mask_lay = mask[:, :, img_no]
+                p = marks[key]
+                print(p)
+                if tool_no == 1:
+                    mask_lay = mask_rectangle(p[0], p[1], p[2], p[3], mask_lay, art_no)
+                elif tool_no == 2:
+                    mask_lay = mask_ellipse(p[0], p[1], p[2], p[3], mask_lay, art_no)
+                elif tool_no == 3:
+                    mask_lay = mask_lasso(p, mask_lay, art_no)
 
-            mask[:, :, img_no] = mask_lay
-    else:
-        pass
+                mask[:, :, img_no] = mask_lay
+        else:
+            pass
 
-    loadMark.close()
-
-    return mask
+        loadMark.close()
+        return mask
+    except:
+        return mask
 
