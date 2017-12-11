@@ -82,16 +82,22 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         else:
             kf = KFold(n_splits = nfolds)
         ind_split = 0
-        X_trainFold = {}
-        X_testFold = {}
-        y_trainFold = {}
-        y_testFold = {}
+        X_trainFold = np.array([])
+        X_testFold = np.array([])
+        y_trainFold = np.array([])
+        y_testFold = np.array([])
         for train_index, test_index in kf.split(allPatches):
             # print("TRAIN:", train_index, "TEST:", test_index)
             X_train, X_test = allPatches[train_index], allPatches[test_index]
             y_train, y_test = allY[train_index], allY[test_index]
             print(X_train.shape, X_test.shape)
             print(y_train.shape, y_test.shape)
+
+            if ind_split == 0:
+                X_trainFold = np.empty([len(np.unique(allPats)), len(train_index), patchSize[0], patchSize[1]])
+                X_testFold = np.empty([len(np.unique(allPats)), len(test_index), patchSize[0], patchSize[1]])
+                y_trainFold = np.empty([len(np.unique(allPats)), len(train_index)])
+                y_testFold = np.empty([len(np.unique(allPats)), len(test_index)])
 
             if (iReturn == 0):
                 folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
