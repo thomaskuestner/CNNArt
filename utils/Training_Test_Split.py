@@ -121,15 +121,21 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
 
     elif sSplitting == "crossvalidation_patient":
         n_splits = len(np.unique(allPats))
-        X_trainFold = {}
-        X_testFold = {}
-        y_trainFold = {}
-        y_testFold = {}
+        X_trainFold = np.array([])
+        X_testFold = np.array([])
+        y_trainFold = np.array([])
+        y_testFold = np.array([])
         for ind_split in xrange(0, n_splits-1):
-            train_index = allPats != ind_split
-            test_index = allPats == ind_split
+            train_index = np.where(allPats != ind_split)[0]
+            test_index = np.where(allPats == ind_split)[0]
             X_train, X_test = allPatches[train_index], allPatches[test_index]
             y_train, y_test = allY[train_index], allY[test_index]
+
+            if ind_split == 0:
+                X_trainFold = np.empty([n_splits-1, len(train_index), patchSize[0], patchSize[1]])
+                X_testFold = np.empty([n_splits-1, len(test_index), patchSize[0], patchSize[1]])
+                y_trainFold = np.empty([n_splits-1, len(train_index)])
+                y_testFold = np.empty([n_splits-1, len(test_index)])
             print(X_train.shape, X_test.shape)
             print(y_train.shape, y_test.shape)
 
