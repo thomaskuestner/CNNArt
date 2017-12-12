@@ -15,12 +15,18 @@ from keras.models import model_from_json
 from keras.callbacks import EarlyStopping, ModelCheckpoint,ReduceLROnPlateau
 
 
-def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize, iLearningRate, iEpochs, CV_Patient=0, model='motion_head'):#rigid for loops for simplicity
+def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes, learningRates, iEpochs, CV_Patient=0, model='motion_head'):#rigid for loops for simplicity
     #add for loops here
-    learning_rate = 0.001
-    cnn= fCreateModel(patchSize, learningRate=learning_rate, optimizer='Adam')
-    print "Model: 2D_CNN"
-    fTrainInner(cnn, X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize[0], learning_rate, iEpochs, CV_Patient=CV_Patient)
+    batchSizes = [64] if batchSizes is None else batchSizes
+    learningRates = [0.001] if learningRates is None else learningRates
+    iEpochs = 300 if iEpochs is None else iEpochs
+    for iBatch in batchSizes:
+        for iLearn in learningRates:
+            print "Model: 2D_CNN"
+            print "learning rate: " + str(iLearn)
+            print "batch size: " + str(iBatch)
+            cnn= fCreateModel(patchSize, learningRate=iLearn, optimizer='Adam')
+            fTrainInner(cnn, X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs, CV_Patient=CV_Patient)
 
 
 def fTrainInner(cnn, X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=64, learningRate=0.001, iEpochs=299, CV_Patient=0):
