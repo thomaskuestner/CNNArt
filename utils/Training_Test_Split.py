@@ -55,7 +55,7 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         print(y_train.shape)
         print(y_test.shape)
 
-        if (iReturn == 0):
+        if iReturn == 0:
             folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
             Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'normal_' + str(
                 patchSize[0]) + str(patchSize[1]) + '.h5'
@@ -77,29 +77,21 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
             return [X_train], [y_train], [X_test], [y_test] # embed in a 1-fold list
 
     elif sSplitting == "crossvalidation_data":
-        if(nfolds==0):
-            kf = KFold(n_splits = len(np.unique(allPats)))
+        if nfolds == 0:
+            kf = KFold(n_splits=len(np.unique(allPats)))
         else:
-            kf = KFold(n_splits = nfolds)
+            kf = KFold(n_splits=nfolds)
         ind_split = 0
-        X_trainFold = np.array([])
-        X_testFold = np.array([])
-        y_trainFold = np.array([])
-        y_testFold = np.array([])
+        X_trainFold = []
+        X_testFold = []
+        y_trainFold = []
+        y_testFold = []
+
         for train_index, test_index in kf.split(allPatches):
-            # print("TRAIN:", train_index, "TEST:", test_index)
             X_train, X_test = allPatches[train_index], allPatches[test_index]
             y_train, y_test = allY[train_index], allY[test_index]
-            print(X_train.shape, X_test.shape)
-            print(y_train.shape, y_test.shape)
 
-            if ind_split == 0:
-                X_trainFold = np.empty([len(np.unique(allPats)), len(train_index), patchSize[0], patchSize[1]])
-                X_testFold = np.empty([len(np.unique(allPats)), len(test_index), patchSize[0], patchSize[1]])
-                y_trainFold = np.empty([len(np.unique(allPats)), len(train_index)])
-                y_testFold = np.empty([len(np.unique(allPats)), len(test_index)])
-
-            if (iReturn == 0):
+            if iReturn == 0:
                 folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
                 Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'crossVal_data' + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
                 if os.path.isdir(folder):
@@ -115,37 +107,36 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
                     hf.create_dataset('patchSize', data=patchSize)
                     hf.create_dataset('patchOverlap', data=patchOverlap)
             else:
-                X_trainFold[ind_split] = X_train
-                X_testFold[ind_split] = X_test
-                y_trainFold[ind_split] = y_train
-                y_testFold[ind_split] = y_test
+                X_trainFold.append(X_train)
+                X_testFold.append(X_test)
+                y_trainFold.append(y_train)
+                y_testFold.append(y_test)
 
             ind_split += 1
 
-        if(iReturn > 0):
+        X_trainFold = np.asarray(X_trainFold)
+        X_testFold = np.asarray(X_testFold)
+        y_trainFold = np.asarray(y_trainFold)
+        y_testFold = np.asarray(y_testFold)
+
+        if iReturn > 0:
             return X_trainFold, y_trainFold, X_testFold, y_testFold
 
     elif sSplitting == "crossvalidation_patient":
         n_splits = len(np.unique(allPats))
-        X_trainFold = np.array([])
-        X_testFold = np.array([])
-        y_trainFold = np.array([])
-        y_testFold = np.array([])
+
+        X_trainFold = []
+        X_testFold = []
+        y_trainFold = []
+        y_testFold = []
+
         for ind_split in xrange(0, n_splits-1):
             train_index = np.where(allPats != ind_split)[0]
             test_index = np.where(allPats == ind_split)[0]
             X_train, X_test = allPatches[train_index], allPatches[test_index]
             y_train, y_test = allY[train_index], allY[test_index]
 
-            if ind_split == 0:
-                X_trainFold = np.empty([n_splits-1, len(train_index), patchSize[0], patchSize[1]])
-                X_testFold = np.empty([n_splits-1, len(test_index), patchSize[0], patchSize[1]])
-                y_trainFold = np.empty([n_splits-1, len(train_index)])
-                y_testFold = np.empty([n_splits-1, len(test_index)])
-            print(X_train.shape, X_test.shape)
-            print(y_train.shape, y_test.shape)
-
-            if (iReturn == 0):
+            if iReturn == 0:
                 folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
                 Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'crossVal' + str(
                     ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
@@ -163,10 +154,16 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
                     hf.create_dataset('patchOverlap', data=patchOverlap)
 
             else:
-                X_trainFold[ind_split] = X_train
-                X_testFold[ind_split] = X_test
-                y_trainFold[ind_split] = y_train
-                y_testFold[ind_split] = y_test
+                X_trainFold.append(X_train)
+                X_testFold.append(X_test)
+                y_trainFold.append(y_train)
+                y_testFold.append(y_test)
 
-        if (iReturn > 0):
+
+        X_trainFold = np.asarray(X_trainFold)
+        X_testFold = np.asarray(X_testFold)
+        y_trainFold = np.asarray(y_trainFold)
+        y_testFold = np.asarray(y_testFold)
+
+        if iReturn > 0:
             return X_trainFold, y_trainFold, X_testFold, y_testFold
