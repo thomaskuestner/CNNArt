@@ -96,7 +96,7 @@ def create_MASK_Array(proband, model, mrt_height, mrt_width, mrt_depth):
     mask = np.zeros((mrt_height, mrt_width, mrt_depth))
     # TODO: adapt path
     try:
-        loadMark = shelve.open("C:/Users/Sebastian Milde/Pictures/Universitaet/Masterarbeit/Markings/" + proband + ".slv")
+        loadMark = shelve.open("../Markings/" + proband + ".slv")
         print(model)
         if loadMark.has_key(model):
             marks = loadMark[model]
