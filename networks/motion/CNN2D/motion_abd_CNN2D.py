@@ -12,8 +12,8 @@ from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Flatten#, Layer  Dropout, Flatten
 #from keras.layers import containers
 from keras.models import model_from_json
-from hyperas.distributions import choice, uniform, conditional
-from hyperopt import Trials, STATUS_OK
+#from hyperas.distributions import choice, uniform, conditional
+#from hyperopt import Trials, STATUS_OK
 
 from keras.layers.convolutional import Convolution2D
 #from keras.layers.convolutional import MaxPooling2D as pool2
@@ -27,33 +27,33 @@ from keras.optimizers import SGD
 
 def createModel(patchSize):
     cnn = Sequential()
+#    cnn.add(Convolution2D(32,
+#                            14, 
+#                            14, 
+#                            init='normal',
+#                           # activation='sigmoid',
+#                            weights=None,
+#                            border_mode='valid',
+#                            subsample=(1, 1),
+#                            W_regularizer=l2(1e-6),
+#                            input_shape=(1, patchSize[0,0], patchSize[0,1])))
+#    cnn.add(Activation('relu'))
+    
     cnn.add(Convolution2D(32,
-                            14, 
-                            14, 
-                            init='he_normal',
+                            14,
+                            14,
+                            init='normal',
                            # activation='sigmoid',
                             weights=None,
                             border_mode='valid',
                             subsample=(1, 1),
                             W_regularizer=l2(1e-6),
                             input_shape=(1, patchSize[0,0], patchSize[0,1])))
-    cnn.add(Activation('relu'))
-    
-#    cnn.add(Convolution2D(32,
-#                            7,
-#                            7,
-#                            init='normal',
-#                           # activation='sigmoid',
-#                            weights=None,
-#                            border_mode='valid',
-#                            subsample=(1, 1),
-#                            W_regularizer=l2(1e-6)))
-#                            #input_shape=(1, patchSize[0,0], patchSize[0,1])))
-#    cnn.add(Activation('relu'))                    
+    cnn.add(Activation('relu'))                    
     cnn.add(Convolution2D(64 ,                    #learning rate: 0.1 -> 76%
                             7, 
                             7, 
-                            init='he_normal',
+                            init='normal',
                            # activation='sigmoid',
                             weights=None,
                             border_mode='valid',
@@ -64,13 +64,23 @@ def createModel(patchSize):
     cnn.add(Convolution2D(128 ,                    #learning rate: 0.1 -> 76%
                             3, 
                             3, 
-                            init='he_normal',
+                            init='normal',
                            # activation='sigmoid',
                             weights=None,
                             border_mode='valid',
                             subsample=(1, 1),
                             W_regularizer=l2(1e-6)))
     cnn.add(Activation('relu'))
+#    cnn.add(Convolution2D(256 ,                    #learning rate: 0.1 -> 76%
+#                            3, 
+#                            3, 
+#                            init='normal',
+#                           # activation='sigmoid',
+#                            weights=None,
+#                            border_mode='valid',
+#                            subsample=(1, 1),
+#                            W_regularizer=l2(1e-6)))
+#    cnn.add(Activation('relu'))
     
     #cnn.add(pool2(pool_size=(2, 2), strides=None, border_mode='valid', dim_ordering='th'))
     
@@ -88,7 +98,17 @@ def createModel(patchSize):
     cnn.add(Activation('softmax'))
     return cnn
 
-def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None):  
+def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None):
+    # grid search on batch_sizes and learning rates
+    # parse inputs
+    batchSizes = 64 if batchSizes is None else batchSizes
+    learningRates = 0.01 if learningRates is None else learningRates
+    iEpochs = 300 if iEpochs is None else iEpochs
+    for iBatch in batchSizes:
+        for iLearn in learningRates:
+            fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs)
+
+def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None):
     # parse inputs
     batchSize = 64 if batchSize is None else batchSize
     learningRate = 0.01 if learningRate is None else learningRate
@@ -115,7 +135,7 @@ def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None
             
     #opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
     opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-    callbacks = [EarlyStopping(monitor='val_loss',patience=5,verbose=1)]
+    callbacks = [EarlyStopping(monitor='val_loss',patience=10,verbose=1)]
         
     cnn.compile(loss='categorical_crossentropy', optimizer=opti)
         
@@ -157,7 +177,7 @@ def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None
                             'acc_test':acc_test,
                             'prob_test':prob_test})
 
-def fPredict(X_test,y_test,model_name, sOutPath, patchSize, batchSize):
+def fPredict(X_test,y_test,model_name,sOutPath,patchSize,batchSize):
        
     weight_name = model_name[0] + '_weights.h5'
     model_json = model_name[0] + '_json'
@@ -185,7 +205,7 @@ def fPredict(X_test,y_test,model_name, sOutPath, patchSize, batchSize):
     model = createModel(patchSize)
     opti = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     callbacks = [EarlyStopping(monitor='val_loss',patience=10,verbose=1)]
-
+        
     model.compile(loss='categorical_crossentropy', optimizer=opti)
     model.load_weights(weight_name)
 
@@ -196,9 +216,9 @@ def fPredict(X_test,y_test,model_name, sOutPath, patchSize, batchSize):
     #y_test = np.ones((len(X_test),1))
     
     score_test, acc_test = model.evaluate(X_test, y_test,batch_size=batchSize,show_accuracy=True)
+    
     prob_pre = model.predict(X_test, batchSize, 0)
     
-    #modelSave = model_name[:-5] + '_pred.mat'
     modelSave = model_name[0] + '_pred.mat'
     sio.savemat(modelSave, {'prob_pre':prob_pre, 'score_test': score_test, 'acc_test':acc_test})
 
@@ -209,19 +229,19 @@ def fPredict(X_test,y_test,model_name, sOutPath, patchSize, batchSize):
 def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
     # explicitly stated here instead of cnn = createModel() to allow optimization
     cnn = Sequential()
-#    cnn.add(Convolution2D(32,
-#                            14, 
-#                            14, 
-#                            init='normal',
-#                           # activation='sigmoid',
-#                            weights=None,
-#                            border_mode='valid',
-#                            subsample=(1, 1),
-#                            W_regularizer=l2(1e-6),
-#                            input_shape=(1, patchSize[0,0], patchSize[0,1])))
-#    cnn.add(Activation('relu'))
+    cnn.add(Convolution2D(32,
+                            14, 
+                            14, 
+                            init='normal',
+                           # activation='sigmoid',
+                            weights=None,
+                            border_mode='valid',
+                            subsample=(1, 1),
+                            W_regularizer=l2(1e-6),
+                            input_shape=(1, patchSize[0,0], patchSize[0,1])))
+    cnn.add(Activation('relu'))
     
-    cnn.add(Convolution2D(32, #64
+    cnn.add(Convolution2D(64,
                             7,
                             7,
                             init='normal',
@@ -269,14 +289,14 @@ def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
                   W_regularizer='l2'))
     cnn.add(Activation('softmax'))
     
-    opti = SGD(lr={{choice([0.1, 0.01, 0.05, 0.005, 0.001])}}, momentum=1e-8, decay=0.1, nesterov=True)
+    opti = SGD(lr={{uniform(0.001, 0.1)}}, momentum=1e-8, decay=0.1, nesterov=True)
     cnn.compile(loss='categorical_crossentropy', 
                         optimizer=opti)
     
     epochs = 300
     
     result = cnn.fit(X_train, Y_train,
-              batch_size=128, # {{choice([64, 128])}}
+              batch_size={{choice([64, 128])}},
               nb_epoch=epochs,
               show_accuracy=True,
               verbose=2,
@@ -284,14 +304,6 @@ def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
     score_test, acc_test = cnn.evaluate(X_test, Y_test, verbose=0)
     
     return {'loss': -acc_test, 'status': STATUS_OK, 'model': cnn, 'trainresult': result, 'score_test': score_test}
-    
-def fGridTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes, learningRates, iEpochs):
-    
-    # grid search on batch_sizes and learning rates
-    for j in batchSizes :          
-        for i in learningRates :
-            fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, j, i, iEpochs)
-            
 
     
 ## helper functions    
@@ -299,5 +311,4 @@ def drange(start, stop, step):
     r = start
     while r < stop:
         yield r
-	r += step
-    
+    r += step

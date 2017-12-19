@@ -2,7 +2,7 @@
 """
 Created on Thu Mar 02 15:59:36 2017
 
-@author: Sebastian Milde
+@author: Sebastian Milde, Thomas Kuestner
 """
 
 import math
@@ -74,7 +74,7 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
                 hf.create_dataset('patchSize', data=patchSize)
                 hf.create_dataset('patchOverlap', data=patchOverlap)
         else:
-            return X_train, y_train, X_test, y_test
+            return [X_train], [y_train], [X_test], [y_test] # embed in a 1-fold list
 
     elif sSplitting == "crossvalidation_data":
         if(nfolds==0):
@@ -126,8 +126,8 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         y_trainFold = {}
         y_testFold = {}
         for ind_split in xrange(0, n_splits-1):
-            train_index = allPats != ind_split
-            test_index = allPats == ind_split
+            train_index=np.where(allPats != ind_split)
+            test_index = np.where(allPats == ind_split)
             X_train, X_test = allPatches[train_index], allPatches[test_index]
             y_train, y_test = allY[train_index], allY[test_index]
             print(X_train.shape, X_test.shape)

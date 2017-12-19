@@ -1,3 +1,7 @@
+"""
+@author: Sebastian Milde, Thomas Kuestner
+"""
+
 import numpy as np
 import dicom
 import dicom_numpy
@@ -18,8 +22,7 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling):
     #pathDicom = mrt_Folder + "/" + proband + "/dicom_sorted/" + model + "/"
     # Creation of dicom_numpy_array and mask_numpy_array
     dicom_numpy_array = create_DICOM_Array(os.path.join(pathDicom, ''))
-    mask_numpy_array = create_MASK_Array(proband, model, dicom_numpy_array.shape[0], dicom_numpy_array.shape[1],
-                                     dicom_numpy_array.shape[2])
+    mask_numpy_array = create_MASK_Array(proband, model, dicom_numpy_array.shape[0], dicom_numpy_array.shape[1], dicom_numpy_array.shape[2])
     # Normalisation
     range_norm = [0, 1]
     scale_dicom_numpy_array = (dicom_numpy_array - np.min(dicom_numpy_array)) * (range_norm[1] - range_norm[0]) / (np.max(dicom_numpy_array) - np.min(dicom_numpy_array))
@@ -92,7 +95,7 @@ def create_DICOM_Array(PathDicom):
 def create_MASK_Array(proband, model, mrt_height, mrt_width, mrt_depth):
     mask = np.zeros((mrt_height, mrt_width, mrt_depth))
     # TODO: adapt path
-    loadMark = shelve.open("C:/Users/Sebastian Milde/Pictures/Universitaet/Masterarbeit/Markings/" + proband + ".slv")
+    loadMark = shelve.open("/home/s1241/no_backup/s1241/CNNArt/Markings/" + proband + ".slv")
     print(model)
     if loadMark.has_key(model):
         marks = loadMark[model]
@@ -121,11 +124,4 @@ def create_MASK_Array(proband, model, mrt_height, mrt_width, mrt_depth):
     loadMark.close()
 
     return mask
-
-patch_Size = np.array(([40.0, 40.0]))
-patch_overlap = 0.5
-proband = 'ab'
-model = 't1_tse_tra_Kopf_Motion_0003'
-Folder = 'C:/Users/Sebastian Milde/Pictures/MRT/'
-cProfile.run("fPreprocessData(Folder, proband, model, patch_Size, patch_overlap, 0.0)")
 

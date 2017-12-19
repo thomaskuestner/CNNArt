@@ -1,5 +1,7 @@
 import os
 import csv
+from MRData import MRData
+
 
 class DatabaseInfo:
 
@@ -17,7 +19,7 @@ class DatabaseInfo:
             self.sDatabase = sDatabase
 
         if sSubDirs is None:
-            self.sSubDirs = ['newProtocol','dicom_sorted'] # name of subdirectory in [database, patient]
+            self.sSubDirs = ['newProtocol','dicom_sorted','testout'] # name of subdirectory in [database, patient]
         else:
             self.sSubDirs = sSubDirs
 
@@ -26,9 +28,15 @@ class DatabaseInfo:
         self.lPats = [name for name in os.listdir(self.sPathIn) if os.path.isdir(os.path.join(self.sPathIn, name))]
 
         # parse config file (according to set database) => TODO (TK): replace by automatic parsing in directory
-        ifile=open('config'+os.sep+self.sDatabase+'Database.csv',"rb") # config file must exist for database!
+        ifile = open('config'+os.sep+self.sDatabase+'Database.csv',"rb") # config file must exist for database!
         reader = csv.reader(ifile)
-        lImgData = [MRData(rows[0],rows[1],rows[2],rows[3]) for rows in reader]
+        reader.next()
+        #lImgData = []
+        #for i, rows in enumerate(reader):
+        #    if i == 0:
+        #        continue
+        #    self.lImgData.append(MRData(rows[0],rows[1],rows[2],rows[3]))
+        self.lImgData = [MRData(rows[0],rows[1],rows[2],rows[3]) for rows in reader]
         ifile.close()
 
     def get_mrt_model(self):
