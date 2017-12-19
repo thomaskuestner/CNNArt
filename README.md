@@ -1,4 +1,4 @@
-# CNNArt [![Waffle.io - Columns and their card count](https://badge.waffle.io/thomaskuestner/CNNArt.svg?columns=all)](https://waffle.io/thomaskuestner/CNNArt) 
+# CNNArt [![Build Status](https://semaphoreci.com/api/v1/thomaskuestner/cnnart/branches/master/shields_badge.svg)](https://semaphoreci.com/thomaskuestner/cnnart) [![Waffle.io - Columns and their card count](https://badge.waffle.io/thomaskuestner/CNNArt.svg?columns=all)](https://waffle.io/thomaskuestner/CNNArt) 
 Automatic and reference-free MR artifact detection
 
 Please refer to the publications:
