@@ -21,8 +21,8 @@ if sys.argv[-1] == 'test':
           author='kSpace Astronauts',
           author_email='thomas.kuestner@iss.uni-stuttgart.de',
           license='Apache2',
-          setup_requires=['pytest-runner', ...],
-          tests_require=['pytest', ...],
+          setup_requires=['pytest-runner'],
+          tests_require=['pytest'],
           include_package_data=True,
           zip_safe=False)
     sys.exit()
