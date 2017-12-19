@@ -160,7 +160,6 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
             cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
                                 dData['patchSize'], iBatchSize, iLearningRate, iEpochs)
 
-
         else:  # no optimization or grid search (if batchSize|learningRate are arrays)
             cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
                             dData['patchSize'], iBatchSize, iLearningRate, iEpochs)

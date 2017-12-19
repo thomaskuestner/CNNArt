@@ -1,5 +1,6 @@
 import os.path
 import scipy.io as sio
+import numpy as np
 import keras
 import keras.optimizers
 from keras.models import Sequential, Model
@@ -15,13 +16,25 @@ from keras.models import model_from_json
 from keras.callbacks import EarlyStopping, ModelCheckpoint,ReduceLROnPlateau
 
 
-def fTrain(sOutPath, patchSize,sInPaths=None,sInPaths_valid=None,X_train=None, Y_train=None, X_test=None, Y_test=None, CV_Patient=0, model='motion_head'):#rigid for loops for simplicity
+def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes, learningRates, iEpochs, CV_Patient=0, model='motion_head'):#rigid for loops for simplicity
     #add for loops here
-    learning_rate = 0.001
-    cnn= fCreateModel(patchSize, learningRate=learning_rate, optimizer='Adam')
-    print "Model: 2D_CNN"
-    fTrainInner(cnn, X_train, Y_train, X_test, Y_test, sOutPath, CV_Patient=CV_Patient,
-         batchSize=64, iEpochs=300)
+    batchSizes = [64] if batchSizes is None else batchSizes
+    learningRates = [0.001] if learningRates is None else learningRates
+    iEpochs = 300 if iEpochs is None else iEpochs
+
+    # change the shape of the dataset
+    X_train = np.expand_dims(X_train, axis=1)
+    X_test = np.expand_dims(X_test, axis=1)
+    y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32)-1)]).T
+    y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32)-1)]).T
+
+    for iBatch in batchSizes:
+        for iLearn in learningRates:
+            print "Model: 2D_CNN"
+            print "learning rate: " + str(iLearn)
+            print "batch size: " + str(iBatch)
+            cnn= fCreateModel(patchSize, learningRate=iLearn, optimizer='Adam')
+            fTrainInner(cnn, X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs, CV_Patient=CV_Patient)
 
 
 def fTrainInner(cnn, X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=64, learningRate=0.001, iEpochs=299, CV_Patient=0):
@@ -36,7 +49,7 @@ def fTrainInner(cnn, X_train, y_train, X_test, y_test, sOutPath, patchSize, batc
     model_name = sPath + '/' + sFilename
     if CV_Patient != 0: model_name = model_name + 'CV' + str(
         CV_Patient) + '_'  # determine if crossValPatient is used...
-    model_name = model_name + str(int(patchSize[0, 0])) + str(int(patchSize[0, 1])) \
+    model_name = model_name + str(int(patchSize[0])) + str(int(patchSize[0])) \
                  + '_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     weight_name = model_name + '_weights.h5'
     model_json = model_name + '_json'
@@ -131,8 +144,8 @@ def fCreateModel(patchSize, optimizer='Adam', learningRate=0.001):# only on lins
                             padding='valid',
                             strides=(1, 1),
                             kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                            input_shape=(1, int(patchSize[0,0]), int(patchSize[0,1]))))
-     #input shape : 1 means grayscale... richtig übergeben...
+                            input_shape=(1, int(patchSize[0]), int(patchSize[0]))))
+     #input shape : 1 means grayscale... richtig uebergeben...
     cnn.add(Activation('relu'))
 
     cnn.add(Conv2D(64,                    #learning rate: 0.1 -> 76%
