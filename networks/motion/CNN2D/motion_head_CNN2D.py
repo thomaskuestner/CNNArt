@@ -88,8 +88,8 @@ def createModel(patchSize):
 def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None):
     # grid search on batch_sizes and learning rates
     # parse inputs
-    batchSizes = 64 if batchSizes is None else batchSizes
-    learningRates = 0.01 if learningRates is None else learningRates
+    batchSizes = [64] if batchSizes is None else batchSizes
+    learningRates = [0.01] if learningRates is None else learningRates
     iEpochs = 300 if iEpochs is None else iEpochs
     for iBatch in batchSizes:
         for iLearn in learningRates:

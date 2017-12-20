@@ -25,67 +25,109 @@ from keras.regularizers import l2#, activity_l2
 from keras.optimizers import SGD
 
 
-def createModel(patchSize):
-    cnn = Sequential()
-    cnn.add(Convolution2D(32,
-                            14, 
-                            14, 
-                            init='he_normal',
-                           # activation='sigmoid',
-                            weights=None,
-                            border_mode='valid',
-                            subsample=(1, 1),
-                            W_regularizer=l2(1e-6),
-                            input_shape=(1, patchSize[0,0], patchSize[0,1])))
-    cnn.add(Activation('relu'))
-    
-#    cnn.add(Convolution2D(32,
-#                            7,
-#                            7,
-#                            init='normal',
-#                           # activation='sigmoid',
-#                            weights=None,
-#                            border_mode='valid',
-#                            subsample=(1, 1),
-#                            W_regularizer=l2(1e-6)))
-#                            #input_shape=(1, patchSize[0,0], patchSize[0,1])))
-#    cnn.add(Activation('relu'))                    
-    cnn.add(Convolution2D(64 ,                    #learning rate: 0.1 -> 76%
-                            7, 
-                            7, 
-                            init='he_normal',
-                           # activation='sigmoid',
-                            weights=None,
-                            border_mode='valid',
-                            subsample=(1, 1),
-                            W_regularizer=l2(1e-6)))
-    cnn.add(Activation('relu'))
-                       
-    cnn.add(Convolution2D(128 ,                    #learning rate: 0.1 -> 76%
-                            3, 
-                            3, 
-                            init='he_normal',
-                           # activation='sigmoid',
-                            weights=None,
-                            border_mode='valid',
-                            subsample=(1, 1),
-                            W_regularizer=l2(1e-6)))
-    cnn.add(Activation('relu'))
-    
-    #cnn.add(pool2(pool_size=(2, 2), strides=None, border_mode='valid', dim_ordering='th'))
-    
-    cnn.add(Flatten())
-    #cnn.add(Dense(input_dim= 100,
-    #              output_dim= 100,
-    #              init = 'normal',
-    #              #activation = 'sigmoid',
-    #              W_regularizer='l2'))
-    #cnn.add(Activation('sigmoid'))
-    cnn.add(Dense(output_dim= 2,
-                  init = 'normal',
-                  #activation = 'sigmoid',
-                  W_regularizer='l2'))
-    cnn.add(Activation('softmax'))
+def createModel(patchSize, architecture='new'):
+    if architecture == 'new':
+        l1_reg = 0
+        l2_reg = 1e-6
+        cnn = Sequential()
+        # Total params: 272,994
+        cnn.add(Conv2D(32,
+                       kernel_size=(14, 14),
+                       kernel_initializer='he_normal',
+                       weights=None,
+                       padding='valid',
+                       strides=(1, 1),
+                       kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                       input_shape=(1, int(patchSize[0]), int(patchSize[0]))))
+        # input shape : 1 means grayscale... richtig uebergeben...
+        cnn.add(Activation('relu'))
+
+        cnn.add(Conv2D(64,  # learning rate: 0.1 -> 76%
+                       kernel_size=(7, 7),
+                       kernel_initializer='he_normal',
+                       weights=None,
+                       padding='valid',
+                       strides=(1, 1),
+                       kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                       # data_format='channels_first'
+                       ))
+        cnn.add(Activation('relu'))
+        cnn.add(Conv2D(128,  # learning rate: 0.1 -> 76%
+                       kernel_size=(3, 3),
+                       kernel_initializer='he_normal',
+                       weights=None,
+                       padding='valid',
+                       strides=(1, 1),
+                       kernel_regularizer=l1_l2(l1_reg, l2_reg)))
+        cnn.add(Activation('relu'))
+        cnn.add(Flatten())
+        cnn.add(Dense(units=2,
+                      kernel_initializer='he_normal',
+                      kernel_regularizer='l2'))
+        cnn.add(Activation('softmax'))
+
+    elif architecture == 'old':
+        cnn = Sequential()
+        cnn.add(Convolution2D(32,
+                                14,
+                                14,
+                                init='he_normal',
+                               # activation='sigmoid',
+                                weights=None,
+                                border_mode='valid',
+                                subsample=(1, 1),
+                                W_regularizer=l2(1e-6),
+                                input_shape=(1, patchSize[0,0], patchSize[0,1])))
+        cnn.add(Activation('relu'))
+
+    #    cnn.add(Convolution2D(32,
+    #                            7,
+    #                            7,
+    #                            init='normal',
+    #                           # activation='sigmoid',
+    #                            weights=None,
+    #                            border_mode='valid',
+    #                            subsample=(1, 1),
+    #                            W_regularizer=l2(1e-6)))
+    #                            #input_shape=(1, patchSize[0,0], patchSize[0,1])))
+    #    cnn.add(Activation('relu'))
+        cnn.add(Convolution2D(64 ,                    #learning rate: 0.1 -> 76%
+                                7,
+                                7,
+                                init='he_normal',
+                               # activation='sigmoid',
+                                weights=None,
+                                border_mode='valid',
+                                subsample=(1, 1),
+                                W_regularizer=l2(1e-6)))
+        cnn.add(Activation('relu'))
+
+        cnn.add(Convolution2D(128 ,                    #learning rate: 0.1 -> 76%
+                                3,
+                                3,
+                                init='he_normal',
+                               # activation='sigmoid',
+                                weights=None,
+                                border_mode='valid',
+                                subsample=(1, 1),
+                                W_regularizer=l2(1e-6)))
+        cnn.add(Activation('relu'))
+
+        #cnn.add(pool2(pool_size=(2, 2), strides=None, border_mode='valid', dim_ordering='th'))
+
+        cnn.add(Flatten())
+        #cnn.add(Dense(input_dim= 100,
+        #              output_dim= 100,
+        #              init = 'normal',
+        #              #activation = 'sigmoid',
+        #              W_regularizer='l2'))
+        #cnn.add(Activation('sigmoid'))
+        cnn.add(Dense(output_dim= 2,
+                      init = 'normal',
+                      #activation = 'sigmoid',
+                      W_regularizer='l2'))
+        cnn.add(Activation('softmax'))
+
     return cnn
 
 def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None):
@@ -100,11 +142,27 @@ def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=Non
 
 def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None):
     # parse inputs
-    batchSize = 64 if batchSize is None else batchSize
-    learningRate = 0.01 if learningRate is None else learningRate
+    batchSizes = [64] if batchSizes is None else batchSizes
+    learningRates = [0.01] if learningRates is None else learningRates
+    iEpochs = 300 if iEpochs is None else iEpochs
+	
+	# change the shape of the dataset
+    X_train = np.expand_dims(X_train, axis=1)
+    X_test = np.expand_dims(X_test, axis=1)
+    y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32)-1)]).T
+    y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32)-1)]).T
+
+    for iBatch in batchSizes:
+        for iLearn in learningRates:
+            fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs)
+
+def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None):
+    # parse inputs
+    batchSize = [64] if batchSize is None else batchSize
+    learningRate = [0.01] if learningRate is None else learningRate
     iEpochs = 300 if iEpochs is None else iEpochs
     
-    print 'Training CNN'
+    print 'Training 2D CNN'
     print 'with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize)
    
     # save names
@@ -126,7 +184,11 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     #opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
     opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     callbacks = [EarlyStopping(monitor='val_loss',patience=5,verbose=1)]
-        
+    #callbacks.append(
+    #    ModelCheckpoint('/home/sXXXX/no_backup/sXXXX/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
+    #                    period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
+    #callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
+		
     cnn.compile(loss='categorical_crossentropy', optimizer=opti)
         
     result = cnn.fit(X_train,
@@ -138,7 +200,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
                      callbacks=callbacks,
                      verbose=1)
                         
-    score_test, acc_test = cnn.evaluate(X_test, y_test,batch_size=batchSize,show_accuracy=True)
+    loss_test, acc_test = cnn.evaluate(X_test, y_test,batch_size=batchSize,show_accuracy=True)
     		
     prob_test = cnn.predict(X_test, batchSize, 0)
         
@@ -163,7 +225,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
                             'loss':loss,
                             'val_acc':val_acc,
                             'val_loss':val_loss,
-                            'score_test':score_test,
+                            'loss_test':loss_test,
                             'acc_test':acc_test,
                             'prob_test':prob_test})
 

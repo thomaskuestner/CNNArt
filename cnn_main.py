@@ -96,8 +96,6 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
     """CNN Models"""
     # check model
     if 'motion' in sModelIn:
-        if '2D_CNN' in sModelIn:
-            sModel = 'networks.motion.CNN2D.2D_CNN'
         if 'CNN2D' in sModelIn:
             sModel = 'networks.motion.CNN2D.' + sModelIn
         elif 'motion_3DCNN' in sModelIn:
@@ -162,9 +160,9 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
             cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
                                 dData['patchSize'], iBatchSize, iLearningRate, iEpochs)
 
-
         else:  # no optimization or grid search (if batchSize|learningRate are arrays)
-            cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath, dData['patchSize'], iBatchSize, iLearningRate, iEpochs)
+            cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
+                            dData['patchSize'], iBatchSize, iLearningRate, iEpochs)
 
     else:  # predicting
         cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, dData['patchSize'], iBatchSize[0])
