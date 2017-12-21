@@ -48,6 +48,9 @@ patchOverlap : 0.5 # 50%
 # 'volume': volume-wise labeling
 # 'patch': patch-wise labeling
 sLabeling : "volume"
+# patching strategy
+# 'rigidPatching' or'adaptivePatching':
+sPatching : "rigidPatching"
 # splitting strategy
 # 'normal': percentage splitting
 # 'crossvalidation_patient': cross validation on patient (leave one patient out)
