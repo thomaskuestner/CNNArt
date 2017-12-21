@@ -44,6 +44,10 @@ range : [0, 1]
 # patches
 patchSize : [40, 40] # x,y
 patchOverlap : 0.5 # 50%
+# sLabeling strategy
+# 'volume': volume-wise labeling
+# 'patch': patch-wise labeling
+sLabeling : "volume"
 # splitting strategy
 # 'normal': percentage splitting
 # 'crossvalidation_patient': cross validation on patient (leave one patient out)
