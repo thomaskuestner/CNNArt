@@ -84,3 +84,29 @@ def fRigidPatching(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,
                 noise_artefact = False
 
     return dPatches, dLabels
+
+def normalPatching(dicom_numpy_array, patchSize, patchOverlap):
+    dPatches = None
+
+    dOverlap = np.multiply(patchSize, patchOverlap)
+    dNotOverlap = np.round(np.multiply(patchSize, (1 - patchOverlap)))
+    size_zero_pad = np.array(([math.ceil((dicom_numpy_array.shape[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[
+        0], math.ceil((dicom_numpy_array.shape[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1]]))
+    zero_pad = np.array(([int(size_zero_pad[0]) - dicom_numpy_array.shape[0], int(size_zero_pad[1]) - dicom_numpy_array.shape[1]]))
+    zero_pad_part = np.array(([int(math.ceil(zero_pad[0] / 2)), int(math.ceil(zero_pad[1] / 2))]))
+    Img_zero_pad = np.lib.pad(dicom_numpy_array, (
+    (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (0, 0)),
+                              mode='constant')
+
+    for iZ in range(0, dicom_numpy_array.shape[2], 1):
+        for iY in range(0, int(size_zero_pad[0] - dOverlap[0]), int(dNotOverlap[0])):
+            for iX in range(0, int(size_zero_pad[1] - dOverlap[1]), int(dNotOverlap[1])):
+                dPatch = Img_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ]
+                dPatch = dPatch[:, :, np.newaxis]
+
+                if dPatches is None:
+                    dPatches = dPatch
+                else:
+                    dPatches = np.concatenate((dPatches, dPatch), axis=2)
+
+    return dPatches

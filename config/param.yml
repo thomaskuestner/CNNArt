@@ -9,7 +9,7 @@ motion_head: &id001
    bestmodel : {CNN2D: "head_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_abd: &id002
-   name      : "motion_abd" 
+   name      : "motion_abd"
    dataref   : ["t1_tse_tra_fs_mbh_Leber_0004"]
    labelref  : [0]
    dataart   : ["t1_tse_tra_fs_mbh_Leber_Motion_0005"]
@@ -18,7 +18,7 @@ motion_abd: &id002
    bestmodel : {CNN2D: "abdomen_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_all: &id003
-   name      : "motion_all" 
+   name      : "motion_all"
    dataref   : ["t1_tse_tra_Kopf_0002", "t1_tse_tra_fs_mbh_Leber_0004"]
    labelref  : [0 0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_mbh_Leber_Motion_0005"]
@@ -37,13 +37,17 @@ selectedDatabase: *id001
 # see *.py files in subfolders of "./networks"
 # naming convention: artifactType_bodyRegion_network OR artifactType_network
 # CNN2D, CNN3D, MNetArt, VNetArt
-network : "motion_all_CNN2D"
+network : "motion_new_CNN2D"
 
 # scaling range
 range : [0, 1]
 # patches
 patchSize : [40, 40] # x,y
 patchOverlap : 0.5 # 50%
+# patching strategy
+# 'fRigidPatching': pathching with patch-wise labels
+# 'normalPatching': patching with volume-wise labels
+sPatching : "normalPatching"
 # splitting strategy
 # 'normal': percentage splitting
 # 'crossvalidation_patient': cross validation on patient (leave one patient out)

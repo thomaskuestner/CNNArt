@@ -33,7 +33,7 @@ def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes, le
             print "Model: 2D_CNN"
             print "learning rate: " + str(iLearn)
             print "batch size: " + str(iBatch)
-            cnn= fCreateModel(patchSize, learningRate=iLearn, optimizer='Adam')
+            cnn = fCreateModel(patchSize, learningRate=iLearn, optimizer='Adam')
             fTrainInner(cnn, X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs, CV_Patient=CV_Patient)
 
 
@@ -63,7 +63,7 @@ def fTrainInner(cnn, X_train, y_train, X_test, y_test, sOutPath, patchSize, batc
 
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
     callbacks.append(
-        ModelCheckpoint('/home/s1222/no_backup/s1222/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
+        ModelCheckpoint('./checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
                         period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
     callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
