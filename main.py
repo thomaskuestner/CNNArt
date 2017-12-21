@@ -62,27 +62,27 @@ elif glob.glob(sDatafile):
         y_test = hf['y_test'][:]
         patchSize = hf['patchSize'][:]
 
-else: # perform patching
+else:   # perform patching
+    # parameters initialization
     dAllPatches = np.zeros((patchSize[0], patchSize[1], 0))
     dAllLabels = np.zeros(0)
     dAllPats = np.zeros((0, 1))
     lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
     iLabels = cfg['selectedDatabase']['labelref'] + cfg['selectedDatabase']['labelart']
-    iValidPat = 0
+    sPatching = cfg['sPatching']
     for ipat, pat in enumerate(dbinfo.lPats):
         if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
             for iseq, seq in enumerate(lDatasets):
                 # patches and labels of reference/artifact
-                tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), cfg['patchSize'], cfg['patchOverlap'], 1 )
+                tmpPatches, tmpLabels = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), cfg['patchSize'], cfg['patchOverlap'], 1, sPatching)
                 dAllPatches = np.concatenate((dAllPatches, tmpPatches), axis=2)
                 dAllLabels = np.concatenate((dAllLabels, iLabels[iseq]*tmpLabels), axis=0)
-                dAllPats = np.concatenate((dAllPats, iValidPat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)
-            iValidPat += 1
+                dAllPats = np.concatenate((dAllPats, ipat*np.ones((tmpLabels.shape[0], 1), dtype=np.int)), axis=0)
         else:
             pass
-        
+
     # perform splitting
-    X_train, y_train, X_test, y_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], patchSize, cfg['patchOverlap'], cfg['dSplitval'], '')
+    X_train, y_train, X_test, y_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], patchSize, cfg['patchOverlap'], cfg['dSplitval'], '', cfg['nFolds'])
 
     # save to file (deprecated)
     # sio.savemat(sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '_input.mat', {'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize']})

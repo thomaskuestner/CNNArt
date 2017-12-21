@@ -11,7 +11,7 @@ from utils.Patching import*
 import cProfile
 
 
-def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling):
+def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sPatching):
     # set variables
     model = os.path.basename(os.path.dirname(pathDicom))
     dir = os.path.dirname(os.path.dirname(pathDicom))
@@ -22,13 +22,19 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling):
     #pathDicom = mrt_Folder + "/" + proband + "/dicom_sorted/" + model + "/"
     # Creation of dicom_numpy_array and mask_numpy_array
     dicom_numpy_array = create_DICOM_Array(os.path.join(pathDicom, ''))
-    mask_numpy_array = create_MASK_Array(proband, model, dicom_numpy_array.shape[0], dicom_numpy_array.shape[1], dicom_numpy_array.shape[2])
+
     # Normalisation
     range_norm = [0, 1]
     scale_dicom_numpy_array = (dicom_numpy_array - np.min(dicom_numpy_array)) * (range_norm[1] - range_norm[0]) / (np.max(dicom_numpy_array) - np.min(dicom_numpy_array))
 
     # RigidPatching
-    dPatches, dLabel = fRigidPatching(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling)
+    if sPatching == 'fRigidPatching':
+        mask_numpy_array = create_MASK_Array(proband, model, dicom_numpy_array.shape[0], dicom_numpy_array.shape[1],
+                                             dicom_numpy_array.shape[2])
+        dPatches, dLabel = fRigidPatching(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling)
+    elif sPatching == 'normalPatching':
+        dPatches = normalPatching(scale_dicom_numpy_array, patchSize, patchOverlap)
+        dLabel = np.ones((dPatches.shape[2]))
 
     return dPatches, dLabel
 

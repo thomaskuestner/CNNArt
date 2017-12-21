@@ -159,7 +159,6 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
                 y_trainFold.append(y_train)
                 y_testFold.append(y_test)
 
-
         X_trainFold = np.asarray(X_trainFold)
         X_testFold = np.asarray(X_testFold)
         y_trainFold = np.asarray(y_trainFold)
