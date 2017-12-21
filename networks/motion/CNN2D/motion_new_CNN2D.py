@@ -148,7 +148,7 @@ def fCreateModel(patchSize, optimizer='Adam', learningRate=0.001):# only on lins
      #input shape : 1 means grayscale... richtig uebergeben...
     cnn.add(Activation('relu'))
 
-    cnn.add(Conv2D(64,                    #learning rate: 0.1 -> 76%
+    cnn.add(Conv4D(64,                    #learning rate: 0.1 -> 76%
                             kernel_size=(7,7),
                             kernel_initializer='he_normal',
                             weights=None,
