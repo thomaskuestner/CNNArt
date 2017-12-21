@@ -92,7 +92,7 @@ def fLoadDataForOptim(sInPath):
 #        if not any(x in sVarname for x in ['X_train', 'X_test', 'y_train', 'y_test'] ):
 #            conten[sVarname]
 
-def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearningRate, iEpochs):
+def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearningRate, iEpochs, CV_Patient):
     """CNN Models"""
     # check model
     if 'motion' in sModelIn:
@@ -158,14 +158,14 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
 
         elif sParaOptim == 'grid':  # grid search << backward compatibility
             cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
-                                dData['patchSize'], iBatchSize, iLearningRate, iEpochs)
+                                dData['patchSize'], iBatchSize, iLearningRate, iEpochs, CV_Patient)
 
         else:  # no optimization or grid search (if batchSize|learningRate are arrays)
             cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
-                            dData['patchSize'], iBatchSize, iLearningRate, iEpochs)
+                            dData['patchSize'], iBatchSize, iLearningRate, iEpochs, CV_Patient)
 
     else:  # predicting
-        cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, dData['patchSize'], iBatchSize[0])
+        cnnModel.fPredict(dData['X_test'], dData['y_test'], sOutPath, dData['patchSize'], iBatchSize[0], iLearningRate)
 
 
 # Main Code

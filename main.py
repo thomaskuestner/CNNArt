@@ -11,10 +11,7 @@ import utils.Training_Test_Split as ttsplit
 import cnn_main
 import scaling
 
-# parse parameters
-# training or prediction
-lTrain = True
-lSave = False # save intermediate test, training sets
+
 with open('config' + os.sep + 'paramnormal.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
 
@@ -93,7 +90,7 @@ else: # perform patching
      
     # save to file (deprecated)
     # sio.savemat(sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '_input.mat', {'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize']})
-     with h5py.File(sDatafile, 'w') as hf:
+    with h5py.File(sDatafile, 'w') as hf:
          hf.create_dataset('X_train', data=X_train)
          hf.create_dataset('X_test', data=X_test)
          hf.create_dataset('y_train', data=y_train)
@@ -102,6 +99,14 @@ else: # perform patching
          hf.create_dataset('patchOverlap', data=cfg['patchOverlap'])
          hf.create_dataset('OrigPatchSize', data=OrigPatchSize)
 
+# parse parameters
+# training or prediction
+lTrain = True
+lSave = False  # save intermediate test, training sets
 # perform training
+for iFold in range(0,2):
 #for iFold in range(0,len(X_train)):
-    #cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])
+    if cfg['sSplitting'] == 'crossvalidation_patient':
+        CV_Patient = iFold + 1
+    cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+
