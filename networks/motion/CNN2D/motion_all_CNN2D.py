@@ -176,18 +176,18 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     #                    period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
     #callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 		
-    cnn.compile(loss='categorical_crossentropy', optimizer=opti)
-        
+    cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
+    print(cnn.summary)
+
     result = cnn.fit(X_train,
                      y_train,
                      validation_data=[X_test, y_test],
                      nb_epoch=iEpochs,
                      batch_size=batchSize, 
-                     show_accuracy=True, 
                      callbacks=callbacks,
                      verbose=1)
                         
-    loss_test, acc_test = cnn.evaluate(X_test, y_test,batch_size=batchSize,show_accuracy=True)
+    loss_test, acc_test = cnn.evaluate(X_test, y_test,batch_size=batchSize)
     		
     prob_test = cnn.predict(X_test, batchSize, 0)
         
@@ -245,7 +245,7 @@ def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
     opti = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     callbacks = [EarlyStopping(monitor='val_loss',patience=10,verbose=1)]    
     
-    model.compile(loss='categorical_crossentropy', optimizer=opti)
+    model.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
     model.load_weights(weight_name)
 
     # load complete model (including weights); keras > 0.7
@@ -254,8 +254,8 @@ def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
     # assume artifact affected shall be tested!
     #y_test = np.ones((len(X_test),1))
     
-    score_test, acc_test = model.evaluate(X_test, y_test,batch_size=batchSize,show_accuracy=True)
-    prob_pre = model.predict(X_test, batchSize, 0)
+    score_test, acc_test = model.evaluate(X_test, y_test,batch_size=batchSize)
+    prob_pre = model.predict(X_test, batchSize, 1)
     
     #modelSave = model_name[:-5] + '_pred.mat'
     modelSave = model_name[0] + '_pred.mat'
