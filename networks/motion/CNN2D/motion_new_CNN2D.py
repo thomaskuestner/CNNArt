@@ -104,32 +104,53 @@ def fTrainInner(cnn, X_train, y_train, X_test, y_test, sOutPath, patchSize, batc
                              'prob_test': prob_test})
 
 
-def fPredict(X, y, sOutPath, patchSize, batchSize=64, learningRate=0.001, CV_Patient=0):
+def fPredict(X_test, y_test, sOutPath, patchSize, batchSizes=64, learningRates=0.001, CV_Patient=0):
     # takes the .mat file as a string
 
-    sModelPath = sModelName.replace(".mat", "")
-    # sModelPath = sModelPath.replace("_json", "")
-    weight_name = sModelPath + '_weights.h5'
-    model_json = sModelPath + '_json'
-    model_all = sModelPath + '_model.h5'
+    # change the shape of the dataset
 
-    model_json = open(model_json, 'r')
-    model_string = model_json.read()
-    model_json.close()
-    model = model_from_json(model_string)
+    X_test = np.expand_dims(X_test, axis=1)
+    y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32)-1)]).T
 
-    model.compile(loss='categorical_crossentropy', optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
-    model.load_weights(weight_name)
+    # save names
+    _, sPath = os.path.splitdrive(sOutPath)
+    sPath, sFilename = os.path.split(sPath)
+    sFilename, sExt = os.path.splitext(sFilename)
 
-    score_test, acc_test = model.evaluate(X, y, batch_size=batchSize)
-    print 'score:' + str(score_test) + 'acc:' + str(acc_test)
-    prob_pre = model.predict(X, batch_size=batchSize, verbose=1)
 
-    _, sModelFileSave = os.path.split(sModelPath)
+    for iBatch in batchSizes:
+        for iLearn in learningRates:
+            model_name = sPath + '/' + sFilename + '/'
+            if CV_Patient != 0: model_name = model_name + 'CV' + str(
+                CV_Patient) + '_'  # determine if crossValPatient is used...
+            sModelName = model_name + str(int(patchSize[0])) + str(int(patchSize[0])) \
+                         + '_lr_' + str(iLearn) + '_bs_' + str(iBatch)
+            print "Predict in Model: 2D_CNN"
+            print "learning rate: " + str(iLearn)
+            print "batch size: " + str(iBatch)
+            # sModelPath = sModelName.replace(".mat", "")
+            # sModelPath = sModelPath.replace("_json", "")
+            weight_name = sModelName + '_weights.h5'
+            model_json = sModelName + '_json'
+            model_all = sModelName + '_model.h5'
 
-    modelSave = sOutPath + sModelFileSave + '_pred.mat'
-    print modelSave
-    sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
+            model_json = open(model_json, 'r')
+            model_string = model_json.read()
+            model_json.close()
+            model = model_from_json(model_string)
+
+            model.compile(loss='categorical_crossentropy', optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
+            model.load_weights(weight_name)
+
+            score_test, acc_test = model.evaluate(X_test, y_test, batch_size=iBatch)
+            print 'score:' + str(score_test) + 'acc:' + str(acc_test)
+            prob_pre = model.predict(X_test, batch_size=iBatch, verbose=1)
+
+            #_, sModelFileSave = os.path.split(sOutPath)
+
+            modelSave = sModelName + '_pred.mat'
+            print modelSave
+            sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
 
 
 def fCreateModel(patchSize, optimizer='Adam', learningRate=0.001):# only on linse 3!!!!!!!!!!!!

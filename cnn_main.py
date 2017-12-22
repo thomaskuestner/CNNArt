@@ -165,7 +165,7 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
                             dData['patchSize'], iBatchSize, iLearningRate, iEpochs, CV_Patient)
 
     else:  # predicting
-        cnnModel.fPredict(dData['X_test'], dData['y_test'], sOutPath, dData['patchSize'], iBatchSize[0], iLearningRate)
+        cnnModel.fPredict(dData['X_test'], dData['y_test'], sOutPath, dData['patchSize'], iBatchSize, iLearningRate, CV_Patient)
 
 
 # Main Code
