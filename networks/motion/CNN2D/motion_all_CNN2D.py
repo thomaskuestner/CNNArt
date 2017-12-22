@@ -8,22 +8,18 @@ import os.path
 import scipy.io as sio  
 import numpy as np                  # for algebraic operations, matrices
 import keras
-from keras.models import Sequential
-from keras.layers.core import Dense, Activation, Flatten#, Layer  Dropout, Flatten
-#from keras.layers import containers
+import keras.optimizers
+from keras.models import Sequential, Model
+from keras.layers import Input
+from keras.layers.core import Dense, Activation, Flatten, Dropout, Lambda, Reshape
+from keras.activations import relu, elu, softmax
+from keras.layers.advanced_activations import LeakyReLU, PReLU
+from keras.initializers import Constant
+from keras.layers import concatenate, add
+from keras.layers.convolutional import Conv3D,Conv2D, MaxPooling3D, MaxPooling2D, ZeroPadding3D
+from keras.regularizers import l1_l2,l2
 from keras.models import model_from_json
-#from hyperas.distributions import choice, uniform, conditional
-#from hyperopt import Trials, STATUS_OK
-
-from keras.layers.convolutional import Convolution2D
-#from keras.layers.convolutional import MaxPooling2D as pool2
-from keras.callbacks import EarlyStopping
-#from keras.layers.convolutional import ZeroPadding2D as zero2d
-from keras.regularizers import l2#, activity_l2
-#from theano import function
-
-from keras.optimizers import SGD
-
+from keras.callbacks import EarlyStopping, ModelCheckpoint,ReduceLROnPlateau
 
 def createModel(patchSize, architecture='new'):
     if architecture == 'new':
@@ -169,7 +165,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     _, sPath = os.path.splitdrive(sOutPath)
     sPath,sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
-    model_name = sPath + '/' + sFilename + str(patchSize[0,0]) + str(patchSize[0,1]) +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
+    model_name = sPath + '/' + sFilename + str(patchSize[0]) + str(patchSize[1]) +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     weight_name = model_name + '_weights.h5'
     model_json = model_name + '_json'
     model_all = model_name + '_model.h5'            

@@ -19,7 +19,6 @@ with open('config' + os.sep + 'paramnormal.yml', 'r') as ymlfile:
 # default database: MRPhysics with ['newProtocol','dicom_sorted']
 dbinfo = DatabaseInfo(cfg['MRdatabase'],cfg['subdirs'])
 
-
 # load/create input data
 patchSize = cfg['patchSize']
 if cfg['sSplitting'] == 'normal':
@@ -66,16 +65,14 @@ else: # perform patching
     dAllPats = np.zeros((0, 1))
     lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
     iLabels = cfg['selectedDatabase']['labelref'] + cfg['selectedDatabase']['labelart']
-    iValidPat = 0
     for ipat, pat in enumerate(dbinfo.lPats):
         if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
             for iseq, seq in enumerate(lDatasets):
                 # patches and labels of reference/artifact
-                tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), cfg['patchSize'], cfg['patchOverlap'], 1 )
+                tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), cfg['patchSize'], cfg['patchOverlap'], 1, cfg['sLabeling'])
                 dAllPatches = np.concatenate((dAllPatches, tmpPatches), axis=2)
                 dAllLabels = np.concatenate((dAllLabels, iLabels[iseq]*tmpLabels), axis=0)
-                dAllPats = np.concatenate((dAllPats, iValidPat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)
-            iValidPat += 1
+                dAllPats = np.concatenate((dAllPats, ipat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)
         else:
             pass
         

@@ -11,7 +11,7 @@ from utils.Patching import*
 import cProfile
 
 
-def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling):
+def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabeling):
     # set variables
     model = os.path.basename(os.path.dirname(pathDicom))
     dir = os.path.dirname(os.path.dirname(pathDicom))
@@ -28,7 +28,7 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling):
     scale_dicom_numpy_array = (dicom_numpy_array - np.min(dicom_numpy_array)) * (range_norm[1] - range_norm[0]) / (np.max(dicom_numpy_array) - np.min(dicom_numpy_array))
 
     # RigidPatching
-    dPatches, dLabel = fRigidPatching(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling)
+    dPatches, dLabel = fRigidPatching(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, sLabeling)
 
     return dPatches, dLabel
 
