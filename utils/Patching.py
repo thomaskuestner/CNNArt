@@ -19,7 +19,7 @@ import math
 #        dLabels ---> 1D-Numpy-Array with all corresponding labels                                                                      #
 #########################################################################################################################################
 
-def fRigidPatching(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling):
+def fRigidPatching(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, sLabeling):
     dPatches = None
     move_artefact = False
     shim_artefact = False
@@ -35,52 +35,65 @@ def fRigidPatching(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,
     Img_zero_pad = np.lib.pad(dicom_numpy_array, (
     (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (0, 0)),
                               mode='constant')
-    Mask_zero_pad = np.lib.pad(mask_numpy_array, (
-    (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (0, 0)),
-                              mode='constant')
+    if sLabeling == 'volume':
+        for iZ in range(0, dicom_numpy_array.shape[2], 1):
+            for iY in range(0, int(size_zero_pad[0] - dOverlap[0]), int(dNotOverlap[0])):
+                for iX in range(0, int(size_zero_pad[1] - dOverlap[1]), int(dNotOverlap[1])):
+                    dPatch = Img_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ]
+                    dPatch = dPatch[:, :, np.newaxis]
 
-    for iZ in range(0, dicom_numpy_array.shape[2], 1):
-        for iY in range(0, int(size_zero_pad[0] - dOverlap[0]), int(dNotOverlap[0])):
-            for iX in range(0, int(size_zero_pad[1] - dOverlap[1]), int(dNotOverlap[1])):
-                dPatch = Img_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ]
-                dPatch = dPatch[:, :, np.newaxis]
+                    if dPatches is None:
+                        dPatches = dPatch
+                    else:
+                        dPatches = np.concatenate((dPatches, dPatch), axis=2)
+        dLabels = np.ones((dPatches.shape[2]))
+    elif sLabeling == 'patch':
+        Mask_zero_pad = np.lib.pad(mask_numpy_array, (
+        (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (0, 0)),
+                                  mode='constant')
 
-                if dPatches is None:
-                    dPatches = dPatch
-                else:
-                    dPatches = np.concatenate((dPatches, dPatch), axis=2)
+        for iZ in range(0, dicom_numpy_array.shape[2], 1):
+            for iY in range(0, int(size_zero_pad[0] - dOverlap[0]), int(dNotOverlap[0])):
+                for iX in range(0, int(size_zero_pad[1] - dOverlap[1]), int(dNotOverlap[1])):
+                    dPatch = Img_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ]
+                    dPatch = dPatch[:, :, np.newaxis]
 
-                dPatch_mask = Mask_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ]
-                patch_number_value = patchSize[0] * patchSize[1]
+                    if dPatches is None:
+                        dPatches = dPatch
+                    else:
+                        dPatches = np.concatenate((dPatches, dPatch), axis=2)
 
-                if np.count_nonzero((dPatch_mask==1).astype(np.int)) > int(ratio_labeling*patch_number_value):
-                    move_artefact = True
-                if np.count_nonzero((dPatch_mask==2).astype(np.int)) > int(ratio_labeling*patch_number_value):
-                    shim_artefact = True
-                if np.count_nonzero((dPatch_mask==3).astype(np.int)) > int(ratio_labeling*patch_number_value):
-                    noise_artefact = True
+                    dPatch_mask = Mask_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ]
+                    patch_number_value = patchSize[0] * patchSize[1]
 
-                label = [0]
+                    if np.count_nonzero((dPatch_mask==1).astype(np.int)) > int(ratio_labeling*patch_number_value):
+                        move_artefact = True
+                    if np.count_nonzero((dPatch_mask==2).astype(np.int)) > int(ratio_labeling*patch_number_value):
+                        shim_artefact = True
+                    if np.count_nonzero((dPatch_mask==3).astype(np.int)) > int(ratio_labeling*patch_number_value):
+                        noise_artefact = True
 
-                if move_artefact == True and shim_artefact != True and noise_artefact != True:
-                    label = [1]
-                elif move_artefact != True and shim_artefact == True and noise_artefact != True:
-                    label = [2]
-                elif move_artefact != True and shim_artefact != True and noise_artefact == True:
-                    label = [3]
-                elif move_artefact == True and shim_artefact == True and noise_artefact != True:
-                    label = [4]
-                elif move_artefact == True and shim_artefact != True and noise_artefact == True:
-                    label = [5]
-                elif move_artefact != True and shim_artefact == True and noise_artefact == True:
-                    label = [6]
-                elif move_artefact == True and shim_artefact == True and noise_artefact == True:
-                    label = [7]
+                    label = [0]
 
-                dLabels = np.concatenate((dLabels, label))
+                    if move_artefact == True and shim_artefact != True and noise_artefact != True:
+                        label = [1]
+                    elif move_artefact != True and shim_artefact == True and noise_artefact != True:
+                        label = [2]
+                    elif move_artefact != True and shim_artefact != True and noise_artefact == True:
+                        label = [3]
+                    elif move_artefact == True and shim_artefact == True and noise_artefact != True:
+                        label = [4]
+                    elif move_artefact == True and shim_artefact != True and noise_artefact == True:
+                        label = [5]
+                    elif move_artefact != True and shim_artefact == True and noise_artefact == True:
+                        label = [6]
+                    elif move_artefact == True and shim_artefact == True and noise_artefact == True:
+                        label = [7]
 
-                move_artefact = False
-                shim_artefact = False
-                noise_artefact = False
+                    dLabels = np.concatenate((dLabels, label))
+
+                    move_artefact = False
+                    shim_artefact = False
+                    noise_artefact = False
 
     return dPatches, dLabels
