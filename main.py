@@ -79,12 +79,6 @@ else: # perform patching
     # perform splitting
     X_train, y_train, X_test, y_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], patchSize, cfg['patchOverlap'], cfg['dSplitval'], '')
 
-    if patchSize[0] != 40:
-        X_train, X_test, NewpatchSize = scaling.fscalling(X_train, X_test, patchSize)
-        sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") +'to'+''.join(map(str, NewpatchSize)).replace(" ", "") + '.h5'
-        OrigPatchSize = patchSize
-        patchSize = NewpatchSize
-     
     # save to file (deprecated)
     # sio.savemat(sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '_input.mat', {'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize']})
     with h5py.File(sDatafile, 'w') as hf:
@@ -94,16 +88,18 @@ else: # perform patching
          hf.create_dataset('y_test', data=y_test)
          hf.create_dataset('patchSize', data=patchSize)
          hf.create_dataset('patchOverlap', data=cfg['patchOverlap'])
-         hf.create_dataset('OrigPatchSize', data=OrigPatchSize)
+
+# Perform resizing of patches if needed
+X_train, X_test, NewpatchSize, sDatafile = scaling.fscalling(X_train, X_test, patchSize, sDatafile)
+# sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") +'to'+''.join(map(str, NewpatchSize)).replace(" ", "") + '.h5'
 
 # parse parameters
 # training or prediction
 lTrain = True
 lSave = False  # save intermediate test, training sets
-# perform training
-for iFold in range(0,2):
-#for iFold in range(0,len(X_train)):
+
+for iFold in range(0,len(X_train)):
     if cfg['sSplitting'] == 'crossvalidation_patient':
         CV_Patient = iFold + 1
-    cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+    cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': NewpatchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
 
