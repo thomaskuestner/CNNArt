@@ -47,8 +47,8 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     learningRate = 0.01 if learningRate is None else learningRate
     iEpochs = 300 if iEpochs is None else iEpochs
 
-    print 'Training(pre) CNN (VGGNet)'
-    print 'with lr = ' + str(i) + ' , batchSize = ' + str(j)
+    print('Training(pre) CNN (VGGNet)')
+    print('with lr = ' + str(i) + ' , batchSize = ' + str(j))
 
     # build model
     base = VGG16(include_top=False, weights=None, input_shape=(1, 180, 180))
@@ -104,7 +104,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 	val_acc = result.history['val_acc']
 	val_loss = result.history['val_loss']
 
-	print 'Saving results: ' + model_name
+	print('Saving results: ' + model_name)
 	sio.savemat(model_name, {'model_settings': model_json,
 	                         'model': model_all,
 	                         'weights': weight_name,

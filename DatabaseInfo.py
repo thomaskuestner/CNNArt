@@ -28,9 +28,9 @@ class DatabaseInfo:
         self.lPats = [name for name in os.listdir(self.sPathIn) if os.path.isdir(os.path.join(self.sPathIn, name))]
 
         # parse config file (according to set database) => TODO (TK): replace by automatic parsing in directory
-        ifile = open('config'+os.sep+'database'+os.sep+self.sDatabase+'.csv',"rb") # config file must exist for database!
+        ifile = open('config'+os.sep+'database'+os.sep+self.sDatabase+'.csv',"r") # config file must exist for database!
         reader = csv.reader(ifile)
-        reader.next()
+        next(reader)
         #lImgData = []
         #for i, rows in enumerate(reader):
         #    if i == 0:
