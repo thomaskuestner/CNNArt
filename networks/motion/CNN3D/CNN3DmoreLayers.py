@@ -18,7 +18,7 @@ def fTrain(sOutPath, patchSize,sInPaths=None,sInPaths_valid=None,X_train=None, Y
     #add for loops here
     learning_rate = 0.001
     cnn, sModelName= fCreateModel(patchSize, learningRate=learning_rate, optimizer='Adam',architecture='Layers4')
-    print "Modelname:" + sModelName
+    print("Modelname:" + sModelName)
     fTrainInner(sOutPath, cnn, sModelName, X_train=X_train, Y_train=Y_train, X_test=X_test, Y_test=Y_test,CV_Patient=CV_Patient,
          batchSize=64, iEpochs=300)
 
@@ -26,8 +26,8 @@ def fTrain(sOutPath, patchSize,sInPaths=None,sInPaths_valid=None,X_train=None, Y
 def fTrainInner(sOutPath, model, sModelName, patchSize=None, sInPaths=None, sInPaths_valid=None, X_train=None, Y_train=None, X_test=None, Y_test=None,  batchSize=64, iEpochs=299, CV_Patient=0):
     '''train a model with training data X_train with labels Y_train. Validation Data should get the keywords Y_test and X_test'''
 
-    print 'Training CNN'
-    print 'with '  + 'batchSize = ' + str(batchSize)
+    print('Training CNN')
+    print('with '  + 'batchSize = ' + str(batchSize))
 
     # save names
     _, sPath = os.path.splitdrive(sOutPath)
@@ -42,7 +42,7 @@ def fTrainInner(sOutPath, model, sModelName, patchSize=None, sInPaths=None, sInP
     model_mat = model_name + '.mat'
 
     if (os.path.isfile(model_mat)):  # no training if output file exists
-        print '----------already trained->go to next----------'
+        print('----------already trained->go to next----------')
         return
 
 
@@ -59,9 +59,9 @@ def fTrainInner(sOutPath, model, sModelName, patchSize=None, sInPaths=None, sInP
                          callbacks=callbacks,
                          verbose=1)
 
-    print '\nscore and acc on test set:'
+    print('\nscore and acc on test set:')
     score_test, acc_test = model.evaluate(X_test, Y_test, batch_size=batchSize, verbose=1)
-    print '\npredict class probabillities:'
+    print('\npredict class probabillities:')
     prob_test = model.predict(X_test, batchSize, verbose=1)
 
     # save model
@@ -78,7 +78,7 @@ def fTrainInner(sOutPath, model, sModelName, patchSize=None, sInPaths=None, sInP
     val_loss = result.history['val_loss']
 
 
-    print '\nSaving results: ' + model_name
+    print('\nSaving results: ' + model_name)
     sio.savemat(model_name, {'model_settings': model_json,
                              'model': model_all,
                              'weights': weight_name,
@@ -115,13 +115,13 @@ def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
 
 
     score_test, acc_test = model.evaluate(X, y, batch_size=batchSize)
-    print 'loss'+str(score_test)+ '   acc:'+ str(acc_test)
+    print('loss'+str(score_test)+ '   acc:'+ str(acc_test))
     prob_pre = model.predict(X, batch_size=batchSize, verbose=1)
-    print prob_pre[0:14,:]
+    print(prob_pre[0:14,:])
     _,sModelFileSave  = os.path.split(sModelPath)
 
     modelSave = sOutPath +sModelFileSave+ '_pred.mat'
-    print 'saving Model:{}'.format(modelSave)
+    print('saving Model:{}'.format(modelSave))
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
 
 def fCreateModel(patchSize, learningRate=1e-3, optimizer='SGD', dr_rate=0.0, input_dr_rate=0.0, max_norm=5, iPReLU=0, l2_reg=1e-6, architecture='Layers4'):
@@ -303,7 +303,7 @@ def fCreateModel(patchSize, learningRate=1e-3, optimizer='SGD', dr_rate=0.0, inp
 ####################################################################helpers#############################################
 def fGetOptimizerAndLoss(optimizer,learningRate=0.001, loss='categorical_crossentropy'):
     if optimizer not in ['Adam', 'SGD', 'Adamax', 'Adagrad', 'Adadelta', 'Nadam', 'RMSprop']:
-        print 'this optimizer does not exist!!!'
+        print('this optimizer does not exist!!!')
         return None
     loss='categorical_crossentropy'
 
