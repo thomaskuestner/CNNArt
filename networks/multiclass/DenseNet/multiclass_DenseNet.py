@@ -46,8 +46,8 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 	learningRate = 0.01 if learningRate is None else learningRate
 	iEpochs = 300 if iEpochs is None else iEpochs
 
-	print 'Training DenseNet'
-	print 'with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize)
+	print('Training DenseNet')
+	print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
 	# save names
 	_, sPath = os.path.splitdrive(sOutPath)

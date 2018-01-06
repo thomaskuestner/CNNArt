@@ -287,8 +287,8 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 	learningRate = 0.01 if learningRate is None else learningRate
 	iEpochs = 300 if iEpochs is None else iEpochs
 
-	print 'Training CNN DenseResNet'
-	print 'with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize)
+	print('Training CNN DenseResNet')
+	print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
 	# save names
 	_, sPath = os.path.splitdrive(sOutPath)
@@ -310,7 +310,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 	elif(patchSize[0,0]==180 & patchSize[0,1]==180):
 		cnn = create180180Model(patchSize)
 	else:
-		print 'NO models for patch size ' + patchSize[0,0] + patchSize[0,0]
+		print('NO models for patch size ' + patchSize[0,0] + patchSize[0,0])
 
 
 	# opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)

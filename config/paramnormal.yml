@@ -38,7 +38,7 @@ selectedDatabase: *id001
 # naming convention: artifactType_bodyRegion_network OR artifactType_network
 # CNN2D, CNN3D, MNetArt, VNetArt
 #network : "motion_head_CNN2D"
-network : "motion_new_CNN2D"
+network : "motion_all_CNN2D"
 #network : "motion_3D_CNN"
 
 # scaling range
@@ -46,6 +46,13 @@ range : [0, 1]
 # patches
 patchSize : [80, 80] # x,y
 patchOverlap : 0.5 # 50%
+# sLabeling strategy
+# 'volume': volume-wise labeling
+# 'patch': patch-wise labeling
+sLabeling : "volume"
+# patching strategy
+# 'rigidPatching' or'adaptivePatching':
+sPatching : "rigidPatching"
 # splitting strategy
 # 'normal': percentage splitting
 # 'crossvalidation_patient': cross validation on patient (leave one patient out)
@@ -60,7 +67,14 @@ dSplitval : 0.1
 sOpti : "grid"
 # optimized parameters
 batchSize : [128]
-#lr : [0.1, 0.01, 0.05, 0.005, 0.001]
-lr : [0.1, 0.05]
+lr : [0.1, 0.01, 0.05, 0.005, 0.001]
 # amount of epochs
 epochs : 300
+# perform training (true) or prediction (false)
+lTrain : true
+# save intermediate results
+lSave : false
+# (list of) path(s) of to be predicted images
+lPredictImg : ["/med_data/ImageSimilarity/Databases/MRPhysics/..."] 
+# (list with) labels of to be predicted images (either scalar or path to patch-wise label file)
+lLabelPredictImg : [ 1 ]

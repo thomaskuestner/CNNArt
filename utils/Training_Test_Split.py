@@ -130,7 +130,7 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         y_trainFold = []
         y_testFold = []
 
-        for ind_split in xrange(0, n_splits-1):
+        for ind_split in range(0, n_splits-1):
             train_index = np.where(allPats != ind_split)[0]
             test_index = np.where(allPats == ind_split)[0]
             X_train, X_test = allPatches[train_index], allPatches[test_index]

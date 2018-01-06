@@ -26,8 +26,8 @@ from networks.motion.VNetArt import *
 from networks.multiclass.DenseResNet import *
 from networks.multiclass.InceptionNet import *
 
-from hyperopt import Trials, STATUS_OK, tpe
-from hyperas import optim
+#from hyperopt import Trials, STATUS_OK, tpe
+#from hyperas import optim
 
 
 
@@ -113,7 +113,7 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
         sys.exit("Model is not supported")
 
     # dynamic loading of corresponding model
-    cnnModel = __import__(sModel, globals(), locals(), ['createModel', 'fTrain', 'fPredict'], -1)  # dynamic module loading with specified functions and with relative implict importing (level=-1) -> only in Python2
+    cnnModel = __import__(sModel, globals(), locals(), ['createModel', 'fTrain', 'fPredict'], 0)  # dynamic module loading with specified functions and with absolute importing (level=0) -> work in both Python2 and Python3
 
     # train (w/ or w/o optimization) and predicting
     if lTrain:  # training

@@ -36,7 +36,9 @@ selectedDatabase: *id001
 # network architecture (if existing for chosen database!)
 # see *.py files in subfolders of "./networks"
 # naming convention: artifactType_bodyRegion_network OR artifactType_network
-# CNN2D, CNN3D, MNetArt, VNetArt
+# artifactType: motion, multiclass
+# bodyRegion: abd, head, all
+# network: CNN2D, CNN3D, MNetArt, VNetArt
 network : "motion_all_CNN2D"
 
 # scaling range
@@ -68,3 +70,11 @@ batchSize : [128]
 lr : [0.1, 0.01, 0.05, 0.005, 0.001]
 # amount of epochs
 epochs : 300
+# perform training (true) or prediction (false)
+lTrain : true
+# save intermediate results
+lSave : false
+# (list of) path(s) of to be predicted images
+lPredictImg : ["/med_data/ImageSimilarity/Databases/MRPhysics/..."] 
+# (list with) labels of to be predicted images (either scalar or path to patch-wise label file)
+lLabelPredictImg : [ 1 ]
