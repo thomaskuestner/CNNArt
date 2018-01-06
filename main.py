@@ -108,6 +108,30 @@ if lTrain:
     for iFold in range(0, len(X_train)):
         cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])
 =======
+    # save to file (deprecated)
+    # sio.savemat(sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '_input.mat', {'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize']})
+    with h5py.File(sDatafile, 'w') as hf:
+         hf.create_dataset('X_train', data=X_train)
+         hf.create_dataset('X_test', data=X_test)
+         hf.create_dataset('y_train', data=y_train)
+         hf.create_dataset('y_test', data=y_test)
+         hf.create_dataset('patchSize', data=patchSize)
+         hf.create_dataset('patchOverlap', data=cfg['patchOverlap'])
+
+# Perform resizing of patches if needed
+X_train, X_test, NewpatchSize, sDatafile = scaling.fscalling(X_train, X_test, patchSize, sDatafile)
+# sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") +'to'+''.join(map(str, NewpatchSize)).replace(" ", "") + '.h5'
+
+# parse parameters
+# training or prediction
+lTrain = True
+lSave = False  # save intermediate test, training sets
+
+for iFold in range(0,len(X_train)):
+    if cfg['sSplitting'] == 'crossvalidation_patient':
+        CV_Patient = iFold + 1
+    cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': NewpatchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+>>>>>>> d89b74770859338c61daa9a99f75edd3f8561684
 
 else: 
     ################

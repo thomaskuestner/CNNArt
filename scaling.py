@@ -5,7 +5,14 @@ from scipy import interpolate
 import cnn_main
 import time
 
+def fscalling(X_train, X_test, patchSize, sDatafile):
+    # one value for the aimed patch size
+    afterSize = 40
+
     # Prepare for the using of scipy.interpolation: create the coordinates of grid
+    if patchSize[0] == afterSize:
+        return X_train, X_test, patchSize, sDatafile
+    elif patchSize[0] < afterSize:
         xaxis = np.arange(0, afterSize, 2)
         yaxis = np.arange(0, afterSize, 2)
     else:
@@ -21,6 +28,8 @@ import time
         zaxis_train = np.arange(lenTrain)
         zaxis_test = np.arange(lenTest)
 
+        # in batches
+        # Up scaling the training set
         Batch=20
         dx_Train = None
         for ibatch in range(Batch):
@@ -44,6 +53,7 @@ import time
             dAllx_train = np.concatenate((dAllx_train, dFoldx_train), axis=0)
 
 
+        # Up scaling the test set
         dx_Test = None
         for ibatch in range(Batch):
 
@@ -67,9 +77,12 @@ import time
             dAllx_test = np.concatenate((dAllx_test, dFoldx_test), axis=0)
 
     patchSize = [afterSize, afterSize]
-    return dAllx_train, dAllx_test, patchSize
 
+    return dAllx_train, dAllx_test, patchSize, sDatafile
+
+if __name__ == "__main__":  # main for test directly
     
+    forig = h5py.File('/home/s1241/no_backup/s1241/MultiScale/Headnormal/8080/testout/normal8080.h5','r')
     X_train=forig['X_train']
     X_test=forig['X_test']
     y_train=forig['y_train']
@@ -81,6 +94,7 @@ import time
     OrigPatchSize = patchSize
     patchSize = NewpatchSize
     
+    with h5py.File('/home/s1241/no_backup/s1241/MultiScale/Headnormal/8080/testout/normal8080to4040.h5', 'w') as hf:
         hf.create_dataset('X_train', data= NX_train)
         hf.create_dataset('X_test', data= NX_test)
         hf.create_dataset('y_train', data=y_train)
