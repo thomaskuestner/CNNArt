@@ -5,7 +5,6 @@ motion_head: &id001
    labelref  : [0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003"]
    labelart  : [1]
-   pathout   : "/home/s1241/no_backup/s1241/CNNArt/MultiScale/Headcross"
    bestmodel : {CNN2D: "head_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_abd: &id002
@@ -14,7 +13,6 @@ motion_abd: &id002
    labelref  : [0]
    dataart   : ["t1_tse_tra_fs_mbh_Leber_Motion_0005"]
    labelart  : [1]
-   pathout   : "/home/s1241/no_backup/s1241/CNNArt/MultiScale/Abdcross"
    bestmodel : {CNN2D: "abdomen_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_all: &id003
@@ -23,7 +21,6 @@ motion_all: &id003
    labelref  : [0 0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_mbh_Leber_Motion_0005"]
    labelart  : [1 1]
-   pathout   : "/home/s1241/no_backup/s1241/CNNArt/MultiScale/Allcross"
    bestmodel : {CNN2D: "all_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 #### set parameters ####
@@ -37,9 +34,12 @@ selectedDatabase: *id001
 # see *.py files in subfolders of "./networks"
 # naming convention: artifactType_bodyRegion_network OR artifactType_network
 # CNN2D, CNN3D, MNetArt, VNetArt
+<<<<<<< HEAD
 #network : "motion_head_CNN2D"
 network : "motion_all_CNN2D"
 #network : "motion_3D_CNN"
+=======
+>>>>>>> d89b74770859338c61daa9a99f75edd3f8561684
 
 # scaling range
 range : [0, 1]

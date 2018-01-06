@@ -85,6 +85,7 @@ if lTrain:
         # perform splitting
         X_train, y_train, X_test, y_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], patchSize, cfg['patchOverlap'], cfg['dSplitval'], '')
 
+<<<<<<< HEAD
     if patchSize[0] != 40:
         X_train, X_test, NewpatchSize = scaling.fscalling(X_train, X_test, patchSize)
         sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") +'to'+''.join(map(str, NewpatchSize)).replace(" ", "") + '.h5'
@@ -106,6 +107,7 @@ if lTrain:
     # perform training
     for iFold in range(0, len(X_train)):
         cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])
+=======
 
 else: 
     ################
