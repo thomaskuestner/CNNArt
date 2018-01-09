@@ -65,7 +65,7 @@ if lTrain:
             patchSize = hf['patchSize'][:]
 
     else: # perform patching
-        dAllPatches = np.zeros((patchSize[0], patchSize[1], 0))
+        dAllPatches = np.zeros((0, patchSize[0], patchSize[1]))
         dAllLabels = np.zeros(0)
         dAllPats = np.zeros((0, 1))
         lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
@@ -75,7 +75,7 @@ if lTrain:
                 for iseq, seq in enumerate(lDatasets):
                     # patches and labels of reference/artifact
                     tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), cfg['patchSize'], cfg['patchOverlap'], 1, cfg['sLabeling'])
-                    dAllPatches = np.concatenate((dAllPatches, tmpPatches), axis=2)
+                    dAllPatches = np.concatenate((dAllPatches, tmpPatches), axis=0)
                     dAllLabels = np.concatenate((dAllLabels, iLabels[iseq]*tmpLabels), axis=0)
                     dAllPats = np.concatenate((dAllPats, ipat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)
             else:
@@ -103,12 +103,12 @@ else:
     ################
     ## prediction ##
     ################
-    X_test = np.zeros((patchSize[0], patchSize[1], 0))
+    X_test = np.zeros((0, patchSize[0], patchSize[1]))
     y_test = np.zeros(0)
     for iImg in range(0,len(cfg['lPredictImg'])):
         # patches and labels of reference/artifact
         tmpPatches, tmpLabels  = datapre.fPreprocessData(cfg['lPredictImg'][iImg], cfg['patchSize'], cfg['patchOverlap'], 1, cfg['sLabeling'])
-        X_test = np.concatenate((X_test, tmpPatches), axis=2)
+        X_test = np.concatenate((X_test, tmpPatches), axis=0)
         y_test = np.concatenate((y_test, cfg['lLabelPredictImg'][iImg]*tmpLabels), axis=0)
     
     sNetworktype = cfg['network'].split("_")
