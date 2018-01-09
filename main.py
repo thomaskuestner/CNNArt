@@ -103,12 +103,12 @@ else:
     ################
     ## prediction ##
     ################
-    X_test = np.zeros((patchSize[0], patchSize[1], 0))
+    X_test = np.zeros((0, patchSize[0], patchSize[1]))
     y_test = np.zeros(0)
     for iImg in range(0,len(cfg['lPredictImg'])):
         # patches and labels of reference/artifact
         tmpPatches, tmpLabels  = datapre.fPreprocessData(cfg['lPredictImg'][iImg], cfg['patchSize'], cfg['patchOverlap'], 1, cfg['sLabeling'])
-        X_test = np.concatenate((X_test, tmpPatches), axis=2)
+        X_test = np.concatenate((X_test, tmpPatches), axis=0)
         y_test = np.concatenate((y_test, cfg['lLabelPredictImg'][iImg]*tmpLabels), axis=0)
     
     sNetworktype = cfg['network'].split("_")
