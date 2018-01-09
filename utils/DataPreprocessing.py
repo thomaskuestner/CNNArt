@@ -29,6 +29,7 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabelin
 
     # RigidPatching
     dPatches, dLabel = fRigidPatching(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, sLabeling)
+    dPatches = np.transpose(dPatches, (2, 0, 1))
 
     return dPatches, dLabel
 
