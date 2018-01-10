@@ -123,14 +123,15 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
             return X_trainFold, y_trainFold, X_testFold, y_testFold
 
     elif sSplitting == "crossvalidation_patient":
-        n_splits = len(np.unique(allPats))
+        unique_pats = np.unique(allPats)
+        #ssssn_splits = len(unique_pats)
 
         X_trainFold = []
         X_testFold = []
         y_trainFold = []
         y_testFold = []
 
-        for ind_split in range(0, n_splits-1):
+        for ind_split in unique_pats:
             train_index = np.where(allPats != ind_split)[0]
             test_index = np.where(allPats == ind_split)[0]
             X_train, X_test = allPatches[train_index], allPatches[test_index]
@@ -160,10 +161,10 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
                 y_testFold.append(y_test)
 
 
-        X_trainFold = np.asarray(X_trainFold)
-        X_testFold = np.asarray(X_testFold)
-        y_trainFold = np.asarray(y_trainFold)
-        y_testFold = np.asarray(y_testFold)
+        X_trainFold = np.asarray(X_trainFold, dtype='f')
+        X_testFold = np.asarray(X_testFold, dtype='f')
+        y_trainFold = np.asarray(y_trainFold, dtype='f')
+        y_testFold = np.asarray(y_testFold, dtype='f')
 
         if iReturn > 0:
             return X_trainFold, y_trainFold, X_testFold, y_testFold
