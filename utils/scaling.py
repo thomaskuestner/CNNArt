@@ -33,7 +33,7 @@ def fscaling(X_train, X_test, scpatchSize, iscalefactor) :
 
             zaxis_train=np.arange(lenTrain//Batch)
 
-            upedTrain=interpolate.interpn((zaxis_train, xaxis, yaxis), X_train[0][lenTrain//Batch*ibatch:lenTrain//Batch*(ibatch+1)], inter_train, method='linear',bounds_error=False, fill_value=0)
+            upedTrain=interpolate.interpn((zaxis_train, xaxis, yaxis), X_train[ifold][lenTrain//Batch*ibatch:lenTrain//Batch*(ibatch+1)], inter_train, method='linear',bounds_error=False, fill_value=0)
             if dx_Train is None:
                 dx_Train = upedTrain
             else:
@@ -57,7 +57,7 @@ def fscaling(X_train, X_test, scpatchSize, iscalefactor) :
 
             zaxis_test=np.arange(lenTest//Batch)
             
-            upedTest=interpolate.interpn((zaxis_test, xaxis, yaxis), X_test[0][lenTest//Batch*ibatch:lenTest//Batch*(ibatch+1)], inter_test, method='linear',bounds_error=False, fill_value=0)
+            upedTest=interpolate.interpn((zaxis_test, xaxis, yaxis), X_test[ifold][lenTest//Batch*ibatch:lenTest//Batch*(ibatch+1)], inter_test, method='linear',bounds_error=False, fill_value=0)
             if dx_Test is None:
                 dx_Test = upedTest
             else:

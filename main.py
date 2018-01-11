@@ -93,7 +93,7 @@ if lTrain:
                 else:
                     pass
 
-            # perform splitting: sp f
+            # perform splitting: sp for split
             spX_train, spy_train, spX_test, spy_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], scpatchSize, cfg['patchOverlap'], cfg['dSplitval'], '')
             # perform scaling: sc for scale
             scX_train, scX_test= scaling.fscaling(spX_train, spX_test, scpatchSize, iscalefactor)
