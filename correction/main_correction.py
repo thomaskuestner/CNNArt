@@ -30,7 +30,7 @@ def fPatching(cfg, dbinfo):
 
     iRefPatches = np.where(dAllLabels == iLabels[0])[0]
     iCorPatches = np.where(dAllLabels == iLabels[1])[0]
-    dRefPatches, dCorPatches = dAllLabels[iRefPatches, :, :], dAllLabels[iCorPatches, :, :]
+    dRefPatches, dCorPatches = dAllLabels[iRefPatches], dAllLabels[iCorPatches]
 
     return dRefPatches, dCorPatches
 
@@ -38,7 +38,6 @@ def fSplitDataset():
     pass
 
 def run(cfg, dbinfo):
-    lPatching = cfg['correction']['lPatching']
     patchSize = cfg['patchSize']
     sOutsubdir = cfg['subdirs'][3]
     sOutPath = cfg['selectedDatabase']['pathout'] + os.sep \
@@ -57,7 +56,8 @@ def run(cfg, dbinfo):
     else:
         # perform patching
         dRefPatches, dCorPatches = fPatching(cfg, dbinfo)
-
+	print(dRefPatches.shape)
+	print(dCorPatches.shape)
         # perform splitting
 
 
