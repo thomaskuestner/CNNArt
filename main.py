@@ -12,7 +12,7 @@ import cnn_main
 import scaling
 
 
-with open('config' + os.sep + 'paramnormal.yml', 'r') as ymlfile:
+with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
 
 lTrain = cfg['lTrain'] # training or prediction
@@ -20,6 +20,8 @@ lSave = cfg['lSave'] # save intermediate test, training sets
 # initiate info objects
 # default database: MRPhysics with ['newProtocol','dicom_sorted']
 dbinfo = DatabaseInfo(cfg['MRdatabase'],cfg['subdirs'])
+sTrainingMethod = cfg['sTrainingMethod'] # options of multiscale
+lScaleFactor = cfg['lScaleFactor']
 
 # load/create input data
 patchSize = cfg['patchSize']
@@ -66,34 +68,50 @@ if lTrain:
             patchSize = hf['patchSize'][:]
 
     else: # perform patching
-        dAllPatches = np.zeros((0, patchSize[0], patchSize[1]))
-        dAllLabels = np.zeros(0)
-        dAllPats = np.zeros((0, 1))
-        lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
-        iLabels = cfg['selectedDatabase']['labelref'] + cfg['selectedDatabase']['labelart']
-        for ipat, pat in enumerate(dbinfo.lPats):
-            if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
-                for iseq, seq in enumerate(lDatasets):
-                    # patches and labels of reference/artifact
-                    tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), cfg['patchSize'], cfg['patchOverlap'], 1, cfg['sLabeling'])
-                    dAllPatches = np.concatenate((dAllPatches, tmpPatches), axis=0)
-                    dAllLabels = np.concatenate((dAllLabels, iLabels[iseq]*tmpLabels), axis=0)
-                    dAllPats = np.concatenate((dAllPats, ipat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)
-            else:
-                pass
-            
-        # perform splitting
-        X_train, y_train, X_test, y_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], patchSize, cfg['patchOverlap'], cfg['dSplitval'], '')
+        X_train = []
+        scpatchSize = patchSize
+        if sTrainingMethod != "PriorScale":
+            lScaleFactor = [1]
+        # Else perform scaling:
+        #   images will be split into pathces with size scpatchSize and then scaled to patchSize
+        for iscalefactor in lScaleFactor:
+            scpatchSize = [int(psi/iscalefactor) for psi in patchSize]
 
-<<<<<<< HEAD
-    if patchSize[0] != 40:
-        X_train, X_test, NewpatchSize = scaling.fscalling(X_train, X_test, patchSize)
-        sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") +'to'+''.join(map(str, NewpatchSize)).replace(" ", "") + '.h5'
-        OrigPatchSize = patchSize
-        patchSize = NewpatchSize
-     
+            dAllPatches = np.zeros((0, scpatchSize[0], scpatchSize[1]))
+            dAllLabels = np.zeros(0)
+            dAllPats = np.zeros((0, 1))
+            lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
+            iLabels = cfg['selectedDatabase']['labelref'] + cfg['selectedDatabase']['labelart']
+            for ipat, pat in enumerate(dbinfo.lPats):
+                if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
+                    for iseq, seq in enumerate(lDatasets):
+                        # patches and labels of reference/artifact
+                        tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), scpatchSize, cfg['patchOverlap'], 1, cfg['sLabeling'])
+                        dAllPatches = np.concatenate((dAllPatches, tmpPatches), axis=0)
+                        dAllLabels = np.concatenate((dAllLabels, iLabels[iseq]*tmpLabels), axis=0)
+                        dAllPats = np.concatenate((dAllPats, ipat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)
+                else:
+                    pass
+
+            # perform splitting: sp f
+            spX_train, spy_train, spX_test, spy_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], scpatchSize, cfg['patchOverlap'], cfg['dSplitval'], '')
+            # perform scaling: sc for scale
+            scX_train, scX_test= scaling.fscaling(spX_train, spX_test, scpatchSize, iscalefactor)
+            if len(X_train) == 0:
+                X_train = scX_train
+                X_test = scX_test
+                y_train = spy_train
+                y_test = spy_test
+            else:
+                X_train = np.concatenate((X_train, scX_train), axis=1)
+                X_test = np.concatenate((X_test, scX_test), axis=1)
+                y_train = np.concatenate((y_train, spy_train), axis=1)
+                y_test = np.concatenate((y_train, spy_test), axis=1)
+
         # save to file (deprecated)
         if lSave:
+            if sTrainingMethod == "PriorScale":
+                sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") +'sf'+''.join(map(str, lScaleFactor)).replace(" ", "") + '.h5'
             # sio.savemat(sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '_input.mat', {'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize']})
             with h5py.File(sDatafile, 'w') as hf:
                 hf.create_dataset('X_train', data=X_train)
@@ -102,36 +120,10 @@ if lTrain:
                 hf.create_dataset('y_test', data=y_test)
                 hf.create_dataset('patchSize', data=patchSize)
                 hf.create_dataset('patchOverlap', data=cfg['patchOverlap'])
-                hf.create_dataset('OrigPatchSize', data=OrigPatchSize)
 
     # perform training
-    for iFold in range(0, len(X_train)):
+    for iFold in range(0,len(X_train)):
         cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])
-=======
-    # save to file (deprecated)
-    # sio.savemat(sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '_input.mat', {'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize']})
-    with h5py.File(sDatafile, 'w') as hf:
-         hf.create_dataset('X_train', data=X_train)
-         hf.create_dataset('X_test', data=X_test)
-         hf.create_dataset('y_train', data=y_train)
-         hf.create_dataset('y_test', data=y_test)
-         hf.create_dataset('patchSize', data=patchSize)
-         hf.create_dataset('patchOverlap', data=cfg['patchOverlap'])
-
-# Perform resizing of patches if needed
-X_train, X_test, NewpatchSize, sDatafile = scaling.fscalling(X_train, X_test, patchSize, sDatafile)
-# sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") +'to'+''.join(map(str, NewpatchSize)).replace(" ", "") + '.h5'
-
-# parse parameters
-# training or prediction
-lTrain = True
-lSave = False  # save intermediate test, training sets
-
-for iFold in range(0,len(X_train)):
-    if cfg['sSplitting'] == 'crossvalidation_patient':
-        CV_Patient = iFold + 1
-    cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': NewpatchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
->>>>>>> d89b74770859338c61daa9a99f75edd3f8561684
 
 else: 
     ################

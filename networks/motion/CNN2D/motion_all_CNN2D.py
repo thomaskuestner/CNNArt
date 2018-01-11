@@ -129,25 +129,9 @@ def createModel(patchSize, architecture='new'):
 def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None):
     # grid search on batch_sizes and learning rates
     # parse inputs
-    batchSizes = 64 if batchSizes is None else batchSizes
-    learningRates = 0.01 if learningRates is None else learningRates
-    iEpochs = 300 if iEpochs is None else iEpochs
-    for iBatch in batchSizes:
-        for iLearn in learningRates:
-            fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs)
-
-def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None):
-    # parse inputs
     batchSizes = [64] if batchSizes is None else batchSizes
     learningRates = [0.01] if learningRates is None else learningRates
     iEpochs = 300 if iEpochs is None else iEpochs
-	
-	# change the shape of the dataset
-    X_train = np.expand_dims(X_train, axis=1)
-    X_test = np.expand_dims(X_test, axis=1)
-    y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32)-1)]).T
-    y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32)-1)]).T
-
     for iBatch in batchSizes:
         for iLearn in learningRates:
             fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs)

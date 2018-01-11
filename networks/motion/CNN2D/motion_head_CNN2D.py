@@ -28,14 +28,15 @@ from keras.optimizers import SGD
 def createModel(patchSize):
     cnn = Sequential()
     cnn.add(Convolution2D(32,
-                            (14, 14),
-                            kernel_initializer='he_normal',
-                           # activation='sigmoid',
-                            weights=None,
-                            padding='valid',
-                            strides=(1, 1),
-                            kernel_regularizer=l2(1e-6),
-                            input_shape=(1, patchSize[0], patchSize[1])))
+                          14,
+                          14,
+                          init='he_normal',
+                          # activation='sigmoid',
+                          weights=None,
+                          border_mode='valid',
+                          subsample=(1, 1),
+                          W_regularizer=l2(1e-6),
+                          input_shape=(1, patchSize[0, 0], patchSize[0, 1])))
     cnn.add(Activation('relu'))
     
 #    cnn.add(Convolution2D(32,
@@ -49,39 +50,44 @@ def createModel(patchSize):
 #                            W_regularizer=l2(1e-6)))
 #                            #input_shape=(1, patchSize[0,0], patchSize[0,1])))
 #    cnn.add(Activation('relu'))                    
-    cnn.add(Convolution2D(64 ,                    #learning rate: 0.1 -> 76%
-                            (7, 7),
-                            kernel_initializer='he_normal',
-                           # activation='sigmoid',
-                            weights=None,
-                            padding='valid',
-                            strides=(1, 1),
-                            kernel_regularizer=l2(1e-6)))
+    cnn.add(Convolution2D(64,  # learning rate: 0.1 -> 76%
+                          7,
+                          7,
+                          init='he_normal',
+                          # activation='sigmoid',
+                          weights=None,
+                          border_mode='valid',
+                          subsample=(1, 1),
+                          W_regularizer=l2(1e-6)))
+
+
     cnn.add(Activation('relu'))
-                       
-    cnn.add(Convolution2D(128 ,                    #learning rate: 0.1 -> 76%
-                            (3, 3),
-                            kernel_initializer='he_normal',
-                           # activation='sigmoid',
+    cnn.add(Convolution2D(128,  # learning rate: 0.1 -> 76%
+                            3,
+                            3,
+                             init='he_normal',
+                            # activation='sigmoid',
                             weights=None,
-                            padding='valid',
-                            strides=(1, 1),
-                            kernel_regularizer=l2(1e-6)))
+                            border_mode='valid',
+                            subsample=(1, 1),
+                            W_regularizer=l2(1e-6)))
     cnn.add(Activation('relu'))
     
     #cnn.add(pool2(pool_size=(2, 2), strides=None, border_mode='valid', dim_ordering='th'))
-    
+
     cnn.add(Flatten())
-    #cnn.add(Dense(input_dim= 100,
-    #              output_dim= 100,
-    #              init = 'normal',
-    #              #activation = 'sigmoid',
-    #              W_regularizer='l2'))
-    #cnn.add(Activation('sigmoid'))
-    cnn.add(Dense(units= 2,
-                  kernel_initializer = 'normal',
-                  #activation = 'sigmoid',
-                  kernel_regularizer='l2'))
+
+
+    # cnn.add(Dense(input_dim= 100,
+    # output_dim= 100,
+    # init = 'normal',
+    # #activation = 'sigmoid',
+    # W_regularizer='l2'))
+    # cnn.add(Activation('sigmoid'))
+    cnn.add(Dense(output_dim=2,
+                    init='normal',
+                    # activation = 'sigmoid',
+                    W_regularizer='l2'))
     cnn.add(Activation('softmax'))
     return cnn
 

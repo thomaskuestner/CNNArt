@@ -2,23 +2,18 @@
 import h5py
 import numpy as np
 from scipy import interpolate
-import cnn_main
-import time
 
-def fscalling(X_train, X_test, patchSize, sDatafile):
-    # one value for the aimed patch size
-    afterSize = 40
+def fscaling(X_train, X_test, scpatchSize, iscalefactor) :
+
+    afterSize = int(scpatchSize[0] * iscalefactor)
 
     # Prepare for the using of scipy.interpolation: create the coordinates of grid
-    if patchSize[0] == afterSize:
-        return X_train, X_test, patchSize, sDatafile
-    elif patchSize[0] < afterSize:
-        xaxis = np.arange(0, afterSize, 2)
-        yaxis = np.arange(0, afterSize, 2)
+    if iscalefactor == 1:
+        return X_train, X_test
     else:
-        xaxis = np.arange(0, afterSize, 0.5)
-        yaxis = np.arange(0, afterSize, 0.5)
-    sDatafile = sDatafile[:-3] + 'to' + ''.join(str(afterSize)).replace(" ", "") + ''.join(str(afterSize)).replace(" ", "") + '.h5'
+        xaxis = np.arange(0, afterSize, iscalefactor)
+        yaxis = np.arange(0, afterSize, iscalefactor)
+
     dAllx_train = None
     dAllx_test = None
 
@@ -62,7 +57,7 @@ def fscalling(X_train, X_test, patchSize, sDatafile):
             inter_test=np.reshape(inter_test1, [inter_test0.size//3, 3]) # 3 for the dimension of coordinates
 
             zaxis_test=np.arange(lenTest//Batch)
-
+            
             upedTest=interpolate.interpn((zaxis_test, xaxis, yaxis), X_test[0][lenTest//Batch*ibatch:lenTest//Batch*(ibatch+1)], inter_test, method='linear',bounds_error=False, fill_value=0)
             if dx_Test is None:
                 dx_Test = upedTest
@@ -76,31 +71,7 @@ def fscalling(X_train, X_test, patchSize, sDatafile):
         else:
             dAllx_test = np.concatenate((dAllx_test, dFoldx_test), axis=0)
 
-    patchSize = [afterSize, afterSize]
+    return dAllx_train, dAllx_test
 
-    return dAllx_train, dAllx_test, patchSize, sDatafile
-
-if __name__ == "__main__":  # main for test directly
-    
-    forig = h5py.File('/home/s1241/no_backup/s1241/MultiScale/Headnormal/8080/testout/normal8080.h5','r')
-    X_train=forig['X_train']
-    X_test=forig['X_test']
-    y_train=forig['y_train']
-    y_test=forig['y_test']
-    patchSize=forig['patchSize']
-    patchOverlap=forig['patchOverlap']
-    
-    NX_train, NX_test, NewpatchSize = fscalling(X_train, X_test, patchSize)
-    OrigPatchSize = patchSize
-    patchSize = NewpatchSize
-    
-    with h5py.File('/home/s1241/no_backup/s1241/MultiScale/Headnormal/8080/testout/normal8080to4040.h5', 'w') as hf:
-        hf.create_dataset('X_train', data= NX_train)
-        hf.create_dataset('X_test', data= NX_test)
-        hf.create_dataset('y_train', data=y_train)
-        hf.create_dataset('y_test', data=y_test)
-        hf.create_dataset('patchSize', data=patchSize)
-        hf.create_dataset('patchOverlap', data=patchOverlap)
-        hf.create_dataset('OrigPatchSize', data=OrigPatchSize)
 
 
