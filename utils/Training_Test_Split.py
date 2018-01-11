@@ -124,7 +124,6 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
 
     elif sSplitting == "crossvalidation_patient":
         unique_pats = np.unique(allPats)
-        #ssssn_splits = len(unique_pats)
 
         X_trainFold = []
         X_testFold = []
