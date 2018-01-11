@@ -9,7 +9,7 @@ from DatabaseInfo import DatabaseInfo
 import utils.DataPreprocessing as datapre
 import utils.Training_Test_Split as ttsplit
 import cnn_main
-import scaling
+import utils.scaling
 
 
 with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
@@ -70,7 +70,7 @@ if lTrain:
     else: # perform patching
         X_train = []
         scpatchSize = patchSize
-        if sTrainingMethod != "PriorScale":
+        if sTrainingMethod != "scalingPrior":
             lScaleFactor = [1]
         # Else perform scaling:
         #   images will be split into pathces with size scpatchSize and then scaled to patchSize
