@@ -28,15 +28,15 @@ from keras.optimizers import SGD
 def createModel(patchSize):
     cnn = Sequential()
     cnn.add(Convolution2D(32,
-                          14,
-                          14,
-                          init='he_normal',
-                          # activation='sigmoid',
-                          weights=None,
-                          border_mode='valid',
-                          subsample=(1, 1),
-                          W_regularizer=l2(1e-6),
-                          input_shape=(1, patchSize[0, 0], patchSize[0, 1])))
+                            14, 
+                            14, 
+                            init='he_normal',
+                           # activation='sigmoid',
+                            weights=None,
+                            border_mode='valid',
+                            subsample=(1, 1),
+                            W_regularizer=l2(1e-6),
+                            input_shape=(1, patchSize[0,0], patchSize[0,1])))
     cnn.add(Activation('relu'))
     
 #    cnn.add(Convolution2D(32,
@@ -50,23 +50,22 @@ def createModel(patchSize):
 #                            W_regularizer=l2(1e-6)))
 #                            #input_shape=(1, patchSize[0,0], patchSize[0,1])))
 #    cnn.add(Activation('relu'))                    
-    cnn.add(Convolution2D(64,  # learning rate: 0.1 -> 76%
-                          7,
-                          7,
-                          init='he_normal',
-                          # activation='sigmoid',
-                          weights=None,
-                          border_mode='valid',
-                          subsample=(1, 1),
-                          W_regularizer=l2(1e-6)))
-
-
+    cnn.add(Convolution2D(64 ,                    #learning rate: 0.1 -> 76%
+                            7, 
+                            7, 
+                            init='he_normal',
+                           # activation='sigmoid',
+                            weights=None,
+                            border_mode='valid',
+                            subsample=(1, 1),
+                            W_regularizer=l2(1e-6)))
     cnn.add(Activation('relu'))
-    cnn.add(Convolution2D(128,  # learning rate: 0.1 -> 76%
-                            3,
-                            3,
-                             init='he_normal',
-                            # activation='sigmoid',
+                       
+    cnn.add(Convolution2D(128 ,                    #learning rate: 0.1 -> 76%
+                            3, 
+                            3, 
+                            init='he_normal',
+                           # activation='sigmoid',
                             weights=None,
                             border_mode='valid',
                             subsample=(1, 1),
@@ -74,20 +73,18 @@ def createModel(patchSize):
     cnn.add(Activation('relu'))
     
     #cnn.add(pool2(pool_size=(2, 2), strides=None, border_mode='valid', dim_ordering='th'))
-
+    
     cnn.add(Flatten())
-
-
-    # cnn.add(Dense(input_dim= 100,
-    # output_dim= 100,
-    # init = 'normal',
-    # #activation = 'sigmoid',
-    # W_regularizer='l2'))
-    # cnn.add(Activation('sigmoid'))
-    cnn.add(Dense(output_dim=2,
-                    init='normal',
-                    # activation = 'sigmoid',
-                    W_regularizer='l2'))
+    #cnn.add(Dense(input_dim= 100,
+    #              output_dim= 100,
+    #              init = 'normal',
+    #              #activation = 'sigmoid',
+    #              W_regularizer='l2'))
+    #cnn.add(Activation('sigmoid'))
+    cnn.add(Dense(output_dim= 2,
+                  init = 'normal',
+                  #activation = 'sigmoid',
+                  W_regularizer='l2'))
     cnn.add(Activation('softmax'))
     return cnn
 
@@ -114,7 +111,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     _, sPath = os.path.splitdrive(sOutPath)
     sPath,sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
-    model_name = sPath + '/' + sFilename + str(patchSize[0]) + str(patchSize[1]) +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
+    model_name = sPath + '/' + sFilename + str(patchSize[0,0]) + str(patchSize[0,1]) +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     weight_name = model_name + '_weights.h5'
     model_json = model_name + '_json'
     model_all = model_name + '_model.h5'            
@@ -136,11 +133,12 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
                      y_train,
                      validation_data=[X_test, y_test],
                      nb_epoch=iEpochs,
-                     batch_size=batchSize,
+                     batch_size=batchSize, 
+                     show_accuracy=True, 
                      callbacks=callbacks,
                      verbose=1)
                         
-    score_test, acc_test = cnn.evaluate(X_test, y_test,batch_size=batchSize)
+    score_test, acc_test = cnn.evaluate(X_test, y_test,batch_size=batchSize,show_accuracy=True)
     		
     prob_test = cnn.predict(X_test, batchSize, 0)
         

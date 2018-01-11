@@ -218,3 +218,5 @@ pip-log.txt
 #Pychar
 .idea/
 *.orig
+config/paramnormal.yml
+train_after_resize.py
