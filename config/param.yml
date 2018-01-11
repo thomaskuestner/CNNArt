@@ -84,3 +84,7 @@ lLabelPredictImg : [ 1 ]
 # "scalingPosterior": scaling during training, to be done
 sTrainingMethod : "None"
 lScaleFactor : [0.5, 1, 2]
+# lCorrection
+# true: artifact correction
+# false: classification
+lCorrection: false
