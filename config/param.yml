@@ -78,3 +78,9 @@ lSave : false
 lPredictImg : ["/med_data/ImageSimilarity/Databases/MRPhysics/..."] 
 # (list with) labels of to be predicted images (either scalar or path to patch-wise label file)
 lLabelPredictImg : [ 1 ]
+# sTrainingMethod
+# "None": No scaling process
+# "scalingPrior": Up and down sampling the patches for data augmentation
+# "scalingPosterior": scaling during training, to be done
+sTrainingMethod : "None"
+lScaleFactor : [0.5, 1, 2]
