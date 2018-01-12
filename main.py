@@ -9,7 +9,7 @@ from DatabaseInfo import DatabaseInfo
 import utils.DataPreprocessing as datapre
 import utils.Training_Test_Split as ttsplit
 import cnn_main
-import utils.scaling
+import utils.scaling as scaling
 
 
 with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
@@ -110,7 +110,7 @@ if lTrain:
 
         # save to file (deprecated)
         if lSave:
-            if sTrainingMethod == "PriorScale":
+            if sTrainingMethod == "scalingPrior":
                 sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") +'sf'+''.join(map(str, lScaleFactor)).replace(" ", "") + '.h5'
             # sio.savemat(sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '_input.mat', {'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize']})
             with h5py.File(sDatafile, 'w') as hf:
@@ -131,7 +131,7 @@ else:
     ################
     X_test = np.zeros((0, patchSize[0], patchSize[1]))
     y_test = np.zeros(0)
-    for iImg in range(0,len(cfg['lPredictImg'])):
+    for iImg in range(0, len(cfg['lPredictImg'])):
         # patches and labels of reference/artifact
         tmpPatches, tmpLabels  = datapre.fPreprocessData(cfg['lPredictImg'][iImg], cfg['patchSize'], cfg['patchOverlap'], 1, cfg['sLabeling'])
         X_test = np.concatenate((X_test, tmpPatches), axis=0)
