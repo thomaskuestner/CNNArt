@@ -10,6 +10,12 @@ import math
 import utils.DataPreprocessing as datapre
 
 def fPatching(cfg, dbinfo):
+    """
+    Perform patching to reference and artifact images according to given patch size.
+    @param cfg: the configuration file loaded from config/param.yml
+    @param dbinfo: database related info
+    @return: patches from reference and artifact images and an array which stores the corresponding patient index
+    """
     patchSize = cfg['patchSize']
     dRefPatches = np.empty((0, patchSize[0], patchSize[1]))
     dArtPatches = np.empty((0, patchSize[0], patchSize[1]))
@@ -37,7 +43,21 @@ def fPatching(cfg, dbinfo):
 
     return dRefPatches, dArtPatches, dRefPats
 
+
 def fSplitDataset(sSplitting, dRefPatches, dArtPatches, allPats, split_ratio, nfolds):
+    """
+    Split dataset with three options:
+    1. normal: randomly split data according to the split_ratio without cross validation
+    2. crossvalidation_data: perform crossvalidation with mixed patient data
+    3. crossvalidation_patient: perform crossvalidation with separate patient data
+    @param sSplitting: splitting mode 'normal', 'crossvalidation_data' or 'crossvalidation_patient'
+    @param dRefPatches: reference patches
+    @param dArtPatches: artifact patches
+    @param allPats: patient index
+    @param split_ratio: the ratio to split test data
+    @param nfolds: folds for cross validation
+    @return: testing and training data for both reference and artifact images
+    """
     train_ref_fold = []
     test_ref_fold = []
     train_art_fold = []
@@ -71,6 +91,7 @@ def fSplitDataset(sSplitting, dRefPatches, dArtPatches, allPats, split_ratio, nf
             test_ref_fold.append(test_ref)
             test_art_fold.append(test_art)
 
+    # crossvalidation with separate patient
     elif sSplitting == 'crossvalidation_patient':
         unique_pats = np.unique(allPats)
 
@@ -93,6 +114,12 @@ def fSplitDataset(sSplitting, dRefPatches, dArtPatches, allPats, split_ratio, nf
     return train_ref_fold, test_ref_fold, train_art_fold, test_art_fold
 
 def run(cfg, dbinfo):
+    """
+    the main interface of correction program
+    @param cfg: the configuration file loaded from config/param.yml
+    @param dbinfo: database related info
+    """
+    # load parameters form config file and define the corresponding output path
     patchSize = cfg['patchSize']
 
     if cfg['sSplitting'] == 'normal':
@@ -107,7 +134,7 @@ def run(cfg, dbinfo):
                + ''.join(map(str, patchSize)).replace(" ", "") + os.sep + sOutsubdir
     sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '.h5'
 
-    # if h5 file exists
+    # if h5 file exists then load the dataset
     if glob.glob(sDatafile):
         with h5py.File(sDatafile, 'r') as hf:
             train_ref = hf['train_ref'][:]
@@ -119,10 +146,6 @@ def run(cfg, dbinfo):
     else:
         # perform patching
         dRefPatches, dArtPatches, dAllPats = fPatching(cfg, dbinfo)
-
-        print(dRefPatches.shape)
-        print(dArtPatches.shape)
-        print(dAllPats.shape)
 
         # perform splitting
         train_ref, test_ref, train_art, test_art = fSplitDataset(cfg['sSplitting'], dRefPatches, dArtPatches, dAllPats, cfg['dSplitval'], cfg['nFolds'])
