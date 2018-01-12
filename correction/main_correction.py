@@ -17,7 +17,7 @@ def fPatching(cfg, dbinfo):
     dArtPats = np.empty((0, 1))
 
     lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
-    for ipat, pat in enumerate(dbinfo.lPats[0:2]):
+    for ipat, pat in enumerate(dbinfo.lPats):
         if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
             for iseq, seq in enumerate(lDatasets):
                 # patches and labels of reference/artifact
@@ -94,10 +94,18 @@ def fSplitDataset(sSplitting, dRefPatches, dArtPatches, allPats, split_ratio, nf
 
 def run(cfg, dbinfo):
     patchSize = cfg['patchSize']
+
+    if cfg['sSplitting'] == 'normal':
+        sFSname = 'normal'
+    elif cfg['sSplitting'] == 'crossvalidation_data':
+        sFSname = 'crossVal_data'
+    elif cfg['sSplitting'] == 'crossvalidation_patient':
+        sFSname = 'crossVal'
+
     sOutsubdir = cfg['subdirs'][3]
     sOutPath = cfg['selectedDatabase']['pathout'] + os.sep \
                + ''.join(map(str, patchSize)).replace(" ", "") + os.sep + sOutsubdir
-    sDatafile = sOutPath + os.sep + ''.join(map(str, patchSize)).replace(" ", "") + '.h5'
+    sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '.h5'
 
     # if h5 file exists
     if glob.glob(sDatafile):
