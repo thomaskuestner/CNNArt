@@ -106,7 +106,7 @@ if lTrain:
                 X_train = np.concatenate((X_train, scX_train), axis=1)
                 X_test = np.concatenate((X_test, scX_test), axis=1)
                 y_train = np.concatenate((y_train, spy_train), axis=1)
-                y_test = np.concatenate((y_train, spy_test), axis=1)
+                y_test = np.concatenate((y_test, spy_test), axis=1)
 
         # save to file (deprecated)
         if lSave:
