@@ -6,6 +6,7 @@ import h5py
 # internal import
 import utils.DataPreprocessing as datapre
 import utils.Training_Test_Split as ttsplit
+import cnn_main
 
 def run(cfg, dbinfo):
     """
@@ -52,3 +53,8 @@ def run(cfg, dbinfo):
                 hf.create_dataset('train_art', data=train_art)
                 hf.create_dataset('test_art', data=test_art)
                 hf.create_dataset('patchSize', data=patchSize)
+
+    dData = {'train_ref': train_ref, 'test_ref': test_ref, 'train_art': train_art, 'test_art': test_art}
+    sModelIn = cfg['correction']['sCorrection']
+    dHyper = {'batchSize': cfg['batchSize'], 'learningRate': cfg['lr'], 'epoch': cfg['epochs']}
+    cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])

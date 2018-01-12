@@ -25,6 +25,7 @@ from networks.motion.MNetArt import *
 from networks.motion.VNetArt import *
 from networks.multiclass.DenseResNet import *
 from networks.multiclass.InceptionNet import *
+from correction.networks.motion import *
 
 #from hyperopt import Trials, STATUS_OK, tpe
 #from hyperas import optim
@@ -167,6 +168,26 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
     else:  # predicting
         cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, dData['patchSize'], iBatchSize[0])
 
+def fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, lTrain):
+    if 'motion' in sModelIn:
+        if 'VAE' in sModelIn:
+            sModel = 'correction.networks.motion.' + sModelIn
+        else:
+            sys.exit("Model is not supported")
+    else:
+        sys.exit("Model is not supported")
+
+    # dynamic loading of corresponding model
+    # dynamic module loading with specified functions and with absolute importing (level=0) ->
+    # work in both Python2 and Python3
+    model = __import__(sModel, globals(), locals(), ['createModel', 'fTrain', 'fPredict'], 0)
+
+    if lTrain:
+        # perform training
+        model.fTrain(dData, sOutPath, patchSize, dHyper)
+    else:
+        # perform prediction
+        model.fPredict(dData, sOutPath, patchSize, dHyper)
 
 # Main Code
 if __name__ == "__main__": # for command line call
