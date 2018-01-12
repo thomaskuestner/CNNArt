@@ -167,3 +167,72 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
 
         if iReturn > 0:
             return X_trainFold, y_trainFold, X_testFold, y_testFold
+
+def fSplitDatasetCorrection(sSplitting, dRefPatches, dArtPatches, allPats, split_ratio, nfolds):
+    """
+    Split dataset with three options:
+    1. normal: randomly split data according to the split_ratio without cross validation
+    2. crossvalidation_data: perform crossvalidation with mixed patient data
+    3. crossvalidation_patient: perform crossvalidation with separate patient data
+    @param sSplitting: splitting mode 'normal', 'crossvalidation_data' or 'crossvalidation_patient'
+    @param dRefPatches: reference patches
+    @param dArtPatches: artifact patches
+    @param allPats: patient index
+    @param split_ratio: the ratio to split test data
+    @param nfolds: folds for cross validation
+    @return: testing and training data for both reference and artifact images
+    """
+    train_ref_fold = []
+    test_ref_fold = []
+    train_art_fold = []
+    test_art_fold = []
+
+    # normal splitting
+    if sSplitting == 'normal':
+        nPatches = dRefPatches.shape[0]
+        dVal = math.floor(split_ratio * nPatches)
+        rand_num = np.random.permutation(np.arange(nPatches))
+        rand_num = rand_num[0:int(dVal)].astype(int)
+
+        test_ref_fold = dRefPatches[rand_num, :, :]
+        train_ref_fold = np.delete(dRefPatches, rand_num, axis=0)
+        test_art_fold = dArtPatches[rand_num, :, :]
+        train_art_fold = np.delete(dArtPatches, rand_num, axis=0)
+
+    # crossvalidation with mixed patient
+    if sSplitting == "crossvalidation_data":
+        if nfolds == 0:
+            kf = KFold(n_splits=len(np.unique(allPats)))
+        else:
+            kf = KFold(n_splits=nfolds)
+
+        for train_index, test_index in kf.split(dRefPatches):
+            train_ref, test_ref = dRefPatches[train_index], dRefPatches[test_index]
+            train_art, test_art = dArtPatches[train_index], dArtPatches[test_index]
+
+            train_ref_fold.append(train_ref)
+            train_art_fold.append(train_art)
+            test_ref_fold.append(test_ref)
+            test_art_fold.append(test_art)
+
+    # crossvalidation with separate patient
+    elif sSplitting == 'crossvalidation_patient':
+        unique_pats = np.unique(allPats)
+
+        for ind_split in unique_pats:
+            train_index = np.where(allPats != ind_split)[0]
+            test_index = np.where(allPats == ind_split)[0]
+            train_ref, test_ref = dRefPatches[train_index], dRefPatches[test_index]
+            train_art, test_art = dArtPatches[train_index], dArtPatches[test_index]
+
+            train_ref_fold.append(train_ref)
+            train_art_fold.append(train_art)
+            test_ref_fold.append(test_ref)
+            test_art_fold.append(test_art)
+
+    train_ref_fold = np.asarray(train_ref_fold, dtype='f')
+    train_art_fold = np.asarray(train_art_fold, dtype='f')
+    test_ref_fold = np.asarray(test_ref_fold, dtype='f')
+    test_art_fold = np.asarray(test_art_fold, dtype='f')
+
+    return train_ref_fold, test_ref_fold, train_art_fold, test_art_fold
