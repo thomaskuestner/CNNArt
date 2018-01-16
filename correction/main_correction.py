@@ -54,7 +54,17 @@ def run(cfg, dbinfo):
                 hf.create_dataset('test_art', data=test_art)
                 hf.create_dataset('patchSize', data=patchSize)
 
-    dData = {'train_ref': train_ref, 'test_ref': test_ref, 'train_art': train_art, 'test_art': test_art}
     sModelIn = cfg['correction']['sCorrection']
-    dHyper = {'batchSize': cfg['batchSize'], 'learningRate': cfg['lr'], 'epoch': cfg['epochs']}
-    cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
+
+    if cfg['lTrain']:
+        dHyper = {'batchSize': cfg['batchSize'], 'learningRate': cfg['lr'], 'epochs': cfg['epochs']}
+        for iFold in range(len(train_ref)):
+            dData = {'train_ref': train_ref[iFold], 'test_ref': test_ref[iFold], 'train_art': train_art[iFold], 'test_art': test_art[iFold]}
+            cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
+    else:
+        dHyper = {'batchSize': cfg['batchSize'], 'bestModel': cfg['correction']['bestModel']}
+        test_ref = test_ref.reshape((-1 , 1, patchSize[0], patchSize[1]))
+        test_art = test_art.reshape((-1 , 1, patchSize[0], patchSize[1]))
+        dData = {'test_ref': test_ref, 'test_art': test_art}
+        cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
+
