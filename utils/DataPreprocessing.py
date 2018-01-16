@@ -33,6 +33,40 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabelin
 
     return dPatches, dLabel
 
+def fPreprocessDataCorrection(cfg, dbinfo):
+    """
+    Perform patching to reference and artifact images according to given patch size.
+    @param cfg: the configuration file loaded from config/param.yml
+    @param dbinfo: database related info
+    @return: patches from reference and artifact images and an array which stores the corresponding patient index
+    """
+    patchSize = cfg['patchSize']
+    dRefPatches = np.empty((0, patchSize[0], patchSize[1]))
+    dArtPatches = np.empty((0, patchSize[0], patchSize[1]))
+    dRefPats = np.empty((0, 1))
+    dArtPats = np.empty((0, 1))
+
+    lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
+    for ipat, pat in enumerate(dbinfo.lPats):
+        if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
+            for iseq, seq in enumerate(lDatasets):
+                # patches and labels of reference/artifact
+                tmpPatches, tmpLabels = fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq),
+                                                                patchSize, cfg['patchOverlap'], 1, 'volume')
+
+                if iseq == 0:
+                    dRefPatches = np.concatenate((dRefPatches, tmpPatches), axis=0)
+                    dRefPats = np.concatenate((dRefPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
+                elif iseq == 1:
+                    dArtPatches = np.concatenate((dArtPatches, tmpPatches), axis=0)
+                    dArtPats = np.concatenate((dArtPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
+        else:
+            pass
+
+    assert(dRefPatches.shape == dArtPatches.shape and dRefPats.shape == dArtPats.shape)
+
+    return dRefPatches, dArtPatches, dRefPats
+
 def mask_rectangle(x_coo1, y_coo1, x_coo2, y_coo2, layer_mask, art_no):
     x_coo1 = round(x_coo1)
     y_coo1 = round(y_coo1)

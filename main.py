@@ -10,13 +10,15 @@ import utils.DataPreprocessing as datapre
 import utils.Training_Test_Split as ttsplit
 import cnn_main
 import utils.scaling as scaling
-
+import correction.main_correction as correction
 
 with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
 
 lTrain = cfg['lTrain'] # training or prediction
 lSave = cfg['lSave'] # save intermediate test, training sets
+lCorrection = cfg['lCorrection'] # artifact correction or classification
+
 # initiate info objects
 # default database: MRPhysics with ['newProtocol','dicom_sorted']
 dbinfo = DatabaseInfo(cfg['MRdatabase'],cfg['subdirs'])
@@ -36,10 +38,16 @@ sOutsubdir = cfg['subdirs'][2]
 sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(map(str,patchSize)).replace(" ", "") + os.sep + sOutsubdir # + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
 sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '.h5'
 
-##############
-## training ##
-##############
-if lTrain:
+if lCorrection:
+    #########################
+    ## Artifact Correction ##
+    #########################
+    correction.run(cfg, dbinfo)
+
+elif lTrain:
+    ##############
+    ## training ##
+    ##############
     # check if file is already existing -> skip patching
     if glob.glob(sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '*_input.mat'): # deprecated
         sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '_input.mat'
