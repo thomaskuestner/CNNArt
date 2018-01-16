@@ -83,6 +83,8 @@ lLabelPredictImg : [ 1 ]
 # "scalingPrior": Up and down sampling the patches for data augmentation
 # "scalingPosterior": scaling during training, to be done
 sTrainingMethod : "None"
+# lScaleFactor: the changing rate of patch size in scaling process
+# factor < 1 means down sampling later, factor > 1 up sampling later
 lScaleFactor : [0.5, 1, 2]
 
 # lCorrection

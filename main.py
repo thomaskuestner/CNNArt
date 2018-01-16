@@ -37,6 +37,10 @@ elif cfg['sSplitting'] == 'crossvalidation_patient':
 sOutsubdir = cfg['subdirs'][2]
 sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(map(str,patchSize)).replace(" ", "") + os.sep + sOutsubdir # + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
 sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '.h5'
+if sTrainingMethod == "scalingPrior":
+    sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + 'sf' + ''.join(map(str, lScaleFactor)).replace(" ", "") + '.h5'
+else:
+    sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '.h5'
 
 if lCorrection:
     #########################
@@ -100,9 +104,10 @@ elif lTrain:
                         dAllPats = np.concatenate((dAllPats, ipat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)
                 else:
                     pass
-
+            print('Start splitting')
             # perform splitting: sp for split
             spX_train, spy_train, spX_test, spy_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], scpatchSize, cfg['patchOverlap'], cfg['dSplitval'], '')
+            print('Start scaling')
             # perform scaling: sc for scale
             scX_train, scX_test= scaling.fscaling(spX_train, spX_test, scpatchSize, iscalefactor)
             if len(X_train) == 0:
@@ -116,11 +121,10 @@ elif lTrain:
                 y_train = np.concatenate((y_train, spy_train), axis=1)
                 y_test = np.concatenate((y_test, spy_test), axis=1)
 
+        print('Start saving')
         # save to file (deprecated)
         if lSave:
-            if sTrainingMethod == "scalingPrior":
-                sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") +'sf'+''.join(map(str, lScaleFactor)).replace(" ", "") + '.h5'
-            # sio.savemat(sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '_input.mat', {'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize']})
+                # sio.savemat(sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '_input.mat', {'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize']})
             with h5py.File(sDatafile, 'w') as hf:
                 hf.create_dataset('X_train', data=X_train)
                 hf.create_dataset('X_test', data=X_test)
