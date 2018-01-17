@@ -6,14 +6,43 @@ Visualize CNNs
 """
 import theano
 import theano.tensor as T
-import keras
 import os
-from keras.models import model_from_json
 import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
-import network_visualization
-import argparse
+import glob
+import yaml
+import h5py
+from DatabaseInfo import DatabaseInfo
+import utils.DataPreprocessing as datapre
+import utils.Training_Test_Split as ttsplit
+import cnn_main
+
+
+
+def make_mosaic(im, nrows, ncols, border=1):
+
+    import numpy.ma as ma
+
+    nimgs = len(im)
+    imshape = im[0].shape
+
+    mosaic = ma.masked_all((nrows * imshape[0] + (nrows - 1) * border,
+                            ncols * imshape[1] + (ncols - 1) * border),
+                           dtype=np.float32)
+
+    paddedh = imshape[0] + border
+    paddedw = imshape[1] + border
+    im
+    for i in range(nimgs):
+        row = int(np.floor(i / ncols))
+        col = i % ncols
+
+        mosaic[row * paddedh:row * paddedh + imshape[0],
+        col * paddedw:col * paddedw + imshape[1]] = im[i]
+
+    return mosaic
+
 
 #load dataset:
 if os.name == 'posix':
@@ -138,10 +167,38 @@ elif sTypeVis == 'keras_weight':
 
 elif sTypeVis == 'weights':
     #visualize weight vectors
-    w = model.layers[0].W.get_value()
-    filters = [w[0,:,:] for w in w]
-    plt.figure(3)
-    plt.title('Weights layer 1')
-    for i in range(len(filters)):
-        plt.subplot(8,4,i+1)
-        plt.imshow(filters[i])
+
+    # record the layers which have 'weights'
+    layers_to_show = []
+
+    for i, layer in enumerate(model.layers[:]):
+        if hasattr(layer, "weights"):
+            if len(layer.weights) == 0:
+                continue
+        w = layer.weights[0].container.data
+        if w.ndim == 4:
+            layers_to_show.append((i, layer))
+
+    for i, (layer_id, layer) in enumerate(layers_to_show):
+        w = layer.weights[0].container.data
+        w = np.transpose(w, (3, 2, 0, 1))
+
+        # n define the maximum number of weights to display
+        n = w.shape[0]
+
+        # Create the mosaic of weights
+        nrows = int(np.round(np.sqrt(n)))
+        ncols = int(nrows)
+
+        if nrows ** 2 < n:
+            ncols += 1
+
+        #filters = [w[0, :, :] for w in w]
+        fig = plt.figure(figsize=(15, 15))
+        plt.suptitle("The Weights of Layer #{} called '{}' of type {}".format(layer_id, layer.name, layer.__class__.__name__))
+
+        mosaic = make_mosaic(w[:, 0], nrows, ncols, border=1)
+
+        im = plt.imshow(mosaic)
+
+plt.show()
