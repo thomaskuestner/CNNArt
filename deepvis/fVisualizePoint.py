@@ -3,10 +3,13 @@
 Visualize CNNs
 
 @author: Thomas Kuestner
+reference to hadim https://gist.github.com/hadim/9fedb72b54eb3bc453362274cd347a6a
 """
 import theano
 import theano.tensor as T
 import os
+import os.path
+import sys
 import numpy as np
 import scipy.io as sio
 import matplotlib.pyplot as plt
@@ -14,79 +17,40 @@ import glob
 import yaml
 import h5py
 from DatabaseInfo import DatabaseInfo
-import utils.DataPreprocessing as datapre
-import utils.Training_Test_Split as ttsplit
-import cnn_main
+from keras.models import load_model
+from network_visualization import make_mosaic
 
 
 
-def make_mosaic(im, nrows, ncols, border=1):
-
-    import numpy.ma as ma
-
-    nimgs = len(im)
-    imshape = im[0].shape
-
-    mosaic = ma.masked_all((nrows * imshape[0] + (nrows - 1) * border,
-                            ncols * imshape[1] + (ncols - 1) * border),
-                           dtype=np.float32)
-
-    paddedh = imshape[0] + border
-    paddedw = imshape[1] + border
-    im
-    for i in range(nimgs):
-        row = int(np.floor(i / ncols))
-        col = i % ncols
-
-        mosaic[row * paddedh:row * paddedh + imshape[0],
-        col * paddedw:col * paddedw + imshape[1]] = im[i]
-
-    return mosaic
-
-
-#load dataset:
-if os.name == 'posix':
-    dataPath = '/scratch/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Headcross/4040/patient/02'
-    sDataTest = '/scratch/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Headcross'
-    sDataTrain = dataPath + os.sep + 'crossVal02_4040.mat'
-else:
-    dataPath = 'W:\ImageSimilarity\Databases\MRPhysics\CNN\Headcross\4040\patient\02'
-    sDataTest = 'W:\ImageSimilarity\Databases\MRPhysics\CNN\Headcross'
-
-#modelPath = dataPath + os.sep + 'outcrossVal024040_lr_0.0001_bs_64'
-
-parser = argparse.ArgumentParser(description='''CNN feature visualization''', epilog='''(c) Thomas Kuestner, thomas.kuestner@iss.uni-stuttgart.de''')
-parser.add_argument('-i','--inPath', nargs = 1, type = str, help='input path to *.mat', default= '/scratch/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Headcross')
-args = parser.parse_args()
 
 # initalize stuff
-sTypeVis = 'deep' # deep: lukas implementation, else: weights of first layer
+sTypeVis = 'weights' # deep: lukas implementation, else: weights of first layer
 lShow = False
 
-#data = sio.loadmat(sDataTest + os.sep + 'visualize.mat')
-data = sio.loadmat(args.inPath[0] + os.sep + 'visualize.mat')
+# parse parameters
 
-#train  = data['X_train']
-#ltrain = data['y_train']
+folderPath = os.path.dirname(os.path.split(os.path.abspath(__file__))[0])
+cfgPath= os.path.dirname(os.path.dirname(__file__))
+cfgPath= os.path.join(cfgPath,'config','param.yml')
 
-test  = data['X_test']
-ltest = data['y_test']
-sSaveName = data['sSavefile']
-modelPath = data['sOptiModel']
-patchSize = data['patchSize']
+with open(cfgPath, 'r') as ymlfile:
+    cfg = yaml.safe_load(ymlfile)
 
-#load the model:
-#reg=1e-5
-model = model_from_json(open(modelPath[0] + '_json').read())
-model.load_weights(modelPath[0] + '_weights.h5')
 
-#opti = keras.optimizers.RMSprop(lr=0.0003, rho=0.9, epsilon=1e-06)
-#opti = keras.optimizers.SGD(lr=0.01, momentum=1e-8, decay=0.1, nesterov=True);
-opti = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-model.compile(loss='categorical_crossentropy', optimizer=opti)
+# default database: MRPhysics with ['newProtocol','dicom_sorted']
+dbinfo = DatabaseInfo(cfg['MRdatabase'],cfg['subdirs'],folderPath)
 
-#predict one image:
-preds_prob = model.predict(test, batch_size=64, verbose=1)
+patchSize = cfg['patchSize']
+
+sOutsubdir = cfg['subdirs'][2]
+sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(map(str,patchSize)).replace(" ", "") + os.sep + sOutsubdir
+sNetworktype = cfg['network'].split("_")
+model_name = cfg['selectedDatabase']['bestmodel'][sNetworktype[2]]
+
+
+model_path = sOutPath + model_name + '_model.h5'
+model = load_model(model_path)
+# model = load_model('/no_backup/d1240/CNNArt/results/4040/testout4040_lr_0.001_bs_128_model.h5')
 
 if sTypeVis == 'deep':
 
@@ -179,9 +143,11 @@ elif sTypeVis == 'weights':
         if w.ndim == 4:
             layers_to_show.append((i, layer))
 
+
     for i, (layer_id, layer) in enumerate(layers_to_show):
         w = layer.weights[0].container.data
         w = np.transpose(w, (3, 2, 0, 1))
+
 
         # n define the maximum number of weights to display
         n = w.shape[0]
@@ -201,4 +167,8 @@ elif sTypeVis == 'weights':
 
         im = plt.imshow(mosaic)
 
+
+
 plt.show()
+
+
