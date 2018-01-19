@@ -156,7 +156,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     _, sPath = os.path.splitdrive(sOutPath)
     sPath,sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
-    model_name = sPath + '/' + sFilename + str(patchSize[0]) + str(patchSize[1]) +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
+    model_name = sPath + '/' + sFilename + '/' + sFilename +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     weight_name = model_name + '_weights.h5'
     model_json = model_name + '_json'
     model_all = model_name + '_model.h5'            
@@ -217,8 +217,8 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
                             'prob_test':prob_test})
 
 def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
-       
-    weight_name = sOutPath + model_name + '_weights.h5'
+
+    weight_name = sOutPath + '/' + model_name + '_weights.h5'
     model_json = sOutPath + model_name + '_json'
     model_all = sOutPath + model_name + '_model.h5'
 
@@ -261,7 +261,7 @@ def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
     prob_pre = model.predict(X_test, batchSize, 1)
     
     #modelSave = model_name[:-5] + '_pred.mat'
-    modelSave = sOutPath + model_name + '_pred.mat'
+    modelSave = sOutPath + '/' + model_name + '_pred.mat'
     sio.savemat(modelSave, {'prob_pre':prob_pre, 'score_test': score_test, 'acc_test':acc_test})
 
     

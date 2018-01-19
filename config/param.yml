@@ -78,6 +78,9 @@ lSave : false
 lPredictImg : ["/med_data/ImageSimilarity/Databases/MRPhysics/..."] 
 # (list with) labels of to be predicted images (either scalar or path to patch-wise label file)
 lLabelPredictImg : [ 1 ]
+# sPredictModel: if empty, the best model in the selected database will be chosen.
+# Otherwise, the given trained model will be used in predicting, e.g. "testout4040_lr_0.0005_bs_128"
+sPredictModel : ""
 # sTrainingMethod
 # "None": No scaling process
 # "scalingPrior": Up and down sampling the patches for data augmentation

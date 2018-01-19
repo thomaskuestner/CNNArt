@@ -98,7 +98,7 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
     if 'motion' in sModelIn:
         if 'CNN2D' in sModelIn:
             sModel = 'networks.motion.CNN2D.' + sModelIn
-        elif 'motion_3DCNN' in sModelIn:
+        elif 'motion_CNN3D' in sModelIn:
             sModel = 'networks.motion.CNN3D.' + sModelIn
         elif 'motion_MNetArt' in sModelIn:
             sModel = 'networks.motion.MNetArt.' + sModelIn
