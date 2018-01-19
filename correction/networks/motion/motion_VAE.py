@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from keras.layers import Input, Dense, Lambda, Flatten, Reshape, Layer, concatenate, LeakyReLU
+from keras.layers import Input, Dense, Lambda, Flatten, Reshape, Layer, concatenate, LeakyReLU, BatchNormalization
 from keras.layers import Conv2D, Conv2DTranspose, add
 from keras.models import Model
 from keras.regularizers import l2
@@ -18,9 +18,8 @@ class lossLayer(Layer):
 
         super(lossLayer, self).__init__(**kwargs)
 
-    def vae_loss(self, x_ref, x_art, x_decoded):
+    def vae_loss(self, x_ref, x_decoded, shared):
         x_ref = K.flatten(x_ref)
-        x_art = K.flatten(x_art)
 
         decoded_ref2ref = Lambda(sliceRef)(x_decoded)
         decoded_art2ref = Lambda(sliceArt)(x_decoded)
@@ -28,16 +27,17 @@ class lossLayer(Layer):
         decoded_art2ref = K.flatten(decoded_art2ref)
 
         loss_ref2ref = self.patch_size[0] * self.patch_size[1] * metrics.binary_crossentropy(x_ref, decoded_ref2ref)
-        loss_art2ref = self.patch_size[0] * self.patch_size[1] * metrics.binary_crossentropy(x_art, decoded_art2ref)
+        loss_art2ref = self.patch_size[0] * self.patch_size[1] * metrics.binary_crossentropy(x_ref, decoded_art2ref)
 
-        # TODO: add kl loss
-        return K.mean(loss_ref2ref + loss_art2ref)
+
+        loss_kl = K.mean(K.pow(shared, 2))
+        return K.mean(loss_ref2ref + loss_art2ref + loss_kl)
 
     def call(self, inputs):
         x_ref = inputs[0]
-        x_art = inputs[1]
-        x_decoded = inputs[2]
-        loss = self.vae_loss(x_ref, x_art, x_decoded)
+        x_decoded = inputs[1]
+        shared = inputs[2]
+        loss = self.vae_loss(x_ref, x_decoded, shared)
         self.add_loss(loss, inputs=inputs)
         return x_decoded
 
@@ -48,169 +48,81 @@ def sliceArt(input):
     return input[input.shape[0]//2:, :, :, :]
 
 def decode(shared):
-    # Residual-block back-end
-    conv_1 = Conv2D(256,
-                    kernel_size=(3, 3),
-                    strides=(1, 1),
-                    padding='same',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(shared)
-    conv_1_r = LeakyReLU()(conv_1)
-    conv_1 = LeakyReLU()(conv_1)
-
-    conv_2 = Conv2D(256,
-                    kernel_size=(3, 3),
-                    strides=(1, 1),
-                    padding='same',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(conv_1)
-    conv_2 = LeakyReLU()(conv_2)
-    conv_2 = add([conv_1_r, conv_2])
-
-    conv_3 = Conv2D(128,
-                    kernel_size=(3, 3),
-                    strides=(1, 1),
-                    padding='same',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(conv_2)
-    conv_3_r = LeakyReLU()(conv_3)
-    conv_3 = LeakyReLU()(conv_3)
-
-    conv_4 = Conv2D(128,
-                    kernel_size=(3, 3),
-                    strides=(1, 1),
-                    padding='same',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(conv_3)
-    conv_4 = LeakyReLU()(conv_4)
-    conv_4 = add([conv_3_r, conv_4])
-
-    # Convolutional back-end
-    deconv_5 = Conv2DTranspose(64,
-                               kernel_size=(3, 3),
-                               strides=(2, 2),
-                               padding='valid',
-                               kernel_initializer='he_normal',
-                               kernel_regularizer=l2(1e-6))(conv_4)
-    deconv_5 = LeakyReLU()(deconv_5)
-
-    deconv_6 = Conv2DTranspose(64,
+    deconv_1 = Conv2DTranspose(256,
                                kernel_size=(3, 3),
                                strides=(1, 1),
-                               padding='valid',
-                               kernel_initializer='he_normal',
-                               kernel_regularizer=l2(1e-6))(deconv_5)
-    deconv_6 = LeakyReLU()(deconv_6)
+                               padding='same')(shared)
+    deconv_1 = LeakyReLU()(deconv_1)
 
-    deconv_7 = Conv2DTranspose(1,
-                              kernel_size=(3, 3),
+    deconv_2 = Conv2DTranspose(128,
+                               kernel_size=(3, 3),
+                               strides=(2, 2),
+                               padding='valid')(deconv_1)
+    deconv_2 = LeakyReLU()(deconv_2)
+
+    deconv_3 = Conv2DTranspose(64,
+                               kernel_size=(3, 3),
+                               strides=(1, 1),
+                               padding='valid')(deconv_2)
+    deconv_3 = LeakyReLU()(deconv_3)
+
+    deconv_4 = Conv2DTranspose(1,
+                              kernel_size=(2, 2),
                               strides=(1, 1),
-                              padding='valid',
-                              kernel_initializer='he_normal',
-                              kernel_regularizer=l2(1e-6))(deconv_6)
-    deconv_7 = LeakyReLU()(deconv_7)
+                              padding='valid')(deconv_3)
+    deconv_4 = LeakyReLU()(deconv_4)
 
-    decoded = Conv2D(1,
-                     kernel_size=2,
-                     padding='valid',
-                     kernel_initializer='he_normal',
-                     kernel_regularizer=l2(1e-6),
-                     activation='tanh')(deconv_7)
-
-    return decoded
+    return deconv_4
 
 def encode(input):
     # Convolutional front-end
     conv_1 = Conv2D(64,
                     kernel_size=(3, 3),
                     strides=(1, 1),
-                    padding='valid',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(input)
+                    padding='valid')(input)
     conv_1 = LeakyReLU()(conv_1)
 
-    conv_2 = Conv2D(64,
+    conv_2 = Conv2D(128,
                     kernel_size=(3, 3),
                     strides=(2, 2),
-                    padding='valid',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(conv_1)
+                    padding='valid')(conv_1)
     conv_2 = LeakyReLU()(conv_2)
 
-    # Residual-block back-end
-    conv_3 = Conv2D(128,
+    conv_3 = Conv2D(256,
                     kernel_size=(3, 3),
                     strides=(1, 1),
-                    padding='same',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(conv_2)
-    conv_3_r = LeakyReLU()(conv_3)
+                    padding='same')(conv_2)
     conv_3 = LeakyReLU()(conv_3)
 
-    conv_4 = Conv2D(128,
-                    kernel_size=(3, 3),
-                    strides=(1, 1),
-                    padding='same',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(conv_3)
-    conv_4 = LeakyReLU()(conv_4)
-    conv_4 = add([conv_3_r, conv_4])
-
-    conv_5 = Conv2D(256,
-                    kernel_size=(3, 3),
-                    strides=(1, 1),
-                    padding='same',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(conv_4)
-    conv_5_r = LeakyReLU()(conv_5)
-    conv_5 = LeakyReLU()(conv_5)
-
-    conv_6 = Conv2D(256,
-                    kernel_size=(3, 3),
-                    strides=(1, 1),
-                    padding='same',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(conv_5)
-    conv_6 = LeakyReLU()(conv_6)
-    conv_6 = add([conv_5_r, conv_6])
-    return conv_6
+    return conv_3
 
 def encode_shared(input):
     conv_1 = Conv2D(256,
                     kernel_size=(3, 3),
                     strides=(1, 1),
-                    padding='same',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(input)
-    conv_1_r = LeakyReLU()(conv_1)
-    conv_1 = LeakyReLU()(conv_1)
+                    padding='same')(input)
+    a_1 = LeakyReLU()(conv_1)
 
     conv_2 = Conv2D(256,
                     kernel_size=(3, 3),
                     strides=(1, 1),
-                    padding='same',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(conv_1)
-    conv_2 = LeakyReLU()(conv_2)
-    conv_2 = add([conv_1_r, conv_2])
+                    padding='same')(a_1)
+    a_2 = LeakyReLU()(conv_2)
+    enc_2 = add([a_2, input])
+    enc_2_r = add([enc_2, input])
 
     conv_3 = Conv2D(256,
                     kernel_size=(3, 3),
                     strides=(1, 1),
-                    padding='same',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(conv_2)
-    conv_3_r = LeakyReLU()(conv_3)
-    conv_3 = LeakyReLU()(conv_3)
+                    padding='same')(enc_2)
+    a_3 = LeakyReLU()(conv_3)
 
     conv_4 = Conv2D(256,
                     kernel_size=(3, 3),
                     strides=(1, 1),
-                    padding='same',
-                    kernel_initializer='he_normal',
-                    kernel_regularizer=l2(1e-6))(conv_3)
-    conv_4 = LeakyReLU()(conv_4)
-    conv_4 = add([conv_3_r, conv_4])
+                    padding='same')(a_3)
+    a_4 = LeakyReLU()(conv_4)
+    conv_4 = add([a_4, enc_2_r])
 
     return conv_4
 
@@ -233,7 +145,7 @@ def createModel(patchSize):
     decoded = decode(shared)
 
     # create a customer layer to calculate the total loss
-    output = lossLayer()([x_ref, x_art, decoded])
+    output = lossLayer()([x_ref, decoded, shared])
 
     # separate the concatenated images
     decoded_ref2ref = Lambda(sliceRef)(output)
@@ -300,10 +212,10 @@ def fPredict(dData, sOutPath, patchSize, dHyper):
     predict_ref = np.squeeze(predict_ref, axis=1)
     predict_art = np.squeeze(predict_art, axis=1)
 
+    nPatch = predict_ref.shape[0]
+
     fig = plt.figure()
     plt.gray()
-
-    nPatch = predict_ref.shape[0]
 
     for i in range(1, 6):
         iPatch = np.random.randint(0, nPatch)
@@ -316,7 +228,15 @@ def fPredict(dData, sOutPath, patchSize, dHyper):
 
     plt.show()
 
+    fig = plt.figure()
 
+    for i in range(1, 6):
+        iPatch = np.random.randint(0, nPatch)
 
+        fig.add_subplot(5, 2, 2*i-1)
+        plt.imshow(test_art[iPatch])
 
+        fig.add_subplot(5, 2, 2*i)
+        plt.imshow(predict_art[iPatch])
 
+    plt.show()
