@@ -2,7 +2,7 @@ function [dImg, SInfo, SCoord] = fReadDICOM(sFolder)
 % read in DICOM files
 %
 % (c) Christian Wuerslin, Thomas Kuestner, 2011
-% ---------------------------------------------------------------------
+% -------------------------------------------------------------------------
 
 % iMAXSIZE = 256;
 

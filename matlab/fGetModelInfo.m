@@ -13,7 +13,7 @@ switch sModel
         sDataRef = ['dicom_sorted',filesep,'t1_tse_tra_Kopf_0002'];
         sDataArt = ['dicom_sorted',filesep,'t1_tse_tra_Kopf_Motion_0003'];
         if(ispc)
-            sPathOut = 'W:\ImageSimilarity\Databases\MRPhysics\CNN\Headcross';
+            sPathOut = 'D:\med_data\MRPhysics\CNN\Headcross';
         else
             sPathOut = '/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Headcross';
         end
@@ -25,7 +25,7 @@ switch sModel
         sDataRef = ['dicom_sorted',filesep,'t1_tse_tra_fs_mbh_Leber_0004'];
         sDataArt = ['dicom_sorted',filesep,'t1_tse_tra_fs_mbh_Leber_Motion_0005'];
         if(ispc)
-            sPathOut = 'W:\ImageSimilarity\Databases\MRPhysics\CNN\Abdcross';
+            sPathOut = 'D:\med_data\MRPhysics\CNN\Abdcross';
         else
             sPathOut = '/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Abdcross';
         end
@@ -39,7 +39,7 @@ switch sModel
         sDataArt = {['dicom_sorted',filesep,'t1_tse_tra_Kopf_Motion_0003'],['dicom_sorted',filesep,'t1_tse_tra_fs_mbh_Leber_Motion_0005']; ...
 					 1													  , 1};
         if(ispc)
-            sPathOut = 'W:\ImageSimilarity\Databases\MRPhysics\CNN\Allcross';
+            sPathOut = 'D:\med_data\MRPhysics\CNN\Allcross';
         else
             sPathOut = '/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Allcross';
         end
@@ -49,7 +49,7 @@ switch sModel
        sDataRef = ['dicom_sorted',filesep,'t2_tse_tra_fs_Becken_0009'];
        sDataArt = ['dicom_sorted',filesep,'t2_tse_tra_fs_Becken_Shim_xz_0012'];
        if(ispc)
-           sPathOut = 'W:\ImageSimilarity\Databases\MRPhysics\CNN\Shimcross';
+           sPathOut = 'D:\med_data\MRPhysics\CNN\Shimcross';
        else
            sPathOut = '/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Shimcross';
        end

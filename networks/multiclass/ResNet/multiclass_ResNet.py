@@ -150,8 +150,8 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     learningRate = 0.01 if learningRate is None else learningRate
     iEpochs = 300 if iEpochs is None else iEpochs
 
-    print('Training CNN ResNet')
-    print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
+    print 'Training CNN ResNet'
+    print 'with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize)
 
     # save names
 	_, sPath = os.path.splitdrive(sOutPath)
@@ -202,7 +202,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     val_acc = result.history['val_acc']
     val_loss = result.history['val_loss']
 
-    print('Saving results: ' + model_name)
+    print 'Saving results: ' + model_name
     sio.savemat(model_name, {'model_settings': model_json,
 	                         'model': model_all,
 	                         'weights': weight_name,

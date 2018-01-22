@@ -29,43 +29,11 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabelin
 
     # RigidPatching
     dPatches, dLabel = fRigidPatching(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, sLabeling)
+
+    # wieso hier transpose????????
     dPatches = np.transpose(dPatches, (2, 0, 1))
 
     return dPatches, dLabel
-
-def fPreprocessDataCorrection(cfg, dbinfo):
-    """
-    Perform patching to reference and artifact images according to given patch size.
-    @param cfg: the configuration file loaded from config/param.yml
-    @param dbinfo: database related info
-    @return: patches from reference and artifact images and an array which stores the corresponding patient index
-    """
-    patchSize = cfg['patchSize']
-    dRefPatches = np.empty((0, patchSize[0], patchSize[1]))
-    dArtPatches = np.empty((0, patchSize[0], patchSize[1]))
-    dRefPats = np.empty((0, 1))
-    dArtPats = np.empty((0, 1))
-
-    lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
-    for ipat, pat in enumerate(dbinfo.lPats):
-        if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
-            for iseq, seq in enumerate(lDatasets):
-                # patches and labels of reference/artifact
-                tmpPatches, tmpLabels = fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq),
-                                                                patchSize, cfg['patchOverlap'], 1, 'volume')
-
-                if iseq == 0:
-                    dRefPatches = np.concatenate((dRefPatches, tmpPatches), axis=0)
-                    dRefPats = np.concatenate((dRefPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
-                elif iseq == 1:
-                    dArtPatches = np.concatenate((dArtPatches, tmpPatches), axis=0)
-                    dArtPats = np.concatenate((dArtPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
-        else:
-            pass
-
-    assert(dRefPatches.shape == dArtPatches.shape and dRefPats.shape == dArtPats.shape)
-
-    return dRefPatches, dArtPatches, dRefPats
 
 def mask_rectangle(x_coo1, y_coo1, x_coo2, y_coo2, layer_mask, art_no):
     x_coo1 = round(x_coo1)
@@ -131,9 +99,22 @@ def create_MASK_Array(proband, model, mrt_height, mrt_width, mrt_depth):
     mask = np.zeros((mrt_height, mrt_width, mrt_depth))
     # TODO: adapt path
     try:
-        loadMark = shelve.open("../Markings/" + proband + ".slv")
-        print(model)
-        if loadMark.has_key(model):
+        #print(model)
+        #print("../Markings3/" + proband + '.dumbdbm' + ".slv")
+        #loadMark = shelve.open('..' + os.sep + 'Markings' + os.sep + proband + '.slv')
+
+        loadMark = shelve.open(
+            'C:' + os.sep + 'Users' + os.sep + 'Yannick' + os.sep + 'Google Drive' + os.sep + 'Masterarbeit' + os.sep + '30_Content' + os.sep + os.sep + 'CNNArt' + os.sep + 'Markings3' + os.sep + proband + '.dumbdbm.slv')
+
+        #print("../Markings3/" + proband + ".slv")
+        #print(model)
+
+        keys = loadMark.keys()
+        for key in keys:
+            print(key)
+
+        #if loadMark.has_key(model):
+        if model in keys:
             marks = loadMark[model]
             for key in marks:
                 num = int(key.find("_"))

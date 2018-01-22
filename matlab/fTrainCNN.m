@@ -10,7 +10,7 @@ function fTrainCNN(sParafile, sModel, lPats, iGPU)
 %% train network
 % database
 if(ispc)
-    sPath = 'W:\ImageSimilarity\Databases\MRPhysics\newProtocol';    
+    sPath = 'D:\med_data\MRPhysics\newProtocol';    
 else
     sPath = '/scratch/med_data/ImageSimilarity/Databases/MRPhysics/newProtocol';
 end
@@ -82,13 +82,14 @@ for iPat = 1:length(sPats)
         [nX,nY,nZ] = size(dImg);
 
         % scaling
-        dImg = scaleImg(dImg, iScaleRange);
-%         dImg = ((dImg - min(dImg(:))) * (range(2)-range(1)))./(max(dImg(:)) - min(dImg(:)));
+        %dImg = scaleImg(dImg, iScaleRange);
+        dImg = ((dImg - min(dImg(:))) * (range(2)-range(1)))./(max(dImg(:)) - min(dImg(:)));
        
         dimension = size(dImg);
         
         % patching
-        dPatches = fPatch(dImg, patchSize, patchOverlap);
+        %dPatches = fPatch(dImg, patchSize, patchOverlap);
+        [dPatches, iPadsize] = fPatch(dImg, patchSize, patchOverlap);
         
 		y = sDataAll{2,iJ} .* ones(size(dPatches,3),1);
         %if(iJ == 1) % ref
@@ -158,13 +159,14 @@ elseif(strcmp(sSplitting,'crossvalidation_data'))
         if(~exist(sPathOutCurr,'dir'))
             mkdir(sPathOutCurr);
         end
-        sFiles = dir(sPathOutCurr); if(length(sFiles(3:end)) == prod(structfun(@(x) length(x), sOptiPara))*3 + 1), continue; end % learning rates, batch sizes, 3 output files, 1 input file
+        sFiles = dir(sPathOutCurr); 
+        if(length(sFiles(3:end)) == prod(structfun(@(x) length(x), sOptiPara))*3 + 1), continue; end % learning rates, batch sizes, 3 output files, 1 input file
 
         sPathMat = [sPathOutCurr,filesep,'crossVal_data',num2str(iFold,'%02d'),'_', num2str(patchSize(1)), num2str(patchSize(2)),'.mat'];
         save(sPathMat, 'X_train', 'X_test', 'y_train', 'y_test', 'dimensions', 'patchSize', 'patchOverlap', '-v7.3');
         
         % call python
-        fSetGPU( iGPU );
+        %fSetGPU( iGPU );
         system(sprintf('python2 cnn_main.py -i %s -o %s -m %s -t -p %s', sPathMat, [sPathOutCurr,filesep,'outcrossVal_data',num2str(iFold,'%02d')], sModel, sOpti));
 
     end

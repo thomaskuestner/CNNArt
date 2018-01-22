@@ -8,14 +8,13 @@ Copyright: 2016, 2017 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) und
 @author: Thomas Kuestner
 """
 
-
 """Import"""
 
 import sys
-import numpy as np                  # for algebraic operations, matrices
+import numpy as np  # for algebraic operations, matrices
 import h5py
-import scipy.io as sio              # I/O
-import os.path                      # operating system
+import scipy.io as sio  # I/O
+import os.path  # operating system
 import argparse
 
 # networks
@@ -26,15 +25,17 @@ from networks.motion.VNetArt import *
 from networks.multiclass.DenseResNet import *
 from networks.multiclass.InceptionNet import *
 
-#from hyperopt import Trials, STATUS_OK, tpe
-#from hyperas import optim
+# from hyperopt import Trials, STATUS_OK, tpe
+# from hyperas import optim
 
 
 
-"""functions"""    
+"""functions"""
+
+
 def fLoadData(conten):
     # prepared in matlab
-    print 'Loading data'
+    print('Loading data')
     for sVarname in ['X_train', 'X_test', 'y_train', 'y_test']:
         if sVarname in conten:
             exec(sVarname + '=conten[sVarname]')
@@ -44,15 +45,16 @@ def fLoadData(conten):
     pIdx = np.random.permutation(np.arange(len(X_train)))
     X_train = X_train[pIdx]
     y_train = y_train[pIdx]
-    y_train= np.asarray([y_train[:,0], np.abs(np.asarray(y_train[:,0],dtype=np.float32)-1)]).T
-    y_test= np.asarray([y_test[:,0], np.abs(np.asarray(y_test[:,0],dtype=np.float32)-1)]).T
+    y_train = np.asarray([y_train[:, 0], np.abs(np.asarray(y_train[:, 0], dtype=np.float32) - 1)]).T
+    y_test = np.asarray([y_test[:, 0], np.abs(np.asarray(y_test[:, 0], dtype=np.float32) - 1)]).T
     return X_train, y_train, X_test, y_test
-    
+
 
 def fRemove_entries(entries, the_dict):
     for key in entries:
         if key in the_dict:
             del the_dict[key]
+
 
 def fLoadMat(sInPath):
     """Data"""
@@ -60,30 +62,32 @@ def fLoadMat(sInPath):
         try:
             conten = sio.loadmat(sInPath)
         except:
-            f = h5py.File(sInPath,'r')
+            f = h5py.File(sInPath, 'r')
             conten = {}
-            conten['X_train'] = np.transpose(np.array(f['X_train']), (3,2,0,1))
-            conten['X_test'] = np.transpose(np.array(f['X_test']), (3,2,0,1))
+            conten['X_train'] = np.transpose(np.array(f['X_train']), (3, 2, 0, 1))
+            conten['X_test'] = np.transpose(np.array(f['X_test']), (3, 2, 0, 1))
             conten['y_train'] = np.transpose(np.array(f['y_train']))
             conten['y_test'] = np.transpose(np.array(f['y_test']))
             conten['patchSize'] = np.transpose(np.array(f['patchSize']))
     else:
         sys.exit('Input file is not existing')
-    X_train, y_train, X_test, y_test = fLoadData(conten) # output order needed for hyperas
-    
-    fRemove_entries(('X_train', 'X_test', 'y_train', 'y_test'), conten )
-    dData = {'X_train':X_train, 'X_test':X_test, 'y_train':y_train, 'y_test':y_test}
+    X_train, y_train, X_test, y_test = fLoadData(conten)  # output order needed for hyperas
+
+    fRemove_entries(('X_train', 'X_test', 'y_train', 'y_test'), conten)
+    dData = {'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test}
     dOut = dData.copy()
     dOut.update(conten)
-    return dOut # output dictionary (similar to conten, but with reshaped X_train, ...)
-    
+    return dOut  # output dictionary (similar to conten, but with reshaped X_train, ...)
+
+
 def fLoadDataForOptim(sInPath):
-     if os.path.isfile(sInPath):
+    if os.path.isfile(sInPath):
         conten = sio.loadmat(sInPath)
-     X_train, y_train, X_test, y_test = fLoadData(conten) # output order needed for hyperas
-     return X_train, y_train, X_test, y_test, conten["patchSize"]
- 
-#def fLoadAddData(sInPath): # deprecated
+    X_train, y_train, X_test, y_test = fLoadData(conten)  # output order needed for hyperas
+    return X_train, y_train, X_test, y_test, conten["patchSize"]
+
+
+# def fLoadAddData(sInPath): # deprecated
 #    if os.path.isfile(sInPath):
 #        conten = sio.loadmat(sInPath)
 #    else:
@@ -113,7 +117,8 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
         sys.exit("Model is not supported")
 
     # dynamic loading of corresponding model
-    cnnModel = __import__(sModel, globals(), locals(), ['createModel', 'fTrain', 'fPredict'], 0)  # dynamic module loading with specified functions and with absolute importing (level=0) -> work in both Python2 and Python3
+    cnnModel = __import__(sModel, globals(), locals(), ['createModel', 'fTrain', 'fPredict'],
+                          0)  # dynamic module loading with specified functions and with absolute importing (level=0) -> work in both Python2 and Python3
 
     # train (w/ or w/o optimization) and predicting
     if lTrain:  # training
@@ -158,28 +163,40 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
 
         elif sParaOptim == 'grid':  # grid search << backward compatibility
             cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
-                                dData['patchSize'], iBatchSize, iLearningRate, iEpochs)
+                            dData['patchSize'], iBatchSize, iLearningRate, iEpochs)
 
         else:  # no optimization or grid search (if batchSize|learningRate are arrays)
             cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
                             dData['patchSize'], iBatchSize, iLearningRate, iEpochs)
 
     else:  # predicting
-        cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, dData['patchSize'], iBatchSize[0])
+        cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, dData['patchSize'],
+                          iBatchSize[0])
 
 
 # Main Code
-if __name__ == "__main__": # for command line call
+if __name__ == "__main__":  # for command line call
     # input parsing
     # ADD new options here!
-    parser = argparse.ArgumentParser(description='''CNN artifact detection''', epilog='''(c) Thomas Kuestner, thomas.kuestner@iss.uni-stuttgart.de''')
-    parser.add_argument('-i','--inPath', nargs = 1, type = str, help='input path to *.mat of stored patches', default= '/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Datatmp/in.mat')
-    parser.add_argument('-o','--outPath', nargs = 1, type = str, help='output path to the file used for storage (subfiles _model, _weights, ... are automatically generated)', default= '/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Datatmp/out' )
-    parser.add_argument('-m','--model', nargs = 1, type = str, choices =['motion_head_CNN2D', 'motion_abd_CNN2D', 'motion_all_CNN2D', 'motion_CNN3D', 'motion_MNetArt', 'motion_VNetArt', 'multi_DenseResNet', 'multi_InceptionNet'], help='select CNN model', default='motion_2DCNN_head' )
-    parser.add_argument('-t','--train', dest='train', action='store_true', help='if set -> training | if not set -> prediction' )
-    parser.add_argument('-p','--paraOptim', dest='paraOptim', type = str, choices = ['grid','hyperas','none'], help='parameter optimization via grid search, hyper optimization or no optimization', default = 'none')
+    parser = argparse.ArgumentParser(description='''CNN artifact detection''',
+                                     epilog='''(c) Thomas Kuestner, thomas.kuestner@iss.uni-stuttgart.de''')
+    parser.add_argument('-i', '--inPath', nargs=1, type=str, help='input path to *.mat of stored patches',
+                        default='/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Datatmp/in.mat')
+    parser.add_argument('-o', '--outPath', nargs=1, type=str,
+                        help='output path to the file used for storage (subfiles _model, _weights, ... are automatically generated)',
+                        default='/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Datatmp/out')
+    parser.add_argument('-m', '--model', nargs=1, type=str,
+                        choices=['motion_head_CNN2D', 'motion_abd_CNN2D', 'motion_all_CNN2D', 'motion_CNN3D',
+                                 'motion_MNetArt', 'motion_VNetArt', 'multi_DenseResNet', 'multi_InceptionNet'],
+                        help='select CNN model', default='motion_2DCNN_head')
+    parser.add_argument('-t', '--train', dest='train', action='store_true',
+                        help='if set -> training | if not set -> prediction')
+    parser.add_argument('-p', '--paraOptim', dest='paraOptim', type=str, choices=['grid', 'hyperas', 'none'],
+                        help='parameter optimization via grid search, hyper optimization or no optimization',
+                        default='none')
     parser.add_argument('-b', '--batchSize', nargs='*', dest='batchSize', type=int, help='batchSize', default=64)
-    parser.add_argument('-l', '--learningRates', nargs='*', dest='learningRate', type=int, help='learningRate', default=0.0001)
+    parser.add_argument('-l', '--learningRates', nargs='*', dest='learningRate', type=int, help='learningRate',
+                        default=0.0001)
     parser.add_argument('-e', '--epochs', nargs=1, dest='epochs', type=int, help='epochs', default=300)
 
     args = parser.parse_args()
@@ -195,6 +212,5 @@ if __name__ == "__main__": # for command line call
     else:
         sOutPath = args.outPath[0]
 
-    fRunCNN(dData,args.model[0], args.train, args.paraOptim, sOutPath, args.batchSize, args.learningRate, args.epochs[0])
-
-
+    fRunCNN(dData, args.model[0], args.train, args.paraOptim, sOutPath, args.batchSize, args.learningRate,
+            args.epochs[0])

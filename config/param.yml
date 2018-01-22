@@ -5,7 +5,7 @@ motion_head: &id001
    labelref  : [0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003"]
    labelart  : [1]
-   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Headcross"
+   pathout   : "D:/med_data/MRPhysics/CNN/Headcross"
    bestmodel : {CNN2D: "head_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_abd: &id002
@@ -14,7 +14,7 @@ motion_abd: &id002
    labelref  : [0]
    dataart   : ["t1_tse_tra_fs_mbh_Leber_Motion_0005"]
    labelart  : [1]
-   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Abdcross"
+   pathout   : "D:/med_data/MRPhysics/CNN/Abdcross"
    bestmodel : {CNN2D: "abdomen_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_all: &id003
@@ -23,14 +23,14 @@ motion_all: &id003
    labelref  : [0 0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_mbh_Leber_Motion_0005"]
    labelart  : [1 1]
-   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Allcross"
+   pathout   : "D:/med_data/MRPhysics/CNN/Allcross"
    bestmodel : {CNN2D: "all_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 #### set parameters ####
 # database name
 MRdatabase : MRPhysics
 # subdirectories in database, patient, output directory
-subdirs : ["newProtocol", "dicom_sorted", "testout", "correction"]
+subdirs : ["newProtocol", "dicom_sorted", "testout"]
 # CNN database to be modeled
 selectedDatabase: *id001
 # network architecture (if existing for chosen database!)
@@ -49,7 +49,7 @@ patchOverlap : 0.5 # 50%
 # sLabeling strategy
 # 'volume': volume-wise labeling
 # 'patch': patch-wise labeling
-sLabeling : "volume"
+sLabeling : "patch"
 # patching strategy
 # 'rigidPatching' or'adaptivePatching':
 sPatching : "rigidPatching"
@@ -75,7 +75,7 @@ lTrain : true
 # save intermediate results
 lSave : false
 # (list of) path(s) of to be predicted images
-lPredictImg : ["/med_data/ImageSimilarity/Databases/MRPhysics/..."] 
+lPredictImg : ["D:/med_data/MRPhysics/..."] 
 # (list with) labels of to be predicted images (either scalar or path to patch-wise label file)
 lLabelPredictImg : [ 1 ]
 # sTrainingMethod
@@ -84,11 +84,3 @@ lLabelPredictImg : [ 1 ]
 # "scalingPosterior": scaling during training, to be done
 sTrainingMethod : "None"
 lScaleFactor : [0.5, 1, 2]
-
-# lCorrection
-# true: artifact correction
-# false: classification
-lCorrection: false
-# parameters in artifacts correction
-correction:
-  sCorrection: "motion"

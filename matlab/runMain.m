@@ -1,7 +1,7 @@
 %% train network
 iGPU = 0;
 lPats = true(1,15); lPats(3) = false;
-sParafile = 'para_crossvalPat.m'; sModel = 'motion_head';
+sParafile = 'parameters_default.m'; sModel = 'motion_head';
 fTrainCNN(sParafile, sModel, lPats, iGPU);
 
 

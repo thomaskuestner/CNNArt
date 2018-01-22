@@ -179,9 +179,9 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 
 def fPredict(X_test,y_test,model_name,sOutPath,patchSize,batchSize):
        
-    weight_name = sOutPath + model_name + '_weights.h5'
-    model_json = sOutPath + model_name + '_json'
-    model_all = sOutPath + model_name + '_model.h5'
+    weight_name = model_name[0] + '_weights.h5'
+    model_json = model_name[0] + '_json'
+    model_all = model_name[0] + '_model.h5'
 
 #    # load weights and model (OLD WAY)
 #    conten = sio.loadmat(model_name)
@@ -214,14 +214,12 @@ def fPredict(X_test,y_test,model_name,sOutPath,patchSize,batchSize):
 	
     # assume artifact affected shall be tested!
     #y_test = np.ones((len(X_test),1))
-    X_test = np.expand_dims(X_test, axis=1)
-    y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
     
     score_test, acc_test = model.evaluate(X_test, y_test,batch_size=batchSize,show_accuracy=True)
     
     prob_pre = model.predict(X_test, batchSize, 0)
     
-    modelSave = sOutPath + model_name + '_pred.mat'
+    modelSave = model_name[0] + '_pred.mat'
     sio.savemat(modelSave, {'prob_pre':prob_pre, 'score_test': score_test, 'acc_test':acc_test})
 
     

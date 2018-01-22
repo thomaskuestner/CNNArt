@@ -1,5 +1,4 @@
 import os
-import os.path
 import csv
 from MRData import MRData
 
@@ -13,7 +12,7 @@ class DatabaseInfo:
     lPats = ''
     lImgData = '' # list of imaging data
 
-    def __init__(self,sDatabase = None,sSubDirs = None, *args):
+    def __init__(self,sDatabase = None,sSubDirs = None):
         if sDatabase is None:
             self.sDatabase = 'MRPhysics'
         else:
@@ -24,29 +23,23 @@ class DatabaseInfo:
         else:
             self.sSubDirs = sSubDirs
 
-        self.sPathIn = '/med_data/ImageSimilarity/Databases' + os.sep + self.sDatabase + os.sep + self.sSubDirs[0]
+        self.sPathIn = 'D:' + os.sep + 'med_data' + os.sep + self.sDatabase + os.sep + self.sSubDirs[0]
         # parse patients
         self.lPats = [name for name in os.listdir(self.sPathIn) if os.path.isdir(os.path.join(self.sPathIn, name))]
 
+        #for testing
+        #self.lPats = [self.lPats.pop(0), self.lPats.pop(1), self.lPats.pop(3)]
+
         # parse config file (according to set database) => TODO (TK): replace by automatic parsing in directory
-
-        # if run the file which is under a folder like deepvis
-        # need to change the path back to 'CNNArt'
-        # otherwise the file cannot find the content under folder 'config'
-
-        if len(args) == 0:
-            ifile = open('config'+os.sep+'database'+os.sep+self.sDatabase+'.csv',"r") # config file must exist for database!
-        else:
-            ifile = open(args[0]+os.sep+'config' + os.sep + 'database' + os.sep + self.sDatabase + '.csv', "r")
-
+        ifile = open('config'+os.sep+'database'+os.sep+self.sDatabase+'.csv',"rb") # config file must exist for database!
         reader = csv.reader(ifile)
-        next(reader)
+        #reader.next()
         #lImgData = []
         #for i, rows in enumerate(reader):
         #    if i == 0:
         #        continue
         #    self.lImgData.append(MRData(rows[0],rows[1],rows[2],rows[3]))
-        self.lImgData = [MRData(rows[0],rows[1],rows[2],rows[3]) for rows in reader]
+        #self.lImgData = [MRData(rows[0],rows[1],rows[2],rows[3]) for rows in reader]
         ifile.close()
 
     def get_mrt_model(self):

@@ -8,18 +8,22 @@ import os.path
 import scipy.io as sio  
 import numpy as np                  # for algebraic operations, matrices
 import keras
-import keras.optimizers
-from keras.models import Sequential, Model
-from keras.layers import Input
-from keras.layers.core import Dense, Activation, Flatten, Dropout, Lambda, Reshape
-from keras.activations import relu, elu, softmax
-from keras.layers.advanced_activations import LeakyReLU, PReLU
-from keras.initializers import Constant
-from keras.layers import concatenate, add
-from keras.layers.convolutional import Conv3D,Conv2D, MaxPooling3D, MaxPooling2D, ZeroPadding3D
-from keras.regularizers import l1_l2,l2
+from keras.models import Sequential
+from keras.layers.core import Dense, Activation, Flatten#, Layer  Dropout, Flatten
+#from keras.layers import containers
 from keras.models import model_from_json
-from keras.callbacks import EarlyStopping, ModelCheckpoint,ReduceLROnPlateau
+#from hyperas.distributions import choice, uniform, conditional
+#from hyperopt import Trials, STATUS_OK
+
+from keras.layers.convolutional import Convolution2D
+#from keras.layers.convolutional import MaxPooling2D as pool2
+from keras.callbacks import EarlyStopping
+#from keras.layers.convolutional import ZeroPadding2D as zero2d
+from keras.regularizers import l2#, activity_l2
+#from theano import function
+
+from keras.optimizers import SGD
+
 
 def createModel(patchSize, architecture='new'):
     if architecture == 'new':
@@ -156,7 +160,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     _, sPath = os.path.splitdrive(sOutPath)
     sPath,sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
-    model_name = sPath + '/' + sFilename + str(patchSize[0]) + str(patchSize[1]) +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
+    model_name = sPath + '/' + sFilename + str(patchSize[0,0]) + str(patchSize[0,1]) +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     weight_name = model_name + '_weights.h5'
     model_json = model_name + '_json'
     model_all = model_name + '_model.h5'            
@@ -176,18 +180,18 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     #                    period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
     #callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 		
-    cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
-    print(cnn.summary)
-
+    cnn.compile(loss='categorical_crossentropy', optimizer=opti)
+        
     result = cnn.fit(X_train,
                      y_train,
                      validation_data=[X_test, y_test],
                      nb_epoch=iEpochs,
                      batch_size=batchSize, 
+                     show_accuracy=True, 
                      callbacks=callbacks,
                      verbose=1)
                         
-    loss_test, acc_test = cnn.evaluate(X_test, y_test,batch_size=batchSize)
+    loss_test, acc_test = cnn.evaluate(X_test, y_test,batch_size=batchSize,show_accuracy=True)
     		
     prob_test = cnn.predict(X_test, batchSize, 0)
         
@@ -218,9 +222,9 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 
 def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
        
-    weight_name = sOutPath + model_name + '_weights.h5'
-    model_json = sOutPath + model_name + '_json'
-    model_all = sOutPath + model_name + '_model.h5'
+    weight_name = model_name[0] + '_weights.h5'
+    model_json = model_name[0] + '_json'
+    model_all = model_name[0] + '_model.h5'
 
 #    # load weights and model (OLD WAY)
 #    conten = sio.loadmat(model_name)
@@ -245,7 +249,7 @@ def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
     opti = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     callbacks = [EarlyStopping(monitor='val_loss',patience=10,verbose=1)]    
     
-    model.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer=opti)
     model.load_weights(weight_name)
 
     # load complete model (including weights); keras > 0.7
@@ -253,15 +257,12 @@ def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
 	
     # assume artifact affected shall be tested!
     #y_test = np.ones((len(X_test),1))
-
-    X_test = np.expand_dims(X_test, axis=1)
-    y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
-
-    score_test, acc_test = model.evaluate(X_test, y_test, batch_size=batchSize)
-    prob_pre = model.predict(X_test, batchSize, 1)
+    
+    score_test, acc_test = model.evaluate(X_test, y_test,batch_size=batchSize,show_accuracy=True)
+    prob_pre = model.predict(X_test, batchSize, 0)
     
     #modelSave = model_name[:-5] + '_pred.mat'
-    modelSave = sOutPath + model_name + '_pred.mat'
+    modelSave = model_name[0] + '_pred.mat'
     sio.savemat(modelSave, {'prob_pre':prob_pre, 'score_test': score_test, 'acc_test':acc_test})
 
     

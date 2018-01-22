@@ -4,30 +4,6 @@ from scipy.optimize import fmin_l_bfgs_b
 import proximal_alg
 import numpy as np
 
-def make_mosaic(im, nrows, ncols, border=1):
-
-    import numpy.ma as ma
-
-    nimgs = len(im)
-    imshape = im[0].shape
-
-    mosaic = ma.masked_all((nrows * imshape[0] + (nrows - 1) * border,
-                            ncols * imshape[1] + (ncols - 1) * border),
-                           dtype=np.float32)
-
-    paddedh = imshape[0] + border
-    paddedw = imshape[1] + border
-    im
-    for i in range(nimgs):
-        row = int(np.floor(i / ncols))
-        col = i % ncols
-
-        mosaic[row * paddedh:row * paddedh + imshape[0],
-        col * paddedw:col * paddedw + imshape[1]] = im[i]
-
-    return mosaic
-
-
 class Visualizer():
     
     def __init__(self, calcGrad, calcCost, input):
