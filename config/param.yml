@@ -30,7 +30,7 @@ motion_all: &id003
 # database name
 MRdatabase : MRPhysics
 # subdirectories in database, patient, output directory
-subdirs : ["newProtocol", "dicom_sorted", "testout"]
+subdirs : ["newProtocol", "dicom_sorted", "testout", "correction"]
 # CNN database to be modeled
 selectedDatabase: *id001
 # network architecture (if existing for chosen database!)
@@ -78,3 +78,17 @@ lSave : false
 lPredictImg : ["/med_data/ImageSimilarity/Databases/MRPhysics/..."] 
 # (list with) labels of to be predicted images (either scalar or path to patch-wise label file)
 lLabelPredictImg : [ 1 ]
+# sTrainingMethod
+# "None": No scaling process
+# "scalingPrior": Up and down sampling the patches for data augmentation
+# "scalingPosterior": scaling during training, to be done
+sTrainingMethod : "None"
+lScaleFactor : [0.5, 1, 2]
+
+# lCorrection
+# true: artifact correction
+# false: classification
+lCorrection: false
+# parameters in artifacts correction
+correction:
+  sCorrection: "motion"

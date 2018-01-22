@@ -26,8 +26,8 @@ from networks.motion.VNetArt import *
 from networks.multiclass.DenseResNet import *
 from networks.multiclass.InceptionNet import *
 
-from hyperopt import Trials, STATUS_OK, tpe
-from hyperas import optim
+#from hyperopt import Trials, STATUS_OK, tpe
+#from hyperas import optim
 
 
 
