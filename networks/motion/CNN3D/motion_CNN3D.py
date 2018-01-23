@@ -1,5 +1,6 @@
 import os.path
 import scipy.io as sio
+import numpy as np
 import keras
 import keras.optimizers
 from keras.models import Sequential, Model
@@ -20,6 +21,12 @@ def fTrain(X_train, Y_train, X_test, Y_test, sOutPath, patchSize,batchSizes=None
     batchSizes = [64] if batchSizes is None else batchSizes
     learningRates = [0.001] if learningRates is None else learningRates
     iEpochs = 300 if iEpochs is None else iEpochs
+
+    # change the shape of the dataset
+    X_train = np.expand_dims(X_train, axis=1)
+    X_test = np.expand_dims(X_test, axis=1)
+    Y_train = np.asarray([Y_train[:], np.abs(np.asarray(Y_train[:], dtype=np.float32) - 1)]).T
+    Y_test = np.asarray([Y_test[:], np.abs(np.asarray(Y_test[:], dtype=np.float32) - 1)]).T
 
     for iBatch in batchSizes:
         for iLearn in learningRates:

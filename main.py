@@ -92,8 +92,10 @@ elif lTrain:
         #   images will be split into pathces with size scpatchSize and then scaled to patchSize
         for iscalefactor in lScaleFactor:
             scpatchSize = [int(psi/iscalefactor) for psi in patchSize]
-
-            dAllPatches = np.zeros((0, scpatchSize[0], scpatchSize[1]))
+            if len(patchSize) == 3:
+                dAllPatches = np.zeros((0, scpatchSize[0], scpatchSize[1], scpatchSize[2]))
+            else:
+                dAllPatches = np.zeros((0, scpatchSize[0], scpatchSize[1]))
             dAllLabels = np.zeros(0)
             dAllPats = np.zeros((0, 1))
             lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
