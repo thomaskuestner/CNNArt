@@ -199,7 +199,7 @@ def fPredict(dData, sOutPath, patchSize, dHyper):
         fig, axes = plt.subplots(nrows=5, ncols=4)
         plt.gray()
 
-        cols_title = ['test_ref', 'predict_ref', 'test_art', 'predict_ref']
+        cols_title = ['test_ref', 'predict_ref', 'test_art', 'predict_art']
 
         for ax, col in zip(axes[0], cols_title):
             ax.set_title(col)
