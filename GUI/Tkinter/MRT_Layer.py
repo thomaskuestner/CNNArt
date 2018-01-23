@@ -1,6 +1,6 @@
-
 """
 Created on Monday January 08 7:40 2018
+
 @author: Sebastian Milde
 """
 
@@ -95,3 +95,4 @@ class MRT_Layer():
 
     def set_v_max(self, v_max):
         self.v_max = v_max
+
