@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from keras.layers import Input, Lambda, Layer, concatenate, LeakyReLU
+from keras.layers import Input, Lambda, Layer, concatenate, LeakyReLU, Dense, Reshape, Flatten
 from keras.layers import Conv2D, Conv2DTranspose
 from keras.models import Model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
@@ -9,17 +9,13 @@ from keras import backend as K
 from keras import metrics
 import os
 
+index = 1
+
 # Custom loss layer
 class LossLayer(Layer):
     def __init__(self, **kwargs):
         self.is_placeholder = True
         super(LossLayer, self).__init__(**kwargs)
-
-    def compute_kl(self, mu, sd):
-        mu_2 = K.pow(mu, 2)
-        sd_2 = K.pow(sd, 2)
-        kl_loss = K.sum(mu_2 + sd_2 - K.log(sd_2)) / K.shape(mu_2)[0]
-        return kl_loss
 
     def vae_loss(self, x_ref, x_decoded, mu, sd):
         x_ref = K.flatten(x_ref)
@@ -33,11 +29,9 @@ class LossLayer(Layer):
         loss_ref2ref = 1600 * metrics.binary_crossentropy(x_ref, decoded_ref2ref)
         loss_art2ref = 1600 * metrics.binary_crossentropy(x_ref, decoded_art2ref)
 
-        loss_kl = 0
-        for i, lt in enumerate([(mu, sd)]):
-            loss_kl += 2 * self.compute_kl(*lt)
+        loss_kl = - 0.5 * K.mean(1 + mu - K.square(mu) - K.exp(sd), axis=-1)
 
-        return 0.1 * (loss_ref2ref + loss_art2ref) + 0.01 * loss_kl
+        return K.mean(loss_art2ref + loss_ref2ref + loss_kl)
 
     def call(self, inputs):
         x_ref = inputs[0]
@@ -74,39 +68,43 @@ def sliceArt(input):
 
 def sampling(args):
     z_mean, z_log_var = args
-    epsilon = K.random_normal(shape=(K.shape(z_mean)[0], K.shape(z_mean)[1], K.shape(z_mean)[2], K.shape(z_mean)[3]), mean=0.,
+    epsilon = K.random_normal(shape=(K.shape(z_mean)[0], 500), mean=0.,
                               stddev=1.0)
     return z_mean + K.exp(z_log_var / 2) * epsilon
 
 def encode(input):
-    conv_1 = LeakyReluConv2D(filters=32, kernel_size=5, strides=2, padding='valid')(input)
-    conv_2 = LeakyReluConv2D(filters=64, kernel_size=5, strides=2, padding='valid')(conv_1)
-    # conv_1 = Conv2D(filters=32, kernel_size=5, strides=2, padding='valid', activation='relu')(input)
-    # conv_2 = Conv2D(filters=64, kernel_size=5, strides=2, padding='valid', activation='relu')(conv_1)
-    return conv_2
+    conv_1 = LeakyReluConv2D(filters=32, kernel_size=3, strides=1, padding='same')(input)
+    conv_2 = LeakyReluConv2D(filters=64, kernel_size=3, strides=2, padding='same')(conv_1)
+    conv_3 = LeakyReluConv2D(filters=128, kernel_size=3, strides=1, padding='same')(conv_2)
+    # conv_1 = Conv2D(filters=32, kernel_size=3, strides=1, padding='same', activation='relu')(input)
+    # conv_2 = Conv2D(filters=64, kernel_size=3, strides=2, padding='same', activation='relu')(conv_1)
+    # conv_3 = Conv2D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(conv_2)
+    return conv_3
 
 def encode_shared(input):
-    conv_1 = LeakyReluConv2D(filters=256, kernel_size=7, strides=1, padding='valid')(input)
-    conv_2 = LeakyReluConv2D(filters=256, kernel_size=1, strides=1, padding='valid')(conv_1)
-    # conv_1 = Conv2D(filters=256, kernel_size=7, strides=1, padding='valid', activation='relu')(input)
-    # conv_2 = Conv2D(filters=512, kernel_size=7, strides=1, padding='valid', activation='relu')(conv_1)
+    conv_1 = LeakyReluConv2D(filters=256, kernel_size=3, strides=1, padding='same')(input)
+    conv_2 = LeakyReluConv2D(filters=256, kernel_size=3, strides=2, padding='same')(conv_1)
+    # conv_1 = Conv2D(filters=256, kernel_size=3, strides=1, padding='same', activation='relu')(input)
+    # conv_2 = Conv2D(filters=256, kernel_size=3, strides=2, padding='same', activation='relu')(conv_1)
+    flat = Flatten()(conv_2)
 
-    mu = Conv2D(filters=256, kernel_size=1, strides=1, padding='valid')(conv_2)
-    sd = Conv2D(filters=256, kernel_size=1, strides=1, padding='valid', activation='softplus')(conv_2)
-    z = Lambda(sampling)([mu, sd])
+    mu = Dense(500)(flat)
+    sd = Dense(500)(flat)
+
+    z = Lambda(sampling, output_shape=(500,))([mu, sd])
 
     return z, mu, sd
 
 def decode(input):
-    output = LeakyReluConv2DTranspose(filters=256, kernel_size=4, strides=2, padding='valid')(input)
-    output = LeakyReluConv2DTranspose(filters=256, kernel_size=3, strides=2, padding='valid')(output)
-    output = LeakyReluConv2DTranspose(filters=128, kernel_size=3, strides=2, padding='valid')(output)
-    output = LeakyReluConv2DTranspose(filters=64, kernel_size=4, strides=2, padding='valid')(output)
-    # output = Conv2DTranspose(filters=512, kernel_size=4, strides=2, padding='valid', activation='relu')(input)
-    # output = Conv2DTranspose(filters=256, kernel_size=3, strides=2, padding='valid', activation='relu')(output)
-    # output = Conv2DTranspose(filters=128, kernel_size=3, strides=2, padding='valid', activation='relu')(output)
-    # output = Conv2DTranspose(filters=64, kernel_size=4, strides=2, padding='valid', activation='relu')(output)
-    output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='valid', activation='tanh')(output)
+    dense = Dense(25600)(input)
+    reshape = Reshape((256, 10, 10))(dense)
+    output = LeakyReluConv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same')(reshape)
+    output = LeakyReluConv2DTranspose(filters=128, kernel_size=3, strides=1, padding='same')(output)
+    output = LeakyReluConv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same')(output)
+    # output = Conv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same', activation='relu')(reshape)
+    # output = Conv2DTranspose(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(output)
+    # output = Conv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same', activation='relu')(output)
+    output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
     return output
 
 def createModel(patchSize):
@@ -165,7 +163,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr):
 
     print('Training with epochs {} batch size {} learning rate {}'.format(epochs, batchSize, lr))
 
-    weights_file = sOutPath + os.sep + 'vae_model_weight_bs_{}.h5'.format(batchSize)
+    weights_file = sOutPath + os.sep + 'vae_model_weight_bs_{}_2.h5'.format(batchSize)
 
     callback_list = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
     callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
@@ -183,7 +181,7 @@ def fPredict(dData, sOutPath, patchSize, dHyper):
     weights_file = sOutPath + os.sep + '{}.h5'.format(dHyper['bestModel'])
 
     vae = createModel(patchSize)
-    vae.compile(optimizer='adam', loss='binary_crossentropy')
+    vae.compile(optimizer='adam', loss=None)
 
     vae.load_weights(weights_file)
 
@@ -197,29 +195,20 @@ def fPredict(dData, sOutPath, patchSize, dHyper):
 
     nPatch = predict_ref.shape[0]
 
-    fig = plt.figure()
-    plt.gray()
+    for i in range(nPatch//6):
+        fig, axes = plt.subplots(nrows=5, ncols=4)
+        plt.gray()
 
-    for i in range(1, 6):
-        iPatch = np.random.randint(0, nPatch)
+        cols_title = ['test_ref', 'predict_ref', 'test_art', 'predict_ref']
 
-        fig.add_subplot(5, 2, 2*i-1)
-        plt.imshow(test_ref[iPatch])
+        for ax, col in zip(axes[0], cols_title):
+            ax.set_title(col)
 
-        fig.add_subplot(5, 2, 2*i)
-        plt.imshow(predict_ref[iPatch])
+        for j in range(5):
+            axes[j, 0].imshow(test_ref[6*i+j])
+            axes[j, 1].imshow(predict_ref[6 * i + j])
+            axes[j, 2].imshow(test_art[6 * i + j])
+            axes[j, 3].imshow(predict_art[6 * i + j])
 
-    plt.show()
+        plt.show()
 
-    fig = plt.figure()
-
-    for i in range(1, 6):
-        iPatch = np.random.randint(0, nPatch)
-
-        fig.add_subplot(5, 2, 2*i-1)
-        plt.imshow(test_art[iPatch])
-
-        fig.add_subplot(5, 2, 2*i)
-        plt.imshow(predict_art[iPatch])
-
-    plt.show()
