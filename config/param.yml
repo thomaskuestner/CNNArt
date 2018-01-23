@@ -96,4 +96,5 @@ lScaleFactor : [0.5, 1, 2]
 lCorrection: false
 # parameters in artifacts correction
 correction:
-  sCorrection: "motion"
+  sCorrection: "motion_VAE"
+  bestModel: "vae_model_weight_bs_128"

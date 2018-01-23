@@ -263,7 +263,7 @@ def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
     #modelSave = model_name[:-5] + '_pred.mat'
     modelSave = sOutPath + '/' + model_name + '_pred.mat'
     sio.savemat(modelSave, {'prob_pre':prob_pre, 'score_test': score_test, 'acc_test':acc_test})
-
+    model.save(model_all)
     
 ###############################################################################
 ## OPTIMIZATIONS ##
