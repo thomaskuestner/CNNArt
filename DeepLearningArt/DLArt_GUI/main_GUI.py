@@ -1,3 +1,9 @@
+'''
+@author: Yannick Wilhelm
+@email: yannick.wilhelm@gmx.de
+@date: January 2018
+'''
+
 import sys
 import os
 from PyQt5.QtCore import *
@@ -40,6 +46,14 @@ class MainWindow(QMainWindow):
         #initialize patching mode
         self.ui.ComboBox_Patching.setCurrentIndex(1)
 
+        #initialize store mode
+        self.ui.ComboBox_StoreOptions.setCurrentIndex(0)
+
+        #initialize splitting mode
+        self.ui.ComboBox_splittingMode.setCurrentIndex(DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING)
+        self.ui.Label_SplittingParams.setText("using Test/Train="
+                                              +str(self.deepLearningArtApp.getTrainTestDatasetRatio())
+                                              +" and Valid/Train="+str(self.deepLearningArtApp.getTrainValidationRatio()))
 
         ################################################################################################################
         # Signals and Slots
@@ -62,6 +76,9 @@ class MainWindow(QMainWindow):
         #mask marking path button clicekd
         self.ui.Button_MarkingsPath.clicked.connect(self.button_markingsPath_clicked)
 
+        # combo box splitting mode is changed
+        self.ui.ComboBox_splittingMode.currentIndexChanged.connect(self.splittingMode_changed)
+
         ################################################################################################################
 
     def button_markingsPath_clicked(self):
@@ -70,6 +87,10 @@ class MainWindow(QMainWindow):
         self.deepLearningArtApp.setMarkingsPath(dir)
 
     def button_patching_clicked(self):
+        if self.deepLearningArtApp.getSplittingMode() == DeepLearningArtApp.NONE_SPLITTING:
+            QMessageBox.about(self, "My message box", "Select Splitting Mode!")
+            return 0
+
         self.getSelectedDatasets()
         self.getSelectedPatients()
 
@@ -96,6 +117,8 @@ class MainWindow(QMainWindow):
             self.ui.ComboBox_Patching.setCurrentIndex(1)
             self.deepLearningArtApp.setPatchingMode(DeepLearningArtApp.PATCHING_2D)
 
+        # handle store mode
+        self.deepLearningArtApp.setStoreMode(self.ui.ComboBox_StoreOptions.currentIndex())
 
         print("Start Patching for ")
         print("the Patients:")
@@ -108,6 +131,7 @@ class MainWindow(QMainWindow):
         print("Patch Size X: " + str(self.deepLearningArtApp.getPatchSizeX()))
         print("Patch Size Y: " + str(self.deepLearningArtApp.getPatchSizeY()))
         print("Patch Overlapp: " + str(self.deepLearningArtApp.getPatchOverlapp()))
+
 
         self.deepLearningArtApp.generateDataset()
 
@@ -151,7 +175,7 @@ class MainWindow(QMainWindow):
         for x in subdirs:
             item = QTreeWidgetItem()
             item.setText(0, str(x))
-            item.setCheckState(0, Qt.Checked)
+            item.setCheckState(0, Qt.Unchecked)
             self.ui.TreeWidget_Patients.addTopLevelItem(item)
 
         self.ui.Label_DB.setText(self.deepLearningArtApp.getPathToDatabase())
@@ -174,6 +198,39 @@ class MainWindow(QMainWindow):
                 selectedDatasets.append(self.ui.TreeWidget_Datasets.topLevelItem(i).text(0))
 
         self.deepLearningArtApp.setSelectedDatasets(selectedDatasets)
+
+    def splittingMode_changed(self):
+
+        if self.ui.ComboBox_splittingMode.currentIndex() == 0:
+            self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
+            self.ui.Label_SplittingParams.setText("Select splitting mode!")
+        elif self.ui.ComboBox_splittingMode.currentIndex() == 1:
+            # call input dialog for editting ratios
+            testTrainingRatio, retBool = QInputDialog.getDouble(self, "Enter Test/Training Ratio:",
+                                                             "Ratio Test/Training Set:", 0.2, 0, 1, decimals=2)
+            if retBool == True:
+                validationTrainingRatio, retBool = QInputDialog.getDouble(self, "Enter Validation/Training Ratio",
+                                                                      "Ratio Validation/Training Set: ", 0.2, 0, 1, decimals=2)
+                if retBool == True:
+                    self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING)
+                    self.deepLearningArtApp.setTrainTestDatasetRatio(testTrainingRatio)
+                    self.deepLearningArtApp.setTrainValidationRatio(validationTrainingRatio)
+                    txtStr = "using Test/Train=" + str(testTrainingRatio) + " and Valid/Train=" + str(validationTrainingRatio)
+                    self.ui.Label_SplittingParams.setText(txtStr)
+                else:
+                    self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
+                    self.ui.ComboBox_splittingMode.setCurrentIndex(0)
+                    self.ui.Label_SplittingParams.setText("Select Splitting Mode!")
+            else:
+                self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
+                self.ui.ComboBox_splittingMode.setCurrentIndex(0)
+                self.ui.Label_SplittingParams.setText("Select Splitting Mode!")
+        elif self.ui.ComboBox_splittingMode.currentIndex() == 2:
+            self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.CROSS_VALIDATION_SPLITTING)
+        elif self.ui.ComboBox_splittingMode.currentIndex() == 3:
+            self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.PATIENT_CROSS_VALIDATION_SPLITTING)
+
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

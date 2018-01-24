@@ -36,7 +36,7 @@
         <x>10</x>
         <y>10</y>
         <width>511</width>
-        <height>431</height>
+        <height>571</height>
        </rect>
       </property>
       <property name="title">
@@ -166,7 +166,7 @@
        <property name="geometry">
         <rect>
          <x>410</x>
-         <y>360</y>
+         <y>520</y>
          <width>91</width>
          <height>31</height>
         </rect>
@@ -251,7 +251,7 @@
         <rect>
          <x>20</x>
          <y>360</y>
-         <width>91</width>
+         <width>101</width>
          <height>31</height>
         </rect>
        </property>
@@ -267,9 +267,9 @@
       <widget class="QLabel" name="Label_OutputPathPatching">
        <property name="geometry">
         <rect>
-         <x>120</x>
+         <x>130</x>
          <y>360</y>
-         <width>271</width>
+         <width>361</width>
          <height>31</height>
         </rect>
        </property>
@@ -287,7 +287,7 @@
         <rect>
          <x>20</x>
          <y>320</y>
-         <width>91</width>
+         <width>101</width>
          <height>31</height>
         </rect>
        </property>
@@ -303,9 +303,9 @@
       <widget class="QLabel" name="Label_MarkingsPath">
        <property name="geometry">
         <rect>
-         <x>120</x>
+         <x>130</x>
          <y>320</y>
-         <width>281</width>
+         <width>361</width>
          <height>31</height>
         </rect>
        </property>
@@ -340,9 +340,9 @@
       <widget class="QRadioButton" name="RadioButton_PatchLabeling">
        <property name="geometry">
         <rect>
-         <x>140</x>
+         <x>160</x>
          <y>290</y>
-         <width>101</width>
+         <width>121</width>
          <height>17</height>
         </rect>
        </property>
@@ -358,9 +358,9 @@
       <widget class="QComboBox" name="ComboBox_Patching">
        <property name="geometry">
         <rect>
-         <x>270</x>
+         <x>330</x>
          <y>282</y>
-         <width>231</width>
+         <width>171</width>
          <height>31</height>
         </rect>
        </property>
@@ -421,6 +421,74 @@
         <string>x</string>
        </property>
       </widget>
+      <widget class="QComboBox" name="ComboBox_StoreOptions">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>520</y>
+         <width>151</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <item>
+        <property name="text">
+         <string>Do not store on HD</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>H5PY</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Patch based</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QComboBox" name="ComboBox_splittingMode">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>400</y>
+         <width>171</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <item>
+        <property name="text">
+         <string>Select Data Spliting ...</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Simple Random Samples</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Crossvalidation</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Patient Crossvalidation</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QLabel" name="Label_SplittingParams">
+       <property name="geometry">
+        <rect>
+         <x>210</x>
+         <y>405</y>
+         <width>271</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Splitting Params</string>
+       </property>
+      </widget>
      </widget>
      <widget class="QGraphicsView" name="GraphicsView_Pic">
       <property name="geometry">
@@ -436,9 +504,9 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>460</y>
+        <y>590</y>
         <width>511</width>
-        <height>311</height>
+        <height>181</height>
        </rect>
       </property>
       <property name="title">

@@ -1,3 +1,9 @@
+'''
+@author: Yannick Wilhelm
+@email: yannick.wilhelm@gmx.de
+@date: January 2018
+'''
+
 import sys
 
 #sys.path.append("C:/Users/Yannick/'Google Drive'/30_Content/CNNArt/utils")
@@ -17,6 +23,9 @@ import tensorflow as tf
 import numpy as np
 import dicom as dicom
 import dicom_numpy as dicom_np
+import json
+import datetime
+import h5py
 
 import shelve
 
@@ -45,6 +54,17 @@ class DeepLearningArtApp():
     PATCHING_2D = 0
     PATCHING_3D = 1
 
+    # constants splitting modes
+    NONE_SPLITTING = 0
+    SIMPLE_RANDOM_SAMPLE_SPLITTING = 1
+    CROSS_VALIDATION_SPLITTING = 2
+    PATIENT_CROSS_VALIDATION_SPLITTING = 3
+
+    # constants storage mode
+    STORE_DISABLED = 0
+    STORE_HDF5 = 1
+    STORE_PATCH_BASED = 2
+
     def __init__(self):
         # attributes for paths and database
         self.pathDatabase = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "newProtocol"
@@ -64,11 +84,60 @@ class DeepLearningArtApp():
 
         #attributes for patching
         self.patchingMode = DeepLearningArtApp.PATCHING_2D
+        self.storeMode = ''
+
+        # attributes for splitting
+        self.splittingMode = DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING
+        self.trainTestDatasetRatio = 0.2 #part of test data
+        self.trainValidationRatio = 0.2 # part of Validation data in traindata
+
+        # train, validation, test dataset attributes
+        self.X_train = ''
+        self.Y_train = ''
+
+        self.X_validation = ''
+        self.Y_validation = ''
+
+        self.X_test = ''
+        self.Y_test = ''
 
 
     def generateDataset(self):
-        dAllPatches = np.zeros((40, 40, 0))
+        self.X_test = []
+        self.X_validation= []
+        self.X_train = []
+        self.Y_test = []
+        self.Y_validation = []
+        self.Y_train = []
+
+        dAllPatches = np.zeros((self.patchSizeX, self.patchSizeY, 0))
         dAllLabels = np.zeros(0)
+
+        # stuff for storing
+        if self.storeMode != DeepLearningArtApp.STORE_DISABLED:
+            # outPutFolder name:
+            outPutFolder = "P" + str(len(self.selectedPatients)) + "_" + "D" + str(len(self.selectedDatasets)) + "_" + \
+                           "PM" + str(self.patchingMode) + "_X" + str(self.patchSizeX) + "_Y" + str(self.patchSizeY) + "_O" + \
+                           str(self.patchOverlapp) + "_L" + str(self.labelingMode) + "_S" + str(self.splittingMode) + \
+                            "_STM" + str(self.storeMode)
+
+            outputFolderPath = self.pathOutputPatching + os.sep + outPutFolder
+
+            if not os.path.exists(outputFolderPath):
+                os.makedirs(outputFolderPath)
+
+            # create dataset summary
+            self.createDatasetInfoSummary(outPutFolder, outputFolderPath)
+
+            if self.storeMode == DeepLearningArtApp.STORE_PATCH_BASED:
+                outPutFolderDataPath = outputFolderPath + os.sep + "data"
+                if not os.path.exists(outPutFolderDataPath):
+                    os.makedirs(outPutFolderDataPath)
+
+                labelDict = {}
+
+        #for storing patch based
+        iPatchToDisk = 0
 
         for patient in self.selectedPatients:
             for dataset in self.selectedDatasets:
@@ -123,13 +192,63 @@ class DeepLearningArtApp():
                         # 3D Patching
                         print("Do 3D patching......")
 
-                dAllPatches = np.concatenate((dAllPatches, dPatches), axis=2)
-                dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
+                if self.storeMode == DeepLearningArtApp.STORE_PATCH_BASED:
+                    # patch based storage
+                    for i in range(0, dPatches.shape[2]):
+                        patchSlice = np.asarray(dPatches[:,:,i], dtype=np.float32)
+                        np.save((outPutFolderDataPath + os.sep + "X"+str(iPatchToDisk)+".npy"), patchSlice, allow_pickle=False)
+                        labelDict["Y"+str(iPatchToDisk)] = int(dLabels[i])
+                        iPatchToDisk+=1
 
-        [X_train], [y_train], [X_test], [y_test]= fSplitDataset(dAllPatches, dAllLabels, None, 'normal',
-                [self.patchSizeX, self.patchSizeY], self.patchOverlapp, 0.1, self.pathOutputPatching, nfolds=0)
+                else:
+                    # concatenate all patches in one array
+                    dAllPatches = np.concatenate((dAllPatches, dPatches), axis=2)
+                    dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
 
-        print("")
+        # store mode
+        if self.storeMode != DeepLearningArtApp.STORE_DISABLED:
+            # H5py store mode
+            if self.storeMode == DeepLearningArtApp.STORE_HDF5:
+                # train, validation, test datasets are computed by splitting all data
+                [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [self.Y_test] \
+                    = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients,
+                                    sSplitting=self.splittingMode,
+                                    patchSize=[self.patchSizeX, self.patchSizeY], patchOverlap=self.patchOverlapp,
+                                    testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                    validationTrainRatio=self.trainValidationRatio,
+                                    outPutPath=self.pathOutputPatching, nfolds=0)
+
+                # #outPutFolder name:
+                # outPutFolder = "P" + str(len(self.selectedPatients)) + "_" + "D" + str(len(self.selectedDatasets)) + "_" + \
+                #     "PM" + str(self.patchingMode) +"_X" + str(self.patchSizeX) + "_Y" + str(self.patchSizeY) + "_O" + \
+                #     str(self.patchOverlapp) + "_L" + str(self.labelingMode) + "_S" + str(self.splittingMode)
+                #
+                # outputFolderPath = self.pathOutputPatching + os.sep + outPutFolder
+                # if not os.path.exists(outputFolderPath):
+                #     os.makedirs(outputFolderPath)
+                #
+                # # create dataset summary
+                # self.createDatasetInfoSummary(outPutFolder, outputFolderPath)
+
+                # store datasets with h5py
+                with h5py.File(outputFolderPath+os.sep+'datasets.hdf5', 'w') as hf:
+                    hf.create_dataset('X_train', data=self.X_train)
+                    hf.create_dataset('X_validation', data=self.X_validation)
+                    hf.create_dataset('X_test', data=self.X_test)
+                    hf.create_dataset('Y_train', data=self.Y_train)
+                    hf.create_dataset('Y_validation', data=self.Y_validation)
+                    hf.create_dataset('Y_test', data=self.Y_test)
+
+            elif self.storeMode == DeepLearningArtApp.STORE_PATCH_BASED:
+                with open(outputFolderPath+os.sep+"labels.json", 'w') as fp:
+                    json.dump(labelDict, fp)
+        else:
+            # no storage of pateched datasets
+            [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [self.Y_test] \
+                = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients, sSplitting=self.splittingMode,
+                                patchSize = [self.patchSizeX, self.patchSizeY], patchOverlap=self.patchOverlapp,
+                                testTrainingDatasetRatio=self.trainTestDatasetRatio, validationTrainRatio=self.trainValidationRatio,
+                                outPutPath=self.pathOutputPatching, nfolds=0)
 
 
 
@@ -147,6 +266,29 @@ class DeepLearningArtApp():
                     fileNames = [os.path.join(curDataDir, f) for f in fileNames]
                     allDicomsPathList = allDicomsPathList + fileNames
         return allDicomsPathList
+
+    def createDatasetInfoSummary(self, name, outputFolderPath):
+        '''
+        creates a json info summary of the patched dataset
+        :param outputFolderPath:
+        :return:
+        '''
+        dataDict = {}
+        dataDict['Name'] = name
+        dataDict['Date'] = datetime.datetime.today().strftime('%Y-%m-%d')
+        dataDict['Patients'] = self.selectedPatients
+        dataDict['Datasets'] = self.selectedDatasets
+        dataDict['PatchMode'] = self.patchingMode
+        dataDict['PatchSizeX'] = self.patchSizeX
+        dataDict['PatchSizeY'] = self.patchSizeY
+        dataDict['PatchSizeZ'] = self.patchSizeZ
+        dataDict['PatchOverlap'] = self.patchOverlapp
+        dataDict['LabelingMode'] = self.labelingMode
+        dataDict['SplittingMode'] = self.splittingMode
+        dataDict['StoreMode'] = self.storeMode
+
+        with open((outputFolderPath+os.sep+name+'.json'), 'w') as fp:
+            json.dump(dataDict, fp, indent=4)
 
 
     def setLabelingMode(self, mode):
@@ -216,3 +358,48 @@ class DeepLearningArtApp():
 
     def getPatchingMode(self):
         return self.patchingMode
+
+    def getStoreMode(self):
+        return self.storeMode
+
+    def setStoreMode(self, mode):
+        if mode == 0:
+            self.storeMode = DeepLearningArtApp.STORE_DISABLED
+        elif mode == 1:
+            self.storeMode = DeepLearningArtApp.STORE_HDF5
+        elif mode == 2:
+            self.storeMode = DeepLearningArtApp.STORE_PATCH_BASED
+        else:
+            raise ValueError('Unknown store mode!!!')
+
+    def getTrainTestDatasetRatio(self):
+        '''
+        Function returns the splitting ratio of dataset into training set and test set
+        :return: splitting ratio
+        '''
+        return self.trainTestDatasetRatio
+
+    def setTrainTestDatasetRatio(self, ratio):
+        if 0 < ratio < 1:
+            self.trainTestDatasetRatio = ratio
+        else:
+            raise ValueError('Splitting ratio train set, test set too big or too small!')
+
+    def getTrainValidationRatio(self):
+        '''
+        Function returns the splitting ratio of training set into sets used for training and validation
+        :return:
+        '''
+        return self.trainValidationRatio
+
+    def setTrainValidationRatio(self, ratio):
+        if 0 < ratio < 1:
+            self.trainValidationRatio = ratio
+        else:
+            raise ValueError('Splitting ratio train, validation on training set is too big or too small!')
+
+    def setSplittingMode(self, mode):
+        self.splittingMode = mode
+
+    def getSplittingMode(self):
+        return self.splittingMode

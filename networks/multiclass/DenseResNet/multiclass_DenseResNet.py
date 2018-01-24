@@ -320,6 +320,11 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 
 	cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
 	cnn.summary()
+
+	# in keras fit() validation_data there is the test set used. -> no validation set used!
+	# compare function definition in doc: fit(self, x=None, y=None, batch_size=None, epochs=1, verbose=1, callbacks=None, validation_split=0.0, validation_data=None, shuffle=True, class_weight=None, sample_weight=None, initial_epoch=0, steps_per_epoch=None, validation_steps=None)
+	# two options: validation_split(splits validation set from training set) or validation_data (overrides validation_split)
+	# BUT: consider if 'normal splitting' or 'cross validation splitting' is used
 	result = cnn.fit(X_train,
 	                 y_train,
 	                 validation_data=[X_test, y_test],

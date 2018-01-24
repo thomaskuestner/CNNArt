@@ -5,12 +5,14 @@ Created on Thu Mar 02 15:59:36 2017
 """
 
 import math
+import pandas as pd
 import numpy as np
 import h5py
 import inspect
 import dis
 from sklearn.model_selection import KFold
 import os
+from DeepLearningArt.DLArt_GUI import dlart
 
 def expecting():
     """Return how many values the caller is expecting"""
@@ -27,7 +29,7 @@ def expecting():
         return 0
     return 1
 
-def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap, split_ratio, sFolder, nfolds = 0):
+def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap, testTrainingDatasetRatio=0, validationTrainRatio=0, outPutPath=None, nfolds = 0):
     # TODO: adapt path
     iReturn = expecting()
 
@@ -35,24 +37,49 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         allPatches = np.transpose(allPatches, (2, 0, 1))
         print(allPatches.shape)
 
-    if sSplitting == "normal":
-        print("Done")
-        nPatches = allPatches.shape[0]
-        dVal = math.floor(split_ratio * nPatches)
-        rand_num = np.random.permutation(np.arange(nPatches))
-        rand_num = rand_num[0:int(dVal)].astype(int)
-        print(rand_num)
+    if sSplitting == dlart.DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING:
+        # more efficient splitting
+        indexSlices = range(allPatches.shape[0])
+        indexSlices = np.random.permutation(indexSlices)
 
-        X_test = allPatches[rand_num, :, :]
-        y_test = allY[rand_num]
-        X_train = allPatches
-        X_train = np.delete(X_train, rand_num, axis=0)
-        y_train = allY
-        y_train = np.delete(y_train, rand_num)
-        print(X_train.shape)
-        print(X_test.shape)
-        print(y_train.shape)
-        print(y_test.shape)
+        allPatches = allPatches[indexSlices, :, :]
+        allY = allY[indexSlices]
+
+        #num of samples in test set and validdation set
+        numAllPatches = allPatches.shape[0]
+        numSamplesTest = math.floor(testTrainingDatasetRatio*numAllPatches)
+        numSamplesValidation = math.floor(validationTrainRatio*(numAllPatches-numSamplesTest))
+
+        # subarrays as no-copy views (array slices)
+        xTest = allPatches[:numSamplesTest, :, :]
+        yTest = allY[:numSamplesTest]
+
+        xValid = allPatches[numSamplesTest:(numSamplesTest+numSamplesValidation), :, :]
+        yValid = allY[numSamplesTest:(numSamplesTest+numSamplesValidation)]
+
+        xTrain = allPatches[(numSamplesTest+numSamplesValidation):, :, :]
+        yTrain = allY[(numSamplesTest+numSamplesValidation):]
+
+        # #random samples
+        # nPatches = allPatches.shape[0]
+        # dVal = math.floor(split_ratio * nPatches)
+        # rand_num = np.random.permutation(np.arange(nPatches))
+        # rand_num = rand_num[0:int(dVal)].astype(int)
+        # print(rand_num)
+        #
+        # #do splitting
+        # X_test = allPatches[rand_num, :, :]
+        # y_test = allY[rand_num]
+        # X_train = allPatches
+        # X_train = np.delete(X_train, rand_num, axis=0)
+        # y_train = allY
+        # y_train = np.delete(y_train, rand_num)
+        # print(X_train.shape)
+        # print(X_test.shape)
+        # print(y_train.shape)
+        # print(y_test.shape)
+        # #!!!! train dataset is not randomly shuffeled!!!
+
 
         if iReturn == 0:
             folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
@@ -73,11 +100,11 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
                 hf.create_dataset('patchSize', data=patchSize)
                 hf.create_dataset('patchOverlap', data=patchOverlap)
         else:
-            return [X_train], [y_train], [X_test], [y_test] # embed in a 1-fold list
+            return [xTrain], [yTrain], [xValid], [yValid], [xTest], [yTest] # embed in a 1-fold list
 
-    elif sSplitting == "crossvalidation_data":
+    elif sSplitting == dlart.DeepLearningArtApp.CROSS_VALIDATION_SPLITTING:
         if nfolds == 0:
-            kf = KFold(n_splits=len(np.unique(allPats)))
+            kf = KFold(n_splits=len(allPats))
         else:
             kf = KFold(n_splits=nfolds)
         ind_split = 0
@@ -86,7 +113,9 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         y_trainFold = []
         y_testFold = []
 
-        for train_index, test_index in kf.split(allPatches):
+        a, b = kf.split(allPatches)
+
+        for train_index, test_index in a, b:
             X_train, X_test = allPatches[train_index], allPatches[test_index]
             y_train, y_test = allY[train_index], allY[test_index]
 
@@ -121,8 +150,8 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         if iReturn > 0:
             return X_trainFold, y_trainFold, X_testFold, y_testFold
 
-    elif sSplitting == "crossvalidation_patient":
-        unique_pats = np.unique(allPats)
+    elif sSplitting == dlart.DeepLearningArtApp.PATIENT_CROSS_VALIDATION_SPLITTING:
+        unique_pats = len(allPats)
 
         X_trainFold = []
         X_testFold = []

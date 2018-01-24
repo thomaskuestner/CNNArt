@@ -49,7 +49,7 @@ patchOverlap : 0.5 # 50%
 # sLabeling strategy
 # 'volume': volume-wise labeling
 # 'patch': patch-wise labeling
-sLabeling : "patch"
+sLabeling : "volume"
 # patching strategy
 # 'rigidPatching' or'adaptivePatching':
 sPatching : "rigidPatching"
@@ -57,7 +57,7 @@ sPatching : "rigidPatching"
 # 'normal': percentage splitting
 # 'crossvalidation_patient': cross validation on patient (leave one patient out)
 # 'crossvalidation_data': cross validation on data
-sSplitting : "crossvalidation_patient"
+sSplitting : "normal"
 # number of folds
 nFolds : 15
 # splitting in training and test set
