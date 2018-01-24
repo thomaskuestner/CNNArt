@@ -18,7 +18,7 @@ with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
 lTrain = cfg['lTrain'] # training or prediction
 lSave = cfg['lSave'] # save intermediate test, training sets
 lCorrection = cfg['lCorrection'] # artifact correction or classification
-
+sPredictModel = cfg['sPredictModel'] # choose trained model used in prediction
 # initiate info objects
 # default database: MRPhysics with ['newProtocol','dicom_sorted']
 dbinfo = DatabaseInfo(cfg['MRdatabase'],cfg['subdirs'])
@@ -35,8 +35,16 @@ elif cfg['sSplitting'] == 'crossvalidation_patient':
     sFSname = 'crossVal'
 
 sOutsubdir = cfg['subdirs'][2]
-sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(map(str,patchSize)).replace(" ", "") + os.sep + sOutsubdir # + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
-sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '.h5'
+sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(map(str,patchSize)).replace(" ", "") + os.sep + sOutsubdir + str(patchSize[0]) + str(patchSize[1]) # + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
+if len(patchSize) == 3:
+    sOutPath = sOutPath + str(patchSize[2])
+if sTrainingMethod == "scalingPrior":
+    sOutPath = sOutPath  + '_sf' + ''.join(map(str, lScaleFactor)).replace(" ", "").replace(".", "")
+# sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '.h5'
+if sTrainingMethod == "scalingPrior":
+    sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + 'sf' + ''.join(map(str, lScaleFactor)).replace(" ", "").replace(".", "") + '.h5'
+else:
+    sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '.h5'
 
 if lCorrection:
     #########################
@@ -84,8 +92,10 @@ elif lTrain:
         #   images will be split into pathces with size scpatchSize and then scaled to patchSize
         for iscalefactor in lScaleFactor:
             scpatchSize = [int(psi/iscalefactor) for psi in patchSize]
-
-            dAllPatches = np.zeros((0, scpatchSize[0], scpatchSize[1]))
+            if len(patchSize) == 3:
+                dAllPatches = np.zeros((0, scpatchSize[0], scpatchSize[1], scpatchSize[2]))
+            else:
+                dAllPatches = np.zeros((0, scpatchSize[0], scpatchSize[1]))
             dAllLabels = np.zeros(0)
             dAllPats = np.zeros((0, 1))
             lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
@@ -100,9 +110,10 @@ elif lTrain:
                         dAllPats = np.concatenate((dAllPats, ipat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)
                 else:
                     pass
-
-            # perform splitting: sp f
+            print('Start splitting')
+            # perform splitting: sp for split
             spX_train, spy_train, spX_test, spy_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], scpatchSize, cfg['patchOverlap'], cfg['dSplitval'], '')
+            print('Start scaling')
             # perform scaling: sc for scale
             scX_train, scX_test= scaling.fscaling(spX_train, spX_test, scpatchSize, iscalefactor)
             if len(X_train) == 0:
@@ -114,13 +125,12 @@ elif lTrain:
                 X_train = np.concatenate((X_train, scX_train), axis=1)
                 X_test = np.concatenate((X_test, scX_test), axis=1)
                 y_train = np.concatenate((y_train, spy_train), axis=1)
-                y_test = np.concatenate((y_train, spy_test), axis=1)
+                y_test = np.concatenate((y_test, spy_test), axis=1)
 
+        print('Start saving')
         # save to file (deprecated)
         if lSave:
-            if sTrainingMethod == "scalingPrior":
-                sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") +'sf'+''.join(map(str, lScaleFactor)).replace(" ", "") + '.h5'
-            # sio.savemat(sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '_input.mat', {'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize']})
+                # sio.savemat(sOutPath + os.sep + sFSname + str(patchSize[0]) + str(patchSize[1]) + '_input.mat', {'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize']})
             with h5py.File(sDatafile, 'w') as hf:
                 hf.create_dataset('X_train', data=X_train)
                 hf.create_dataset('X_test', data=X_test)
@@ -137,13 +147,22 @@ else:
     ################
     ## prediction ##
     ################
-    X_test = np.zeros((0, patchSize[0], patchSize[1]))
-    y_test = np.zeros(0)
-    for iImg in range(0, len(cfg['lPredictImg'])):
-        # patches and labels of reference/artifact
-        tmpPatches, tmpLabels  = datapre.fPreprocessData(cfg['lPredictImg'][iImg], cfg['patchSize'], cfg['patchOverlap'], 1, cfg['sLabeling'])
-        X_test = np.concatenate((X_test, tmpPatches), axis=0)
-        y_test = np.concatenate((y_test, cfg['lLabelPredictImg'][iImg]*tmpLabels), axis=0)
+    if glob.glob(sDatafile):
+        with h5py.File(sDatafile, 'r') as hf:
+            X_test = hf['X_test'][:]
+            y_test = hf['y_test'][:]
+            patchSize = hf['patchSize'][:]
+    else:
+        X_test = np.zeros((0, patchSize[0], patchSize[1]))
+        y_test = np.zeros(0)
+        for iImg in range(0, len(cfg['lPredictImg'])):
+            # patches and labels of reference/artifact
+            tmpPatches, tmpLabels  = datapre.fPreprocessData(cfg['lPredictImg'][iImg], cfg['patchSize'], cfg['patchOverlap'], 1, cfg['sLabeling'])
+            X_test = np.concatenate((X_test, tmpPatches), axis=0)
+            y_test = np.concatenate((y_test, cfg['lLabelPredictImg'][iImg]*tmpLabels), axis=0)
     
     sNetworktype = cfg['network'].split("_")
-    cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test, 'y_test': y_test, 'patchSize': patchSize, 'model_name': cfg['selectedDatabase']['bestmodel'][sNetworktype[2]] }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])
+    if len(sPredictModel) == 0:
+        sPredictModel = cfg['selectedDatabase']['bestmodel'][sNetworktype[2]]
+    for iFold in range(0, len(X_test)):
+        cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'model_name': sPredictModel }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])

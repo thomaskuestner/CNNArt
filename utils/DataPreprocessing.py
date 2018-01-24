@@ -28,8 +28,12 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabelin
     scale_dicom_numpy_array = (dicom_numpy_array - np.min(dicom_numpy_array)) * (range_norm[1] - range_norm[0]) / (np.max(dicom_numpy_array) - np.min(dicom_numpy_array))
 
     # RigidPatching
-    dPatches, dLabel = fRigidPatching(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, sLabeling)
-    dPatches = np.transpose(dPatches, (2, 0, 1))
+    if len(patchSize) == 3: # 3D patches
+        dPatches, dLabel = fRigidPatching3D(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,ratio_labeling, sLabeling)
+        dPatches = np.transpose(dPatches, (3, 0, 1, 2))
+    else:
+        dPatches, dLabel = fRigidPatching(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,ratio_labeling, sLabeling)
+        dPatches = np.transpose(dPatches, (2, 0, 1))
 
     return dPatches, dLabel
 
