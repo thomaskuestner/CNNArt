@@ -101,10 +101,16 @@ def fPreprocessDataCorrection(cfg, dbinfo):
     train_ref_sc, test_ref_sc = scaling.fscaling(train_ref_sp, test_ref_sp, scpatchSize, iscalefactor)
     train_art_sc, test_art_sc = scaling.fscaling(train_art_sp, test_art_sp, scpatchSize, iscalefactor)
 
-    train_ref = np.concatenate((train_ref, train_ref_sc), axis=1)
-    test_ref = np.concatenate((test_ref, test_art_sc), axis=1)
-    train_art = np.concatenate((train_art, train_art_sc), axis=1)
-    test_art = np.concatenate((test_art, test_art_sc), axis=1)
+    if len(train_ref) == 0:
+        train_ref = train_ref_sc
+        test_ref = test_art_sc
+        train_art = train_art_sc
+        test_art = test_art_sc
+    else:
+        train_ref = np.concatenate((train_ref, train_ref_sc), axis=1)
+        test_ref = np.concatenate((test_ref, test_art_sc), axis=1)
+        train_art = np.concatenate((train_art, train_art_sc), axis=1)
+        test_art = np.concatenate((test_art, test_art_sc), axis=1)
 
     return train_ref, test_ref, train_art, test_art
 

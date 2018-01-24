@@ -50,14 +50,19 @@ def run(cfg, dbinfo):
                 hf.create_dataset('train_art', data=train_art)
                 hf.create_dataset('test_art', data=test_art)
                 hf.create_dataset('patchSize', data=patchSize)
+                hf.create_dataset('patchOverlap', data=cfg['patchOverlap'])
 
     sModelIn = cfg['correction']['sCorrection']
 
     if cfg['lTrain']:
         dHyper = {'batchSize': cfg['batchSize'], 'learningRate': cfg['lr'], 'epochs': cfg['epochs']}
-        for iFold in range(len(train_ref)):
-            dData = {'train_ref': train_ref[iFold], 'test_ref': test_ref[iFold], 'train_art': train_art[iFold], 'test_art': test_art[iFold]}
+        if len(train_ref.shape) == 3:
+            dData = {'train_ref': train_ref, 'test_ref': test_ref, 'train_art': train_art, 'test_art': test_art}
             cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
+        elif len(train_ref.shape) == 4:
+            for iFold in range(len(train_ref)):
+                dData = {'train_ref': train_ref[iFold], 'test_ref': test_ref[iFold], 'train_art': train_art[iFold], 'test_art': test_art[iFold]}
+                cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
     else:
         dHyper = {'batchSize': cfg['batchSize'], 'bestModel': cfg['correction']['bestModel']}
         test_ref = test_ref.reshape((-1 , 1, patchSize[0], patchSize[1]))
