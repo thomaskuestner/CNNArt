@@ -39,11 +39,8 @@ def run(cfg, dbinfo):
             patchSize = hf['patchSize'][:]
 
     else:
-        # perform patching
-        dRefPatches, dArtPatches, dAllPats = datapre.fPreprocessDataCorrection(cfg, dbinfo)
-
-        # perform splitting
-        train_ref, test_ref, train_art, test_art = ttsplit.fSplitDatasetCorrection(cfg['sSplitting'], dRefPatches, dArtPatches, dAllPats, cfg['dSplitval'], cfg['nFolds'])
+        # perform patching and splitting
+        train_ref, test_ref, train_art, test_art = datapre.fPreprocessDataCorrection(cfg, dbinfo)
 
         # save to h5 file
         if cfg['lSave']:
