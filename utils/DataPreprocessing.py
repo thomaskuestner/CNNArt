@@ -103,12 +103,12 @@ def fPreprocessDataCorrection(cfg, dbinfo):
 
     if len(train_ref) == 0:
         train_ref = train_ref_sc
-        test_ref = test_art_sc
+        test_ref = test_ref_sc
         train_art = train_art_sc
         test_art = test_art_sc
     else:
         train_ref = np.concatenate((train_ref, train_ref_sc), axis=1)
-        test_ref = np.concatenate((test_ref, test_art_sc), axis=1)
+        test_ref = np.concatenate((test_ref, test_ref_sc), axis=1)
         train_art = np.concatenate((train_art, train_art_sc), axis=1)
         test_art = np.concatenate((test_art, test_art_sc), axis=1)
 

@@ -1,12 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from keras.layers import Input, Lambda, Layer, concatenate, LeakyReLU, Dense, Reshape, Flatten
+from keras.layers import Input, Lambda, Layer, concatenate, LeakyReLU, Dense, Reshape, Flatten, BatchNormalization
 from keras.layers import Conv2D, Conv2DTranspose
 from keras.models import Model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras import backend as K
-from keras import metrics
+from keras import losses
+from keras import regularizers
 import os
 
 index = 1
@@ -26,10 +27,10 @@ class LossLayer(Layer):
         decoded_ref2ref = K.flatten(decoded_ref2ref)
         decoded_art2ref = K.flatten(decoded_art2ref)
 
-        loss_ref2ref = 1600 * metrics.binary_crossentropy(x_ref, decoded_ref2ref)
-        loss_art2ref = 1600 * metrics.binary_crossentropy(x_ref, decoded_art2ref)
+        loss_ref2ref = 28 * 28 * losses.binary_crossentropy(x_ref, decoded_ref2ref) + 1e-7
+        loss_art2ref = 28 * 28 * losses.binary_crossentropy(x_ref, decoded_art2ref) + 1e-7
 
-        loss_kl = - 0.5 * K.mean(1 + mu - K.square(mu) - K.exp(sd), axis=-1)
+        loss_kl = - 0.5 * K.sum(1 + mu - K.square(mu) - K.exp(sd), axis=-1)
 
         return K.mean(loss_art2ref + loss_ref2ref + loss_kl)
 
@@ -42,22 +43,26 @@ class LossLayer(Layer):
         self.add_loss(loss)
         return x_decoded
 
-def LeakyReluConv2D(filters, kernel_size, strides, padding):
+def BNReluConv2D(filters, kernel_size, strides, padding):
     def f(inputs):
         conv2d = Conv2D(filters,
                         kernel_size=kernel_size,
                         strides=strides,
-                        padding=padding)(inputs)
-        return LeakyReLU()(conv2d)
+                        padding=padding,
+                        activation='relu')(inputs)
+        bn = BatchNormalization(axis=1)(conv2d)
+        return bn
     return f
 
-def LeakyReluConv2DTranspose(filters, kernel_size, strides, padding):
+def BNReluConv2DTranspose(filters, kernel_size, strides, padding):
     def f(inputs):
         conv2d = Conv2DTranspose(filters=filters,
                                  kernel_size=kernel_size,
                                  strides=strides,
-                                 padding=padding)(inputs)
-        return LeakyReLU()(conv2d)
+                                 padding=padding,
+                                 activation='relu')(inputs)
+        bn = BatchNormalization(axis=1)(conv2d)
+        return bn
     return f
 
 def sliceRef(input):
@@ -68,42 +73,34 @@ def sliceArt(input):
 
 def sampling(args):
     z_mean, z_log_var = args
-    epsilon = K.random_normal(shape=(K.shape(z_mean)[0], 500), mean=0.,
+    epsilon = K.random_normal(shape=(K.shape(z_mean)[0], 128), mean=0.,
                               stddev=1.0)
-    return z_mean + K.exp(z_log_var / 2) * epsilon
+    return z_mean + K.exp(z_log_var) * epsilon
 
 def encode(input):
-    conv_1 = LeakyReluConv2D(filters=32, kernel_size=3, strides=1, padding='same')(input)
-    conv_2 = LeakyReluConv2D(filters=64, kernel_size=3, strides=2, padding='same')(conv_1)
-    conv_3 = LeakyReluConv2D(filters=128, kernel_size=3, strides=1, padding='same')(conv_2)
-    # conv_1 = Conv2D(filters=32, kernel_size=3, strides=1, padding='same', activation='relu')(input)
-    # conv_2 = Conv2D(filters=64, kernel_size=3, strides=2, padding='same', activation='relu')(conv_1)
-    # conv_3 = Conv2D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(conv_2)
+    conv_1 = BNReluConv2D(filters=32, kernel_size=3, strides=1, padding='same')(input)
+    conv_2 = BNReluConv2D(filters=64, kernel_size=3, strides=1, padding='same')(conv_1)
+    conv_3 = BNReluConv2D(filters=128, kernel_size=3, strides=1, padding='same')(conv_2)
     return conv_3
 
 def encode_shared(input):
-    conv_1 = LeakyReluConv2D(filters=256, kernel_size=3, strides=1, padding='same')(input)
-    conv_2 = LeakyReluConv2D(filters=256, kernel_size=3, strides=2, padding='same')(conv_1)
-    # conv_1 = Conv2D(filters=256, kernel_size=3, strides=1, padding='same', activation='relu')(input)
-    # conv_2 = Conv2D(filters=256, kernel_size=3, strides=2, padding='same', activation='relu')(conv_1)
+    conv_1 = BNReluConv2D(filters=256, kernel_size=3, strides=1, padding='same')(input)
+    conv_2 = BNReluConv2D(filters=256, kernel_size=3, strides=1, padding='same')(conv_1)
     flat = Flatten()(conv_2)
 
-    mu = Dense(500)(flat)
-    sd = Dense(500)(flat)
+    mu = Dense(128)(flat)
+    sd = Dense(128)(flat)
 
-    z = Lambda(sampling, output_shape=(500,))([mu, sd])
+    z = Lambda(sampling, output_shape=(128,))([mu, sd])
 
     return z, mu, sd
 
 def decode(input):
-    dense = Dense(25600)(input)
-    reshape = Reshape((256, 10, 10))(dense)
-    output = LeakyReluConv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same')(reshape)
-    output = LeakyReluConv2DTranspose(filters=128, kernel_size=3, strides=1, padding='same')(output)
-    output = LeakyReluConv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same')(output)
-    # output = Conv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same', activation='relu')(reshape)
-    # output = Conv2DTranspose(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(output)
-    # output = Conv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same', activation='relu')(output)
+    dense = Dense(256 * 28 * 28)(input)
+    reshape = Reshape((256, 28, 28))(dense)
+    output = BNReluConv2DTranspose(filters=256, kernel_size=3, strides=1, padding='same')(reshape)
+    output = BNReluConv2DTranspose(filters=128, kernel_size=3, strides=1, padding='same')(output)
+    output = BNReluConv2DTranspose(filters=64, kernel_size=3, strides=1, padding='same')(output)
     output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
     return output
 
@@ -163,11 +160,11 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr):
 
     print('Training with epochs {} batch size {} learning rate {}'.format(epochs, batchSize, lr))
 
-    weights_file = sOutPath + os.sep + 'vae_model_weight_bs_{}_2.h5'.format(batchSize)
+    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}.h5'.format(patchSize[0], batchSize)
 
-    callback_list = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
+    callback_list = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
     callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
-    callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
+    callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=1e-4, verbose=1))
 
     vae.fit([train_ref, train_art],
             shuffle=True,
@@ -206,9 +203,11 @@ def fPredict(dData, sOutPath, patchSize, dHyper):
 
         for j in range(5):
             axes[j, 0].imshow(test_ref[6*i+j])
-            axes[j, 1].imshow(predict_ref[6 * i + j])
-            axes[j, 2].imshow(test_art[6 * i + j])
-            axes[j, 3].imshow(predict_art[6 * i + j])
+            axes[j, 1].imshow(predict_ref[6*i+j])
+            axes[j, 2].imshow(test_art[6*i+j])
+            axes[j, 3].imshow(predict_art[6*i+j])
+
+        figManager = plt.get_current_fig_manager()
+        figManager.resize(*figManager.window.maxsize())
 
         plt.show()
-
