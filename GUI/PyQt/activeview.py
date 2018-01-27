@@ -6,11 +6,13 @@ class Activeview(QtWidgets.QGraphicsView):
         super(Activeview, self).__init__(parent)
 
         self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
-        self.setResizeAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)  #
+        self.setResizeAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
         self.setMinimumSize(500, 500)
+
+        #self.setAutoFillBackground(True) #
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:

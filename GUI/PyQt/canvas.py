@@ -9,19 +9,22 @@ class Canvas(FigureCanvas):
         FigureCanvas.__init__(self, self.figure)
         self.setParent(parent)
 
+        self.voxel = voxel
+        self.slices = self.voxel.shape[2]
+        self.ind = self.slices // 2
+
         self.x_clicked = None
         self.y_clicked = None
         self.mouse_second_clicked = False
         self.ax1 = self.figure.add_subplot(111)
-        self.pltc = None
+        self.ax1.axis('off')
+        self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
+
         self.figure.canvas.mpl_connect('button_press_event', self.mouse_clicked)
         self.figure.canvas.mpl_connect('motion_notify_event', self.mouse_move)
         self.figure.canvas.mpl_connect('button_release_event', self.mouse_release)
         self.figure.canvas.mpl_connect('scroll_event', self.onscroll)
 
-        self.voxel = voxel
-        self.slices = self.voxel.shape[2]
-        self.ind = self.slices // 2
         self.View_A()
 
     def onscroll(self, event):
@@ -30,15 +33,14 @@ class Canvas(FigureCanvas):
             self.ind = (self.ind + 1) % self.slices
         else:
             self.ind = (self.ind - 1) % self.slices
-        plt.cla() # not clf
+        # plt.cla() # not clf
         self.View_A()
 
     def View_A(self):
-        self.ax1.clear()
-        self.ax1.axis('off')
-        self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
+        # self.ax1.clear()
+        self.pltc.set_data(np.swapaxes(self.voxel[:, :, self.ind], 0, 1))
         self.ax1.set_ylabel('slice %s' % (self.ind+1))
-        self.figure.canvas.draw()
+        self.draw()
 
     def mouse_clicked(self, event):
         if event.button == 2:
