@@ -1,4 +1,5 @@
 import os
+import os.path
 import csv
 from MRData import MRData
 
@@ -12,7 +13,7 @@ class DatabaseInfo:
     lPats = ''
     lImgData = '' # list of imaging data
 
-    def __init__(self,sDatabase = None,sSubDirs = None):
+    def __init__(self,sDatabase = None,sSubDirs = None, *args):
         if sDatabase is None:
             self.sDatabase = 'MRPhysics'
         else:
@@ -28,7 +29,16 @@ class DatabaseInfo:
         self.lPats = [name for name in os.listdir(self.sPathIn) if os.path.isdir(os.path.join(self.sPathIn, name))]
 
         # parse config file (according to set database) => TODO (TK): replace by automatic parsing in directory
-        ifile = open('config'+os.sep+'database'+os.sep+self.sDatabase+'.csv',"r") # config file must exist for database!
+
+        # if run the file which is under a folder like deepvis
+        # need to change the path back to 'CNNArt'
+        # otherwise the file cannot find the content under folder 'config'
+
+        if len(args) == 0:
+            ifile = open('config'+os.sep+'database'+os.sep+self.sDatabase+'.csv',"r") # config file must exist for database!
+        else:
+            ifile = open(args[0]+os.sep+'config' + os.sep + 'database' + os.sep + self.sDatabase + '.csv', "r")
+
         reader = csv.reader(ifile)
         next(reader)
         #lImgData = []
