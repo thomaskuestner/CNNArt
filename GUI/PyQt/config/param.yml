@@ -1,0 +1,100 @@
+# Datasets
+motion_head: &id001
+   name      : "motion_head"
+   dataref   : ["t1_tse_tra_Kopf_0002"]
+   labelref  : [0]
+   dataart   : ["t1_tse_tra_Kopf_Motion_0003"]
+   labelart  : [1]
+   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Headcross"
+   bestmodel : {CNN2D: "head_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
+#
+motion_abd: &id002
+   name      : "motion_abd" 
+   dataref   : ["t1_tse_tra_fs_mbh_Leber_0004"]
+   labelref  : [0]
+   dataart   : ["t1_tse_tra_fs_mbh_Leber_Motion_0005"]
+   labelart  : [1]
+   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Abdcross"
+   bestmodel : {CNN2D: "abdomen_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
+#
+motion_all: &id003
+   name      : "motion_all" 
+   dataref   : ["t1_tse_tra_Kopf_0002", "t1_tse_tra_fs_mbh_Leber_0004"]
+   labelref  : [0 0]
+   dataart   : ["t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_mbh_Leber_Motion_0005"]
+   labelart  : [1 1]
+   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Allcross"
+   bestmodel : {CNN2D: "all_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
+#
+#### set parameters ####
+# database name
+MRdatabase : MRPhysics
+# subdirectories in database, patient, output directory
+subdirs : ["newProtocol", "dicom_sorted", "testout", "correction"]
+# CNN database to be modeled
+selectedDatabase: *id001
+# network architecture (if existing for chosen database!)
+# see *.py files in subfolders of "./networks"
+# naming convention: artifactType_bodyRegion_network OR artifactType_network
+# artifactType: motion, multiclass
+# bodyRegion: abd, head, all
+# network: CNN2D, CNN3D, MNetArt, VNetArt
+network : "motion_all_CNN2D"
+
+# scaling range
+range : [0, 1]
+# patches
+patchSize : [40, 40] # x,y
+patchOverlap : 0.5 # 50%
+# sLabeling strategy
+# 'volume': volume-wise labeling
+# 'patch': patch-wise labeling
+sLabeling : "volume"
+# patching strategy
+# 'rigidPatching' or'adaptivePatching':
+sPatching : "rigidPatching"
+# splitting strategy
+# 'normal': percentage splitting
+# 'crossvalidation_patient': cross validation on patient (leave one patient out)
+# 'crossvalidation_data': cross validation on data
+sSplitting : "crossvalidation_patient"
+# number of folds
+nFolds : 15
+# splitting in training and test set
+dSplitval : 0.1
+# optimization type in keras: 'grid', 'hyperas', 'none'
+# v1.1: grid and none are the same -> automatic switching if batchSize|learningRate are arrays, then 'grid', else 'none'
+sOpti : "grid"
+# optimized parameters
+batchSize : [128]
+lr : [0.1, 0.01, 0.05, 0.005, 0.001]
+# amount of epochs
+epochs : 300
+# perform training (true) or prediction (false)
+lTrain : true
+# save intermediate results
+lSave : false
+# (list of) path(s) of to be predicted images
+lPredictImg : ["/med_data/ImageSimilarity/Databases/MRPhysics/..."] 
+# (list with) labels of to be predicted images (either scalar or path to patch-wise label file)
+lLabelPredictImg : [ 1 ]
+# sPredictModel: if empty, the best model in the selected database will be chosen.
+# Otherwise, the given trained model will be used in predicting, e.g. "testout4040_lr_0.0005_bs_128"
+sPredictModel : ""
+# sTrainingMethod
+# "None": No scaling process
+# "scalingPrior": Up and down sampling the patches for data augmentation
+# "scalingPosterior": scaling during training, to be done
+sTrainingMethod : "None"
+# lScaleFactor: the changing rate of patch size in scaling process
+# factor < 1 means down sampling later, factor > 1 up sampling later
+lScaleFactor : [0.5, 1, 2]
+
+# lCorrection
+# true: artifact correction
+# false: classification
+lCorrection: false
+# parameters in artifacts correction
+correction:
+  sCorrection: "motion_VAE"
+  bestModel: "vae_model_weight_bs_128"

@@ -1,0 +1,12 @@
+pathdata,pathlabel,artefact,bodyregion
+t1_tse_tra_Kopf_0002,,ref,head
+t1_tse_tra_Kopf_Motion_0003,,motion,head
+t1_tse_tra_fs_mbh_Leber_0004,,ref,abdomen
+t1_tse_tra_fs_mbh_Leber_Motion_0005,,motion,abdomen
+t2_tse_tra_fs_navi_Leber_0006,,ref,abdomen
+t2_tse_tra_fs_navi_Leber_Shim_xz_0007,,shim,abdomen
+t1_tse_tra_fs_Becken_0008,,ref,pelvis
+t2_tse_tra_fs_Becken_0009,,ref,pelvis
+t1_tse_tra_fs_Becken_Motion_0010,,motion,pelvis
+t2_tse_tra_fs_Becken_Motion_0011,,motion,pelvis
+t2_tse_tra_fs_Becken_Shim_xz_0012,,shim,pelvis                 
