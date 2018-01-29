@@ -33,11 +33,11 @@ from networks.multiclass.DenseNet.Densenet import DenseNet
 
 # elementary denseResBlock
 def Block(input,num_filters,with_shortcut):
-	out1 = Conv2D(filters=num_filters/2, kernel_size=(1, 1), kernel_initializer='he_normal', weights=None, padding='same',
+	out1 = Conv2D(filters=int(num_filters/2), kernel_size=(1, 1), kernel_initializer='he_normal', weights=None, padding='same',
 	              strides=(1, 1), kernel_regularizer=l2(1e-6), activation='relu')(input)
-	out2 = Conv2D(filters=num_filters, kernel_size=(3, 3), kernel_initializer='he_normal', weights=None, padding='same',
+	out2 = Conv2D(filters=int(num_filters), kernel_size=(3, 3), kernel_initializer='he_normal', weights=None, padding='same',
 	              strides=(1, 1), kernel_regularizer=l2(1e-6), activation='relu')(out1)
-	out3 = Conv2D(filters=num_filters, kernel_size=(1, 1), kernel_initializer='he_normal', weights=None, padding='same',
+	out3 = Conv2D(filters=int(num_filters), kernel_size=(1, 1), kernel_initializer='he_normal', weights=None, padding='same',
 	              strides=(1, 1), kernel_regularizer=l2(1e-6), activation='relu')(out2)
 	# out4 = pool2(pool_size=(3, 3), strides=(2, 2), data_format="channel_first")(out3)
 
@@ -51,33 +51,33 @@ def Block(input,num_filters,with_shortcut):
 		return add([input,out3])
 
 # DenseResNet 4040
-def create4040Model(patchSize, iVersion = 1):
+def create4040Model(patchSize, outputDimension=11, iVersion = 1):
     seed=5
     np.random.seed(seed)
-    input=Input(shape=(1,patchSize[0, 0], patchSize[0, 1]))
+    input=Input(shape=(patchSize[0], patchSize[1], 1))
 
     # DenseResNet 4040 (selected)
     if iVersion == 1:
-        out=Conv2D(filters=64,kernel_size=(3,3),kernel_initializer='he_normal',weights=None,padding='same',strides=(1, 1),kernel_regularizer=l2(1e-6),activation='relu')(input)
-        out1=Conv2D(filters=64,kernel_size=(3,3),kernel_initializer='he_normal',weights=None,padding='same',strides=(1, 1),kernel_regularizer=l2(1e-6),activation='relu')(out)
+        out=Conv2D(filters=64,kernel_size=(3,3),kernel_initializer='he_normal',weights=None,padding='same', data_format='channels_last', strides=(1, 1),kernel_regularizer=l2(1e-6),activation='relu')(input)
+        out1=Conv2D(filters=64,kernel_size=(3,3),kernel_initializer='he_normal',weights=None,padding='same', data_format='channels_last', strides=(1, 1),kernel_regularizer=l2(1e-6),activation='relu')(out)
         #out1=pool2(pool_size=(3,3),strides=(2,2),data_format='channels_first')(out)
 
         out=Block(out1,128,with_shortcut=True)
         out=Block(out,128,with_shortcut=False)
-        out=concatenate(inputs=[out1,out],axis=1)
+        out=concatenate(inputs=[out1,out],axis=3)
         out2=pool2(pool_size=(3,3),strides=(2,2),data_format='channels_first')(out)
 
         out=Block(out2,256,with_shortcut=True)
         out=Block(out,256,with_shortcut=False)
         out1=pool2(pool_size=(3,3),strides=(2,2),data_format="channels_first")(out1)
-        out=concatenate(inputs=[out1,out2,out],axis=1)
+        out=concatenate(inputs=[out1,out2,out],axis=3)
         out3=pool2(pool_size=(3,3),strides=(2,2),data_format='channels_first')(out)
 
         #out5=GlobalAveragePooling2D(data_format='channels_first')(out3)
 
         out5=Flatten()(out3)
 
-        out6=Dense(units=11,
+        out6=Dense(units=outputDimension,
                    kernel_initializer='normal',
                    kernel_regularizer='l2',
                    activation='softmax')(out5)
@@ -87,14 +87,14 @@ def create4040Model(patchSize, iVersion = 1):
     # temp/resdensenet1 for 4040
     elif iVersion == 2:
         out = Conv2D(filters=64, kernel_size=(3, 3), kernel_initializer='he_normal', weights=None, padding='same',
-                     strides=(2, 2), kernel_regularizer=l2(1e-6), activation='relu')(input)
+					 data_format='channels_last', strides=(2, 2), kernel_regularizer=l2(1e-6), activation='relu')(input)
         out = Conv2D(filters=64, kernel_size=(3, 3), kernel_initializer='he_normal', weights=None, padding='same',
-                     strides=(1, 1), kernel_regularizer=l2(1e-6), activation='relu')(out)
+					 data_format='channels_last', strides=(1, 1), kernel_regularizer=l2(1e-6), activation='relu')(out)
         out1 = pool2(pool_size=(3, 3), strides=(2, 2), data_format='channels_first')(out)
 
         out = Block(out1, 128, with_shortcut=True)
         out = Block(out, 128, with_shortcut=False)
-        out = concatenate(inputs=[out1, out], axis=1)
+        out = concatenate(inputs=[out1, out], axis=3)
         out2 = pool2(pool_size=(3, 3), strides=(2, 2), data_format='channels_first')(out)
 
         out = Block(out2, 256, with_shortcut=True)
@@ -154,10 +154,11 @@ def create4040Model(patchSize, iVersion = 1):
 
 
 # DenseResNet 180180
-def create180180Model(patchSize, iVersion=1):
+def create180180Model(patchSize, outputDimension=11, iVersion=1):
 	seed=5
 	np.random.seed(seed)
-	input=Input(shape=(1,patchSize[0, 0], patchSize[0, 1]))
+	# define input shape=(xSize, ySize, colorChannel=1)
+	input=Input(shape=(patchSize[0], patchSize[1], 1))
 
 	# DenseResNet 180180 (selected)
 	if(iVersion == 1):
@@ -186,7 +187,7 @@ def create180180Model(patchSize, iVersion=1):
 
 		out5=Flatten()(out4)
 
-		out6=Dense(units=11,
+		out6=Dense(units=outputDimension,
 				   kernel_initializer='normal',
 				   kernel_regularizer='l2',
 				   activation='softmax')(out5)
@@ -274,27 +275,34 @@ def create180180Model(patchSize, iVersion=1):
 def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None):
 # grid search on batch_sizes and learning rates
 # parse inputs
-	batchSizes = 64 if batchSizes is None else batchSizes
-	learningRates = 0.01 if learningRates is None else learningRates
+	batchSizes = [64] if batchSizes is None else [batchSizes]
+	learningRates = [0.01] if learningRates is None else learningRates
 	iEpochs = 300 if iEpochs is None else iEpochs
+
 	for iBatch in batchSizes:
 		for iLearn in learningRates:
 			fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs)
 
 def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None):
 # parse inputs
-	batchSize = 64 if batchSize is None else batchSize
-	learningRate = 0.01 if learningRate is None else learningRate
+	batchSize = [64]if batchSize is None else batchSize
+	learningRate = [0.01] if learningRate is None else learningRate
 	iEpochs = 300 if iEpochs is None else iEpochs
 
-	print 'Training CNN DenseResNet'
-	print 'with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize)
+	outputDimension = y_train.shape[1]
+
+	#reshpae input tensors
+	X_train = np.reshape(X_train, [X_train.shape[0], X_train.shape[1], X_train.shape[2], 1]) # to shape [numSamples, xSize, ySize, channels=1]
+	X_test = np.reshape(X_test, [X_test.shape[0], X_test.shape[1], X_test.shape[2], 1])
+
+	print('Training CNN DenseResNet')
+	print( 'with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
 	# save names
 	_, sPath = os.path.splitdrive(sOutPath)
 	sPath, sFilename = os.path.split(sPath)
 	sFilename, sExt = os.path.splitext(sFilename)
-	model_name = sPath + '/' + sFilename + str(patchSize[0, 0]) + str(patchSize[0, 1]) + '_lr_' + str(
+	model_name = sPath + os.sep + sFilename + str(patchSize[0]) + str(patchSize[1]) + '_lr_' + str(
 		learningRate) + '_bs_' + str(batchSize)
 	weight_name = model_name + '_weights.h5'
 	model_json = model_name + '_json'
@@ -305,20 +313,20 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 		return
 
 	# create model
-	if (patchSize[0,0]==40 & patchSize[0,1]==40):
-		cnn = create4040Model(patchSize)
-	elif(patchSize[0,0]==180 & patchSize[0,1]==180):
+	if (patchSize[0]==40 & patchSize[1]==40):
+		cnn = create4040Model(patchSize, outputDimension=outputDimension)
+	elif(patchSize[0]==180 & patchSize[1]==180):
 		cnn = create180180Model(patchSize)
 	else:
-		print 'NO models for patch size ' + patchSize[0,0] + patchSize[0,0]
+		print('NO models for patch size ' + patchSize[0] + patchSize[1])
 
 
 	# opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
-	opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+	optimizer = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 	callbacks = [EarlyStopping(monitor='val_loss', patience=20, verbose=1), ModelCheckpoint(filepath=model_name+'bestweights.hdf5',monitor='val_acc',verbose=0,save_best_only=True,save_weights_only=False)]
 	#callbacks = [ModelCheckpoint(filepath=model_name+'bestweights.hdf5',monitor='val_acc',verbose=0,save_best_only=True,save_weights_only=False)]
 
-	cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
+	cnn.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 	cnn.summary()
 
 	# in keras fit() validation_data there is the test set used. -> no validation set used!
@@ -353,7 +361,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 	val_acc = result.history['val_acc']
 	val_loss = result.history['val_loss']
 
-	print 'Saving results: ' + model_name
+	print('Saving results: ' + model_name)
 	sio.savemat(model_name, {'model_settings': model_json,
 	                         'model': model_all,
 	                         'weights': weight_name,

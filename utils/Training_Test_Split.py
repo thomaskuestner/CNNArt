@@ -31,21 +31,22 @@ def expecting():
 
 def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap, testTrainingDatasetRatio=0, validationTrainRatio=0, outPutPath=None, nfolds = 0):
     # TODO: adapt path
-    iReturn = expecting()
+    #iReturn = expecting()
+    iReturn = 1000
 
     if allPatches.shape[0] == patchSize[0] and allPatches.shape[1] == patchSize[1]:
         allPatches = np.transpose(allPatches, (2, 0, 1))
         print(allPatches.shape)
 
     if sSplitting == dlart.DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING:
-        # more efficient splitting
+        # splitting
         indexSlices = range(allPatches.shape[0])
         indexSlices = np.random.permutation(indexSlices)
 
         allPatches = allPatches[indexSlices, :, :]
         allY = allY[indexSlices]
 
-        #num of samples in test set and validdation set
+        #num of samples in test set and validation set
         numAllPatches = allPatches.shape[0]
         numSamplesTest = math.floor(testTrainingDatasetRatio*numAllPatches)
         numSamplesValidation = math.floor(validationTrainRatio*(numAllPatches-numSamplesTest))
@@ -103,21 +104,40 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
             return [xTrain], [yTrain], [xValid], [yValid], [xTest], [yTest] # embed in a 1-fold list
 
     elif sSplitting == dlart.DeepLearningArtApp.CROSS_VALIDATION_SPLITTING:
+        # split into test/train sets
+        #shuffle
+        indexSlices = range(allPatches.shape[0])
+        indexSlices = np.random.permutation(indexSlices)
+
+        allPatches = allPatches[indexSlices, :, :]
+        allY = allY[indexSlices]
+
+        # num of samples in test set
+        numAllPatches = allPatches.shape[0]
+        numSamplesTest = math.floor(testTrainingDatasetRatio*numAllPatches)
+
+        # subarrays as no-copy views (array slices)
+        xTest = allPatches[:numSamplesTest, :, :]
+        yTest = allY[:numSamplesTest]
+
+        xTrain = allPatches[numSamplesTest:, :, :]
+        yTrain = allY[numSamplesTest:]
+
+        # split training dataset into n folds
         if nfolds == 0:
             kf = KFold(n_splits=len(allPats))
         else:
             kf = KFold(n_splits=nfolds)
-        ind_split = 0
+
+        #ind_split = 0
         X_trainFold = []
         X_testFold = []
         y_trainFold = []
         y_testFold = []
 
-        a, b = kf.split(allPatches)
-
-        for train_index, test_index in a, b:
-            X_train, X_test = allPatches[train_index], allPatches[test_index]
-            y_train, y_test = allY[train_index], allY[test_index]
+        for train_index, test_index in kf.split(xTrain):
+            X_train, X_test = xTrain[train_index], xTrain[test_index]
+            y_train, y_test = yTrain[train_index], yTrain[test_index]
 
             if iReturn == 0:
                 folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
@@ -140,7 +160,7 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
                 y_trainFold.append(y_train)
                 y_testFold.append(y_test)
 
-            ind_split += 1
+            #ind_split += 1
 
         X_trainFold = np.asarray(X_trainFold)
         X_testFold = np.asarray(X_testFold)
@@ -148,7 +168,9 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         y_testFold = np.asarray(y_testFold)
 
         if iReturn > 0:
-            return X_trainFold, y_trainFold, X_testFold, y_testFold
+            return X_trainFold, y_trainFold, X_testFold, y_testFold, xTest, yTest
+
+
 
     elif sSplitting == dlart.DeepLearningArtApp.PATIENT_CROSS_VALIDATION_SPLITTING:
         unique_pats = len(allPats)

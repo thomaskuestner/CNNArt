@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1385</width>
-    <height>904</height>
+    <width>1384</width>
+    <height>935</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,8 +20,11 @@
       <x>10</x>
       <y>10</y>
       <width>1361</width>
-      <height>811</height>
+      <height>851</height>
      </rect>
+    </property>
+    <property name="autoFillBackground">
+     <bool>false</bool>
     </property>
     <property name="currentIndex">
      <number>0</number>
@@ -36,7 +39,7 @@
         <x>10</x>
         <y>10</y>
         <width>511</width>
-        <height>571</height>
+        <height>501</height>
        </rect>
       </property>
       <property name="title">
@@ -165,9 +168,9 @@
       <widget class="QPushButton" name="Button_Patching">
        <property name="geometry">
         <rect>
-         <x>410</x>
-         <y>520</y>
-         <width>91</width>
+         <x>370</x>
+         <y>450</y>
+         <width>131</width>
          <height>31</height>
         </rect>
        </property>
@@ -177,7 +180,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Patching</string>
+        <string>Perform Patching</string>
        </property>
       </widget>
       <widget class="QTreeWidget" name="TreeWidget_Patients">
@@ -425,7 +428,7 @@
        <property name="geometry">
         <rect>
          <x>20</x>
-         <y>520</y>
+         <y>450</y>
          <width>151</width>
          <height>31</height>
         </rect>
@@ -490,28 +493,182 @@
        </property>
       </widget>
      </widget>
-     <widget class="QGraphicsView" name="GraphicsView_Pic">
+     <widget class="QGroupBox" name="GroupBox_TrainNN">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="geometry">
        <rect>
         <x>540</x>
-        <y>360</y>
-        <width>451</width>
-        <height>391</height>
-       </rect>
-      </property>
-     </widget>
-     <widget class="QGroupBox" name="groupBox_2">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>590</y>
-        <width>511</width>
-        <height>181</height>
+        <y>370</y>
+        <width>471</width>
+        <height>261</height>
        </rect>
       </property>
       <property name="title">
-       <string>Deep Neural Network</string>
+       <string>Train Deep Neural Network</string>
       </property>
+      <widget class="QPushButton" name="Button_LearningOutputPath">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>70</y>
+         <width>131</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Learning Output Path</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="Label_LearningOutputPath">
+       <property name="geometry">
+        <rect>
+         <x>150</x>
+         <y>75</y>
+         <width>311</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Select Network Output Path!</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_2">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>109</y>
+         <width>71</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Batch Size:</string>
+       </property>
+      </widget>
+      <widget class="QSpinBox" name="SpinBox_BatchSize">
+       <property name="geometry">
+        <rect>
+         <x>100</x>
+         <y>111</y>
+         <width>91</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+        </font>
+       </property>
+       <property name="maximum">
+        <number>100000000</number>
+       </property>
+       <property name="value">
+        <number>100</number>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_3">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>160</y>
+         <width>221</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Learning Rates &quot;0.1,0.01,0.005&quot; :</string>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="LineEdit_LearningRates">
+       <property name="geometry">
+        <rect>
+         <x>210</x>
+         <y>160</y>
+         <width>251</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>0.1,0.01,0.005,0.001</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_8">
+       <property name="geometry">
+        <rect>
+         <x>220</x>
+         <y>110</y>
+         <width>55</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Epochs:</string>
+       </property>
+      </widget>
+      <widget class="QSpinBox" name="SpinBox_Epochs">
+       <property name="geometry">
+        <rect>
+         <x>280</x>
+         <y>110</y>
+         <width>91</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+        </font>
+       </property>
+       <property name="maximum">
+        <number>100000</number>
+       </property>
+       <property name="value">
+        <number>100</number>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="Button_train">
+       <property name="geometry">
+        <rect>
+         <x>200</x>
+         <y>210</y>
+         <width>101</width>
+         <height>41</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Train</string>
+       </property>
+      </widget>
+      <widget class="QProgressBar" name="ProgressBar_training">
+       <property name="geometry">
+        <rect>
+         <x>310</x>
+         <y>220</y>
+         <width>151</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="value">
+        <number>100</number>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="ComboBox_DNNs">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>20</y>
+         <width>451</width>
+         <height>31</height>
+        </rect>
+       </property>
+      </widget>
      </widget>
      <widget class="QGroupBox" name="groupBox_3">
       <property name="geometry">
@@ -526,6 +683,61 @@
        <string>Training Parameters</string>
       </property>
      </widget>
+     <widget class="QGroupBox" name="groupBox_4">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>519</y>
+        <width>511</width>
+        <height>181</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Dataset for Deep Learning</string>
+      </property>
+      <widget class="QPushButton" name="Button_useCurrentData">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>121</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Use current data</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="Button_selectDataset">
+       <property name="geometry">
+        <rect>
+         <x>140</x>
+         <y>30</y>
+         <width>361</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Select Dataset</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="Label_currentDataset">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>70</y>
+         <width>491</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>No Dataset is selected for Deep Learning!</string>
+       </property>
+      </widget>
+     </widget>
     </widget>
     <widget class="QWidget" name="Tab_GAN">
      <attribute name="title">
@@ -539,8 +751,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1385</width>
-     <height>26</height>
+     <width>1384</width>
+     <height>21</height>
     </rect>
    </property>
   </widget>

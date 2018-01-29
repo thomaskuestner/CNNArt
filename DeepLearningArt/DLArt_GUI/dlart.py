@@ -27,6 +27,8 @@ import json
 import datetime
 import h5py
 
+import cnn_main
+
 import shelve
 
 class DeepLearningArtApp():
@@ -42,6 +44,11 @@ class DeepLearningArtApp():
         't1_tse_tra_fs_Becken_Motion_0010': Dataset('t1_tse_tra_fs_Becken_Motion_0010', None, 'motion', 'pelvis', 't1'),
         't2_tse_tra_fs_Becken_Motion_0011': Dataset('t2_tse_tra_fs_Becken_Motion_0011', None, 'motion', 'pelvis', 't2'),
         't2_tse_tra_fs_Becken_Shim_xz_0012': Dataset('t2_tse_tra_fs_Becken_Shim_xz_0012', None, 'shim', 'pelvis', 't2')
+    }
+
+    deepNeuralNetworks = {
+        'Multiclass DenseResNet': 'networks.multiclass.DenseResNet.multiclass_DenseResNet',
+        'Multiclass InceptionNet': 'networks.multiclass.InceptionNet.multiclass_InceptionNet'
     }
 
     modelSubDir = "dicom_sorted"
@@ -67,11 +74,11 @@ class DeepLearningArtApp():
 
     def __init__(self):
         # attributes for paths and database
-        self.pathDatabase = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "newProtocol"
         self.selectedPatients = ''
         self.selectedDatasets = ''
-        self.pathOutputPatching = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "DeepLearningArt_Output"
-        self.markingsPath = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "Markings"
+
+        self.pathDatabase, self.pathOutputPatching, self.markingsPath, self.learningOutputPath \
+            = DeepLearningArtApp.getOSPathes(operatingSystem=0)  # for windows os=0, for linse server os=1. see method for pathes
 
         # attributes for patching
         self.patchSizeX = 40
@@ -90,19 +97,32 @@ class DeepLearningArtApp():
         self.splittingMode = DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING
         self.trainTestDatasetRatio = 0.2 #part of test data
         self.trainValidationRatio = 0.2 # part of Validation data in traindata
+        self.numFolds = 5
+
+        #attributes for DNN
+        self.neuralNetworkModel = None
+        self.batchSize = None
+        self.epochs = None
+        self.learningRates = None
+
 
         # train, validation, test dataset attributes
-        self.X_train = ''
-        self.Y_train = ''
+        self.X_train = None
+        self.Y_train = None
 
-        self.X_validation = ''
-        self.Y_validation = ''
+        self.X_validation = None
+        self.Y_validation = None
 
-        self.X_test = ''
-        self.Y_test = ''
+        self.X_test = None
+        self.Y_test = None
 
 
     def generateDataset(self):
+        '''
+        method performs the splitting of the datasets to the learning datasets (training, validation, test)
+        and handles the storage of datasets
+        :return:
+        '''
         self.X_test = []
         self.X_validation= []
         self.X_train = []
@@ -174,8 +194,12 @@ class DeepLearningArtApp():
 
                             #compute 2D Mask labling patching
                             dPatches, dLabels = fRigidPatching_maskLabeling(norm_voxel_ndarray,
-                                    [self.patchSizeX, self.patchSizeY], self.patchOverlapp, labelMask_ndarray, 1,
+                                    [self.patchSizeX, self.patchSizeY], self.patchOverlapp, labelMask_ndarray, 0.5,
                                      DeepLearningArtApp.datasets[dataset])
+
+                            #convert to float32
+                            dPatches = np.asarray(dPatches, dtype=np.float32)
+                            dLabels = np.asarray(dLabels, dtype=np.float32)
 
                         elif self.labelingMode == DeepLearningArtApp.PATCH_LABELING:
                             # get label
@@ -186,11 +210,15 @@ class DeepLearningArtApp():
                                                                              [self.patchSizeX, self.patchSizeY],
                                                                              self.patchOverlapp, 1)
                             dLabels = dLabels*datasetLabel
-                        else:
-                            print("We do not know what labeling mode you want to use :p")
+
+                            # convert to float32
+                            dPatches = np.asarray(dPatches, dtype=np.float32)
+                            dLabels = np.asarray(dLabels, dtype=np.float32)
                     elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
                         # 3D Patching
                         print("Do 3D patching......")
+                    else:
+                            print("We do not know what labeling mode you want to use :p")
 
                 if self.storeMode == DeepLearningArtApp.STORE_PATCH_BASED:
                     # patch based storage
@@ -205,6 +233,10 @@ class DeepLearningArtApp():
                     dAllPatches = np.concatenate((dAllPatches, dPatches), axis=2)
                     dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
 
+
+        # dataset splitting
+
+
         # store mode
         if self.storeMode != DeepLearningArtApp.STORE_DISABLED:
             # H5py store mode
@@ -217,18 +249,6 @@ class DeepLearningArtApp():
                                     testTrainingDatasetRatio=self.trainTestDatasetRatio,
                                     validationTrainRatio=self.trainValidationRatio,
                                     outPutPath=self.pathOutputPatching, nfolds=0)
-
-                # #outPutFolder name:
-                # outPutFolder = "P" + str(len(self.selectedPatients)) + "_" + "D" + str(len(self.selectedDatasets)) + "_" + \
-                #     "PM" + str(self.patchingMode) +"_X" + str(self.patchSizeX) + "_Y" + str(self.patchSizeY) + "_O" + \
-                #     str(self.patchOverlapp) + "_L" + str(self.labelingMode) + "_S" + str(self.splittingMode)
-                #
-                # outputFolderPath = self.pathOutputPatching + os.sep + outPutFolder
-                # if not os.path.exists(outputFolderPath):
-                #     os.makedirs(outputFolderPath)
-                #
-                # # create dataset summary
-                # self.createDatasetInfoSummary(outPutFolder, outputFolderPath)
 
                 # store datasets with h5py
                 with h5py.File(outputFolderPath+os.sep+'datasets.hdf5', 'w') as hf:
@@ -243,13 +263,45 @@ class DeepLearningArtApp():
                 with open(outputFolderPath+os.sep+"labels.json", 'w') as fp:
                     json.dump(labelDict, fp)
         else:
-            # no storage of pateched datasets
-            [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [self.Y_test] \
-                = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients, sSplitting=self.splittingMode,
+            # no storage of patched datasets
+            [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [self.Y_test] = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients, sSplitting=self.splittingMode,
                                 patchSize = [self.patchSizeX, self.patchSizeY], patchOverlap=self.patchOverlapp,
                                 testTrainingDatasetRatio=self.trainTestDatasetRatio, validationTrainRatio=self.trainValidationRatio,
-                                outPutPath=self.pathOutputPatching, nfolds=0)
+                                outPutPath=self.pathOutputPatching, nfolds=self.numFolds)
 
+            print()
+
+    def performTraining(self):
+        # get output vector for different classes
+        classes = np.asarray(np.unique(self.Y_train, ), dtype=int)
+        classMappings = Label.mapClassesToOutputVector(classes=classes, usingArtefacts=True, usingBodyRegion=True, usingTWeightings=True)
+
+        Y_train = []
+        for i in range(self.Y_train.shape[0]):
+            Y_train.append(classMappings[self.Y_train[i]])
+        Y_train = np.asarray(Y_train)
+
+        Y_validation = []
+        for i in range(self.Y_validation.shape[0]):
+            Y_validation.append(classMappings[self.Y_validation[i]])
+        Y_validation = np.asarray(Y_validation)
+
+        Y_test = []
+        for i in range(self.Y_test.shape[0]):
+            Y_test.append(classMappings[self.Y_test[i]])
+        Y_test = np.asarray(Y_test)
+
+        cnn_main.fRunCNN(
+            dData={'X_train': self.X_train, 'y_train': Y_train, 'X_test': self.X_test, 'y_test': Y_test, 'patchSize': [self.patchSizeX, self.patchSizeY, self.patchSizeZ]},
+            sModelIn=DeepLearningArtApp.deepNeuralNetworks[self.neuralNetworkModel],
+            lTrain=True,
+            sParaOptim='',
+            sOutPath=self.learningOutputPath,
+            iBatchSize=self.batchSize,
+            iLearningRate=self.learningRates,
+            iEpochs=self.epochs)
+
+        print()
 
 
     def getAllDicomsPathList(self):
@@ -287,7 +339,7 @@ class DeepLearningArtApp():
         dataDict['SplittingMode'] = self.splittingMode
         dataDict['StoreMode'] = self.storeMode
 
-        with open((outputFolderPath+os.sep+name+'.json'), 'w') as fp:
+        with open((outputFolderPath+os.sep+'dataset_info.json'), 'w') as fp:
             json.dump(dataDict, fp, indent=4)
 
 
@@ -359,6 +411,12 @@ class DeepLearningArtApp():
     def getPatchingMode(self):
         return self.patchingMode
 
+    def getLearningOutputPath(self):
+        return self.learningOutputPath
+
+    def setLearningOutputPath(self, path):
+        self.learningOutputPath = path
+
     def getStoreMode(self):
         return self.storeMode
 
@@ -403,3 +461,101 @@ class DeepLearningArtApp():
 
     def getSplittingMode(self):
         return self.splittingMode
+
+    def getNumFolds(self):
+        return self.numFolds
+
+    def setNumFolds(self, folds):
+        self.numFolds = folds
+
+    def setNeuralNetworkModel(self, model):
+        self.neuralNetworkModel = model
+
+    def getNeuralNetworkModel(self):
+        return self.neuralNetworkModel
+
+    def setBatchSize(self, size):
+        self.batchSize = size
+
+    def getBatchSize(self):
+        return self.batchSize
+
+    def setLearningRates(self, rates):
+        self.learningRates = rates
+
+    def getLearningRates(self):
+        return self.learningRates
+
+    def setEpochs(self, epochs):
+        self.epochs = epochs
+
+    def getEpochs(self):
+        return self.epochs
+
+    def datasetAvailable(self):
+        retbool = False
+        if  self.X_train.all and self.X_validation.all and self.X_test.all and self.Y_train.all and self.Y_validation.all and self.Y_test.all:
+            retbool = True
+        return retbool
+
+    def loadDataset(self, pathToDataset):
+        '''
+        Method loads an existing dataset out of hd5f files or handles the patch based datasets
+        :param pathToDataset: path to dataset
+        :return: boolean if loading was successful, and name of loaded dataset
+        '''
+        retbool = False
+        datasetName = ''
+        #check for data info summary in json file
+        try:
+            with open(pathToDataset + os.sep + "dataset_info.json", 'r') as fp:
+                dataset_info = json.load(fp)
+
+            # hd5f or patch based?
+            if dataset_info['StoreMode'] == DeepLearningArtApp.STORE_HDF5:
+                # loading hdf5
+                datasetName = dataset_info['Name']
+
+                # loading hdf5 dataset
+                try:
+                    with h5py.File(pathToDataset + os.sep + "datasets.hdf5", 'r') as hf:
+                        self.X_train = hf['X_train'][:]
+                        self.X_validation = hf['X_validation'][:]
+                        self.X_test = hf['X_test'][:]
+                        self.Y_train = hf['Y_train'][:]
+                        self.Y_validation = hf['Y_validation'][:]
+                        self.Y_test = hf['Y_test'][:]
+
+                    retbool = True
+                except:
+                    raise TypeError("Can't read HDF5 dataset!")
+
+            elif dataset_info['StoreMode'] == DeepLearningArtApp.STORE_PATCH_BASED:
+                #loading patchbased stuff
+                datasetName = dataset_info['Name']
+
+                print("still in progrss")
+            else:
+                raise NameError("No such store Mode known!")
+
+        except:
+            raise FileNotFoundError("Error: Something went wrong at trying to load the dataset!!!")
+
+        return retbool, datasetName
+
+    @staticmethod
+    def getOSPathes(operatingSystem=0):
+        if operatingSystem==0:
+            # my windows PC
+            pathDatabase = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "newProtocol"
+            pathOutputPatching = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "DeepLearningArt_Output"
+            markingsPath = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "Markings"
+            learningOutputPath = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "DeepLearningArt_Output" + \
+                                      os.sep + "Output_Learning"
+        elif operatingSystem==1:
+            pathDatabase = "/med_data/ImageSimilarity/Databases/MRPhysics/newProtocol"
+            pathOutputPatching = "/no_backup/d1237/DeepLearningArt_Output/"
+            markingsPath = "/no_backup/d1237/Markings/"
+            learningOutputPath = "/no_backup/d1237/DeepLearningArt_Output/"
+
+        return pathDatabase, pathOutputPatching, markingsPath, learningOutputPath

@@ -6,6 +6,7 @@
 
 import sys
 import os
+import numpy as np
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -43,6 +44,9 @@ class MainWindow(QMainWindow):
         # initialize markings path
         self.ui.Label_MarkingsPath.setText(self.deepLearningArtApp.getMarkingsPath())
 
+        # initialize learning output path
+        self.ui.Label_LearningOutputPath.setText(self.deepLearningArtApp.getLearningOutputPath())
+
         #initialize patching mode
         self.ui.ComboBox_Patching.setCurrentIndex(1)
 
@@ -54,6 +58,12 @@ class MainWindow(QMainWindow):
         self.ui.Label_SplittingParams.setText("using Test/Train="
                                               +str(self.deepLearningArtApp.getTrainTestDatasetRatio())
                                               +" and Valid/Train="+str(self.deepLearningArtApp.getTrainValidationRatio()))
+
+        #initialize combox box for DNN selection
+        self.ui.ComboBox_DNNs.addItem("Select Deep Neural Network Model...")
+        self.ui.ComboBox_DNNs.addItems(DeepLearningArtApp.deepNeuralNetworks.keys())
+        self.ui.ComboBox_DNNs.setCurrentIndex(1)
+        self.deepLearningArtApp.setNeuralNetworkModel(self.ui.ComboBox_DNNs.currentText())
 
         ################################################################################################################
         # Signals and Slots
@@ -79,7 +89,33 @@ class MainWindow(QMainWindow):
         # combo box splitting mode is changed
         self.ui.ComboBox_splittingMode.currentIndexChanged.connect(self.splittingMode_changed)
 
+        # "use current data" button clicked
+        self.ui.Button_useCurrentData.clicked.connect(self.button_useCurrentData_clicked)
+
+        # select dataset is clicked
+        self.ui.Button_selectDataset.clicked.connect(self.button_selectDataset_clicked)
+
+        # learning output path button clicked
+        self.ui.Button_LearningOutputPath.clicked.connect(self.button_learningOutputPath_clicked)
+
+        # train button clicked
+        self.ui.Button_train.clicked.connect(self.button_train_clicked)
+
+        # combobox dnns
+        self.ui.ComboBox_DNNs.currentIndexChanged.connect(self.selectedDNN_changed)
         ################################################################################################################
+
+    def button_train_clicked(self):
+        self.deepLearningArtApp.setBatchSize(self.ui.SpinBox_BatchSize.value())
+        self.deepLearningArtApp.setEpochs(self.ui.SpinBox_Epochs.value())
+        try:
+            learningRates = np.fromstring(self.ui.LineEdit_LearningRates.text(), dtype=np.float32, sep=',')
+            self.deepLearningArtApp.setLearningRates(learningRates)
+        except:
+            raise ValueError("Wrong input format of learning rates! Enter values seperated by ','. For example: 0.1,0.01,0.001")
+
+        self.deepLearningArtApp.performTraining()
+
 
     def button_markingsPath_clicked(self):
         dir = self.openFileNamesDialog(self.deepLearningArtApp.getMarkingsPath())
@@ -132,8 +168,14 @@ class MainWindow(QMainWindow):
         print("Patch Size Y: " + str(self.deepLearningArtApp.getPatchSizeY()))
         print("Patch Overlapp: " + str(self.deepLearningArtApp.getPatchOverlapp()))
 
-
+        #generate dataset
         self.deepLearningArtApp.generateDataset()
+
+        #check if attributes in DeepLearningArtApp class contains dataset
+        if self.deepLearningArtApp.datasetAvailable() == True:
+            # if yes, make the use current data button available
+            self.ui.Button_useCurrentData.setEnabled(True)
+
 
 
     def button_outputPatching_clicked(self):
@@ -169,16 +211,17 @@ class MainWindow(QMainWindow):
 
     def manageTreeView(self):
         # all patients in database
-        subdirs = os.listdir(self.deepLearningArtApp.getPathToDatabase())
-        self.ui.TreeWidget_Patients.setHeaderLabel("Patients:")
+        if os.path.exists(self.deepLearningArtApp.getPathToDatabase()):
+            subdirs = os.listdir(self.deepLearningArtApp.getPathToDatabase())
+            self.ui.TreeWidget_Patients.setHeaderLabel("Patients:")
 
-        for x in subdirs:
-            item = QTreeWidgetItem()
-            item.setText(0, str(x))
-            item.setCheckState(0, Qt.Unchecked)
-            self.ui.TreeWidget_Patients.addTopLevelItem(item)
+            for x in subdirs:
+                item = QTreeWidgetItem()
+                item.setText(0, str(x))
+                item.setCheckState(0, Qt.Unchecked)
+                self.ui.TreeWidget_Patients.addTopLevelItem(item)
 
-        self.ui.Label_DB.setText(self.deepLearningArtApp.getPathToDatabase())
+            self.ui.Label_DB.setText(self.deepLearningArtApp.getPathToDatabase())
 
     def manageTreeViewDatasets(self):
         print(os.path.dirname(self.deepLearningArtApp.getPathToDatabase()))
@@ -198,6 +241,36 @@ class MainWindow(QMainWindow):
                 selectedDatasets.append(self.ui.TreeWidget_Datasets.topLevelItem(i).text(0))
 
         self.deepLearningArtApp.setSelectedDatasets(selectedDatasets)
+
+    def selectedDNN_changed(self):
+        self.deepLearningArtApp.setNeuralNetworkModel(self.ui.ComboBox_DNNs.currentText())
+
+    def button_useCurrentData_clicked(self):
+        if self.deepLearningArtApp.datasetAvailable() == True:
+            self.ui.Label_currentDataset.setText("Current Dataset is used...")
+            self.ui.GroupBox_TrainNN.setEnabled(True)
+        else:
+            self.ui.Button_useCurrentData.setEnabled(False)
+            self.ui.Label_currentDataset.setText("No Dataset selected!")
+            self.ui.GroupBox_TrainNN.setEnabled(False)
+
+    def button_selectDataset_clicked(self):
+        pathToDataset = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
+        retbool, datasetName = self.deepLearningArtApp.loadDataset(pathToDataset)
+        if retbool == True:
+            self.ui.Label_currentDataset.setText(datasetName + " is used as dataset...")
+        else:
+            self.ui.Label_currentDataset.setText("No Dataset selected!")
+
+        if self.deepLearningArtApp.datasetAvailable() == True:
+            self.ui.GroupBox_TrainNN.setEnabled(True)
+        else:
+            self.ui.GroupBox_TrainNN.setEnabled(False)
+
+    def button_learningOutputPath_clicked(self):
+        path = self.openFileNamesDialog(self.deepLearningArtApp.getLearningOutputPath())
+        self.deepLearningArtApp.setLearningOutputPath(path)
+        self.ui.Label_LearningOutputPath.setText(path)
 
     def splittingMode_changed(self):
 
@@ -226,11 +299,41 @@ class MainWindow(QMainWindow):
                 self.ui.ComboBox_splittingMode.setCurrentIndex(0)
                 self.ui.Label_SplittingParams.setText("Select Splitting Mode!")
         elif self.ui.ComboBox_splittingMode.currentIndex() == 2:
-            self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.CROSS_VALIDATION_SPLITTING)
+            # cross validation splitting
+            testTrainingRatio, retBool = QInputDialog.getDouble(self, "Enter Test/Training Ratio:",
+                                                             "Ratio Test/Training Set:", 0.2, 0, 1, decimals=2)
+
+            if retBool == True:
+                numFolds, retBool = QInputDialog.getInt(self, "Enter Number of Folds for Cross Validation",
+                                                    "Number of Folds: ", 15, 0, 100000)
+                if retBool == True:
+                    self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.CROSS_VALIDATION_SPLITTING)
+                    self.deepLearningArtApp.setTrainTestDatasetRatio(testTrainingRatio)
+                    self.deepLearningArtApp.setNumFolds(numFolds)
+                    self.ui.Label_SplittingParams.setText("Test/Train Ratio: " + str(testTrainingRatio) + \
+                                                          ", and " + str(numFolds) + " Folds")
+                else:
+                    self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
+                    self.ui.ComboBox_splittingMode.setCurrentIndex(0)
+                    self.ui.Label_SplittingParams.setText("Select Splitting Mode!")
+            else:
+                self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
+                self.ui.ComboBox_splittingMode.setCurrentIndex(0)
+                self.ui.Label_SplittingParams.setText("Select Splitting Mode!")
+
         elif self.ui.ComboBox_splittingMode.currentIndex() == 3:
             self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.PATIENT_CROSS_VALIDATION_SPLITTING)
 
 
+
+sys._excepthook = sys.excepthook
+
+def my_exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+sys.excepthook = my_exception_hook
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

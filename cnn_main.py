@@ -25,8 +25,8 @@ from networks.motion.VNetArt import *
 from networks.multiclass.DenseResNet import *
 from networks.multiclass.InceptionNet import *
 
-# from hyperopt import Trials, STATUS_OK, tpe
-# from hyperas import optim
+from hyperopt import Trials, STATUS_OK, tpe
+from hyperas import optim
 
 
 
@@ -99,26 +99,27 @@ def fLoadDataForOptim(sInPath):
 def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearningRate, iEpochs):
     """CNN Models"""
     # check model
-    if 'motion' in sModelIn:
-        if 'CNN2D' in sModelIn:
-            sModel = 'networks.motion.CNN2D.' + sModelIn
-        elif 'motion_3DCNN' in sModelIn:
-            sModel = 'networks.motion.CNN3D.' + sModelIn
-        elif 'motion_MNetArt' in sModelIn:
-            sModel = 'networks.motion.MNetArt.' + sModelIn
-        elif 'motion_VNetArt' in sModelIn:
-            sModel = 'networks.motion.VNetArt.' + sModelIn
-    elif 'multi' in sModelIn:
-        if 'multi_DenseResNet' in sModelIn:
-            sModel = 'networks.multiclass.DenseResNet.' + sModelIn
-        elif 'multi_InceptionNet' in sModelIn:
-            sModel = 'networks.multiclass.InceptionNet.' + sModelIn
-    else:
-        sys.exit("Model is not supported")
+    sModel = sModelIn
+
+    # if 'motion' in sModelIn:
+    #     if 'CNN2D' in sModelIn:
+    #         sModel = 'networks.motion.CNN2D.' + sModelIn
+    #     elif 'motion_3DCNN' in sModelIn:
+    #         sModel = 'networks.motion.CNN3D.' + sModelIn
+    #     elif 'motion_MNetArt' in sModelIn:
+    #         sModel = 'networks.motion.MNetArt.' + sModelIn
+    #     elif 'motion_VNetArt' in sModelIn:
+    #         sModel = 'networks.motion.VNetArt.' + sModelIn
+    # elif 'multi' in sModelIn:
+    #     if 'multi_DenseResNet' in sModelIn:
+    #         sModel = 'networks.multiclass.DenseResNet.' + sModelIn
+    #     elif 'multi_InceptionNet' in sModelIn:
+    #         sModel = 'networks.multiclass.InceptionNet.' + sModelIn
+    # else:
+    #     sys.exit("Model is not supported")
 
     # dynamic loading of corresponding model
-    cnnModel = __import__(sModel, globals(), locals(), ['createModel', 'fTrain', 'fPredict'],
-                          0)  # dynamic module loading with specified functions and with absolute importing (level=0) -> work in both Python2 and Python3
+    cnnModel = __import__(sModel, globals(), locals(), ['createModel', 'fTrain', 'fPredict'], 0)  # dynamic module loading with specified functions and with absolute importing (level=0) -> work in both Python2 and Python3
 
     # train (w/ or w/o optimization) and predicting
     if lTrain:  # training
