@@ -9,8 +9,7 @@ from keras import backend as K
 from keras import losses
 from keras.applications.vgg19 import VGG19
 import os
-
-index = 1
+import keras
 
 # Custom loss layer
 class FinalLayer(Layer):
@@ -19,13 +18,16 @@ class FinalLayer(Layer):
         super(FinalLayer, self).__init__(**kwargs)
 
     def call(self, inputs):
-        p1_loss = inputs[0]
-        p2_loss = inputs[1]
-        p3_loss = inputs[2]
-        self.add_loss(3e-5 * (p1_loss + p2_loss + p3_loss))
+        p1_loss_ref = inputs[0]
+        p2_loss_ref = inputs[1]
+        p3_loss_ref = inputs[2]
+        p1_loss_art = inputs[3]
+        p2_loss_art = inputs[4]
+        p3_loss_art = inputs[5]
+        total_loss = p1_loss_ref + p2_loss_ref + p3_loss_ref + p1_loss_art + p2_loss_art + p3_loss_art
+        self.add_loss(3e-5 * total_loss)
 
-        return p1_loss + p2_loss + p3_loss
-
+        return total_loss
 
 def BNReluConv2D(filters, kernel_size, strides, padding):
     def f(inputs):
@@ -118,6 +120,7 @@ def createModel(patchSize):
     # perceptual loss
     x_ref_triple = concatenate([x_ref, x_ref, x_ref], axis=1)
     decoded_ref_triple = concatenate([decoded_ref, decoded_ref, decoded_ref], axis=1)
+    decoded_art_triple = concatenate([decoded_art, decoded_art, decoded_art], axis=1)
     vgg_input = Input(shape=(3, patchSize[0], patchSize[1]))
 
     vgg = VGG19(include_top=False, weights='imagenet', input_tensor=vgg_input)
@@ -134,21 +137,40 @@ def createModel(patchSize):
     l2_model = Model(vgg_input, l2)
     l3_model = Model(vgg_input, l3)
 
+    l1_model.trainable = False
+    l2_model.trainable = False
+    l3_model.trainable = False
+    for l in l1_model.layers:
+        l.trainable = False
+    for l in l2_model.layers:
+        l.trainable = False
+    for l in l3_model.layers:
+        l.trainable = False
+
     f_l1_ref = l1_model(x_ref_triple)
     f_l2_ref = l2_model(x_ref_triple)
     f_l3_ref = l3_model(x_ref_triple)
+    f_l1_art = l1_model(decoded_art_triple)
+    f_l2_art = l2_model(decoded_art_triple)
+    f_l3_art = l3_model(decoded_art_triple)
     f_l1_predict = l1_model(decoded_ref_triple)
     f_l2_predict = l2_model(decoded_ref_triple)
     f_l3_predict = l3_model(decoded_ref_triple)
 
-    p1_loss = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])) + 1e-7)([f_l1_ref, f_l1_predict])
-    p2_loss = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])) + 1e-7)([f_l2_ref, f_l2_predict])
-    p3_loss = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])) + 1e-7)([f_l3_ref, f_l3_predict])
+    p1_loss_ref = Lambda(lambda x: K.mean(K.sum(K.abs(x[0] - x[1]), [1, 2, 3])))([f_l1_ref, f_l1_predict])
+    p2_loss_ref = Lambda(lambda x: K.mean(K.sum(K.abs(x[0] - x[1]), [1, 2, 3])))([f_l2_ref, f_l2_predict])
+    p3_loss_ref = Lambda(lambda x: K.mean(K.sum(K.abs(x[0] - x[1]), [1, 2, 3])))([f_l3_ref, f_l3_predict])
 
-    output_loss = FinalLayer()([p1_loss, p2_loss, p3_loss])
+    p1_loss_art = Lambda(lambda x: K.mean(K.sum(K.abs(x[0] - x[1]), [1, 2, 3])))([f_l1_art, f_l1_predict])
+    p2_loss_art = Lambda(lambda x: K.mean(K.sum(K.abs(x[0] - x[1]), [1, 2, 3])))([f_l2_art, f_l2_predict])
+    p3_loss_art = Lambda(lambda x: K.mean(K.sum(K.abs(x[0] - x[1]), [1, 2, 3])))([f_l3_art, f_l3_predict])
+
+    output_loss = FinalLayer()([p1_loss_ref, p2_loss_ref, p3_loss_ref, p1_loss_art, p2_loss_art, p3_loss_art])
 
     loss_model = Model(vae.input, output_loss)
     loss_model.add_loss(loss_kl)
+    for l in loss_model.layers[-13:]:
+        l.trainable = False
 
     return loss_model, vae
 
@@ -179,7 +201,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr):
 
     print('Training with epochs {} batch size {} learning rate {}'.format(epochs, batchSize, lr))
 
-    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}(VGG19).h5'.format(patchSize[0], batchSize)
+    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}.h5'.format(patchSize[0], batchSize)
 
     callback_list = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
     callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
