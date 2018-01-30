@@ -59,12 +59,12 @@ def encode_shared(input):
     conv_2 = LeakyReluConv2D(filters=256, kernel_size=3, strides=2, padding='same')(conv_1)
     flat = Flatten()(conv_2)
 
-    mu = Dense(512)(flat)
-    sd = Dense(512)(flat)
+    z_mean = Dense(512)(flat)
+    z_log_var = Dense(512)(flat)
 
-    z = Lambda(sampling, output_shape=(512,))([mu, sd])
+    z = Lambda(sampling, output_shape=(512,))([z_mean, z_log_var])
 
-    return z, mu, sd
+    return z, z_mean, z_log_var
 
 def decode(input):
     dense = Dense(256 * 12 * 12)(input)
@@ -88,7 +88,7 @@ def createModel(patchSize, kl_weight, perceptual_weight):
     combined = concatenate([encoded_ref, encoded_art], axis=0)
 
     # create the shared encoder
-    z, mu, sd = encode_shared(combined)
+    z, z_mean, z_log_var = encode_shared(combined)
 
     # create the decoder
     decoded = decode(z)
@@ -101,7 +101,7 @@ def createModel(patchSize, kl_weight, perceptual_weight):
     vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
 
     # compute kl loss
-    loss_kl = - 0.5 * K.sum(1 + mu - K.square(mu) - K.exp(sd), axis=-1)
+    loss_kl = - 0.5 * K.sum(1 + z_mean - K.square(z_mean) - K.exp(z_log_var), axis=-1)
     vae.add_loss(kl_weight * K.mean(loss_kl))
 
     # compute pixel to pixel loss

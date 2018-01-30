@@ -52,12 +52,12 @@ def encode_shared(input):
     conv_4 = LeakyReluConv2D(filters=256, kernel_size=3, strides=2, padding='same')(conv_3)
     flat = Flatten()(conv_4)
 
-    mu = Dense(512)(flat)
-    sd = Dense(512)(flat)
+    z_mean = Dense(512)(flat)
+    z_log_var = Dense(512)(flat)
 
-    z = Lambda(sampling, output_shape=(500,))([mu, sd])
+    z = Lambda(sampling, output_shape=(500,))([z_mean, z_log_var])
 
-    return z, mu, sd
+    return z, z_mean, z_log_var
 
 def decode(input):
     dense = Dense(25600)(input)
@@ -83,7 +83,7 @@ def createModel(patchSize, kl_weight, pixel_weight):
     combined = concatenate([encoded_ref, encoded_art], axis=0)
 
     # create the shared encoder
-    z, mu, sd = encode_shared(combined)
+    z, z_mean, z_log_var = encode_shared(combined)
 
     # create the decoder
     decoded = decode(z)
@@ -95,7 +95,7 @@ def createModel(patchSize, kl_weight, pixel_weight):
     loss_ref2ref = patchSize[0] * patchSize[1] * metrics.binary_crossentropy(K.flatten(x_ref), K.flatten(decoded_ref2ref))
     loss_art2ref = patchSize[0] * patchSize[1] * metrics.binary_crossentropy(K.flatten(x_ref), K.flatten(decoded_art2ref))
     loss_pixel = pixel_weight * (loss_ref2ref + loss_art2ref)
-    loss_kl = kl_weight * K.mean(- 0.5 * K.sum(1 + mu - K.square(mu) - K.exp(sd), axis=-1))
+    loss_kl = kl_weight * K.mean(- 0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1))
 
     # generate the VAE and encoder model
     vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
