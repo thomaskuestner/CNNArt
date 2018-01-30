@@ -55,7 +55,9 @@ def run(cfg, dbinfo):
     sModelIn = cfg['correction']['sCorrection']
 
     if cfg['lTrain']:
-        dHyper = {'batchSize': cfg['batchSize'], 'learningRate': cfg['lr'], 'epochs': cfg['epochs']}
+        dHyper = {'batchSize': cfg['batchSize'], 'learningRate': cfg['lr'], 'epochs': cfg['epochs'],
+                  'kl_weight': cfg['kl_weight'], 'perceptual_weight': cfg['perceptual_weight'],
+                  'pixel_weight': cfg['pixel_weight']}
         if len(train_ref.shape) == 3:
             dData = {'train_ref': train_ref, 'test_ref': test_ref, 'train_art': train_art, 'test_art': test_art}
             cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
@@ -65,8 +67,8 @@ def run(cfg, dbinfo):
                 cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
     else:
         dHyper = {'batchSize': cfg['batchSize'], 'bestModel': cfg['correction']['bestModel']}
-        test_ref = test_ref.reshape((-1 , 1, patchSize[0], patchSize[1]))
-        test_art = test_art.reshape((-1 , 1, patchSize[0], patchSize[1]))
+        test_ref = test_ref.reshape((-1, 1, patchSize[0], patchSize[1]))
+        test_art = test_art.reshape((-1, 1, patchSize[0], patchSize[1]))
         dData = {'test_ref': test_ref, 'test_art': test_art}
         cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
 

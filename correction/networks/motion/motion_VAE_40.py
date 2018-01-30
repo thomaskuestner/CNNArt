@@ -66,7 +66,7 @@ def decode(input):
     output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
     return output
 
-def createModel(patchSize):
+def createModel(patchSize, kl_weight, pixel_weight):
     # input corrupted and non-corrupted image
     x_ref = Input(shape=(1, patchSize[0], patchSize[1]))
     x_art = Input(shape=(1, patchSize[0], patchSize[1]))
@@ -90,13 +90,14 @@ def createModel(patchSize):
 
     loss_ref2ref = patchSize[0] * patchSize[1] * metrics.binary_crossentropy(K.flatten(x_ref), K.flatten(decoded_ref2ref))
     loss_art2ref = patchSize[0] * patchSize[1] * metrics.binary_crossentropy(K.flatten(x_ref), K.flatten(decoded_art2ref))
-    loss_kl = - 0.5 * K.sum(1 + mu - K.square(mu) - K.exp(sd), axis=-1)
+    loss_pixel = pixel_weight * (loss_ref2ref + loss_art2ref)
+    loss_kl = kl_weight * K.mean(- 0.5 * K.sum(1 + mu - K.square(mu) - K.exp(sd), axis=-1))
 
     # generate the VAE and encoder model
     vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
 
     # add loss
-    vae.add_loss(K.mean(loss_ref2ref + loss_art2ref + loss_kl))
+    vae.add_loss(loss_kl + loss_pixel)
     return vae
 
 def fTrain(dData, sOutPath, patchSize, dHyper):
@@ -107,9 +108,9 @@ def fTrain(dData, sOutPath, patchSize, dHyper):
 
     for iBatch in batchSize:
         for iLearn in learningRate:
-            fTrainInner(dData, sOutPath, patchSize, epochs, iBatch, iLearn)
+            fTrainInner(dData, sOutPath, patchSize, epochs, iBatch, iLearn, dHyper['kl_weight'], dHyper['pixel_weight'])
 
-def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr):
+def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pixel_weight):
     train_ref = dData['train_ref']
     train_art = dData['train_art']
     test_ref = dData['test_ref']
@@ -120,7 +121,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr):
     test_ref = np.expand_dims(test_ref, axis=1)
     test_art = np.expand_dims(test_art, axis=1)
 
-    vae = createModel(patchSize)
+    vae = createModel(patchSize, kl_weight, pixel_weight)
     vae.compile(optimizer='adam', loss=None)
     vae.summary()
 
