@@ -148,7 +148,10 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pi
 def fPredict(dData, sOutPath, patchSize, dHyper):
     weights_file = sOutPath + os.sep + '{}.h5'.format(dHyper['bestModel'])
 
-    vae = createModel(patchSize)
+    kl_weight = dHyper['kl_weight']
+    pixel_weight = dHyper['pixel_weight']
+
+    vae = createModel(patchSize, kl_weight, pixel_weight)
     vae.compile(optimizer='adam', loss=None)
 
     vae.load_weights(weights_file)
