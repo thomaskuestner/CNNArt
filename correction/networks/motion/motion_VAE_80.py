@@ -9,59 +9,22 @@ from keras import backend as K
 from keras import metrics
 import os
 
-index = 1
-
-# Custom loss layer
-class LossLayer(Layer):
-    def __init__(self, **kwargs):
-        self.is_placeholder = True
-        super(LossLayer, self).__init__(**kwargs)
-
-    def vae_loss(self, x_ref, x_decoded, mu, sd):
-        x_ref = K.flatten(x_ref)
-
-        decoded_ref2ref = Lambda(sliceRef)(x_decoded)
-        decoded_art2ref = Lambda(sliceArt)(x_decoded)
-
-        decoded_ref2ref = K.flatten(decoded_ref2ref)
-        decoded_art2ref = K.flatten(decoded_art2ref)
-
-        loss_ref2ref = 80 * 80 * metrics.binary_crossentropy(x_ref, decoded_ref2ref) + 1e-7
-        loss_art2ref = 80 * 80 * metrics.binary_crossentropy(x_ref, decoded_art2ref) + 1e-7
-
-        loss_kl = - 0.5 * K.sum(1 + sd - K.square(mu) - K.exp(sd), axis=-1)
-
-        return K.mean(loss_ref2ref + loss_art2ref + loss_kl)
-
-    def call(self, inputs):
-        x_ref = inputs[0]
-        x_decoded = inputs[1]
-        mu = inputs[2]
-        sd = inputs[3]
-        loss = self.vae_loss(x_ref, x_decoded, mu, sd)
-        self.add_loss(loss)
-        return x_decoded
-
-def BNReluConv2D(filters, kernel_size, strides, padding):
+def LeakyReluConv2D(filters, kernel_size, strides, padding):
     def f(inputs):
         conv2d = Conv2D(filters,
                         kernel_size=kernel_size,
                         strides=strides,
-                        padding=padding,
-                        activation='relu')(inputs)
-        bn = BatchNormalization(axis=1)(conv2d)
-        return bn
+                        padding=padding)(inputs)
+        return LeakyReLU()(conv2d)
     return f
 
-def BNReluConv2DTranspose(filters, kernel_size, strides, padding):
+def LeakyReluConv2DTranspose(filters, kernel_size, strides, padding):
     def f(inputs):
         conv2d = Conv2DTranspose(filters=filters,
                                  kernel_size=kernel_size,
                                  strides=strides,
-                                 padding=padding,
-                                 activation='relu')(inputs)
-        bn = BatchNormalization(axis=1)(conv2d)
-        return bn
+                                 padding=padding)(inputs)
+        return LeakyReLU()(conv2d)
     return f
 
 def sliceRef(input):
@@ -77,33 +40,33 @@ def sampling(args):
     return z_mean + K.exp(z_log_var) * epsilon
 
 def encode(input):
-    conv_1 = BNReluConv2D(filters=32, kernel_size=3, strides=1, padding='same')(input)
-    conv_2 = BNReluConv2D(filters=64, kernel_size=3, strides=2, padding='same')(conv_1)
-    conv_3 = BNReluConv2D(filters=128, kernel_size=3, strides=1, padding='same')(conv_2)
+    conv_1 = LeakyReluConv2D(filters=32, kernel_size=3, strides=1, padding='same')(input)
+    conv_2 = LeakyReluConv2D(filters=64, kernel_size=3, strides=2, padding='same')(conv_1)
+    conv_3 = LeakyReluConv2D(filters=128, kernel_size=3, strides=1, padding='same')(conv_2)
     return conv_3
 
 def encode_shared(input):
-    conv_1 = BNReluConv2D(filters=256, kernel_size=3, strides=1, padding='same')(input)
-    conv_2 = BNReluConv2D(filters=256, kernel_size=3, strides=2, padding='same')(conv_1)
-    conv_3 = BNReluConv2D(filters=256, kernel_size=3, strides=1, padding='same')(conv_2)
-    conv_4 = BNReluConv2D(filters=256, kernel_size=3, strides=2, padding='same')(conv_3)
+    conv_1 = LeakyReluConv2D(filters=256, kernel_size=3, strides=1, padding='same')(input)
+    conv_2 = LeakyReluConv2D(filters=256, kernel_size=3, strides=2, padding='same')(conv_1)
+    conv_3 = LeakyReluConv2D(filters=256, kernel_size=3, strides=1, padding='same')(conv_2)
+    conv_4 = LeakyReluConv2D(filters=256, kernel_size=3, strides=2, padding='same')(conv_3)
     flat = Flatten()(conv_4)
 
     mu = Dense(512)(flat)
     sd = Dense(512)(flat)
 
-    z = Lambda(sampling, output_shape=(512,))([mu, sd])
+    z = Lambda(sampling, output_shape=(500,))([mu, sd])
 
     return z, mu, sd
 
 def decode(input):
     dense = Dense(25600)(input)
     reshape = Reshape((256, 10, 10))(dense)
-    output = BNReluConv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same')(reshape)
-    output = BNReluConv2DTranspose(filters=256, kernel_size=3, strides=1, padding='same')(output)
-    output = BNReluConv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same')(output)
-    output = BNReluConv2DTranspose(filters=128, kernel_size=3, strides=1, padding='same')(output)
-    output = BNReluConv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same')(output)
+    output = LeakyReluConv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same')(reshape)
+    output = LeakyReluConv2DTranspose(filters=256, kernel_size=3, strides=1, padding='same')(output)
+    output = LeakyReluConv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same')(output)
+    output = LeakyReluConv2DTranspose(filters=128, kernel_size=3, strides=1, padding='same')(output)
+    output = LeakyReluConv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same')(output)
     output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
     return output
 
@@ -125,15 +88,19 @@ def createModel(patchSize):
     # create the decoder
     decoded = decode(z)
 
-    # create a customer layer to calculate the total loss
-    output = LossLayer()([x_ref, decoded, mu, sd])
-
     # separate the concatenated images
-    decoded_ref2ref = Lambda(sliceRef)(output)
-    decoded_art2ref = Lambda(sliceArt)(output)
+    decoded_ref2ref = Lambda(sliceRef)(decoded)
+    decoded_art2ref = Lambda(sliceArt)(decoded)
+
+    loss_ref2ref = patchSize[0] * patchSize[1] * metrics.binary_crossentropy(K.flatten(x_ref), K.flatten(decoded_ref2ref))
+    loss_art2ref = patchSize[0] * patchSize[1] * metrics.binary_crossentropy(K.flatten(x_ref), K.flatten(decoded_art2ref))
+    loss_kl = - 0.5 * K.sum(1 + mu - K.square(mu) - K.exp(sd), axis=-1)
 
     # generate the VAE and encoder model
     vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
+
+    # add loss
+    vae.add_loss(K.mean(loss_ref2ref + loss_art2ref + loss_kl))
     return vae
 
 def fTrain(dData, sOutPath, patchSize, dHyper):
