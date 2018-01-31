@@ -92,7 +92,7 @@ def fscaling2D(X_train, X_test, scpatchSize, iscalefactor) :
 
 
 def fscaling3D(X_train, X_test, scpatchSize, iscalefactor):
-    afterSize = np.multiply(scpatchSize, iscalefactor).astype(int)
+    afterSize = np.rint(np.multiply(scpatchSize, iscalefactor)).astype(int)
 
     # Prepare for the using of scipy.interpolation: create the coordinates of grid
     if iscalefactor == 1:
