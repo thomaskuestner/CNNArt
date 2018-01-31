@@ -18,203 +18,40 @@ import scipy.ndimage
 #qtCreatorFile = "framework1.ui" # my Qt Designer file
 #Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
-from PyQt5 import QtWidgets
-from framework1 import Ui_MainWindow  ##
+from PyQt5 import QtWidgets, QtGui, QtCore
+from framework1 import Ui_MainWindow
+from CNN_setting import*
+from Data_Preprocessing import*
+from Layout_Choosing import*
+from activescene import Activescene
+from canvas import Canvas
+
+from DatabaseInfo import*
+import yaml
 
 class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
-    def __init__(self, parent=None):
-        #super(MyApp, self).__init__()
-        super().__init__(parent)
+    def __init__(self):
+        super(MyApp, self).__init__()
+        #super().__init__(parent)
         self.setupUi(self)
 
-        self.tool_buttons = []
-        self.activated_button = 0
-        self.button1_activated = True
-        self.x_clicked = None
-        self.y_clicked = None
-        self.mouse_second_clicked = False
-        self.fig = self.canvas.figure  #
-        self.ax = plt.gca()      # for seb
-        self.pltc = None
-
-        self.openfile = QtWidgets.QAction('Open', self)
-        self.openfile.setShortcut('Ctrl+O')
-        self.openfile.setStatusTip('Open new file')
-        self.file = self.menubar.addMenu('&File')
-        self.file.addAction(self.openfile)
-        self.openfile.triggered.connect(self.load_data)
-
-        self.slider.valueChanged.connect(self.null_slot)
+        self.gridson = False
         self.voxel_ndarray = []
+        self.vision = 2
+        self.list1 = []
+        self.list2 = []
+        self.list3 = []
+        self.scenelist1 = []
+        self.scenelist2 = []
+        self.scenelist3 = []
+        self.i = -1
 
-
-        def onClick(i):
-            old_button = self.activated_button
-            self.activated_button = i
-            if self.activated_button == 0:
-                toggle_selector.ES.set_active(False)
-                toggle_selector.RS.set_active(False)
-                toggle_selector.LS.set_active(False)
-                self.button1_activated = True
-            if self.activated_button == 2:
-                toggle_selector.ES.set_active(True)
-                toggle_selector.RS.set_active(False)
-                toggle_selector.LS.set_active(False)
-                self.button1_activated = False
-            if self.activated_button == 1:
-                toggle_selector.ES.set_active(False)
-                toggle_selector.RS.set_active(True)
-                toggle_selector.LS.set_active(False)
-                self.button1_activated = False
-            if self.activated_button == 3:
-                toggle_selector.ES.set_active(False)
-                toggle_selector.RS.set_active(False)
-                toggle_selector.LS.set_active(True)
-                self.button1_activated = False
-            if old_button == i:
-                pass
-            else:
-                self.tool_buttons[old_button].configure(relief=RAISED)
-                self.tool_buttons[self.activated_button].configure(relief=SUNKEN)
-            return
-        def lasso_onselect(verts):
-            print (verts)
-            p = path.Path(verts)
-            current_mrt_layer = self.get_currentLayerNumber()
-            proband = self.art_mod_label['text'][10:self.art_mod_label['text'].find('\n')]
-            model = self.art_mod_label['text'][
-                    self.art_mod_label['text'].find('\n') + 9:len(self.art_mod_label['text'])]
-            print(proband)
-            print(model)
-            saveFile = shelve.open(self.Path_marking + proband + ".slv", writeback=True)
-            print(p)
-            patch = None
-            col_str = None
-            if self.chooseArtefact.get() == self.artefact_list[0]:
-                col_str = "31"
-                patch = patches.PathPatch(p, fill=False, edgecolor='red', lw=2)
-            elif self.chooseArtefact.get() == self.artefact_list[1]:
-                col_str = "32"
-                patch = patches.PathPatch(p, fill=False, edgecolor='green', lw=2)
-            elif self.chooseArtefact.get() == self.artefact_list[2]:
-                col_str = "33"
-                patch = patches.PathPatch(p, fill=False, edgecolor='blue', lw=2)
-            self.ax.add_patch(patch)
-            layer_name = model
-            if saveFile.has_key(layer_name):
-                number_str = str(self.mrt_layer_set[current_mrt_layer].get_current_Number()) + "_" + col_str + "_" + str(len(self.ax.patches) - 1)
-                saveFile[layer_name].update({number_str: p})
-            else:
-                number_str = str(
-                    self.mrt_layer_set[current_mrt_layer].get_current_Number()) + "_" + col_str + "_" + str(
-                    len(self.ax.patches) - 1)
-                saveFile[layer_name] = {number_str: p}
-
-            saveFile.close()
-            self.fig.canvas.draw_idle()
-
-        def ronselect(eclick, erelease):
-            'eclick and erelease are matplotlib events at press and release'
-            col_str = None
-            rect = None
-            ell = None
-            x1, y1 = eclick.xdata, eclick.ydata
-            x2, y2 = erelease.xdata, erelease.ydata
-            current_mrt_layer = self.get_currentLayerNumber()
-            proband = self.art_mod_label['text'][10:self.art_mod_label['text'].find('\n')]
-            model = self.art_mod_label['text'][
-                    self.art_mod_label['text'].find('\n') + 9:len(self.art_mod_label['text'])]
-            print(proband)
-            print(model)
-            saveFile = shelve.open(self.Path_marking + proband +".slv", writeback=True)
-            p = np.array(([x1,y1,x2,y2]))
-
-            layer_name =  model
-
-            if toggle_selector.RS.active and not toggle_selector.ES.active:
-                if self.chooseArtefact.get() == self.artefact_list[0]:
-                    col_str = "11"
-                    rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2), fill=False,
-                                         edgecolor="red", lw=2)
-                elif self.chooseArtefact.get() == self.artefact_list[1]:
-                    col_str = "12"
-                    rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2), fill=False,
-                                         edgecolor="green", lw=2)
-                elif self.chooseArtefact.get() == self.artefact_list[2]:
-                    col_str = "13"
-                    rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2), fill=False,
-                                         edgecolor="blue", lw=2)
-                self.ax.add_patch(rect)
-            elif toggle_selector.ES.active and not toggle_selector.RS.active:
-                if self.chooseArtefact.get() == self.artefact_list[0]:
-                    col_str = "21"
-                    ell = Ellipse(xy=(min(x1, x2) + np.abs(x1 - x2) / 2, min(y1, y2) + np.abs(y1 - y2) / 2),
-                                  width=np.abs(x1 - x2), height=np.abs(y1 - y2), edgecolor="red", fc='None', lw=2)
-                elif self.chooseArtefact.get() == self.artefact_list[1]:
-                    col_str = "22"
-                    ell = Ellipse(xy=(min(x1, x2) + np.abs(x1 - x2) / 2, min(y1, y2) + np.abs(y1 - y2) / 2),
-                                  width=np.abs(x1 - x2), height=np.abs(y1 - y2), edgecolor="green", fc='None', lw=2)
-                elif self.chooseArtefact.get() == self.artefact_list[2]:
-                    col_str = "23"
-                    ell = Ellipse(xy=(min(x1, x2) + np.abs(x1 - x2) / 2, min(y1, y2) + np.abs(y1 - y2) / 2),
-                                  width=np.abs(x1 - x2), height=np.abs(y1 - y2), edgecolor="blue", fc='None', lw=2)
-                self.ax.add_patch(ell)
-
-            if saveFile.has_key(layer_name):
-                number_str = str(self.mrt_layer_set[current_mrt_layer].get_current_Number()) + "_" + col_str + "_" + str(len(self.ax.patches) - 1)
-                saveFile[layer_name].update({number_str: p})
-            else:
-                number_str = str(
-                    self.mrt_layer_set[current_mrt_layer].get_current_Number()) + "_" + col_str + "_" + str(
-                    len(self.ax.patches) - 1)
-                saveFile[layer_name] = {number_str: p}
-            saveFile.close()
-            print(' startposition : (%f, %f)' % (eclick.xdata, eclick.ydata))
-            print(' endposition   : (%f, %f)' % (erelease.xdata, erelease.ydata))
-            print(' used button   : ', eclick.button)
-
-
-        def toggle_selector(event):
-            print(' Key pressed.')
-            if self.activated_button == 2 and not toggle_selector.ES.active and (
-                        toggle_selector.LS.active or toggle_selector.RS.active):
-                toggle_selector.ES.set_active(True)
-                toggle_selector.RS.set_active(False)
-                toggle_selector.LS.set_active(False)
-            if self.activated_button == 1 and not toggle_selector.RS.active and (
-                        toggle_selector.LS.active or toggle_selector.ES.active):
-                toggle_selector.ES.set_active(False)
-                toggle_selector.RS.set_active(True)
-                toggle_selector.LS.set_active(False)
-            if self.activated_button == 3 and (
-                        toggle_selector.ES.active or toggle_selector.RS.active) and not toggle_selector.LS.active:
-                toggle_selector.ES.set_active(False)
-                toggle_selector.RS.set_active(False)
-                toggle_selector.LS.set_active(True)
-
-        toggle_selector.RS = RectangleSelector(self.ax, ronselect, button=[1]) #drawtype='box', useblit=False, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True
-
-        toggle_selector.ES = EllipseSelector(self.ax, ronselect, drawtype='line', button=[1],  minspanx=5, minspany=5, spancoords='pixels',interactive=True) #drawtype='line', minspanx=5, minspany=5, spancoords='pixels', interactive=True
-
-        toggle_selector.LS = LassoSelector(self.ax, lasso_onselect, button=[1])
-
-        toggle_selector.ES.set_active(False)
-        toggle_selector.RS.set_active(False)
-        toggle_selector.LS.set_active(False)
-
-        self.fig.canvas.mpl_connect('button_press_event', self.mouse_clicked)
-        self.fig.canvas.mpl_connect('motion_notify_event', self.mouse_move)
-        self.fig.canvas.mpl_connect('button_release_event', self.mouse_release)
-
-        self.axial.clicked.connect(self.updatea)
-        self.axial.clicked.connect(self.View_A)
-        self.sagittal.clicked.connect(self.updates)
-        self.sagittal.clicked.connect(self.View_S)
-        self.coronal.clicked.connect(self.updatec)
-        self.coronal.clicked.connect(self.View_C)
-
-    def null_slot(self):
-        pass
+        self.openfile.clicked.connect(self.load_data)
+        self.grids1.clicked.connect(self.setlayout1)   # old: triggered
+        self.grids2.clicked.connect(self.setlayout2)
+        self.resetdicom.clicked.connect(self.resetcanvas)
+        self.clearimage.clicked.connect(self.clearall)
+        self.exit.clicked.connect(self.close)
 
     def load_scan(self, path):
         if path:
@@ -243,142 +80,184 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         return image, new_spacing
 
     def load_data(self):
-        self.slider.setValue(1)
-        self.PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "open file", "C:/Users/hansw/Videos/artefacts")  # root directory
-        if self.PathDicom:
-            print(self.PathDicom)
-            files = sorted([os.path.join(self.PathDicom, file) for file in os.listdir(self.PathDicom)], key=os.path.getctime)
-            datasets = [dicom.read_file(f) \
-                        for f in files]
-            try:
-                self.voxel_ndarray, pixel_space = dicom_numpy.combine_slices(datasets)
-            except dicom_numpy.DicomImportException:
-                raise
-
-        self.sscan = self.load_scan(self.PathDicom)
-        if self.sscan:
-            self.simage = np.stack([s.pixel_array for s in self.sscan])
-            self.svoxel, spacing = self.resample(self.simage, self.sscan, [1, 1, 1])
-            self.svoxel = np.swapaxes(self.svoxel, 0, 2)
-            self.ax1 = self.canvas.figure.add_subplot(111)
-
-    def updatea(self):
-        if self.voxel_ndarray == []:
-            pass
+        if self.gridson == False:
+            QtWidgets.QMessageBox.information(self, 'Warning', 'Grids needed!')
         else:
-            self.slider.valueChanged.disconnect()
-            self.slices = self.voxel_ndarray.shape[2]
-            self.slider.setRange(1, self.slices)
-            self.slider.setValue(1)
-            self.slider.valueChanged.connect(self.View_A)
-            # spinbox
-            #self.valueset.setRange(1, self.slices)
-            #self.valueset.valueChanged.connect(self.slice_update)
-            #self.valueset.setValue(1)
+            with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
+                cfg = yaml.safe_load(ymlfile)
+            dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
 
+            self.PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "open file", dbinfo.sPathIn)
+            # self.PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "open file", "C:/Users/hansw/Videos/artefacts")
 
-    def View_A(self):
-        if self.voxel_ndarray == []:
-            pass
-        else:
-            self.ax1.clear()
-            self.ind = self.slider.value()
-            self.pltc = self.ax1.imshow(np.swapaxes(self.voxel_ndarray[:, :, self.ind-1], 0, 1), cmap='gray', vmin=0, vmax=2094)
-            self.ax1.set_ylabel('slice %s' % self.ind)
+            if self.PathDicom:
+                print(self.PathDicom)
+                files = sorted([os.path.join(self.PathDicom, file) for file in os.listdir(self.PathDicom)], key=os.path.getctime)
+                datasets = [dicom.read_file(f) \
+                            for f in files]
+                try:
+                    self.voxel_ndarray, pixel_space = dicom_numpy.combine_slices(datasets)
+                except dicom_numpy.DicomImportException:
+                    raise
 
-        #self.ax2 = self.canvas.figure.add_subplot(122)
-        #self.ax2.clear()
-        #self.im2 = self.ax2.imshow(np.swapaxes(self.voxel_ndarray[:, :, self.ind-1], 0, 1), cmap='gray', vmin=0, vmax=2094)
+                self.sscan = self.load_scan(self.PathDicom)
+                if self.sscan:
+                    self.simage = np.stack([s.pixel_array for s in self.sscan])
+                    self.svoxel, spacing = self.resample(self.simage, self.sscan, [1, 1, 1])
+                    self.svoxel = np.swapaxes(self.svoxel, 0, 2)
 
-        self.canvas.draw()
+                self.list1.append(self.voxel_ndarray)
+                self.a = np.rot90(self.svoxel, axes=(2, 0))
+                self.list2.append(np.swapaxes(self.a, 0, 1))
+                self.list3.append(np.swapaxes(self.svoxel, 1, 2))
+                self.scenelist1.append(Activescene())
+                self.scenelist2.append(Activescene())
+                self.scenelist3.append(Activescene())
 
-    def updates(self):
-        if self.voxel_ndarray == []:
-            pass
-        else:
-            self.slider.valueChanged.disconnect()
-            self.slices = self.svoxel.shape[0]
-            self.slider.setRange(1, self.slices)
-            self.slider.setValue(1)
-            self.slider.valueChanged.connect(self.View_S)
-
-    def View_S(self):
-        if self.voxel_ndarray == []:
-            pass
-        else:
-            self.ax1.clear()
-            self.ind = self.slider.value()
-            self.pltc = self.ax1.imshow(np.swapaxes(self.svoxel[self.ind-1, :, :], 0, 1), cmap='gray', vmin=0, vmax=2094)
-            self.ax1.set_ylabel('slice %s' % self.ind)  # easy way
-            self.canvas.draw()
-
-    def updatec(self):
-        if self.voxel_ndarray == []:
-            pass
-        else:
-            self.slider.valueChanged.disconnect()
-            self.slices = self.svoxel.shape[1]
-            self.slider.setRange(1, self.slices)
-            self.slider.setValue(1)
-            self.slider.valueChanged.connect(self.View_C)
-
-    def View_C(self):
-        if self.voxel_ndarray == []:
-            pass
-        else:
-            self.ax1.clear()
-            self.ind = self.slider.value()
-            self.pltc = self.ax1.imshow(np.swapaxes(self.svoxel[:, self.ind-1, :], 0, 1), cmap='gray', vmin=0, vmax=2094)
-            self.ax1.set_ylabel('slice %s' % self.ind)  # easy way
-            self.canvas.draw()
-        
-    def mouse_clicked(self, event):
-        if event.button == 2 and self.button1_activated:
-            self.x_clicked = event.xdata
-            self.y_clicked = event.ydata
-            self.mouse_second_clicked = True
-
-    def mouse_move(self, event):
-        if self.button1_activated and self.mouse_second_clicked:
-            factor = 10
-            __x = event.xdata - self.x_clicked
-            __y = event.ydata - self.y_clicked
-            print(__x)
-            print(__y)
-            v_min, v_max = self.pltc.get_clim()
-            print(v_min, v_max)
-            if __x >= 0 and __y >= 0:
-                print("h")
-                __vmin = np.abs(__x) * factor + np.abs(__y) * factor
-                __vmax = np.abs(__x) * factor - np.abs(__y) * factor
-            elif __x < 0 and __y >= 0:
-                print("h")
-                __vmin = -np.abs(__x) * factor + np.abs(__y) * factor
-                __vmax = -np.abs(__x) * factor - np.abs(__y) * factor
-
-            elif __x < 0 and __y < 0:
-                print("h")
-                __vmin = -np.abs(__x) * factor - np.abs(__y) * factor
-                __vmax = -np.abs(__x) * factor + np.abs(__y) * factor
-
+                self.i = self.i + 1
+                self.putcanvas()
             else:
-                print("h")
-                __vmin = np.abs(__x) * factor - np.abs(__y) * factor
-                __vmax = np.abs(__x) * factor + np.abs(__y) * factor
+                pass
 
-            v_min += __vmin
-            v_max += __vmax
-            print(v_min, v_max)
-            self.pltc.set_clim(vmin=v_min, vmax=v_max)
-            self.fig.canvas.draw()  #
+    def clearall(self):
+        if self.gridson == True:
+            for i in reversed(range(self.maingrids.count())):  # delete old widgets
+                self.maingrids.itemAt(i).widget().setParent(None)
+        else:
+            QtWidgets.QMessageBox.information(self, 'Warning', 'No image!')
 
-    def mouse_release(self, event):
-        if event.button == 2:
-            self.mouse_second_clicked = False
+    def setlayout1(self):
+        self.gridson = True
+        self.vision = 2
+        self.scrollAreaWidgetContents = QtWidgets.QWidget()
+        self.maingrids = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        self.layoutlines = self.combo_layline.currentIndex() + 1
+        self.layoutcolumns = self.combo_laycolumn.currentIndex() + 1
+        self.clearall()
+        for i in range(self.layoutlines):
+            for j in range(self.layoutcolumns):
+                self.maingrids.addWidget(Activeview(), i, j)
+        if  self.voxel_ndarray == []:
+            pass
+        else:
+            self.switchcanvas()
 
+    def setlayout2(self):
+        self.gridson = True
+        self.vision = 3
+        self.scrollAreaWidgetContents = QtWidgets.QWidget()
+        self.maingrids = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        self.layout3D = self.combo_3D.currentIndex() + 1
+        self.clearall()
+        for i in range(self.layout3D):
+            for j in range(3):
+                self.maingrids.addWidget(Activeview(), i, j)
+        if  self.voxel_ndarray == []:
+            pass
+        else:
+            self.switchcanvas()
+
+    ''' menubar version, with Layout_chooseing.py
+    def setlayout(self):
+        self.layoutlines, self.layoutcolumns, ok = Layout_window.getData()
+        if ok:
+            for i in reversed(range(self.maingrids.count())): # delete old widgets
+                self.maingrids.itemAt(i).widget().setParent(None)
+            for i in range(self.layoutlines):
+                for j in range(self.layoutcolumns):
+                    self.maingrids.addWidget(Activeview(), i, j)
+        else:       # cancel clicked
+            pass
+    '''
+    def putcanvas(self):
+        if self.voxel_ndarray != []:   ###########
+            if self.vision == 2:
+                self.maxiimg = self.layoutlines * self.layoutcolumns
+                if self.i <=self.maxiimg-1:
+                    self.canvas = Canvas(self.list1[self.i])
+                    self.scenelist1[self.i].addWidget(self.canvas)
+                    self.maingrids.itemAt(self.i).widget().setScene(self.scenelist1[self.i])
+                else:
+                    QtWidgets.QMessageBox.information(self, 'Warning', 'More grids needed!')
+            else:
+                self.maxiimg = self.layout3D
+                if self.i <=self.maxiimg-1:
+                    self.canvas1 = Canvas(self.list1[self.i])
+                    self.canvas2 = Canvas(self.list2[self.i])
+                    self.canvas3 = Canvas(self.list3[self.i])
+                    self.scenelist1[self.i].addWidget(self.canvas1)     #additem
+                    self.scenelist2[self.i].addWidget(self.canvas2)
+                    self.scenelist3[self.i].addWidget(self.canvas3)
+                    self.maingrids.itemAt((self.i)*3).widget().setScene(self.scenelist1[self.i])
+                    self.maingrids.itemAt((self.i)*3+1).widget().setScene(self.scenelist2[self.i])
+                    self.maingrids.itemAt((self.i)*3+2).widget().setScene(self.scenelist3[self.i])
+                else:
+                    QtWidgets.QMessageBox.information(self, 'Warning', 'More grids needed!')
+
+    def switchcanvas(self):
+        if self.vision == 2:
+            self.maxiimg = self.layoutlines * self.layoutcolumns
+            if self.i <=self.maxiimg-1:
+                for j in range(0, self.i+1):
+                    self.canvas = Canvas(self.list1[j])
+                    self.scenelist1[j].addWidget(self.canvas)
+                    self.maingrids.itemAt(j).widget().setScene(self.scenelist1[j])
+            else:
+                QtWidgets.QMessageBox.information(self, 'Warning', 'More grids needed!')
+        else:
+            self.maxiimg = self.layout3D
+            if self.i <=self.maxiimg-1:
+                for j in range(0, self.i+1):
+                    self.canvas1 = Canvas(self.list1[j])
+                    self.canvas2 = Canvas(self.list2[j])
+                    self.canvas3 = Canvas(self.list3[j])
+                    self.scenelist1[j].addWidget(self.canvas1)
+                    self.scenelist2[j].addWidget(self.canvas2)
+                    self.scenelist3[j].addWidget(self.canvas3)
+                    self.maingrids.itemAt(j*3).widget().setScene(self.scenelist1[j])
+                    self.maingrids.itemAt(j*3+1).widget().setScene(self.scenelist2[j])
+                    self.maingrids.itemAt(j*3+2).widget().setScene(self.scenelist3[j])
+            else:
+                QtWidgets.QMessageBox.information(self, 'Warning', 'More grids needed!')
+
+    def resetcanvas(self):
+        if self.gridson == False:
+            QtWidgets.QMessageBox.information(self, 'Warning', 'No image!')
+        else:
+            self.clearall()
+            if self.vision == 2:
+                for i in range(self.layoutlines):
+                    for j in range(self.layoutcolumns):
+                        self.maingrids.addWidget(Activeview(), i, j)
+                for j in range(0, self.i + 1):
+                    self.canvas = Canvas(self.list1[j])
+                    self.scenelist1[j].addWidget(self.canvas)
+                    self.maingrids.itemAt(j).widget().setScene(self.scenelist1[j])
+            else:
+                for i in range(self.layout3D):
+                    for j in range(3):
+                        self.maingrids.addWidget(Activeview(), i, j)
+                for j in range(0, self.i + 1):
+                    self.canvas1 = Canvas(self.list1[j])
+                    self.canvas2 = Canvas(self.list2[j])
+                    self.canvas3 = Canvas(self.list3[j])
+                    self.scenelist1[j].addWidget(self.canvas1)
+                    self.scenelist2[j].addWidget(self.canvas2)
+                    self.scenelist3[j].addWidget(self.canvas3)
+                    self.maingrids.itemAt(j * 3).widget().setScene(self.scenelist1[j])
+                    self.maingrids.itemAt(j * 3 + 1).widget().setScene(self.scenelist2[j])
+                    self.maingrids.itemAt(j * 3 + 2).widget().setScene(self.scenelist3[j])
 if __name__ == '__main__':
     import sys
     app = QtWidgets.QApplication(sys.argv)
     mainWindow = MyApp()
+    mainWindow.showMaximized()
+    newwindow1 = CNN_window()
+    newwindow2 = DataPre_window()
+    mainWindow.setting_CNN.clicked.connect(newwindow1.show)
+    mainWindow.Datapre.clicked.connect(newwindow2.show)
+
     mainWindow.show()
     sys.exit(app.exec_())
