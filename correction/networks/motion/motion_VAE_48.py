@@ -243,9 +243,9 @@ def fPredict(dData, sOutPath, patchSize, dHyper):
 
         for j in range(5):
             axes[j, 0].imshow(test_ref[6*i+j])
-            axes[j, 1].imshow(predict_ref[6 * i + j])
-            axes[j, 2].imshow(test_art[6 * i + j])
-            axes[j, 3].imshow(predict_art[6 * i + j])
+            axes[j, 1].imshow(predict_ref[6*i+j])
+            axes[j, 2].imshow(test_art[6*i+j])
+            axes[j, 3].imshow(predict_art[6*i+j])
 
         plt.show()
 
