@@ -98,9 +98,9 @@ def fscaling3D(X_train, X_test, scpatchSize, iscalefactor):
     if iscalefactor == 1:
         return X_train, X_test
     else:
-        xaxis = np.arange(0, afterSize[0], iscalefactor)
-        yaxis = np.arange(0, afterSize[1], iscalefactor)
-        zaxis = np.arange(0, afterSize[2], iscalefactor)
+        xaxis = np.linspace(0, afterSize[0], scpatchSize[0])
+        yaxis = np.linspace(0, afterSize[1], scpatchSize[1])
+        zaxis = np.linspace(0, afterSize[2], scpatchSize[2])
 
     dAllx_train = None
     dAllx_test = None
