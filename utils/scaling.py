@@ -14,14 +14,14 @@ def fscaling(X_train, X_test, scpatchSize, iscalefactor) :
 
 def fscaling2D(X_train, X_test, scpatchSize, iscalefactor) :
     start = time.clock()
-    afterSize = int(scpatchSize[0] * iscalefactor)
+    afterSize = int(np.round(scpatchSize[0] * iscalefactor))
 
     # Prepare for the using of scipy.interpolation: create the coordinates of grid
     if iscalefactor == 1:
         return X_train, X_test
     else:
-        xaxis = np.arange(0, afterSize, iscalefactor)
-        yaxis = np.arange(0, afterSize, iscalefactor)
+        xaxis = np.linspace(0, afterSize, scpatchSize[0])
+        yaxis = np.linspace(0, afterSize, scpatchSize[1])
 
     dAllx_train = None
     dAllx_test = None
