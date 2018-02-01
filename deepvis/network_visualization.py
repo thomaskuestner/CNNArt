@@ -27,6 +27,75 @@ def make_mosaic(im, nrows, ncols, border=1):
 
     return mosaic
 
+
+def on_click(event):
+    """Enlarge or restore the selected axis."""
+    ax = event.inaxes
+    if ax is None:
+        # Occurs when a region not in an axis is clicked...
+        return
+    if event.button is 1:
+        # On left click, zoom the selected axes
+        ax._orig_position = ax.get_position()
+        ax.set_position([0.1, 0.1, 0.85, 0.85])
+        for axis in event.canvas.figure.axes:
+            # Hide all the other axes...
+            if axis is not ax:
+                axis.set_visible(False)
+    elif event.button is 3:
+        # On right click, restore the axes
+        try:
+            ax.set_position(ax._orig_position)
+            for axis in event.canvas.figure.axes:
+                axis.set_visible(True)
+        except AttributeError:
+            # If we haven't zoomed, ignore...
+            pass
+    else:
+        # No need to re-draw the canvas if it's not a left or right click
+        return
+    event.canvas.draw()
+
+def plot_mosaic(im, nrows, ncols, fig,**kwargs):
+
+    # Set default matplotlib parameters
+    if not 'interpolation' in kwargs.keys():
+        kwargs['interpolation'] = "none"
+
+    if not 'cmap' in kwargs.keys():
+        kwargs['cmap'] = "gray"
+
+    nimgs = len(im)
+    imshape = im[0].shape
+
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    # ax = fig.add_subplot()
+
+
+    mosaic = np.zeros(imshape)
+
+
+    for i in range(nimgs):
+        row = int(np.floor(i / ncols))
+        col = i % ncols
+
+        ax = fig.add_subplot(nrows, ncols,i+1)
+        ax.set_xlim(0,imshape[0]-1)
+        ax.set_ylim(0,imshape[1]-1)
+
+
+        mosaic = im[i]
+
+        ax.imshow(mosaic)
+        ax.set_axis_off()
+
+    fig.canvas.mpl_connect('button_press_event', on_click)
+
+
+    return fig
+
 def plot_feature_map(model, layer_id, X, n=256, ax=None, **kwargs):
     """
     """
