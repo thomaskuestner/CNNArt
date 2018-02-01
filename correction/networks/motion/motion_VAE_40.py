@@ -9,39 +9,6 @@ from keras import backend as K
 from keras import metrics
 import os
 
-index = 1
-
-# Custom loss layer
-class LossLayer(Layer):
-    def __init__(self, **kwargs):
-        self.is_placeholder = True
-        super(LossLayer, self).__init__(**kwargs)
-
-    def vae_loss(self, x_ref, x_decoded, mu, sd):
-        x_ref = K.flatten(x_ref)
-
-        decoded_ref2ref = Lambda(sliceRef)(x_decoded)
-        decoded_art2ref = Lambda(sliceArt)(x_decoded)
-
-        decoded_ref2ref = K.flatten(decoded_ref2ref)
-        decoded_art2ref = K.flatten(decoded_art2ref)
-
-        loss_ref2ref = 1600 * metrics.binary_crossentropy(x_ref, decoded_ref2ref)
-        loss_art2ref = 1600 * metrics.binary_crossentropy(x_ref, decoded_art2ref)
-
-        loss_kl = - 0.5 * K.mean(1 + mu - K.square(mu) - K.exp(sd), axis=-1)
-
-        return K.mean(loss_art2ref + loss_ref2ref + loss_kl)
-
-    def call(self, inputs):
-        x_ref = inputs[0]
-        x_decoded = inputs[1]
-        mu = inputs[2]
-        sd = inputs[3]
-        loss = self.vae_loss(x_ref, x_decoded, mu, sd)
-        self.add_loss(loss)
-        return x_decoded
-
 def LeakyReluConv2D(filters, kernel_size, strides, padding):
     def f(inputs):
         conv2d = Conv2D(filters,
@@ -68,7 +35,7 @@ def sliceArt(input):
 
 def sampling(args):
     z_mean, z_log_var = args
-    epsilon = K.random_normal(shape=(K.shape(z_mean)[0], 500), mean=0.,
+    epsilon = K.random_normal(shape=(K.shape(z_mean)[0], 512), mean=0.,
                               stddev=1.0)
     return z_mean + K.exp(z_log_var / 2) * epsilon
 
@@ -76,24 +43,19 @@ def encode(input):
     conv_1 = LeakyReluConv2D(filters=32, kernel_size=3, strides=1, padding='same')(input)
     conv_2 = LeakyReluConv2D(filters=64, kernel_size=3, strides=2, padding='same')(conv_1)
     conv_3 = LeakyReluConv2D(filters=128, kernel_size=3, strides=1, padding='same')(conv_2)
-    # conv_1 = Conv2D(filters=32, kernel_size=3, strides=1, padding='same', activation='relu')(input)
-    # conv_2 = Conv2D(filters=64, kernel_size=3, strides=2, padding='same', activation='relu')(conv_1)
-    # conv_3 = Conv2D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(conv_2)
     return conv_3
 
 def encode_shared(input):
     conv_1 = LeakyReluConv2D(filters=256, kernel_size=3, strides=1, padding='same')(input)
     conv_2 = LeakyReluConv2D(filters=256, kernel_size=3, strides=2, padding='same')(conv_1)
-    # conv_1 = Conv2D(filters=256, kernel_size=3, strides=1, padding='same', activation='relu')(input)
-    # conv_2 = Conv2D(filters=256, kernel_size=3, strides=2, padding='same', activation='relu')(conv_1)
     flat = Flatten()(conv_2)
 
-    mu = Dense(500)(flat)
-    sd = Dense(500)(flat)
+    z_mean = Dense(512)(flat)
+    z_log_var = Dense(512)(flat)
 
-    z = Lambda(sampling, output_shape=(500,))([mu, sd])
+    z = Lambda(sampling, output_shape=(512,))([z_mean, z_log_var])
 
-    return z, mu, sd
+    return z, z_mean, z_log_var
 
 def decode(input):
     dense = Dense(25600)(input)
@@ -101,13 +63,10 @@ def decode(input):
     output = LeakyReluConv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same')(reshape)
     output = LeakyReluConv2DTranspose(filters=128, kernel_size=3, strides=1, padding='same')(output)
     output = LeakyReluConv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same')(output)
-    # output = Conv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same', activation='relu')(reshape)
-    # output = Conv2DTranspose(filters=128, kernel_size=3, strides=1, padding='same', activation='relu')(output)
-    # output = Conv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same', activation='relu')(output)
     output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
     return output
 
-def createModel(patchSize):
+def createModel(patchSize, kl_weight, pixel_weight):
     # input corrupted and non-corrupted image
     x_ref = Input(shape=(1, patchSize[0], patchSize[1]))
     x_art = Input(shape=(1, patchSize[0], patchSize[1]))
@@ -120,20 +79,25 @@ def createModel(patchSize):
     combined = concatenate([encoded_ref, encoded_art], axis=0)
 
     # create the shared encoder
-    z, mu, sd = encode_shared(combined)
+    z, z_mean, z_log_var = encode_shared(combined)
 
     # create the decoder
     decoded = decode(z)
 
-    # create a customer layer to calculate the total loss
-    output = LossLayer()([x_ref, decoded, mu, sd])
-
     # separate the concatenated images
-    decoded_ref2ref = Lambda(sliceRef)(output)
-    decoded_art2ref = Lambda(sliceArt)(output)
+    decoded_ref2ref = Lambda(sliceRef)(decoded)
+    decoded_art2ref = Lambda(sliceArt)(decoded)
+
+    loss_ref2ref = patchSize[0] * patchSize[1] * metrics.binary_crossentropy(K.flatten(x_ref), K.flatten(decoded_ref2ref))
+    loss_art2ref = patchSize[0] * patchSize[1] * metrics.binary_crossentropy(K.flatten(x_ref), K.flatten(decoded_art2ref))
+    loss_pixel = pixel_weight * (loss_ref2ref + loss_art2ref)
+    loss_kl = kl_weight * K.mean(- 0.5 * K.sum(1 + z_log_var  - K.square(z_mean) - K.exp(z_log_var), axis=-1))
 
     # generate the VAE and encoder model
     vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
+
+    # add loss
+    vae.add_loss(loss_kl + loss_pixel)
     return vae
 
 def fTrain(dData, sOutPath, patchSize, dHyper):
@@ -144,9 +108,9 @@ def fTrain(dData, sOutPath, patchSize, dHyper):
 
     for iBatch in batchSize:
         for iLearn in learningRate:
-            fTrainInner(dData, sOutPath, patchSize, epochs, iBatch, iLearn)
+            fTrainInner(dData, sOutPath, patchSize, epochs, iBatch, iLearn, dHyper['kl_weight'], dHyper['pixel_weight'])
 
-def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr):
+def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pixel_weight):
     train_ref = dData['train_ref']
     train_art = dData['train_art']
     test_ref = dData['test_ref']
@@ -157,13 +121,13 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr):
     test_ref = np.expand_dims(test_ref, axis=1)
     test_art = np.expand_dims(test_art, axis=1)
 
-    vae = createModel(patchSize)
+    vae = createModel(patchSize, kl_weight, pixel_weight)
     vae.compile(optimizer='adam', loss=None)
     vae.summary()
 
     print('Training with epochs {} batch size {} learning rate {}'.format(epochs, batchSize, lr))
 
-    weights_file = sOutPath + os.sep + 'vae_model_weight_bs_{}_2.h5'.format(batchSize)
+    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}.h5'.format(patchSize[0], batchSize)
 
     callback_list = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
     callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
@@ -180,7 +144,10 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr):
 def fPredict(dData, sOutPath, patchSize, dHyper):
     weights_file = sOutPath + os.sep + '{}.h5'.format(dHyper['bestModel'])
 
-    vae = createModel(patchSize)
+    kl_weight = dHyper['kl_weight']
+    pixel_weight = dHyper['pixel_weight']
+
+    vae = createModel(patchSize, kl_weight, pixel_weight)
     vae.compile(optimizer='adam', loss=None)
 
     vae.load_weights(weights_file)
@@ -206,9 +173,9 @@ def fPredict(dData, sOutPath, patchSize, dHyper):
 
         for j in range(5):
             axes[j, 0].imshow(test_ref[6*i+j])
-            axes[j, 1].imshow(predict_ref[6 * i + j])
-            axes[j, 2].imshow(test_art[6 * i + j])
-            axes[j, 3].imshow(predict_art[6 * i + j])
+            axes[j, 1].imshow(predict_ref[6*i+j])
+            axes[j, 2].imshow(test_art[6*i+j])
+            axes[j, 3].imshow(predict_art[6*i+j])
 
         plt.show()
 
