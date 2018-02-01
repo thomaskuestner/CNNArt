@@ -19,7 +19,7 @@ import h5py
 from DatabaseInfo import DatabaseInfo
 import utils.DataPreprocessing as datapre
 from keras.models import load_model
-from network_visualization import make_mosaic,plot_feature_map,plot_all_feature_maps
+from network_visualization import make_mosaic,plot_feature_map,plot_all_feature_maps,get_weights_mosaic,plot_weights,plot_all_weights,on_click
 from keras.utils import plot_model
 import keras.optimizers
 from keras.callbacks import EarlyStopping, ModelCheckpoint,ReduceLROnPlateau
@@ -138,45 +138,35 @@ elif sTypeVis == 'keras_weight':
     _[0].show()
 
 elif sTypeVis == 'weights':
-    #visualize weight vectors
-
-    # record the layers which have 'weights'
     layers_to_show = []
+    n =[]
 
     for i, layer in enumerate(model.layers[:]):
         if hasattr(layer, "weights"):
             if len(layer.weights) == 0:
                 continue
-        w = layer.weights[0].container.data
-        if w.ndim == 4:
-            layers_to_show.append((i, layer))
+            weights = layer.weights[0].container.data
+            if weights.ndim == 4:
+                layers_to_show.append((i, layer))
 
 
     for i, (layer_id, layer) in enumerate(layers_to_show):
         w = layer.weights[0].container.data
         w = np.transpose(w, (3, 2, 0, 1))
 
-
         # n define the maximum number of weights to display
-        n = w.shape[0]
-
-        # Create the mosaic of weights
-        nrows = int(np.round(np.sqrt(n)))
-        ncols = int(nrows)
-
-        if nrows ** 2 < n:
-            ncols += 1
-
-        #filters = [w[0, :, :] for w in w]
-        fig = plt.figure(figsize=(15, 15))
-        plt.suptitle("The Weights of Layer #{} called '{}' of type {}".format(layer_id, layer.name, layer.__class__.__name__))
-
-        mosaic = make_mosaic(w[:, 0], nrows, ncols, border=1)
-
-        im = plt.imshow(mosaic)
+        n.append(w.shape[0])
 
 
 
-plt.show()
+    ########################################################
+    #choose plot one layer's weight or plot all the weights#
+    ########################################################
+
+    #_=plot_weights(model, 0,n=n[-1])
+
+    _ = plot_all_weights(model, n=n[-1])
+    _.show()
+
 
 
