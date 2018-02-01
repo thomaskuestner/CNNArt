@@ -98,6 +98,3 @@ lCorrection: false
 correction:
   sCorrection: "motion_VAE"
   bestModel: "vae_model_weight_bs_128"
-  kl_weight: 1
-  pixel_weight: 1
-  perceptual_weight: 0.01

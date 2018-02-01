@@ -32,9 +32,14 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
     # TODO: adapt path
     iReturn = expecting()
 
-    if allPatches.shape[0] == patchSize[0] and allPatches.shape[1] == patchSize[1]:
-        allPatches = np.transpose(allPatches, (2, 0, 1))
-        print(allPatches.shape)
+    if len(patchSize) == 3:
+        if allPatches.shape[0] == patchSize[0] and allPatches.shape[1] == patchSize[1] and allPatches.shape[2] == patchSize[2]:
+            allPatches = np.transpose(allPatches, (3, 0, 1, 2))
+            print(allPatches.shape)
+    else:
+        if allPatches.shape[0] == patchSize[0] and allPatches.shape[1] == patchSize[1]:
+            allPatches = np.transpose(allPatches, (2, 0, 1))
+            print(allPatches.shape)
 
     if sSplitting == "normal":
         print("Done")
@@ -43,8 +48,10 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         rand_num = np.random.permutation(np.arange(nPatches))
         rand_num = rand_num[0:int(dVal)].astype(int)
         print(rand_num)
-
-        X_test = allPatches[rand_num, :, :]
+        if len(patchSize) == 3:
+            X_test = allPatches[rand_num, :, :, :]
+        else:
+            X_test = allPatches[rand_num, :, :]
         y_test = allY[rand_num]
         X_train = allPatches
         X_train = np.delete(X_train, rand_num, axis=0)
@@ -56,9 +63,12 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         print(y_test.shape)
 
         if iReturn == 0:
-            folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
-            Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'normal_' + str(
-                patchSize[0]) + str(patchSize[1]) + '.h5'
+            if len(patchSize) == 3:
+                folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + str(patchSize[2])
+                Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + str(patchSize[2]) + os.sep + 'normal_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
+            else:
+                folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
+                Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'normal_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
 
             if os.path.isdir(folder):
                 pass
@@ -92,8 +102,12 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
             y_train, y_test = allY[train_index], allY[test_index]
 
             if iReturn == 0:
-                folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
-                Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'crossVal_data' + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
+                if len(patchSize) == 3:
+                    folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + str(patchSize[2])
+                    Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + str(patchSize[2]) + os.sep + 'crossVal_data' + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + str(patchSize[2])+ '.h5'
+                else:
+                    folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
+                    Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'crossVal_data' + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
                 if os.path.isdir(folder):
                     pass
                 else:
@@ -137,8 +151,12 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
             y_train, y_test = allY[train_index], allY[test_index]
 
             if iReturn == 0:
-                folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
-                Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'crossVal' + str(
+                if len(patchSize) == 3:
+                    folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + str(patchSize[2])
+                    Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + str(patchSize[2]) + os.sep + 'crossVal' + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + str(patchSize[2])+ '.h5'
+                else:
+                    folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
+                    Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'crossVal' + str(
                     ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
                 if os.path.isdir(folder):
                     pass
