@@ -9,6 +9,8 @@ import os
 import shelve
 from utils.Patching import*
 import cProfile
+import utils.Training_Test_Split as ttsplit
+import utils.scaling as scaling
 
 
 def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabeling):
@@ -44,32 +46,73 @@ def fPreprocessDataCorrection(cfg, dbinfo):
     @param dbinfo: database related info
     @return: patches from reference and artifact images and an array which stores the corresponding patient index
     """
+    train_ref = []
+    test_ref = []
+    train_art = []
+    test_art = []
+
+    sTrainingMethod = cfg['sTrainingMethod']  # options of multiscale
     patchSize = cfg['patchSize']
-    dRefPatches = np.empty((0, patchSize[0], patchSize[1]))
-    dArtPatches = np.empty((0, patchSize[0], patchSize[1]))
-    dRefPats = np.empty((0, 1))
-    dArtPats = np.empty((0, 1))
 
-    lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
-    for ipat, pat in enumerate(dbinfo.lPats):
-        if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
-            for iseq, seq in enumerate(lDatasets):
-                # patches and labels of reference/artifact
-                tmpPatches, tmpLabels = fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq),
-                                                                patchSize, cfg['patchOverlap'], 1, 'volume')
-
-                if iseq == 0:
-                    dRefPatches = np.concatenate((dRefPatches, tmpPatches), axis=0)
-                    dRefPats = np.concatenate((dRefPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
-                elif iseq == 1:
-                    dArtPatches = np.concatenate((dArtPatches, tmpPatches), axis=0)
-                    dArtPats = np.concatenate((dArtPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
+    scpatchSize = patchSize
+    if sTrainingMethod != "scalingPrior":
+        lScaleFactor = [1]
+    # Else perform scaling:
+    #   images will be split into pathces with size scpatchSize and then scaled to patchSize
+    for iscalefactor in lScaleFactor:
+        lDatasets = cfg['selectedDatabase']['dataref'] + cfg['selectedDatabase']['dataart']
+        scpatchSize = [int(psi / iscalefactor) for psi in patchSize]
+        if len(patchSize) == 3:
+            dRefPatches = np.empty((0, scpatchSize[0], scpatchSize[1], scpatchSize[2]))
+            dArtPatches = np.empty((0, scpatchSize[0], scpatchSize[1], scpatchSize[2]))
         else:
-            pass
+            dRefPatches = np.empty((0, scpatchSize[0], scpatchSize[1]))
+            dArtPatches = np.empty((0, scpatchSize[0], scpatchSize[1]))
+
+        dRefPats = np.empty((0, 1))
+        dArtPats = np.empty((0, 1))
+
+        for ipat, pat in enumerate(dbinfo.lPats):
+            if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
+                for iseq, seq in enumerate(lDatasets):
+                    # patches and labels of reference/artifact
+                    tmpPatches, tmpLabels = fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq),
+                                                                    patchSize, cfg['patchOverlap'], 1, 'volume')
+
+                    if iseq == 0:
+                        dRefPatches = np.concatenate((dRefPatches, tmpPatches), axis=0)
+                        dRefPats = np.concatenate((dRefPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
+                    elif iseq == 1:
+                        dArtPatches = np.concatenate((dArtPatches, tmpPatches), axis=0)
+                        dArtPats = np.concatenate((dArtPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
+            else:
+                pass
 
     assert(dRefPatches.shape == dArtPatches.shape and dRefPats.shape == dArtPats.shape)
 
-    return dRefPatches, dArtPatches, dRefPats
+    # perform splitting
+    print('Start splitting')
+    train_ref_sp, test_ref_sp, train_art_sp, test_art_sp = ttsplit.fSplitDatasetCorrection(cfg['sSplitting'],
+                                                                               dRefPatches, dArtPatches,
+                                                                               dRefPats, cfg['dSplitval'],
+                                                                               cfg['nFolds'])
+    print('Start scaling')
+    # perform scaling: sc for scale
+    train_ref_sc, test_ref_sc = scaling.fscaling(train_ref_sp, test_ref_sp, scpatchSize, iscalefactor)
+    train_art_sc, test_art_sc = scaling.fscaling(train_art_sp, test_art_sp, scpatchSize, iscalefactor)
+
+    if len(train_ref) == 0:
+        train_ref = train_ref_sc
+        test_ref = test_ref_sc
+        train_art = train_art_sc
+        test_art = test_art_sc
+    else:
+        train_ref = np.concatenate((train_ref, train_ref_sc), axis=1)
+        test_ref = np.concatenate((test_ref, test_ref_sc), axis=1)
+        train_art = np.concatenate((train_art, train_art_sc), axis=1)
+        test_art = np.concatenate((test_art, test_art_sc), axis=1)
+
+    return train_ref, test_ref, train_art, test_art
 
 def mask_rectangle(x_coo1, y_coo1, x_coo2, y_coo2, layer_mask, art_no):
     x_coo1 = round(x_coo1)
