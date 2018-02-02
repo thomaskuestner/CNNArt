@@ -20,11 +20,16 @@ import scipy.ndimage
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 from framework1 import Ui_MainWindow
-from CNN_setting import*
-from Data_Preprocessing import*
+from CNN_window import*
+from Data_Prewindow import*
 from Layout_Choosing import*
+from Patches_window import*
+
 from activescene import Activescene
 from canvas import Canvas
+# from canvas2 import Canvas2
+from Unpatch_eleven import*
+from Unpatch_two import*
 
 from DatabaseInfo import*
 import yaml
@@ -41,6 +46,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.list1 = []
         self.list2 = []
         self.list3 = []
+        self.thicklist = []
         self.scenelist1 = []
         self.scenelist2 = []
         self.scenelist3 = []
@@ -52,6 +58,13 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.resetdicom.clicked.connect(self.resetcanvas)
         self.clearimage.clicked.connect(self.clearall)
         self.exit.clicked.connect(self.close)
+
+        self.resultpatch.clicked.connect(self.addcolor)
+        self.list4 = []
+        self.list5 = []
+        self.list6 = []
+        self.empty1 = []
+
 
     def load_scan(self, path):
         if path:
@@ -66,7 +79,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 s.SliceThickness = slice_thickness
             return slices
 
-    def resample(self, image, scan, new_spacing=[1, 1, 1]):
+    def resample(self, image, scan, new_spacing = [1, 1, 1]):
         # Determine current pixel spacing
         spacing = map(float, ([scan[0].SliceThickness] + scan[0].PixelSpacing))  # scan is list
         spacing = np.array(list(spacing))
@@ -77,7 +90,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         real_resize_factor = new_shape / image.shape
         new_spacing = spacing / real_resize_factor
         image = scipy.ndimage.interpolation.zoom(image, real_resize_factor)
-        return image, new_spacing
+        return image, new_spacing, scan[0].SliceThickness
 
     def load_data(self):
         if self.gridson == False:
@@ -91,7 +104,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             # self.PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "open file", "C:/Users/hansw/Videos/artefacts")
 
             if self.PathDicom:
-                print(self.PathDicom)
+                #print(self.PathDicom)
                 files = sorted([os.path.join(self.PathDicom, file) for file in os.listdir(self.PathDicom)], key=os.path.getctime)
                 datasets = [dicom.read_file(f) \
                             for f in files]
@@ -103,13 +116,14 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.sscan = self.load_scan(self.PathDicom)
                 if self.sscan:
                     self.simage = np.stack([s.pixel_array for s in self.sscan])
-                    self.svoxel, spacing = self.resample(self.simage, self.sscan, [1, 1, 1])
+                    self.svoxel, spacing, self.thickness = self.resample(self.simage, self.sscan, [1, 1, 1])
                     self.svoxel = np.swapaxes(self.svoxel, 0, 2)
 
                 self.list1.append(self.voxel_ndarray)
                 self.a = np.rot90(self.svoxel, axes=(2, 0))
                 self.list2.append(np.swapaxes(self.a, 0, 1))
                 self.list3.append(np.swapaxes(self.svoxel, 1, 2))
+                #self.thicklist.append(self.thickness)
                 self.scenelist1.append(Activescene())
                 self.scenelist2.append(Activescene())
                 self.scenelist3.append(Activescene())
@@ -159,24 +173,12 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             self.switchcanvas()
 
-    ''' menubar version, with Layout_chooseing.py
-    def setlayout(self):
-        self.layoutlines, self.layoutcolumns, ok = Layout_window.getData()
-        if ok:
-            for i in reversed(range(self.maingrids.count())): # delete old widgets
-                self.maingrids.itemAt(i).widget().setParent(None)
-            for i in range(self.layoutlines):
-                for j in range(self.layoutcolumns):
-                    self.maingrids.addWidget(Activeview(), i, j)
-        else:       # cancel clicked
-            pass
-    '''
     def putcanvas(self):
-        if self.voxel_ndarray != []:   ###########
+        if self.voxel_ndarray != []:
             if self.vision == 2:
                 self.maxiimg = self.layoutlines * self.layoutcolumns
                 if self.i <=self.maxiimg-1:
-                    self.canvas = Canvas(self.list1[self.i])
+                    self.canvas = Canvas(self.list1[self.i], 0, self.empty1, self.empty1)
                     self.scenelist1[self.i].addWidget(self.canvas)
                     self.maingrids.itemAt(self.i).widget().setScene(self.scenelist1[self.i])
                 else:
@@ -184,9 +186,9 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             else:
                 self.maxiimg = self.layout3D
                 if self.i <=self.maxiimg-1:
-                    self.canvas1 = Canvas(self.list1[self.i])
-                    self.canvas2 = Canvas(self.list2[self.i])
-                    self.canvas3 = Canvas(self.list3[self.i])
+                    self.canvas1 = Canvas(self.list1[self.i], 0, self.empty1, self.empty1)
+                    self.canvas2 = Canvas(self.list2[self.i], 0, self.empty1, self.empty1)
+                    self.canvas3 = Canvas(self.list3[self.i], 0, self.empty1, self.empty1)
                     self.scenelist1[self.i].addWidget(self.canvas1)     #additem
                     self.scenelist2[self.i].addWidget(self.canvas2)
                     self.scenelist3[self.i].addWidget(self.canvas3)
@@ -201,7 +203,8 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.maxiimg = self.layoutlines * self.layoutcolumns
             if self.i <=self.maxiimg-1:
                 for j in range(0, self.i+1):
-                    self.canvas = Canvas(self.list1[j])
+                    self.canvas = Canvas(self.list1[j], 0, self.empty1, self.empty1)
+                    self.scenelist1[j].clear()
                     self.scenelist1[j].addWidget(self.canvas)
                     self.maingrids.itemAt(j).widget().setScene(self.scenelist1[j])
             else:
@@ -210,9 +213,12 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.maxiimg = self.layout3D
             if self.i <=self.maxiimg-1:
                 for j in range(0, self.i+1):
-                    self.canvas1 = Canvas(self.list1[j])
-                    self.canvas2 = Canvas(self.list2[j])
-                    self.canvas3 = Canvas(self.list3[j])
+                    self.canvas1 = Canvas(self.list1[j], 0, self.empty1, self.empty1)
+                    self.canvas2 = Canvas(self.list2[j], 0, self.empty1, self.empty1)
+                    self.canvas3 = Canvas(self.list3[j], 0, self.empty1, self.empty1)
+                    self.scenelist1[j].clear()
+                    self.scenelist2[j].clear()
+                    self.scenelist3[j].clear()
                     self.scenelist1[j].addWidget(self.canvas1)
                     self.scenelist2[j].addWidget(self.canvas2)
                     self.scenelist3[j].addWidget(self.canvas3)
@@ -232,7 +238,8 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     for j in range(self.layoutcolumns):
                         self.maingrids.addWidget(Activeview(), i, j)
                 for j in range(0, self.i + 1):
-                    self.canvas = Canvas(self.list1[j])
+                    self.canvas = Canvas(self.list1[j], 0, self.empty1, self.empty1)
+                    self.scenelist1[j].clear()
                     self.scenelist1[j].addWidget(self.canvas)
                     self.maingrids.itemAt(j).widget().setScene(self.scenelist1[j])
             else:
@@ -240,15 +247,91 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     for j in range(3):
                         self.maingrids.addWidget(Activeview(), i, j)
                 for j in range(0, self.i + 1):
-                    self.canvas1 = Canvas(self.list1[j])
-                    self.canvas2 = Canvas(self.list2[j])
-                    self.canvas3 = Canvas(self.list3[j])
+                    self.canvas1 = Canvas(self.list1[j], 0, self.empty1, self.empty1)
+                    self.canvas2 = Canvas(self.list2[j], 0, self.empty1, self.empty1)
+                    self.canvas3 = Canvas(self.list3[j], 0, self.empty1, self.empty1)
+                    self.scenelist1[j].clear()
+                    self.scenelist2[j].clear()
+                    self.scenelist3[j].clear()
                     self.scenelist1[j].addWidget(self.canvas1)
                     self.scenelist2[j].addWidget(self.canvas2)
                     self.scenelist3[j].addWidget(self.canvas3)
                     self.maingrids.itemAt(j * 3).widget().setScene(self.scenelist1[j])
                     self.maingrids.itemAt(j * 3 + 1).widget().setScene(self.scenelist2[j])
                     self.maingrids.itemAt(j * 3 + 2).widget().setScene(self.scenelist3[j])
+
+    def unpatching11(self):
+        PatchSize = np.array((40.0, 40.0))
+        PatchOverlay = 0.5
+        Path = "Pred_result.mat"
+        conten = sio.loadmat(Path)
+        prob_test = conten['prob_pre']
+
+        IndexType = np.argmax(prob_test, 1)
+        IndexType[IndexType == 0] = 1
+        IndexType[(IndexType > 1) & (IndexType < 4)] = 2
+        IndexType[(IndexType > 6) & (IndexType < 9)] = 3
+        IndexType[(IndexType > 3) & (IndexType < 7)] = 4
+        IndexType[IndexType > 8] = 5
+
+        a = Counter(IndexType).most_common(1)
+        domain = a[0][0]
+
+        PType = np.delete(prob_test, [1, 3, 5, 6, 8, 10], 1)  # only 5 region left
+        PArte = np.delete(prob_test, [0, 2, 4, 7, 9], 1)
+        PArte[:, [4, 5]] = PArte[:, [5, 4]]
+        PNew = np.concatenate((PType, PArte), axis=1)
+        IndexArte = np.argmax(PNew, 1)
+
+        Type = UnpatchType(IndexType, domain, PatchSize, PatchOverlay, self.voxel_ndarray.shape)
+        Arte = UnpatchArte(IndexArte, PatchSize, PatchOverlay, self.voxel_ndarray.shape)
+        return Type, Arte
+
+    def addcolor(self):
+        if self.vision == 2:
+            QtWidgets.QMessageBox.information(self, 'Info', 'Please view the result in 3D grids')
+        else:
+            self.linepos, self.classnr, ok = Patches_window.getData()
+            if ok and self.voxel_ndarray != []:
+                if self.classnr == 1:  # multi class needed
+                    self.IType, self.IArte = self.unpatching11()
+
+                    self.canvas4 = Canvas(self.list1[self.linepos], 1, self.IType, self.IArte)
+                    self.list4.append(self.canvas4)
+                    self.scenelist1[self.linepos].clear()
+                    self.scenelist1[self.linepos].addWidget(self.canvas4)
+
+                    reverse1 = np.rot90(np.swapaxes(self.list2[self.linepos], 1, 0), axes=(0, 2))
+                    self.canvas5 = Canvas(reverse1, 2, self.IType, self.IArte)
+                    self.list5.append(self.canvas5)
+                    self.scenelist2[self.linepos].clear()
+                    self.scenelist2[self.linepos].addWidget(self.canvas5)
+
+                    reverse2 = np.swapaxes(self.list3[self.linepos], 2, 1)
+                    self.canvas6 = Canvas(reverse2, 3, self.IType, self.IArte)
+                    self.list6.append(self.canvas6)
+                    self.scenelist3[self.linepos].clear()
+                    self.scenelist3[self.linepos].addWidget(self.canvas6)
+
+                # elif self.classnr == 0:
+
+            else:  # cancel clicked
+                pass
+
+
+    # #menubar version, with Layout_chooseing.py
+    # def setlayout(self):
+    #     self.layoutlines, self.layoutcolumns, ok = Layout_window.getData()
+    #     if ok:
+    #         for i in reversed(range(self.maingrids.count())): # delete old widgets
+    #             self.maingrids.itemAt(i).widget().setParent(None)
+    #         for i in range(self.layoutlines):
+    #             for j in range(self.layoutcolumns):
+    #                 self.maingrids.addWidget(Activeview(), i, j)
+    #     else:       # cancel clicked
+    #         pass
+
+
 if __name__ == '__main__':
     import sys
     app = QtWidgets.QApplication(sys.argv)
@@ -256,8 +339,10 @@ if __name__ == '__main__':
     mainWindow.showMaximized()
     newwindow1 = CNN_window()
     newwindow2 = DataPre_window()
+    #newwindow3 = Patches_window()
     mainWindow.setting_CNN.clicked.connect(newwindow1.show)
     mainWindow.Datapre.clicked.connect(newwindow2.show)
+    #mainWindow.resultpatch.clicked.connect(newwindow3.show)
 
     mainWindow.show()
     sys.exit(app.exec_())

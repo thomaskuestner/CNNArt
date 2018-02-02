@@ -5,6 +5,8 @@ class Activeview(QtWidgets.QGraphicsView):
     def __init__(self, parent=None):
         super(Activeview, self).__init__(parent)
 
+        self.setStyleSheet("border: 0px")
+
         self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)

@@ -1,24 +1,35 @@
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
+import matplotlib as mpl
 import numpy as np
 
 class Canvas(FigureCanvas):
-    def __init__(self, voxel, parent=None):
+    def __init__(self, voxel, model, Y ,Z, parent=None):
         self.figure = plt.figure()
         FigureCanvas.__init__(self, self.figure)
         self.setParent(parent)
 
         self.voxel = voxel
-        self.slices = self.voxel.shape[2]
-        self.ind = self.slices // 2
+        self.Y = Y
+        self.Z = Z
+        self.model = model
+
+        if self.model == 0 or self.model ==1:
+            self.slices = self.voxel.shape[2]
+            self.ind = self.slices // 2
+        elif self.model == 2:
+            self.slices = self.voxel.shape[0]
+            self.ind = self.slices // 2
+        elif self.model == 3:
+            self.slices = self.voxel.shape[1]
+            self.ind = self.slices//2
 
         self.x_clicked = None
         self.y_clicked = None
         self.mouse_second_clicked = False
         self.ax1 = self.figure.add_subplot(111)
-        self.ax1.axis('off')
-        self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
+        self.cmap1 = mpl.colors.ListedColormap(['blue', 'purple', 'cyan', 'yellow', 'green'])
 
         self.figure.canvas.mpl_connect('button_press_event', self.mouse_clicked)
         self.figure.canvas.mpl_connect('motion_notify_event', self.mouse_move)
@@ -30,17 +41,56 @@ class Canvas(FigureCanvas):
     def onscroll(self, event):
         #print("%s %s" % (event.button, event.step))
         if event.button == 'up':
-            self.ind = (self.ind + 1) % self.slices
+            self.ind = (self.ind + 1) #% self.slices
         else:
-            self.ind = (self.ind - 1) % self.slices
+            self.ind = (self.ind - 1) #% self.slices
+        if self.ind >= self.slices:
+            self.ind = 0
+        if self.ind <= -1:
+            self.ind = self.slices - 1
         # plt.cla() # not clf
         self.View_A()
 
     def View_A(self):
-        # self.ax1.clear()
-        self.pltc.set_data(np.swapaxes(self.voxel[:, :, self.ind], 0, 1))
-        self.ax1.set_ylabel('slice %s' % (self.ind+1))
-        self.draw()
+        if self.model == 0:
+            self.ax1.axis('off')
+            self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
+            self.ax1.set_ylabel('slice %s' % (self.ind + 1))
+            self.draw()
+        elif self.model == 1:
+            self.ax1.axis('off')
+            self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
+
+            self.im2 = self.ax1.imshow(np.swapaxes(self.Y[:, :, self.ind], 0, 1), cmap=self.cmap1, alpha=.3, vmin=1,
+                                     vmax=6)
+            plt.rcParams['hatch.color'] = 'r'
+            self.im3 = self.ax1.contourf(np.transpose(self.Z[:, :, self.ind]), hatches=[None, '//', '\\', 'XX'],
+                                        colors='none', edges='r', levels=np.arange(5))
+            self.ax1.set_ylabel('slice %s' % (self.ind + 1))
+            self.draw()
+        elif self.model == 2:
+            self.ax1.axis('off')
+            self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[self.ind, :, :], 0, 1), cmap='gray', vmin=0, vmax=2094)
+            self.im2 = self.ax1.imshow(np.swapaxes(self.Y[self.ind, :, :], 0, 1), cmap=self.cmap1, alpha=.3, vmin=1,
+                                       vmax=6, extent=[0, self.voxel.shape[1], self.voxel.shape[2], 0])
+            plt.rcParams['hatch.color'] = 'r'
+            self.im3 = self.ax1.contourf(np.transpose(self.Z[self.ind, :, :]), hatches=[None, '//', '\\', 'XX'],
+                                     colors='none', edges='r', levels=np.arange(5),
+                                        extent=[0, self.voxel.shape[1], self.voxel.shape[2], 0])
+            self.ax1.set_ylabel('slice %s' % (self.ind + 1))
+            self.draw()
+        elif self.model == 3:
+            self.ax1.axis('off')
+            self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, self.ind, :], 0, 1), cmap='gray', vmin=0, vmax=2094)
+
+            self.im2 = self.ax1.imshow(np.swapaxes(self.Y[:, self.ind, :], 0, 1), cmap=self.cmap1, alpha=.3, vmin=1,
+                                      vmax=6, extent=[0, self.voxel.shape[0], self.voxel.shape[2], 0])
+            plt.rcParams['hatch.color'] = 'r'
+            self.im3 = self.ax1.contourf(np.transpose(self.Z[:, self.ind, :]), hatches=[None, '//', '\\', 'XX'],
+                                        colors='none', edges='r', levels=np.arange(5),
+                                        extent=[0, self.voxel.shape[0], self.voxel.shape[2], 0])
+            self.ax1.set_ylabel('slice %s' % (self.ind + 1))
+            self.draw()
 
     def mouse_clicked(self, event):
         if event.button == 2:
