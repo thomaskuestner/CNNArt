@@ -5,7 +5,7 @@ import matplotlib as mpl
 import numpy as np
 
 class Canvas(FigureCanvas):
-    def __init__(self, voxel, model, Y ,Z, parent=None):
+    def __init__(self, voxel, model, Y ,Z, cmap1, parent=None):
         self.figure = plt.figure()
         FigureCanvas.__init__(self, self.figure)
         self.setParent(parent)
@@ -14,6 +14,7 @@ class Canvas(FigureCanvas):
         self.Y = Y
         self.Z = Z
         self.model = model
+        self.cmap1 = cmap1
 
         if self.model == 0 or self.model ==1:
             self.slices = self.voxel.shape[2]
@@ -29,7 +30,6 @@ class Canvas(FigureCanvas):
         self.y_clicked = None
         self.mouse_second_clicked = False
         self.ax1 = self.figure.add_subplot(111)
-        self.cmap1 = mpl.colors.ListedColormap(['blue', 'purple', 'cyan', 'yellow', 'green'])
 
         self.figure.canvas.mpl_connect('button_press_event', self.mouse_clicked)
         self.figure.canvas.mpl_connect('motion_notify_event', self.mouse_move)

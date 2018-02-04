@@ -60,10 +60,12 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.exit.clicked.connect(self.close)
 
         self.resultpatch.clicked.connect(self.addcolor)
+        self.bpatch.clicked.connect(self.loadpatch)
         self.list4 = []
         self.list5 = []
         self.list6 = []
         self.empty1 = []
+        self.cmap = []
 
 
     def load_scan(self, path):
@@ -178,7 +180,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             if self.vision == 2:
                 self.maxiimg = self.layoutlines * self.layoutcolumns
                 if self.i <=self.maxiimg-1:
-                    self.canvas = Canvas(self.list1[self.i], 0, self.empty1, self.empty1)
+                    self.canvas = Canvas(self.list1[self.i], 0, self.empty1, self.empty1, self.cmap)
                     self.scenelist1[self.i].addWidget(self.canvas)
                     self.maingrids.itemAt(self.i).widget().setScene(self.scenelist1[self.i])
                 else:
@@ -186,9 +188,9 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             else:
                 self.maxiimg = self.layout3D
                 if self.i <=self.maxiimg-1:
-                    self.canvas1 = Canvas(self.list1[self.i], 0, self.empty1, self.empty1)
-                    self.canvas2 = Canvas(self.list2[self.i], 0, self.empty1, self.empty1)
-                    self.canvas3 = Canvas(self.list3[self.i], 0, self.empty1, self.empty1)
+                    self.canvas1 = Canvas(self.list1[self.i], 0, self.empty1, self.empty1,self.cmap)
+                    self.canvas2 = Canvas(self.list2[self.i], 0, self.empty1, self.empty1,self.cmap)
+                    self.canvas3 = Canvas(self.list3[self.i], 0, self.empty1, self.empty1,self.cmap)
                     self.scenelist1[self.i].addWidget(self.canvas1)     #additem
                     self.scenelist2[self.i].addWidget(self.canvas2)
                     self.scenelist3[self.i].addWidget(self.canvas3)
@@ -203,7 +205,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.maxiimg = self.layoutlines * self.layoutcolumns
             if self.i <=self.maxiimg-1:
                 for j in range(0, self.i+1):
-                    self.canvas = Canvas(self.list1[j], 0, self.empty1, self.empty1)
+                    self.canvas = Canvas(self.list1[j], 0, self.empty1, self.empty1, self.cmap)
                     self.scenelist1[j].clear()
                     self.scenelist1[j].addWidget(self.canvas)
                     self.maingrids.itemAt(j).widget().setScene(self.scenelist1[j])
@@ -213,9 +215,9 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.maxiimg = self.layout3D
             if self.i <=self.maxiimg-1:
                 for j in range(0, self.i+1):
-                    self.canvas1 = Canvas(self.list1[j], 0, self.empty1, self.empty1)
-                    self.canvas2 = Canvas(self.list2[j], 0, self.empty1, self.empty1)
-                    self.canvas3 = Canvas(self.list3[j], 0, self.empty1, self.empty1)
+                    self.canvas1 = Canvas(self.list1[j], 0, self.empty1, self.empty1, self.cmap)
+                    self.canvas2 = Canvas(self.list2[j], 0, self.empty1, self.empty1, self.cmap)
+                    self.canvas3 = Canvas(self.list3[j], 0, self.empty1, self.empty1,self.cmap)
                     self.scenelist1[j].clear()
                     self.scenelist2[j].clear()
                     self.scenelist3[j].clear()
@@ -238,7 +240,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     for j in range(self.layoutcolumns):
                         self.maingrids.addWidget(Activeview(), i, j)
                 for j in range(0, self.i + 1):
-                    self.canvas = Canvas(self.list1[j], 0, self.empty1, self.empty1)
+                    self.canvas = Canvas(self.list1[j], 0, self.empty1, self.empty1, self.cmap)
                     self.scenelist1[j].clear()
                     self.scenelist1[j].addWidget(self.canvas)
                     self.maingrids.itemAt(j).widget().setScene(self.scenelist1[j])
@@ -247,9 +249,9 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     for j in range(3):
                         self.maingrids.addWidget(Activeview(), i, j)
                 for j in range(0, self.i + 1):
-                    self.canvas1 = Canvas(self.list1[j], 0, self.empty1, self.empty1)
-                    self.canvas2 = Canvas(self.list2[j], 0, self.empty1, self.empty1)
-                    self.canvas3 = Canvas(self.list3[j], 0, self.empty1, self.empty1)
+                    self.canvas1 = Canvas(self.list1[j], 0, self.empty1, self.empty1, self.cmap)
+                    self.canvas2 = Canvas(self.list2[j], 0, self.empty1, self.empty1, self.cmap)
+                    self.canvas3 = Canvas(self.list3[j], 0, self.empty1, self.empty1, self.cmap)
                     self.scenelist1[j].clear()
                     self.scenelist2[j].clear()
                     self.scenelist3[j].clear()
@@ -259,15 +261,17 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     self.maingrids.itemAt(j * 3).widget().setScene(self.scenelist1[j])
                     self.maingrids.itemAt(j * 3 + 1).widget().setScene(self.scenelist2[j])
                     self.maingrids.itemAt(j * 3 + 2).widget().setScene(self.scenelist3[j])
-
-    def unpatching11(self):
+    def unpatching2(self, result):
         PatchSize = np.array((40.0, 40.0))
         PatchOverlay = 0.5
-        Path = "Pred_result.mat"
-        conten = sio.loadmat(Path)
-        prob_test = conten['prob_pre']
+        imglay = fUnpatch2D(result, PatchSize, PatchOverlay, self.voxel_ndarray.shape, 0) # 0 for reference
+        return imglay
 
-        IndexType = np.argmax(prob_test, 1)
+    def unpatching11(self, result):
+        PatchSize = np.array((40.0, 40.0))
+        PatchOverlay = 0.5
+
+        IndexType = np.argmax(result, 1)
         IndexType[IndexType == 0] = 1
         IndexType[(IndexType > 1) & (IndexType < 4)] = 2
         IndexType[(IndexType > 6) & (IndexType < 9)] = 3
@@ -277,8 +281,8 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         a = Counter(IndexType).most_common(1)
         domain = a[0][0]
 
-        PType = np.delete(prob_test, [1, 3, 5, 6, 8, 10], 1)  # only 5 region left
-        PArte = np.delete(prob_test, [0, 2, 4, 7, 9], 1)
+        PType = np.delete(result, [1, 3, 5, 6, 8, 10], 1)  # only 5 region left
+        PArte = np.delete(result, [0, 2, 4, 7, 9], 1)
         PArte[:, [4, 5]] = PArte[:, [5, 4]]
         PNew = np.concatenate((PType, PArte), axis=1)
         IndexArte = np.argmax(PNew, 1)
@@ -287,34 +291,41 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         Arte = UnpatchArte(IndexArte, PatchSize, PatchOverlay, self.voxel_ndarray.shape)
         return Type, Arte
 
+    def loadpatch(self):
+        resultfile = QtWidgets.QFileDialog.getOpenFileName(self, "open file",
+                                        "C:/Users/hansw/Desktop/Ma_code/PyQt","Mat files(*.mat)")[0]
+                    # last directory, C:/Users/hansw/Desktop/Ma_code/PyQt   , None, QtWidgets.QFileDialog.DontUseNativeDialog
+        self.conten = sio.loadmat(resultfile)
+        return self.conten
+
     def addcolor(self):
         if self.vision == 2:
             QtWidgets.QMessageBox.information(self, 'Info', 'Please view the result in 3D grids')
         else:
-            self.linepos, self.classnr, ok = Patches_window.getData()
+            self.linepos, self.classnr, self.cmap, ok = Patches_window.getData()
             if ok and self.voxel_ndarray != []:
-                if self.classnr == 1:  # multi class needed
-                    self.IType, self.IArte = self.unpatching11()
+                if self.classnr == 0:
+                    self.imglay = self.unpatching2(self.conten['prob_test'])
 
-                    self.canvas4 = Canvas(self.list1[self.linepos], 1, self.IType, self.IArte)
+                elif self.classnr == 1:  # multi class needed
+                    self.IType, self.IArte = self.unpatching11(self.conten['prob_pre'])
+
+                    self.canvas4 = Canvas(self.list1[self.linepos], 1, self.IType, self.IArte, self.cmap)
                     self.list4.append(self.canvas4)
                     self.scenelist1[self.linepos].clear()
                     self.scenelist1[self.linepos].addWidget(self.canvas4)
 
                     reverse1 = np.rot90(np.swapaxes(self.list2[self.linepos], 1, 0), axes=(0, 2))
-                    self.canvas5 = Canvas(reverse1, 2, self.IType, self.IArte)
+                    self.canvas5 = Canvas(reverse1, 2, self.IType, self.IArte, self.cmap)
                     self.list5.append(self.canvas5)
                     self.scenelist2[self.linepos].clear()
                     self.scenelist2[self.linepos].addWidget(self.canvas5)
 
                     reverse2 = np.swapaxes(self.list3[self.linepos], 2, 1)
-                    self.canvas6 = Canvas(reverse2, 3, self.IType, self.IArte)
+                    self.canvas6 = Canvas(reverse2, 3, self.IType, self.IArte, self.cmap)
                     self.list6.append(self.canvas6)
                     self.scenelist3[self.linepos].clear()
                     self.scenelist3[self.linepos].addWidget(self.canvas6)
-
-                # elif self.classnr == 0:
-
             else:  # cancel clicked
                 pass
 
