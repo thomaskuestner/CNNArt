@@ -31,6 +31,7 @@ class MainWindow(QMainWindow):
 
         # initialize DeepLearningArt Application
         self.deepLearningArtApp = DeepLearningArtApp()
+        self.deepLearningArtApp.setGUIHandle(self)
 
         # initialize TreeView Database
         self.manageTreeView()
@@ -64,6 +65,11 @@ class MainWindow(QMainWindow):
         self.ui.ComboBox_DNNs.addItems(DeepLearningArtApp.deepNeuralNetworks.keys())
         self.ui.ComboBox_DNNs.setCurrentIndex(1)
         self.deepLearningArtApp.setNeuralNetworkModel(self.ui.ComboBox_DNNs.currentText())
+
+        #initialize check boxes for used classes
+        self.ui.CheckBox_Artifacts.setChecked(self.deepLearningArtApp.getUsingArtifacts())
+        self.ui.CheckBox_BodyRegion.setChecked(self.deepLearningArtApp.getUsingBodyRegions())
+        self.ui.CheckBox_TWeighting.setChecked(self.deepLearningArtApp.getUsingTWeighting())
 
         ################################################################################################################
         # Signals and Slots
@@ -106,9 +112,16 @@ class MainWindow(QMainWindow):
         ################################################################################################################
 
     def button_train_clicked(self):
-        self.deepLearningArtApp.setBatchSize(self.ui.SpinBox_BatchSize.value())
         self.deepLearningArtApp.setEpochs(self.ui.SpinBox_Epochs.value())
+
+        # handle check states of check boxes for used classes
+        self.deepLearningArtApp.setUsingArtifacts(self.ui.CheckBox_Artifacts.isChecked())
+        self.deepLearningArtApp.setUsingBodyRegions(self.ui.CheckBox_BodyRegion.isChecked())
+        self.deepLearningArtApp.setUsingTWeighting(self.ui.CheckBox_TWeighting.isChecked())
+
         try:
+            batchSizes = np.fromstring(self.ui.LineEdit_BatchSizes.text(), dtype=np.int, sep=',')
+            self.deepLearningArtApp.setBatchSizes(batchSizes)
             learningRates = np.fromstring(self.ui.LineEdit_LearningRates.text(), dtype=np.float32, sep=',')
             self.deepLearningArtApp.setLearningRates(learningRates)
         except:
@@ -147,7 +160,7 @@ class MainWindow(QMainWindow):
             # 2D patching selected
             self.deepLearningArtApp.setPatchingMode(DeepLearningArtApp.PATCHING_2D)
         elif self.ui.ComboBox_Patching.currentIndex() == 2:
-            # 2D patching selected
+            # 3D patching selected
             self.deepLearningArtApp.setPatchingMode(DeepLearningArtApp.PATCHING_3D)
         else:
             self.ui.ComboBox_Patching.setCurrentIndex(1)
@@ -271,6 +284,9 @@ class MainWindow(QMainWindow):
         path = self.openFileNamesDialog(self.deepLearningArtApp.getLearningOutputPath())
         self.deepLearningArtApp.setLearningOutputPath(path)
         self.ui.Label_LearningOutputPath.setText(path)
+
+    def updateProgressBarTraining(self, val):
+        self.ui.ProgressBar_training.setValue(val)
 
     def splittingMode_changed(self):
 

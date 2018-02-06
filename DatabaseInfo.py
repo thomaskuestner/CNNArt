@@ -28,7 +28,7 @@ class DatabaseInfo:
         self.lPats = [name for name in os.listdir(self.sPathIn) if os.path.isdir(os.path.join(self.sPathIn, name))]
 
         #for testing
-        self.lPats = [self.lPats.pop(0), self.lPats.pop(1)]
+        self.lPats = [self.lPats.pop(0)]
 
         # parse config file (according to set database) => TODO (TK): replace by automatic parsing in directory
         ifile = open('config'+os.sep+'database'+os.sep+self.sDatabase+'.csv',"rb") # config file must exist for database!

@@ -13,6 +13,7 @@ import dis
 from sklearn.model_selection import KFold
 import os
 from DeepLearningArt.DLArt_GUI import dlart
+import keras.backend as K
 
 def expecting():
     """Return how many values the caller is expecting"""
@@ -31,19 +32,31 @@ def expecting():
 
 def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap, testTrainingDatasetRatio=0, validationTrainRatio=0, outPutPath=None, nfolds = 0):
     # TODO: adapt path
-    #iReturn = expecting()
-    iReturn = 1000
+    iReturn = expecting()
+    #iReturn = 1000
 
-    if allPatches.shape[0] == patchSize[0] and allPatches.shape[1] == patchSize[1]:
-        allPatches = np.transpose(allPatches, (2, 0, 1))
-        print(allPatches.shape)
+    # 2D or 3D patching?
+    if len(patchSize) == 2:
+        #2D patches are used
+        if allPatches.shape[0] == patchSize[0] and allPatches.shape[1] == patchSize[1]:
+            allPatches = np.transpose(allPatches, (2, 0, 1))
+    elif len(patchSize) == 3:
+        #3D patches are used
+        if allPatches.shape[0] == patchSize[0] and allPatches.shape[1] == patchSize[1] and allPatches.shape[2] == patchSize[2]:
+            allPatches = np.transpose(allPatches, (3, 0, 1, 2))
 
     if sSplitting == dlart.DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING:
         # splitting
         indexSlices = range(allPatches.shape[0])
         indexSlices = np.random.permutation(indexSlices)
 
-        allPatches = allPatches[indexSlices, :, :]
+        if len(patchSize)==2:
+            #2D patching
+            allPatches = allPatches[indexSlices, :, :]
+        elif len(patchSize)==3:
+            #3D patching
+            allPatches = allPatches[indexSlices, :, :, :]
+
         allY = allY[indexSlices]
 
         #num of samples in test set and validation set
@@ -51,15 +64,23 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         numSamplesTest = math.floor(testTrainingDatasetRatio*numAllPatches)
         numSamplesValidation = math.floor(validationTrainRatio*(numAllPatches-numSamplesTest))
 
-        # subarrays as no-copy views (array slices)
-        xTest = allPatches[:numSamplesTest, :, :]
-        yTest = allY[:numSamplesTest]
+        if len(patchSize) == 2:
+            #2D patching
+            # subarrays as no-copy views (array slices)
+            X_test = allPatches[:numSamplesTest, :, :]
+            X_valid = allPatches[numSamplesTest:(numSamplesTest+numSamplesValidation), :, :]
+            X_train = allPatches[(numSamplesTest+numSamplesValidation):, :, :]
 
-        xValid = allPatches[numSamplesTest:(numSamplesTest+numSamplesValidation), :, :]
-        yValid = allY[numSamplesTest:(numSamplesTest+numSamplesValidation)]
+        elif len(patchSize) == 3:
+            # 3D patching
+            # subarrays as no-copy views (array slices)
+            X_test = allPatches[:numSamplesTest, :, :, :]
+            X_talid = allPatches[numSamplesTest:(numSamplesTest + numSamplesValidation), :, :, :]
+            X_train = allPatches[(numSamplesTest + numSamplesValidation):, :, :, :]
 
-        xTrain = allPatches[(numSamplesTest+numSamplesValidation):, :, :]
-        yTrain = allY[(numSamplesTest+numSamplesValidation):]
+        y_test = allY[:numSamplesTest]
+        y_valid = allY[numSamplesTest:(numSamplesTest + numSamplesValidation)]
+        y_train = allY[(numSamplesTest + numSamplesValidation):]
 
         # #random samples
         # nPatches = allPatches.shape[0]
@@ -81,11 +102,15 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         # print(y_test.shape)
         # #!!!! train dataset is not randomly shuffeled!!!
 
-
         if iReturn == 0:
-            folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
-            Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'normal_' + str(
-                patchSize[0]) + str(patchSize[1]) + '.h5'
+            if len(patchSize) == 3:
+                folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + str(patchSize[2])
+                Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + str(
+                    patchSize[2]) + os.sep + 'normal_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
+            else:
+                folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
+                Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'normal_' + str(
+                    patchSize[0]) + str(patchSize[1]) + '.h5'
 
             if os.path.isdir(folder):
                 pass
@@ -101,7 +126,21 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
                 hf.create_dataset('patchSize', data=patchSize)
                 hf.create_dataset('patchOverlap', data=patchOverlap)
         else:
-            return [xTrain], [yTrain], [xValid], [yValid], [xTest], [yTest] # embed in a 1-fold list
+            # if len(patchSize) == 2:
+            #     # 2D patches are used
+            #     if allPatches.shape[1] == patchSize[0] and allPatches.shape[2] == patchSize[1]:
+            #         X_train = np.transpose(X_train, (1, 2, 0))
+            #         X_valid = np.transpose(X_valid, (1, 2, 0))
+            #         X_test = np.transpose(X_test, (1, 2, 0))
+            # elif len(patchSize) == 3:
+            #     # 3D patches are used
+            #     if allPatches.shape[0] == patchSize[0] and allPatches.shape[1] == patchSize[1] and allPatches.shape[2] == patchSize[2]:
+            #         X_train = np.transpose(X_train, (1, 2, 3, 0))
+            #         X_valid = np.transpose(X_valid, (1, 2, 3, 0))
+            #         X_test = np.transpose(X_test, (1, 2, 3, 0))
+
+            return [X_train], [y_train], [X_valid], [y_valid], [X_test], [y_test] # embed in a 1-fold list
+
 
     elif sSplitting == dlart.DeepLearningArtApp.CROSS_VALIDATION_SPLITTING:
         # split into test/train sets
@@ -140,8 +179,15 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
             y_train, y_test = yTrain[train_index], yTrain[test_index]
 
             if iReturn == 0:
-                folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
-                Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'crossVal_data' + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
+                if len(patchSize) == 3:
+                    folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + str(patchSize[2])
+                    Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + str(
+                        patchSize[2]) + os.sep + 'crossVal_data' + str(ind_split) + '_' + str(patchSize[0]) + str(
+                        patchSize[1]) + str(patchSize[2]) + '.h5'
+                else:
+                    folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
+                    Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'crossVal_data' + str(
+                        ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
                 if os.path.isdir(folder):
                     pass
                 else:
@@ -187,9 +233,15 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
             y_train, y_test = allY[train_index], allY[test_index]
 
             if iReturn == 0:
-                folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
-                Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'crossVal' + str(
-                    ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
+                if len(patchSize) == 3:
+                    folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + str(patchSize[2])
+                    Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + str(
+                        patchSize[2]) + os.sep + 'crossVal' + str(ind_split) + '_' + str(patchSize[0]) + str(
+                        patchSize[1]) + str(patchSize[2]) + '.h5'
+                else:
+                    folder = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1])
+                    Path = sFolder + os.sep + str(patchSize[0]) + str(patchSize[1]) + os.sep + 'crossVal' + str(
+                        ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
                 if os.path.isdir(folder):
                     pass
                 else:

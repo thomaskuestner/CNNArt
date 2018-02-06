@@ -1,6 +1,5 @@
 import numpy as np
-
-
+from keras.layers import *
 
 # from sklearn.model_selection import KFold
 #
@@ -15,20 +14,8 @@ import numpy as np
 #    print("TRAIN:", train_index, "TEST:", test_index)
 #    X_train, X_test = X[train_index], X[test_index]
 #    y_train, y_test = y[train_index], y[test_index]
+y_train = [1, 1, 0, 0, 1, 1]
 
-dict = {1: [1, 1, 3], 2:[3, 5, 6], 3:[3, 5, 5]}
-
-asdf = np.zeros([100, 20, 20])
-
-a = []
-a.append(dict[1])
-a.append(dict[2])
-
-a = np.asarray(a)
-
-print(a.shape)
-
-
-
+a = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32)-1)]).T
 
 print(a)

@@ -48,7 +48,11 @@ class DeepLearningArtApp():
 
     deepNeuralNetworks = {
         'Multiclass DenseResNet': 'networks.multiclass.DenseResNet.multiclass_DenseResNet',
-        'Multiclass InceptionNet': 'networks.multiclass.InceptionNet.multiclass_InceptionNet'
+        'Multiclass InceptionNet': 'networks.multiclass.InceptionNet.multiclass_InceptionNet',
+        'Mulitclass ResNet-56': 'networks.multiclass.SENets.multiclass_ResNet-56',
+        'Multiclass SE-ResNet-56': 'networks.multiclass.SENets.multiclass_SE-ResNet-56',
+        'Mulitclass ResNet-50': 'networks.multiclass.SENets.multiclass_ResNet-50',
+        'Multiclass SE-ResNet-50': 'networks.multiclass.SENets.multiclass_SE-ResNet-50'
     }
 
     modelSubDir = "dicom_sorted"
@@ -73,6 +77,9 @@ class DeepLearningArtApp():
     STORE_PATCH_BASED = 2
 
     def __init__(self):
+        # GUI handle
+        self.dlart_GUI_handle = None
+
         # attributes for paths and database
         self.selectedPatients = ''
         self.selectedDatasets = ''
@@ -101,10 +108,14 @@ class DeepLearningArtApp():
 
         #attributes for DNN
         self.neuralNetworkModel = None
-        self.batchSize = None
+        self.batchSizes = None
         self.epochs = None
         self.learningRates = None
 
+        # Attributes for classes and labels
+        self.usingArtifacts = True
+        self.usingBodyRegions = True
+        self.usingTWeighting = True
 
         # train, validation, test dataset attributes
         self.X_train = None
@@ -130,8 +141,14 @@ class DeepLearningArtApp():
         self.Y_validation = []
         self.Y_train = []
 
-        dAllPatches = np.zeros((self.patchSizeX, self.patchSizeY, 0))
-        dAllLabels = np.zeros(0)
+        if self.patchingMode == DeepLearningArtApp.PATCHING_2D:
+            dAllPatches = np.zeros((self.patchSizeX, self.patchSizeY, 0))
+            dAllLabels = np.zeros(0)
+        elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
+            dAllPatches = np.zeros([self.patchSizeX, self.patchSizeY, self.patchSizeZ, 0])
+            dAllLabels = np.zeros(0)
+        else:
+            raise IOError("What's your plan, man? We do not know your patching mode...")
 
         # stuff for storing
         if self.storeMode != DeepLearningArtApp.STORE_DISABLED:
@@ -194,8 +211,10 @@ class DeepLearningArtApp():
 
                             #compute 2D Mask labling patching
                             dPatches, dLabels = fRigidPatching_maskLabeling(norm_voxel_ndarray,
-                                    [self.patchSizeX, self.patchSizeY], self.patchOverlapp, labelMask_ndarray, 0.5,
-                                     DeepLearningArtApp.datasets[dataset])
+                                                                            [self.patchSizeX, self.patchSizeY],
+                                                                            self.patchOverlapp,
+                                                                            labelMask_ndarray, 0.5,
+                                                                            DeepLearningArtApp.datasets[dataset])
 
                             #convert to float32
                             dPatches = np.asarray(dPatches, dtype=np.float32)
@@ -216,7 +235,29 @@ class DeepLearningArtApp():
                             dLabels = np.asarray(dLabels, dtype=np.float32)
                     elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
                         # 3D Patching
-                        print("Do 3D patching......")
+                        if self.labelingMode == DeepLearningArtApp.MASK_LABELING:
+                            # path to marking file
+                            currentMarkingsPath = self.getMarkingsPath() + os.sep + patient + ".json"
+                            # get the markings mask
+                            labelMask_ndarray = create_MASK_Array(currentMarkingsPath, patient, dataset,
+                                                                  voxel_ndarray.shape[0],
+                                                                  voxel_ndarray.shape[1], voxel_ndarray.shape[2])
+
+                            # compute 3D Mask labling patching
+                            dPatches, dLabels = fRigidPatching3D_maskLabeling(norm_voxel_ndarray,
+                                                                 [self.patchSizeX, self.patchSizeY, self.patchSizeZ],
+                                                                 self.patchOverlapp,
+                                                                 labelMask_ndarray,
+                                                                 0.5,
+                                                                 DeepLearningArtApp.datasets[dataset])
+
+                            # convert to float32
+                            dPatches = np.asarray(dPatches, dtype=np.float32)
+                            dLabels = np.asarray(dLabels, dtype=np.float32)
+
+                        elif self.labelingMode == DeepLearningArtApp.PATCH_LABELING:
+                            print("3D local patch labeling not available until now!")
+
                     else:
                             print("We do not know what labeling mode you want to use :p")
 
@@ -230,8 +271,12 @@ class DeepLearningArtApp():
 
                 else:
                     # concatenate all patches in one array
-                    dAllPatches = np.concatenate((dAllPatches, dPatches), axis=2)
-                    dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
+                    if self.patchingMode == DeepLearningArtApp.PATCHING_2D:
+                        dAllPatches = np.concatenate((dAllPatches, dPatches), axis=2)
+                        dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
+                    elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
+                        dAllPatches = np.concatenate((dAllPatches, dPatches), axis=3)
+                        dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
 
 
         # dataset splitting
@@ -264,17 +309,27 @@ class DeepLearningArtApp():
                     json.dump(labelDict, fp)
         else:
             # no storage of patched datasets
-            [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [self.Y_test] = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients, sSplitting=self.splittingMode,
-                                patchSize = [self.patchSizeX, self.patchSizeY], patchOverlap=self.patchOverlapp,
-                                testTrainingDatasetRatio=self.trainTestDatasetRatio, validationTrainRatio=self.trainValidationRatio,
-                                outPutPath=self.pathOutputPatching, nfolds=self.numFolds)
+            [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [self.Y_test] \
+                = fSplitDataset(dAllPatches,
+                                dAllLabels,
+                                allPats=self.selectedPatients,
+                                sSplitting=self.splittingMode,
+                                patchSize = [self.patchSizeX, self.patchSizeY],
+                                patchOverlap=self.patchOverlapp,
+                                testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                validationTrainRatio=self.trainValidationRatio,
+                                outPutPath=self.pathOutputPatching,
+                                nfolds=self.numFolds)
 
             print()
 
     def performTraining(self):
         # get output vector for different classes
         classes = np.asarray(np.unique(self.Y_train, ), dtype=int)
-        classMappings = Label.mapClassesToOutputVector(classes=classes, usingArtefacts=True, usingBodyRegion=True, usingTWeightings=True)
+        classMappings = Label.mapClassesToOutputVector(classes=classes,
+                                                       usingArtefacts=self.usingArtifacts,
+                                                       usingBodyRegion=self.usingBodyRegions,
+                                                       usingTWeightings=self.usingTWeighting)
 
         Y_train = []
         for i in range(self.Y_train.shape[0]):
@@ -291,13 +346,19 @@ class DeepLearningArtApp():
             Y_test.append(classMappings[self.Y_test[i]])
         Y_test = np.asarray(Y_test)
 
+        # output folder
+        outPutFolderDataPath = self.learningOutputPath + os.sep + self.neuralNetworkModel + \
+                               "_" + str(self.patchSizeX) + "x" + str(self.patchSizeY)
+        if not os.path.exists(outPutFolderDataPath):
+            os.makedirs(outPutFolderDataPath)
+
         cnn_main.fRunCNN(
             dData={'X_train': self.X_train, 'y_train': Y_train, 'X_test': self.X_test, 'y_test': Y_test, 'patchSize': [self.patchSizeX, self.patchSizeY, self.patchSizeZ]},
             sModelIn=DeepLearningArtApp.deepNeuralNetworks[self.neuralNetworkModel],
             lTrain=True,
             sParaOptim='',
-            sOutPath=self.learningOutputPath,
-            iBatchSize=self.batchSize,
+            sOutPath=outPutFolderDataPath,
+            iBatchSize=self.batchSizes,
             iLearningRate=self.learningRates,
             iEpochs=self.epochs)
 
@@ -474,11 +535,11 @@ class DeepLearningArtApp():
     def getNeuralNetworkModel(self):
         return self.neuralNetworkModel
 
-    def setBatchSize(self, size):
-        self.batchSize = size
+    def setBatchSizes(self, size):
+        self.batchSizes = size
 
-    def getBatchSize(self):
-        return self.batchSize
+    def getBatchSizes(self):
+        return self.batchSizes
 
     def setLearningRates(self, rates):
         self.learningRates = rates
@@ -492,11 +553,38 @@ class DeepLearningArtApp():
     def getEpochs(self):
         return self.epochs
 
+    def getUsingArtifacts(self):
+        return self.usingArtifacts
+
+    def setUsingArtifacts(self, b):
+        self.usingArtifacts = b
+
+    def getUsingBodyRegions(self):
+        return self.usingBodyRegions
+
+    def setUsingBodyRegions(self, b):
+        self.usingBodyRegions = b
+
+    def getUsingTWeighting(self):
+        return self.usingBodyRegions
+
+    def setUsingTWeighting(self, b):
+        self.usingTWeighting = b
+
+    def setGUIHandle(self, handle):
+        self.dlart_GUI_handle = handle
+
+    def getGUIHandle(self):
+        return self.dlart_GUI_handle
+
     def datasetAvailable(self):
         retbool = False
         if  self.X_train.all and self.X_validation.all and self.X_test.all and self.Y_train.all and self.Y_validation.all and self.Y_test.all:
             retbool = True
         return retbool
+
+    def updateProgressBarTraining(self, val):
+        self.dlart_GUI_handle.updateProgressBarTraining(val)
 
     def loadDataset(self, pathToDataset):
         '''
