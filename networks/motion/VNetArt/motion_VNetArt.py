@@ -30,7 +30,7 @@ def fTrain(X_train, Y_train, X_test, Y_test, sOutPath, patchSize, batchSizes=Non
     for iBatch in batchSizes:
         for iLearn in learningRates:
             cnn = fCreateModel(patchSize, learningRate=iLearn, optimizer='Adam')
-            fTrainInner(sOutPath, cnn, learningRate=iLearn, X_train=X_train, Y_train=Y_train, X_test=X_test, Y_test=Y_test,batchSize=iBatch, iEpochs=iEpochs)
+            fTrainInner(sOutPath, cnn, learningRate=iLearn, X_train=X_train, Y_train=Y_train, X_test=X_test, Y_test=Y_test,batchSize=iBatch, iEpochs=iEpochs, CV_Patient=CV_Patient)
 
 def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=None, sInPaths_valid=None, X_train=None, Y_train=None, X_test=None, Y_test=None,  batchSize=64, iEpochs=299, CV_Patient=0):
     '''train a model with training data X_train with labels Y_train. Validation Data should get the keywords Y_test and X_test'''
@@ -42,7 +42,7 @@ def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=No
     _, sPath = os.path.splitdrive(sOutPath)
     sPath,sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
-    model_name = sPath + '/' + sFilename + 'VNet' + '/' + sFilename +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
+    model_name = sPath + '/' + sFilename  + '/' + sFilename + '_VNet' +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     if CV_Patient != 0: model_name = model_name +'_'+ 'CV' + str(CV_Patient)# determine if crossValPatient is used...
     weight_name = model_name + '_weights.h5'
     model_json = model_name + '_json'
@@ -55,9 +55,9 @@ def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=No
 
 
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
-    callbacks.append(ModelCheckpoint('/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
-        period=5, save_best_only=True))# overrides the last checkpoint, its just for security
-    callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
+    #callbacks.append(ModelCheckpoint('/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
+    #    period=5, save_best_only=True))# overrides the last checkpoint, its just for security
+    #callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
     result =model.fit(X_train,
                          Y_train,

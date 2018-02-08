@@ -12,7 +12,7 @@ import cnn_main
 import utils.scaling as scaling
 import correction.main_correction as correction
 
-with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
+with open('config' + os.sep + 'paramnormal.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
 
 lTrain = cfg['lTrain'] # training or prediction
@@ -141,7 +141,11 @@ elif lTrain:
 
     # perform training
     for iFold in range(0,len(X_train)):
-        cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])
+        if len(X_train) != 1:
+            CV_Patient = iFold + 1
+        else:
+            CV_Patient = 0
+        cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
 
 else: 
     ################
@@ -165,4 +169,8 @@ else:
     if len(sPredictModel) == 0:
         sPredictModel = cfg['selectedDatabase']['bestmodel'][sNetworktype[2]]
     for iFold in range(0, len(X_test)):
-        cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'model_name': sPredictModel }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])
+        if len(X_test) != 1:
+            CV_Patient = iFold + 1
+        else:
+            CV_Patient = 0
+        cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'model_name': sPredictModel }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
