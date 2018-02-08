@@ -39,9 +39,6 @@ sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(map(str,patchSi
 if len(patchSize) == 3:
     sOutPath = sOutPath + str(patchSize[2])
 if sTrainingMethod == "scalingPrior":
-    sOutPath = sOutPath  + '_sf' + ''.join(map(str, lScaleFactor)).replace(" ", "").replace(".", "")
-# sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '.h5'
-if sTrainingMethod == "scalingPrior":
     sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + 'sf' + ''.join(map(str, lScaleFactor)).replace(" ", "").replace(".", "") + '.h5'
 else:
     sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '.h5'
