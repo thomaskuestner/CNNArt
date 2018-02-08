@@ -264,7 +264,7 @@
      <item>
       <widget class="QPushButton" name="openfile">
        <property name="text">
-        <string>load</string>
+        <string> load image</string>
        </property>
       </widget>
      </item>
@@ -328,6 +328,78 @@
       <widget class="QPushButton" name="resultpatch">
        <property name="text">
         <string>view result</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="verticalLayoutWidget_3">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>360</y>
+      <width>121</width>
+      <height>163</height>
+     </rect>
+    </property>
+    <layout class="QVBoxLayout" name="verticalLayout_4">
+     <item>
+      <widget class="QLabel" name="label_4">
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>artefact selector</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="bselectoron">
+       <property name="text">
+        <string>selector on/off</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="artefactbox">
+       <item>
+        <property name="text">
+         <string>movement</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>shim</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>noise</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="brectangle">
+       <property name="text">
+        <string>rectangle</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="bellipse">
+       <property name="text">
+        <string>ellipse</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="blasso">
+       <property name="text">
+        <string>lasso</string>
        </property>
       </widget>
      </item>

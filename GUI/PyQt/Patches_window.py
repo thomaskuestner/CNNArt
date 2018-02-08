@@ -98,14 +98,3 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
         ok = dialog.exec_()
         linepos, classnr, cmap = dialog.ccsetting()
         return linepos, classnr, cmap, ok
-
-
-
-
-
-
-
-
-
-
-

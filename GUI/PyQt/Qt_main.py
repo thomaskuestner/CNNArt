@@ -33,6 +33,7 @@ from Unpatch_two import*
 
 from DatabaseInfo import*
 import yaml
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -66,6 +67,44 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.list6 = []
         self.empty1 = []
         self.cmap = []
+
+        self.bselectoron.clicked.connect(self.selectormode)
+        self.selectoron = False
+        self.selectorbox = QtWidgets.QButtonGroup(self)
+        self.selectorbox.addButton(self.brectangle, 11)
+        self.selectorbox.addButton(self.bellipse, 12)
+        self.selectorbox.addButton(self.blasso, 13)
+        self.selectorbox.buttonClicked.connect(self.selectorform)
+
+        def lasso_onselect(verts):
+            print (verts)
+            p = path.Path(verts)
+            saveFile = shelve.open(self.markfile)
+            print(p)
+            patch = None
+            col_str = None
+            if  self.artefactbox.currentIndex() == 0:
+                col_str = "31"
+                patch = patches.PathPatch(p, fill=False, edgecolor='red', lw=2)
+            elif self.artefactbox.currentIndex() == 1:
+                col_str = "32"
+                patch = patches.PathPatch(p, fill=False, edgecolor='green', lw=2)
+            elif self.artefactbox.currentIndex() == 2:
+                col_str = "33"
+                patch = patches.PathPatch(p, fill=False, edgecolor='blue', lw=2)
+            self.ax.add_patch(patch)
+            layer_name = model
+            if saveFile.has_key(layer_name):
+                number_str = str(self.mrt_layer_set[current_mrt_layer].get_current_Number()) + "_" + col_str + "_" + str(len(self.ax.patches) - 1)
+                saveFile[layer_name].update({number_str: p})
+            else:
+                number_str = str(
+                    self.mrt_layer_set[current_mrt_layer].get_current_Number()) + "_" + col_str + "_" + str(
+                    len(self.ax.patches) - 1)
+                saveFile[layer_name] = {number_str: p}
+
+            saveFile.close()
+            self.fig.canvas.draw_idle()
 
 
     def load_scan(self, path):
@@ -261,6 +300,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     self.maingrids.itemAt(j * 3).widget().setScene(self.scenelist1[j])
                     self.maingrids.itemAt(j * 3 + 1).widget().setScene(self.scenelist2[j])
                     self.maingrids.itemAt(j * 3 + 2).widget().setScene(self.scenelist3[j])
+
     def unpatching2(self, result):
         PatchSize = np.array((40.0, 40.0))
         PatchOverlay = 0.5
@@ -292,7 +332,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         return Type, Arte
 
     def loadpatch(self):
-        resultfile = QtWidgets.QFileDialog.getOpenFileName(self, "open file",
+        resultfile = QtWidgets.QFileDialog.getOpenFileName(self, "choose the result file",
                                         "C:/Users/hansw/Desktop/Ma_code/PyQt","Mat files(*.mat)")[0]
                     # last directory, C:/Users/hansw/Desktop/Ma_code/PyQt   , None, QtWidgets.QFileDialog.DontUseNativeDialog
         self.conten = sio.loadmat(resultfile)
@@ -329,6 +369,193 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             else:  # cancel clicked
                 pass
 
+    def selectorform(self):
+        if self.selectorbox.checkedId() == 11:
+            toggle_selector.ES.set_active(False)
+            toggle_selector.RS.set_active(True)
+            toggle_selector.LS.set_active(False)
+        elif self.selectorbox.checkedId() == 12:
+            toggle_selector.ES.set_active(True)
+            toggle_selector.RS.set_active(False)
+            toggle_selector.LS.set_active(False)
+        else:
+            toggle_selector.ES.set_active(False)
+            toggle_selector.RS.set_active(False)
+            toggle_selector.LS.set_active(True)
+
+    def selectormode(self):
+        if self.selectoron == False:
+            self.selectoron = True
+            self.scrollAreaWidgetContents = QtWidgets.QWidget()
+            self.maingrids = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
+            self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+
+            self.newfig = plt.figure(dpi=50)
+            self.newax = self.newfig.add_subplot(111)
+            self.newcanvas = FigureCanvas(self.newfig)
+            self.maingrids.addWidget(self.newcanvas)
+
+            self.newfig.canvas.mpl_connect('scroll_event', self.newonscroll)
+
+            self.selectorPath = QtWidgets.QFileDialog.getExistingDirectory(self, "choose the image to view",
+                                                            "C:/Users/hansw/Videos/artefacts/MRPhysics/newProtocol")
+            files = sorted([os.path.join(self.selectorPath, file) for file in os.listdir(self.selectorPath)],
+                           key=os.path.getctime)
+            datasets = [dicom.read_file(f) \
+                        for f in files]
+            try:
+                self.imageforselector, pixel_space = dicom_numpy.combine_slices(datasets)
+            except dicom_numpy.DicomImportException:
+                raise
+
+            self.proband = os.listdir(self.selectorPath)
+            self.model = os.listdir(self.sFolder + self.proband[0] + "/dicom_sorted")
+            # markingPath = "C:/Users/hansw/Desktop/Ma_code/PyQt/Markings"
+            # File_Path = self.markingPath + self.proband +".slv"
+            self.markfile = QtWidgets.QFileDialog.getOpenFileName(self, "choose the marking file",
+                                                               "C:/Users/hansw/Desktop/Ma_code/PyQt/Markings",
+                                                               "slv files(*.slv)")[0]
+            self.loadFile = shelve.open(self.markfile)
+            number_Patch = 0
+            cur_no = "0"
+            if self.loadFile.has_key(self.artefact_str.get()):
+                layer = self.loadFile[self.artefact_str.get()]
+                while layer.has_key(
+                        cur_no + "_11_" + str(number_Patch)) or layer.has_key(
+                    cur_no + "_12_" + str(number_Patch)) or layer.has_key(
+                    cur_no + "_13_" + str(number_Patch)) or layer.has_key(
+                    cur_no + "_21_" + str(number_Patch)) or layer.has_key(
+                    cur_no + "_22_" + str(number_Patch)) or layer.has_key(
+                    cur_no + "_23_" + str(number_Patch)) or layer.has_key(
+                    cur_no + "_31_" + str(number_Patch)) or layer.has_key(
+                    cur_no + "_32_" + str(number_Patch)) or layer.has_key(
+                    cur_no + "_33_" + str(number_Patch)):
+
+                    patch = None
+                    if layer.has_key(cur_no + "_11_" + str(number_Patch)):
+                        p = layer[cur_no + "_11_" + str(number_Patch)]
+                        patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
+                                              np.abs(p[1] - p[3]), fill=False,
+                                              edgecolor="red", lw=2)
+                    elif layer.has_key(cur_no + "_12_" + str(number_Patch)):
+                        p = layer[cur_no + "_12_" + str(number_Patch)]
+                        patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
+                                              np.abs(p[1] - p[3]), fill=False,
+                                              edgecolor="green", lw=2)
+                    elif layer.has_key(cur_no + "_13_" + str(number_Patch)):
+                        p = layer[cur_no + "_13_" + str(number_Patch)]
+                        patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
+                                              np.abs(p[1] - p[3]), fill=False,
+                                              edgecolor="blue", lw=2)
+                    elif layer.has_key(cur_no + "_21_" + str(number_Patch)):
+                        p = layer[cur_no + "_21_" + str(number_Patch)]
+                        patch = Ellipse(
+                            xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
+                            width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="red", fc='None', lw=2)
+                    elif layer.has_key(cur_no + "_22_" + str(number_Patch)):
+                        p = layer[cur_no + "_22_" + str(number_Patch)]
+                        patch = Ellipse(
+                            xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
+                            width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="green", fc='None', lw=2)
+                    elif layer.has_key(cur_no + "_23_" + str(number_Patch)):
+                        p = layer[cur_no + "_23_" + str(number_Patch)]
+                        patch = Ellipse(
+                            xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
+                            width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="blue", fc='None', lw=2)
+                    elif layer.has_key(cur_no + "_31_" + str(number_Patch)):
+                        p = layer[cur_no + "_31_" + str(number_Patch)]
+                        patch = patches.PathPatch(p, fill=False, edgecolor='red', lw=2)
+                    elif layer.has_key(cur_no + "_32_" + str(number_Patch)):
+                        p = layer[cur_no + "_32_" + str(number_Patch)]
+                        patch = patches.PathPatch(p, fill=False, edgecolor='green', lw=2)
+                    elif layer.has_key(cur_no + "_33_" + str(number_Patch)):
+                        p = layer[cur_no + "_33_" + str(number_Patch)]
+                        patch = patches.PathPatch(p, fill=False, edgecolor='blue', lw=2)
+                    self.newax.add_patch(patch)
+                    number_Patch += 1
+
+            #self.fig.canvas.draw()
+            self.ind = 0
+            self.slices = self.imageforselector.shape[2]
+            self.newslicesview()
+
+        else:
+            self.selectoron = False
+            for i in reversed(range(self.maingrids.count())):  # delete old widgets
+                self.maingrids.itemAt(i).widget().setParent(None)
+
+    def newonscroll(self, event):
+        # print("%s %s" % (event.button, event.step))
+        if event.button == 'up':
+            self.ind = (self.ind + 1)  % self.slices
+        else:
+            self.ind = (self.ind - 1)  % self.slices
+        if self.ind >= self.slices:
+            self.ind = 0
+        if self.ind <= -1:
+            self.ind = self.slices - 1
+        self.newslicesview()
+
+    def newslicesview(self):
+        self.newax.imshow(np.swapaxes(self.imageforselector[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
+        self.newax.set_ylabel('slice %s' % (self.ind + 1))
+
+        number_Patch = 0
+        model = os.listdir(self.selectorPath)
+        model.sort()
+        if self.loadFile.has_key(model):
+            layer_name = model
+            layer = self.loadFile[layer_name]
+            cur_no = str(self.ind)
+
+            while layer.has_key(cur_no + "_11_" + str(number_Patch)) or layer.has_key(
+                                    cur_no + "_12_" + str(number_Patch)) or layer.has_key(
+                                    cur_no + "_13_" + str(number_Patch)) or layer.has_key(
+                                    cur_no + "_21_" + str(number_Patch)) or layer.has_key(
+                                    cur_no + "_22_" + str(number_Patch)) or layer.has_key(
+                                    cur_no + "_23_" + str(number_Patch)) or layer.has_key(
+                                    cur_no + "_31_" + str(number_Patch)) or layer.has_key(
+                                    cur_no + "_32_" + str(number_Patch)) or layer.has_key(
+                                    cur_no + "_33_" + str(number_Patch)):
+                patch = None
+                if layer.has_key(cur_no+ "_11_" + str(number_Patch)):
+                    p = layer[cur_no+ "_11_" + str(number_Patch)]
+                    print(p)
+                    patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]), np.abs(p[1] - p[3]), fill=False,
+                                         edgecolor="red", lw=2)
+                elif layer.has_key(cur_no+ "_12_" + str(number_Patch)):
+                    p = layer[cur_no+ "_12_" + str(number_Patch)]
+                    patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]), np.abs(p[1] - p[3]), fill=False,
+                                         edgecolor="green", lw=2)
+                elif layer.has_key(cur_no+ "_13_" + str(number_Patch)):
+                    p = layer[cur_no+ "_13_" + str(number_Patch)]
+                    patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]), np.abs(p[1] - p[3]), fill=False,
+                                         edgecolor="blue", lw=2)
+                elif layer.has_key(cur_no + "_21_" + str(number_Patch)):
+                    p = layer[cur_no + "_21_" + str(number_Patch)]
+                    patch = Ellipse(xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
+                                  width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="red", fc='None', lw=2)
+                elif layer.has_key(cur_no + "_22_" + str(number_Patch)):
+                    p = layer[cur_no + "_22_" + str(number_Patch)]
+                    patch = Ellipse(xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
+                                    width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="green", fc='None', lw=2)
+                elif layer.has_key(cur_no + "_23_" + str(number_Patch)):
+                    p = layer[cur_no + "_23_" + str(number_Patch)]
+                    patch = Ellipse(xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
+                                    width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="blue", fc='None', lw=2)
+                elif layer.has_key(cur_no + "_31_" + str(number_Patch)):
+                    p = layer[cur_no + "_31_" + str(number_Patch)]
+                    patch = patches.PathPatch(p, fill=False, edgecolor='red', lw=2)
+                elif layer.has_key(cur_no + "_32_" + str(number_Patch)):
+                    p = layer[cur_no + "_32_" + str(number_Patch)]
+                    patch = patches.PathPatch(p, fill=False, edgecolor='green', lw=2)
+                elif layer.has_key(cur_no + "_33_" + str(number_Patch)):
+                    p = layer[cur_no + "_33_" + str(number_Patch)]
+                    patch = patches.PathPatch(p, fill=False, edgecolor='blue', lw=2)
+                self.newax.add_patch(patch)
+                number_Patch += 1
+        self.newcanvas.draw()  # not self.newcanvas.show()
+
 
     # #menubar version, with Layout_chooseing.py
     # def setlayout(self):
@@ -341,7 +568,6 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
     #                 self.maingrids.addWidget(Activeview(), i, j)
     #     else:       # cancel clicked
     #         pass
-
 
 if __name__ == '__main__':
     import sys
