@@ -20,11 +20,12 @@ import scipy.ndimage
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 from framework1 import Ui_MainWindow
-from CNN_window import*
-from Data_Prewindow import*
-from Layout_Choosing import*
+# from CNN_window import*
+# from Data_Prewindow import*
+# from Layout_Choosing import*
 from Patches_window import*
 
+from activeview import Activeview
 from activescene import Activescene
 from canvas import Canvas
 # from canvas2 import Canvas2
@@ -71,11 +72,17 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.empty1 = []
         self.cmap = []
 
-        self.selectorbox = QtWidgets.QButtonGroup(self)
-        self.selectorbox.addButton(self.brectangle, 11)
-        self.selectorbox.addButton(self.bellipse, 12)
-        self.selectorbox.addButton(self.blasso, 13)
+        # self.selectorbox = QtWidgets.QButtonGroup(self)
+        # self.selectorbox.addButton(self.bnoselect, 11)
+        # self.selectorbox.addButton(self.brectangle, 12)
+        # self.selectorbox.addButton(self.bellipse, 13)
+        # self.selectorbox.addButton(self.blasso, 14)
+        self.bnoselect.setChecked(True)
         self.bselectoron.clicked.connect(self.selectormode)
+        self.bnoselect.toggled.connect(lambda:formsclick(1))
+        self.brectangle.toggled.connect(lambda:formsclick(2))
+        self.bellipse.toggled.connect(lambda:formsclick(3))
+        self.blasso.toggled.connect(lambda: formsclick(4))
 
         self.selectoron = False
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
@@ -83,15 +90,32 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.newfig = plt.figure(dpi=50)
         # self.newax = self.newfig.add_subplot(111)
-        self.newax = plt.gca()
+        self.newax = plt.gca()  # for cooperation with pltc
         self.pltc = None
         self.x_clicked = None
         self.y_clicked = None
         self.mouse_second_clicked = False
 
-        self.newcanvas = FigureCanvas(self.newfig)
+        self.newcanvas = FigureCanvas(self.newfig) # must be defined because of selector next
         self.newcanvas.mpl_connect('scroll_event', self.newonscroll)
 
+        def formsclick(n):
+            if n ==1:
+                toggle_selector.ES.set_active(False)
+                toggle_selector.RS.set_active(False)
+                toggle_selector.LS.set_active(False)
+            elif n==2:
+                toggle_selector.ES.set_active(False)
+                toggle_selector.RS.set_active(True)
+                toggle_selector.LS.set_active(False)
+            elif n==3:
+                toggle_selector.ES.set_active(True)
+                toggle_selector.RS.set_active(False)
+                toggle_selector.LS.set_active(False)
+            elif n==4:
+                toggle_selector.ES.set_active(False)
+                toggle_selector.RS.set_active(False)
+                toggle_selector.LS.set_active(True)
 
         def lasso_onselect(verts):
             print(verts)
@@ -137,7 +161,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             sepkey = sepkey[1]
             layer_name = sepkey
 
-            if self.toggle_selector.RS.active and not self.toggle_selector.ES.active:
+            if toggle_selector.RS.active and not toggle_selector.ES.active:
                 if self.artefactbox.currentIndex() == 0:
                     col_str = "11"
                     rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2), fill=False,
@@ -151,7 +175,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2), fill=False,
                                          edgecolor="blue", lw=2)
                 self.newax.add_patch(rect)
-            elif self.toggle_selector.ES.active and not self.toggle_selector.RS.active:
+            elif toggle_selector.ES.active and not toggle_selector.RS.active:
                 if self.artefactbox.currentIndex() == 0:
                     col_str = "21"
                     ell = Ellipse(xy=(min(x1, x2) + np.abs(x1 - x2) / 2, min(y1, y2) + np.abs(y1 - y2) / 2),
@@ -175,18 +199,22 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             saveFile.close()
 
         def toggle_selector(event):
-            if self.selectorbox.checkedId() == 11:
+            if self.brectangle.isChecked() and not toggle_selector.RS.active and (
+                        toggle_selector.LS.active or toggle_selector.ES.active):
                 toggle_selector.ES.set_active(False)
                 toggle_selector.RS.set_active(True)
                 toggle_selector.LS.set_active(False)
-            elif self.selectorbox.checkedId() == 12:
+            elif self.bellipse.isChecked() and not toggle_selector.ES.active and (
+                        toggle_selector.LS.active or toggle_selector.RS.active):
                 toggle_selector.ES.set_active(True)
                 toggle_selector.RS.set_active(False)
                 toggle_selector.LS.set_active(False)
-            else:
+            elif self.blasso.isChecked() and (toggle_selector.ES.active or toggle_selector.RS.active
+                ) and not toggle_selector.LS.active:
                 toggle_selector.ES.set_active(False)
                 toggle_selector.RS.set_active(False)
                 toggle_selector.LS.set_active(True)
+
 
         toggle_selector.RS = RectangleSelector(self.newax, ronselect, button=[1])  # drawtype='box', useblit=False, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True
 
@@ -196,6 +224,10 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                                                   interactive=True)  # drawtype='line', minspanx=5, minspany=5, spancoords='pixels', interactive=True
 
         toggle_selector.LS = LassoSelector(self.newax, lasso_onselect, button=[1])
+        toggle_selector.ES.set_active(False)
+        toggle_selector.RS.set_active(False)
+        toggle_selector.LS.set_active(False)
+
         # connect('key_press_event', toggle_selector)
 
         self.newfig.canvas.mpl_connect('button_press_event', self.mouse_clicked)
@@ -433,8 +465,11 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         resultfile = QtWidgets.QFileDialog.getOpenFileName(self, "choose the result file",
                                         "C:/Users/hansw/Desktop/Ma_code/PyQt","Mat files(*.mat)")[0]
                     # last directory, C:/Users/hansw/Desktop/Ma_code/PyQt   , None, QtWidgets.QFileDialog.DontUseNativeDialog
-        self.conten = sio.loadmat(resultfile)
-        return self.conten
+        if resultfile:
+            self.conten = sio.loadmat(resultfile)
+            return self.conten
+        else:
+            return
 
     def addcolor(self):
         if self.vision == 2:
@@ -471,6 +506,8 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         # self.selectorbox = selectorbox
         if self.selectoron == False:
             self.selectoron = True
+            for i in reversed(range(self.maingrids.count())):  # clear the image viewing grids
+                self.maingrids.itemAt(i).widget().setParent(None)
             self.maingrids.addWidget(self.newcanvas)
 
             self.selectorPath = QtWidgets.QFileDialog.getExistingDirectory(self, "choose the image to view",
@@ -702,34 +739,30 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
     def mouse_move(self, event):
         if self.mouse_second_clicked:
             factor = 10
-            __x = event.xdata - self.x_clicked
-            __y = event.ydata - self.y_clicked
-            print(__x)
-            print(__y)
+            __x = event.x - self.x_clicked
+            __y = event.y - self.y_clicked
             v_min, v_max = self.pltc.get_clim()
-            print(v_min, v_max)
             if __x >= 0 and __y >= 0:
-                print("h")
-                __vmin = np.abs(__x) * factor + np.abs(__y) * factor
-                __vmax = np.abs(__x) * factor - np.abs(__y) * factor
-            elif __x < 0 and __y >= 0:
-                print("h")
-                __vmin = -np.abs(__x) * factor + np.abs(__y) * factor
-                __vmax = -np.abs(__x) * factor - np.abs(__y) * factor
-
-            elif __x < 0 and __y < 0:
-                print("h")
-                __vmin = -np.abs(__x) * factor - np.abs(__y) * factor
-                __vmax = -np.abs(__x) * factor + np.abs(__y) * factor
-
-            else:
-                print("h")
                 __vmin = np.abs(__x) * factor - np.abs(__y) * factor
                 __vmax = np.abs(__x) * factor + np.abs(__y) * factor
+            elif __x < 0 and __y >= 0:
+                __vmin = -np.abs(__x) * factor - np.abs(__y) * factor
+                __vmax = -np.abs(__x) * factor + np.abs(__y) * factor
+            elif __x < 0 and __y < 0:
+                __vmin = -np.abs(__x) * factor + np.abs(__y) * factor
+                __vmax = -np.abs(__x) * factor - np.abs(__y) * factor
+            else:
+                __vmin = np.abs(__x) * factor + np.abs(__y) * factor
+                __vmax = np.abs(__x) * factor - np.abs(__y) * factor
+
+            if (float(__vmin - __vmax)) / (v_max - v_min + 0.001) > 1:
+                nmb = (float(__vmin - __vmax)) / (v_max - v_min + 0.001) + 1
+                __vmin = (float(__vmin - __vmax)) / nmb * (__vmin / (__vmin - __vmax))
+                __vmax = (float(__vmin - __vmax)) / nmb * (__vmax / (__vmin - __vmax))
 
             v_min += __vmin
             v_max += __vmax
-            self.pltc.set_clim(vmin=v_min, vmax=v_max)
+            self.pltc.set_clim(vmin=v_min.round(2), vmax=v_max.round(2))
             self.newfig.canvas.draw()
 
     def mouse_release(self, event):
@@ -756,11 +789,11 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     mainWindow = MyApp()
     mainWindow.showMaximized()
-    newwindow1 = CNN_window()
-    newwindow2 = DataPre_window()
+    # newwindow1 = CNN_window()
+    # newwindow2 = DataPre_window()
     #newwindow3 = Patches_window()
-    mainWindow.setting_CNN.clicked.connect(newwindow1.show)
-    mainWindow.Datapre.clicked.connect(newwindow2.show)
+    # mainWindow.setting_CNN.clicked.connect(newwindow1.show)
+    # mainWindow.Datapre.clicked.connect(newwindow2.show)
     #mainWindow.resultpatch.clicked.connect(newwindow3.show)
 
     mainWindow.show()
