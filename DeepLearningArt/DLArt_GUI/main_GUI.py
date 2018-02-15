@@ -14,6 +14,15 @@ from PyQt5.uic import *
 
 from DeepLearningArt.DLArt_GUI.dlart_gui import Ui_DLArt_GUI
 from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
+
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from DeepLearningArt.DLArt_GUI.PlotCanvas import PlotCanvas
+from matplotlib.figure import Figure
+
+import random
+
 #from dlart_gui import Ui_DLArt_GUI
 #from dlart import DeepLearningArtApp
 
@@ -71,6 +80,38 @@ class MainWindow(QMainWindow):
         self.ui.CheckBox_BodyRegion.setChecked(self.deepLearningArtApp.getUsingBodyRegions())
         self.ui.CheckBox_TWeighting.setChecked(self.deepLearningArtApp.getUsingTWeighting())
 
+        #initilize training parameters
+        self.ui.DoubleSpinBox_WeightDecay.setValue(self.deepLearningArtApp.getWeightDecay())
+        self.ui.DoubleSpinBox_Momentum.setValue(self.deepLearningArtApp.getMomentum())
+        self.ui.CheckBox_Nesterov.setChecked(self.deepLearningArtApp.getNesterovEnabled())
+        self.ui.CheckBox_DataAugmentation.setChecked(self.deepLearningArtApp.getDataAugmentationEnabled())
+        self.ui.CheckBox_DataAug_horizontalFlip.setChecked(self.deepLearningArtApp.getHorizontalFlip())
+        self.ui.CheckBox_DataAug_verticalFlip.setChecked(self.deepLearningArtApp.getVerticalFlip())
+        self.ui.CheckBox_DataAug_Rotation.setChecked(self.deepLearningArtApp.getRotation())
+        self.ui.CheckBox_DataAug_zcaWeighting.setChecked(self.deepLearningArtApp.getZCA_Whitening())
+        self.ui.CheckBox_DataAug_HeightShift.setChecked(self.deepLearningArtApp.getHeightShift())
+        self.ui.CheckBox_DataAug_WidthShift.setChecked(self.deepLearningArtApp.getWidthShift())
+        self.check_dataAugmentation_enabled()
+
+        ################################################################################################################
+        # ArtGAN Stuff
+        self.manageTreeView_DB_ArtGAN()
+        self.manageTreeViewDatasetsArtGAN()
+
+        # Signals and Slots
+        self.ui.Button_DB_ArtGAN.clicked.connect(self.button_DB_ArtGAN_clicked)
+        self.ui.Button_Patching_ArtGAN.clicked.connect(self.button_patching_ArtGAN_clicked)
+        self.ui.HorizontalSlider_ArtGAN.sliderMoved.connect(self.slider_ArtGAN_moved)
+        self.ui.HorizontalSlider_ArtGAN.valueChanged.connect(self.slider_ArtGAN_changed)
+
+        self.figureImg = Figure(figsize=(5, 5))
+        self.canvas_figImg = FigureCanvas(self.figureImg)
+        self.toolbar_figCanvas = NavigationToolbar(self.canvas_figImg, self)
+        self.ui.verticalLayout_ArtGAN.addWidget(self.canvas_figImg)
+        self.ui.verticalLayout_ArtGAN.addWidget(self.toolbar_figCanvas)
+
+        ################################################################################################################
+
         ################################################################################################################
         # Signals and Slots
         ################################################################################################################
@@ -109,9 +150,17 @@ class MainWindow(QMainWindow):
 
         # combobox dnns
         self.ui.ComboBox_DNNs.currentIndexChanged.connect(self.selectedDNN_changed)
+
+        # show Dataset for ArtGAN Button
+        self.ui.Button_ShowDataset.clicked.connect(self.button_showDataset_clicked)
+
+        # data augmentation enbaled changed
+        self.ui.CheckBox_DataAugmentation.stateChanged.connect(self.check_dataAugmentation_enabled)
+
         ################################################################################################################
 
     def button_train_clicked(self):
+        # set epochs
         self.deepLearningArtApp.setEpochs(self.ui.SpinBox_Epochs.value())
 
         # handle check states of check boxes for used classes
@@ -119,6 +168,7 @@ class MainWindow(QMainWindow):
         self.deepLearningArtApp.setUsingBodyRegions(self.ui.CheckBox_BodyRegion.isChecked())
         self.deepLearningArtApp.setUsingTWeighting(self.ui.CheckBox_TWeighting.isChecked())
 
+        # set learning rates and batch sizes
         try:
             batchSizes = np.fromstring(self.ui.LineEdit_BatchSizes.text(), dtype=np.int, sep=',')
             self.deepLearningArtApp.setBatchSizes(batchSizes)
@@ -127,13 +177,80 @@ class MainWindow(QMainWindow):
         except:
             raise ValueError("Wrong input format of learning rates! Enter values seperated by ','. For example: 0.1,0.01,0.001")
 
+        # set optimizer
+        selectedOptimizer = self.ui.ComboBox_Optimizers.currentText()
+        if selectedOptimizer == "SGD":
+            self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.SGD_OPTIMIZER)
+        elif selectedOptimizer == "RMSprop":
+            self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.RMS_PROP_OPTIMIZER)
+        elif selectedOptimizer == "Adagrad":
+            self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.ADAGRAD_OPTIMIZER)
+        elif selectedOptimizer == "Adadelta":
+            self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.ADADELTA_OPTIMIZER)
+        elif selectedOptimizer == "Adam":
+            self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.ADAM_OPTIMIZER)
+        else:
+            raise ValueError("Unknown Optimizer!")
+
+        # set weigth decay
+        self.deepLearningArtApp.setWeightDecay(float(self.ui.DoubleSpinBox_WeightDecay.value()))
+        # set momentum
+        self.deepLearningArtApp.setMomentum(float(self.ui.DoubleSpinBox_Momentum.value()))
+        # set nesterov enabled
+        if self.ui.CheckBox_Nesterov.checkState() == Qt.Checked:
+            self.deepLearningArtApp.setNesterovEnabled(True)
+        else:
+            self.deepLearningArtApp.setNesterovEnabled(False)
+
+        # handle data augmentation
+        if self.ui.CheckBox_DataAugmentation.checkState() == Qt.Checked:
+            self.deepLearningArtApp.setDataAugmentationEnabled(True)
+            # get all checked data augmentation options
+            if self.ui.CheckBox_DataAug_horizontalFlip.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setHorizontalFlip(True)
+            else:
+                self.deepLearningArtApp.setHorizontalFlip(False)
+
+            if self.ui.CheckBox_DataAug_verticalFlip.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setVerticalFlip(True)
+            else:
+                self.deepLearningArtApp.setVerticalFlip(False)
+
+            if self.ui.CheckBox_DataAug_Rotation.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setRotation(True)
+            else:
+                self.deepLearningArtApp.setRotation(False)
+
+            if self.ui.CheckBox_DataAug_zcaWeighting.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setZCA_Whitening(True)
+            else:
+                self.deepLearningArtApp.setZCA_Whitening(False)
+
+            if self.ui.CheckBox_DataAug_HeightShift.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setHeightShift(True)
+            else:
+                self.deepLearningArtApp.setHeightShift(False)
+
+            if self.ui.CheckBox_DataAug_WidthShift.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setWidthShift(True)
+            else:
+                self.deepLearningArtApp.setWidthShift(False)
+        else:
+            # disable data augmentation
+            self.deepLearningArtApp.setDataAugmentationEnabled(False)
+
+
+        # start training process
         self.deepLearningArtApp.performTraining()
+
 
 
     def button_markingsPath_clicked(self):
         dir = self.openFileNamesDialog(self.deepLearningArtApp.getMarkingsPath())
         self.ui.Label_MarkingsPath.setText(dir)
         self.deepLearningArtApp.setMarkingsPath(dir)
+
+
 
     def button_patching_clicked(self):
         if self.deepLearningArtApp.getSplittingMode() == DeepLearningArtApp.NONE_SPLITTING:
@@ -196,6 +313,8 @@ class MainWindow(QMainWindow):
         self.ui.Label_OutputPathPatching.setText(dir)
         self.deepLearningArtApp.setOutputPathForPatching(dir)
 
+
+
     def getSelectedPatients(self):
         selectedPatients = []
         for i in range(self.ui.TreeWidget_Patients.topLevelItemCount()):
@@ -204,10 +323,14 @@ class MainWindow(QMainWindow):
 
         self.deepLearningArtApp.setSelectedPatients(selectedPatients)
 
+
+
     def button_DB_clicked(self):
         dir = self.openFileNamesDialog(self.deepLearningArtApp.getPathToDatabase())
         self.deepLearningArtApp.setPathToDatabase(dir)
         self.manageTreeView()
+
+
 
     def openFileNamesDialog(self, dir=None):
         if dir==None:
@@ -220,6 +343,7 @@ class MainWindow(QMainWindow):
         # path to database
         dir = str(ret)
         return dir
+
 
 
     def manageTreeView(self):
@@ -236,6 +360,8 @@ class MainWindow(QMainWindow):
 
             self.ui.Label_DB.setText(self.deepLearningArtApp.getPathToDatabase())
 
+
+
     def manageTreeViewDatasets(self):
         print(os.path.dirname(self.deepLearningArtApp.getPathToDatabase()))
         # manage datasets
@@ -247,6 +373,8 @@ class MainWindow(QMainWindow):
             item.setCheckState(0, Qt.Unchecked)
             self.ui.TreeWidget_Datasets.addTopLevelItem(item)
 
+
+
     def getSelectedDatasets(self):
         selectedDatasets = []
         for i in range(self.ui.TreeWidget_Datasets.topLevelItemCount()):
@@ -255,8 +383,12 @@ class MainWindow(QMainWindow):
 
         self.deepLearningArtApp.setSelectedDatasets(selectedDatasets)
 
+
+
     def selectedDNN_changed(self):
         self.deepLearningArtApp.setNeuralNetworkModel(self.ui.ComboBox_DNNs.currentText())
+
+
 
     def button_useCurrentData_clicked(self):
         if self.deepLearningArtApp.datasetAvailable() == True:
@@ -266,6 +398,8 @@ class MainWindow(QMainWindow):
             self.ui.Button_useCurrentData.setEnabled(False)
             self.ui.Label_currentDataset.setText("No Dataset selected!")
             self.ui.GroupBox_TrainNN.setEnabled(False)
+
+
 
     def button_selectDataset_clicked(self):
         pathToDataset = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
@@ -280,13 +414,19 @@ class MainWindow(QMainWindow):
         else:
             self.ui.GroupBox_TrainNN.setEnabled(False)
 
+
+
     def button_learningOutputPath_clicked(self):
         path = self.openFileNamesDialog(self.deepLearningArtApp.getLearningOutputPath())
         self.deepLearningArtApp.setLearningOutputPath(path)
         self.ui.Label_LearningOutputPath.setText(path)
 
+
+
     def updateProgressBarTraining(self, val):
         self.ui.ProgressBar_training.setValue(val)
+
+
 
     def splittingMode_changed(self):
 
@@ -339,6 +479,166 @@ class MainWindow(QMainWindow):
 
         elif self.ui.ComboBox_splittingMode.currentIndex() == 3:
             self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.PATIENT_CROSS_VALIDATION_SPLITTING)
+
+
+
+    def check_dataAugmentation_enabled(self):
+        if self.ui.CheckBox_DataAugmentation.checkState() == Qt.Checked:
+            self.ui.CheckBox_DataAug_horizontalFlip.setEnabled(True)
+            self.ui.CheckBox_DataAug_verticalFlip.setEnabled(True)
+            self.ui.CheckBox_DataAug_Rotation.setEnabled(True)
+            self.ui.CheckBox_DataAug_zcaWeighting.setEnabled(True)
+            self.ui.CheckBox_DataAug_HeightShift.setEnabled(True)
+            self.ui.CheckBox_DataAug_WidthShift.setEnabled(True)
+        else:
+            self.ui.CheckBox_DataAug_horizontalFlip.setEnabled(False)
+            self.ui.CheckBox_DataAug_verticalFlip.setEnabled(False)
+            self.ui.CheckBox_DataAug_Rotation.setEnabled(False)
+            self.ui.CheckBox_DataAug_zcaWeighting.setEnabled(False)
+            self.ui.CheckBox_DataAug_HeightShift.setEnabled(False)
+            self.ui.CheckBox_DataAug_WidthShift.setEnabled(False)
+
+
+
+    ###################################################################################################################
+    ##############################                 ArtGAN Stuff             ###########################################
+    ###################################################################################################################
+    def button_patching_ArtGAN_clicked(self):
+
+        # handle store mode
+        self.deepLearningArtApp.setStoreMode_ArtGAN(self.ui.ComboBox_StoreOptions.currentIndex())
+        self.deepLearningArtApp.setPatchSizeX_ArtGAN(int(self.ui.SpinBox_PatchX_ArtGAN.value()))
+        self.deepLearningArtApp.setPatchSizeY_ArtGAN(int(self.ui.SpinBox_PatchY_ArtGAN.value()))
+        self.deepLearningArtApp.setPatchOverlap_ArtGAN(float(self.ui.SpinBox_PatchOverlapp_ArtGAN.value()))
+
+
+        #get selected datasets
+        selectedDatasets = []
+        for i in range(self.ui.TreeWidget_Datasets_ArtGAN.topLevelItemCount()):
+            if self.ui.TreeWidget_Datasets_ArtGAN.topLevelItem(i).checkState(0) == Qt.Checked:
+                selectedDatasets.append(self.ui.TreeWidget_Datasets_ArtGAN.topLevelItem(i).text(0))
+
+        #get selected patients
+        selectedPatients = []
+        for i in range(self.ui.TreeWidget_Patients_ArtGAN.topLevelItemCount()):
+            if self.ui.TreeWidget_Patients_ArtGAN.topLevelItem(i).checkState(0) == Qt.Checked:
+                selectedPatients.append(self.ui.TreeWidget_Patients_ArtGAN.topLevelItem(i).text(0))
+
+        #get reference datasets for selected artifacts datasets
+        artGAN_datapairs = {}
+        for i in selectedDatasets:
+            bodyRegionOfSelectedDataset, _ = DeepLearningArtApp.datasets[i].getBodyRegion()
+            mrtWeightingOfSelectedDataset, _ = DeepLearningArtApp.datasets[i].getMRTWeighting()
+            artGAN_datapairs[i] = self.getArtGANPairByBodyRegion(bodyRegionOfSelectedDataset,
+                                                                 mrtWeightingOfSelectedDataset)
+
+        self.deepLearningArtApp.setPatientsArtGAN(selectedPatients)
+        self.deepLearningArtApp.setDatasetArtGAN(selectedDatasets)
+        self.deepLearningArtApp.setDatasets_ArtGAN_Pairs(artGAN_datapairs)
+
+        self.deepLearningArtApp.generateDataset_ArtGAN()
+
+
+
+    def button_DB_ArtGAN_clicked(self):
+        dir = self.openFileNamesDialog(self.deepLearningArtApp.getPathToDatabase())
+        self.ui.Label_MarkingsPath.setText(dir)
+        self.deepLearningArtApp.setPathToDatabase(dir)
+
+
+
+    def getArtGANPairByBodyRegion(self, param_bodyregion, param_mrtWeighting):
+        for item in DeepLearningArtApp.datasets:
+            bodyregion, labelBodyRegion = DeepLearningArtApp.datasets[item].getBodyRegion()
+            mrtWeighting, tWeighting = DeepLearningArtApp.datasets[item].getMRTWeighting()
+            if param_bodyregion == bodyregion \
+                    and DeepLearningArtApp.datasets[item].getArtefact() == 'ref' \
+                    and mrtWeighting == param_mrtWeighting:
+                datasetPair = item
+                break
+        return  datasetPair
+
+
+
+    def manageTreeViewDatasetsArtGAN(self):
+        print(os.path.dirname(self.deepLearningArtApp.getPathToDatabase()))
+        # manage datasets
+        self.ui.TreeWidget_Datasets_ArtGAN.setHeaderLabel("Artefact Datasets:")
+
+        artefact_datasets = []
+
+        for ds in DeepLearningArtApp.datasets.keys():
+            dataset = DeepLearningArtApp.datasets[ds]
+            if dataset.getArtefact() != 'ref':
+                artefact_datasets.append(dataset.getPathdata())
+
+        for i in artefact_datasets:
+            item = QTreeWidgetItem()
+            item.setText(0, i)
+            item.setCheckState(0, Qt.Unchecked)
+            self.ui.TreeWidget_Datasets_ArtGAN.addTopLevelItem(item)
+
+
+
+    def manageTreeView_DB_ArtGAN(self):
+        # all patients in database
+        if os.path.exists(self.deepLearningArtApp.getPathToDatabase()):
+            subdirs = os.listdir(self.deepLearningArtApp.getPathToDatabase())
+            self.ui.TreeWidget_Patients_ArtGAN.setHeaderLabel("Patients:")
+
+            for x in subdirs:
+                item = QTreeWidgetItem()
+                item.setText(0, str(x))
+                item.setCheckState(0, Qt.Unchecked)
+                self.ui.TreeWidget_Patients_ArtGAN.addTopLevelItem(item)
+
+            self.ui.Label_DB_ArtGAN.setText(self.deepLearningArtApp.getPathToDatabase())
+
+
+
+    ####################################################################################################################
+    ####################################################################################################################
+    ####################################################################################################################
+
+
+
+    def slider_ArtGAN_moved(self):
+        val = int(self.ui.HorizontalSlider_ArtGAN.value())
+        self.ui.Label_Slider_ArtGAN.setText(str(val))
+
+
+
+    def button_showDataset_clicked(self):
+        self.ui.HorizontalSlider_ArtGAN.setMaximum(int(self.deepLearningArtApp.getArtRefPairLength()-1))
+        self.ui.HorizontalSlider_ArtGAN.setMinimum(0)
+        self.ui.HorizontalSlider_ArtGAN.setValue(100)
+        self.plotImg(figure=self.figureImg, canvas=self.canvas_figImg, index=100)
+
+
+
+    def slider_ArtGAN_changed(self):
+        val = int(self.ui.HorizontalSlider_ArtGAN.value())
+        self.plotImg(figure=self.figureImg, canvas=self.canvas_figImg, index=val)
+        self.ui.Label_Slider_ArtGAN.setText(str(val))
+
+
+
+    def plotImg(self, figure, canvas, index):
+        art, ref = self.deepLearningArtApp.getArtRefPair(index)
+
+        data = [random.random() for i in range(25)]
+
+        axes_art = figure.add_subplot(121)
+        axes_art.imshow(art, cmap='gray')
+        axes_art.set_title('Artefact')
+
+        axes_ref = figure.add_subplot(122)
+        axes_ref.imshow(ref, cmap='gray')
+        axes_ref.set_title('Reference')
+
+        canvas.draw()
+
+
 
 
 

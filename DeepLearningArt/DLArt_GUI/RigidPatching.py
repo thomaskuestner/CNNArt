@@ -158,7 +158,7 @@ def fRigidPatching_patchLabeling(dicom_numpy_array, patchSize, patchOverlap, rat
 #########################################################################################################################################
 
 def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, dataset):
-    #ToDo error for patchSizeZ = 5 at line 206. To different Array sizes (40,40,4) and (40,40,5). Padding problem????
+    #ToDo error for patchSizeZ = 5. To different Array sizes (40,40,4) and (40,40,5). Padding problem with uneven z-patch sizes????
 
     move_artefact = False
     shim_artefact = False
@@ -172,17 +172,26 @@ def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, ma
 
     dOverlap = np.round(np.multiply(patchSize, patchOverlap))
     dNotOverlap = np.round(np.multiply(patchSize, (1 - patchOverlap)))
-    size_zero_pad = np.array(([math.ceil((dicom_numpy_array.shape[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[
-        0], math.ceil((dicom_numpy_array.shape[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1], math.ceil((dicom_numpy_array.shape[2] - dOverlap[2]) / (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2]]))
-    zero_pad = np.array(([int(size_zero_pad[0]) - dicom_numpy_array.shape[0], int(size_zero_pad[1]) - dicom_numpy_array.shape[1], int(size_zero_pad[2]) - dicom_numpy_array.shape[2]]))
-    zero_pad_part = np.array(([int(math.ceil(zero_pad[0] / 2)), int(math.ceil(zero_pad[1] / 2)), int(math.ceil(zero_pad[2] / 2))]))
+    size_zero_pad = np.array(([math.ceil((dicom_numpy_array.shape[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0],
+                               math.ceil((dicom_numpy_array.shape[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1],
+                               math.ceil((dicom_numpy_array.shape[2] - dOverlap[2]) / (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2]]))
+    zero_pad = np.array(([int(size_zero_pad[0]) - dicom_numpy_array.shape[0],
+                          int(size_zero_pad[1]) - dicom_numpy_array.shape[1],
+                          int(size_zero_pad[2]) - dicom_numpy_array.shape[2]]))
+    zero_pad_part = np.array(([int(math.ceil(zero_pad[0] / 2)),
+                               int(math.ceil(zero_pad[1] / 2)),
+                               int(math.ceil(zero_pad[2] / 2))]))
 
-    Img_zero_pad = np.lib.pad(dicom_numpy_array, (
-    (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (zero_pad_part[2], zero_pad[2] - zero_pad_part[2])),
+    Img_zero_pad = np.lib.pad(dicom_numpy_array,
+                              ((zero_pad_part[0], zero_pad[0] - zero_pad_part[0]),
+                               (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]),
+                               (zero_pad_part[2], zero_pad[2] - zero_pad_part[2])),
                               mode='constant')
 
     Mask_zero_pad = np.lib.pad(mask_numpy_array,
-                               ((zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (zero_pad_part[2], zero_pad[2] - zero_pad_part[2])),
+                               ((zero_pad_part[0], zero_pad[0] - zero_pad_part[0]),
+                                (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]),
+                                (zero_pad_part[2], zero_pad[2] - zero_pad_part[2])),
                                mode='constant')
 
     nbPatches = ((size_zero_pad[0]-patchSize[0])/((1-patchOverlap)*patchSize[0])+1)*((size_zero_pad[1]-patchSize[1])/((1-patchOverlap)*patchSize[1])+1)*((size_zero_pad[2]-patchSize[2])/(np.round((1-patchOverlap)*patchSize[2]))+1)

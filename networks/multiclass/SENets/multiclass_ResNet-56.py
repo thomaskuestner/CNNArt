@@ -18,7 +18,9 @@ from keras.regularizers import l2  # , activity_l2
 from keras.optimizers import SGD
 
 from networks.multiclass.SENets.deep_residual_learning_blocks import *
-
+from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
+from keras.preprocessing.image import ImageDataGenerator
+from matplotlib import pyplot as plt
 
 def createModel(patchSize, numClasses):
     # ResNet-56 based on CIFAR-10, for 32x32 Images
@@ -84,7 +86,7 @@ def createModel(patchSize, numClasses):
     return cnn
 
 
-def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None):
+def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
     # grid search on batch_sizes and learning rates
     # parse inputs
     batchSizes = [64] if batchSizes is None else batchSizes
@@ -99,10 +101,10 @@ def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=Non
 
     for iBatch in batchSizes:
         for iLearn in learningRates:
-            fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs)
+            fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs, dlart_handle)
 
 
-def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None):
+def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None):
     # parse inputs
     batchSize = 64 if batchSize is None else batchSize
     learningRate = 0.01 if learningRate is None else learningRate
@@ -131,26 +133,268 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     # create model
     cnn = createModel(patchSize, numClasses=numClasses)
 
-    # opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
-    opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-    callbacks = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
+    # create optimizer
+    if dlart_handle != None:
+        if dlart_handle.getOptimizer() == DeepLearningArtApp.SGD_OPTIMIZER:
+            opti = keras.optimizers.SGD(lr=learningRate,
+                                        momentum=dlart_handle.getMomentum(),
+                                        decay=dlart_handle.getWeightDecay(),
+                                        nesterov=dlart_handle.getNesterovEnabled())
+        elif dlart_handle.getOptimizer() == DeepLearningArtApp.RMS_PROP_OPTIMIZER:
+            opti = keras.optimizers.RMSprop(lr=learningRate, decay=dlart_handle.getWeightDecay())
+        elif dlart_handle.getOptimizer() == DeepLearningArtApp.ADAGRAD_OPTIMIZER:
+            opti = keras.optimizers.Adagrad(lr=learningRate, epsilon=None, decay=dlart_handle.getWeightDecay())
+        elif dlart_handle.getOptimizer() == DeepLearningArtApp.ADADELTA_OPTIMIZER:
+            opti = keras.optimizers.Adadelta(lr=learningRate, rho=0.95, epsilon=None,
+                                             decay=dlart_handle.getWeightDecay())
+        elif dlart_handle.getOptimizer() == DeepLearningArtApp.ADAM_OPTIMIZER:
+            opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=None,
+                                         decay=dlart_handle.getWeightDecay())
+        else:
+            raise ValueError("Unknown Optimizer!")
+    else:
+        # opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
+        opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 
+    cnn.summary()
+
+    # compile model
     cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
 
-    result = cnn.fit(X_train,
-                     y_train,
-                     validation_data=[X_test, y_test],
-                     epochs=iEpochs,
-                     batch_size=batchSize,
-                     callbacks=callbacks,
-                     verbose=1)
+    # callbacks
+    callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=8, verbose=1)
+    callback_tensorBoard = keras.callbacks.TensorBoard(log_dir=dlart_handle.getLearningOutputPath() + '/logs',
+                                                       histogram_freq=2,
+                                                       batch_size=batchSize,
+                                                       write_graph=True,
+                                                       write_grads=True,
+                                                       write_images=True,
+                                                       embeddings_freq=0,
+                                                       embeddings_layer_names=None,
+                                                       embeddings_metadata=None)
 
+    callbacks = [callback_earlyStopping, callback_tensorBoard]
+
+
+    # data augmentation
+    if dlart_handle.getDataAugmentationEnabled() == True:
+        # Initialize Image Generator
+        # all shifted and rotated images are filled with zero padded pixels
+        if dlart_handle.getRotation() == True and dlart_handle.getHeightShift() == False and dlart_handle.getWidthShift() == False:
+            datagen = ImageDataGenerator(
+                featurewise_center=False,
+                samplewise_center=False,
+                featurewise_std_normalization=False,
+                samplewise_std_normalization=False,
+                zca_whitening=dlart_handle.getZCA_Whitening(),
+                zca_epsilon=1e-6,
+                rotation_range=30,
+                width_shift_range=0.,
+                height_shift_range=0.,
+                shear_range=0.,
+                zoom_range=0.,
+                channel_shift_range=0.,
+                fill_mode='constant',
+                cval=0.,
+                horizontal_flip=dlart_handle.getHorizontalFlip(),
+                vertical_flip=dlart_handle.getVerticalFlip(),
+                rescale=None,
+                preprocessing_function=None,
+                data_format=K.image_data_format()
+            )
+        elif dlart_handle.getRotation() == False and dlart_handle.getHeightShift() == True and dlart_handle.getWidthShift() == False:
+            datagen = ImageDataGenerator(
+                featurewise_center=False,
+                samplewise_center=False,
+                featurewise_std_normalization=False,
+                samplewise_std_normalization=False,
+                zca_whitening=dlart_handle.getZCA_Whitening(),
+                zca_epsilon=1e-6,
+                rotation_range=0,
+                width_shift_range=0.,
+                height_shift_range=0.2,
+                shear_range=0.,
+                zoom_range=0.,
+                channel_shift_range=0.,
+                fill_mode='constant',
+                cval=0.,
+                horizontal_flip=dlart_handle.getHorizontalFlip(),
+                vertical_flip=dlart_handle.getVerticalFlip(),
+                rescale=None,
+                preprocessing_function=None,
+                data_format=K.image_data_format()
+            )
+        elif dlart_handle.getRotation() == False and dlart_handle.getHeightShift() == False and dlart_handle.getWidthShift() == True:
+            datagen = ImageDataGenerator(
+                featurewise_center=False,
+                samplewise_center=False,
+                featurewise_std_normalization=False,
+                samplewise_std_normalization=False,
+                zca_whitening=dlart_handle.getZCA_Whitening(),
+                zca_epsilon=1e-6,
+                rotation_range=0,
+                width_shift_range=0.2,
+                height_shift_range=0,
+                shear_range=0.,
+                zoom_range=0.,
+                channel_shift_range=0.,
+                fill_mode='constant',
+                cval=0.,
+                horizontal_flip=dlart_handle.getHorizontalFlip(),
+                vertical_flip=dlart_handle.getVerticalFlip(),
+                rescale=None,
+                preprocessing_function=None,
+                data_format=K.image_data_format()
+            )
+        elif dlart_handle.getRotation() == True and dlart_handle.getHeightShift() == True and dlart_handle.getWidthShift() == False:
+            datagen = ImageDataGenerator(
+                featurewise_center=False,
+                samplewise_center=False,
+                featurewise_std_normalization=False,
+                samplewise_std_normalization=False,
+                zca_whitening=dlart_handle.getZCA_Whitening(),
+                zca_epsilon=1e-6,
+                rotation_range=30,
+                width_shift_range=0.,
+                height_shift_range=0.2,
+                shear_range=0.,
+                zoom_range=0.,
+                channel_shift_range=0.,
+                fill_mode='constant',
+                cval=0.,
+                horizontal_flip=dlart_handle.getHorizontalFlip(),
+                vertical_flip=dlart_handle.getVerticalFlip(),
+                rescale=None,
+                preprocessing_function=None,
+                data_format=K.image_data_format()
+            )
+        elif dlart_handle.getRotation() == True and dlart_handle.getHeightShift() == False and dlart_handle.getWidthShift() == True:
+            datagen = ImageDataGenerator(
+                featurewise_center=False,
+                samplewise_center=False,
+                featurewise_std_normalization=False,
+                samplewise_std_normalization=False,
+                zca_whitening=dlart_handle.getZCA_Whitening(),
+                zca_epsilon=1e-6,
+                rotation_range=30,
+                width_shift_range=0.2,
+                height_shift_range=0.,
+                shear_range=0.,
+                zoom_range=0.,
+                channel_shift_range=0.,
+                fill_mode='constant',
+                cval=0.,
+                horizontal_flip=dlart_handle.getHorizontalFlip(),
+                vertical_flip=dlart_handle.getVerticalFlip(),
+                rescale=None,
+                preprocessing_function=None,
+                data_format=K.image_data_format()
+            )
+        elif dlart_handle.getRotation() == False and dlart_handle.getHeightShift() == True and dlart_handle.getWidthShift() == True:
+            datagen = ImageDataGenerator(
+                featurewise_center=False,
+                samplewise_center=False,
+                featurewise_std_normalization=False,
+                samplewise_std_normalization=False,
+                zca_whitening=dlart_handle.getZCA_Whitening(),
+                zca_epsilon=1e-6,
+                rotation_range=0,
+                width_shift_range=0.2,
+                height_shift_range=0.2,
+                shear_range=0.,
+                zoom_range=0.,
+                channel_shift_range=0.,
+                fill_mode='constant',
+                cval=0.,
+                horizontal_flip=dlart_handle.getHorizontalFlip(),
+                vertical_flip=dlart_handle.getVerticalFlip(),
+                rescale=None,
+                preprocessing_function=None,
+                data_format=K.image_data_format()
+            )
+        elif dlart_handle.getRotation() == True and dlart_handle.getHeightShift() == True and dlart_handle.getWidthShift() == True:
+            datagen = ImageDataGenerator(
+                featurewise_center=False,
+                samplewise_center=False,
+                featurewise_std_normalization=False,
+                samplewise_std_normalization=False,
+                zca_whitening=dlart_handle.getZCA_Whitening(),
+                zca_epsilon=1e-6,
+                rotation_range=30,
+                width_shift_range=0.2,
+                height_shift_range=0.2,
+                shear_range=0.,
+                zoom_range=0.,
+                channel_shift_range=0.,
+                fill_mode='constant',
+                cval=0.,
+                horizontal_flip=dlart_handle.getHorizontalFlip(),
+                vertical_flip=dlart_handle.getVerticalFlip(),
+                rescale=None,
+                preprocessing_function=None,
+                data_format=K.image_data_format()
+            )
+        elif dlart_handle.getRotation() == False and dlart_handle.getHeightShift() == False and dlart_handle.getWidthShift() == False:
+            datagen = ImageDataGenerator(
+                featurewise_center=False,
+                samplewise_center=False,
+                featurewise_std_normalization=False,
+                samplewise_std_normalization=False,
+                zca_whitening=dlart_handle.getZCA_Whitening(),
+                zca_epsilon=1e-6,
+                rotation_range=0,
+                width_shift_range=0.,
+                height_shift_range=0.,
+                shear_range=0.,
+                zoom_range=0.,
+                channel_shift_range=0.,
+                fill_mode='constant',
+                cval=0.,
+                horizontal_flip=dlart_handle.getHorizontalFlip(),
+                vertical_flip=dlart_handle.getVerticalFlip(),
+                rescale=None,
+                preprocessing_function=None,
+                data_format=K.image_data_format()
+            )
+        else:
+            raise ValueError("No valid data augmentation option configuration!")
+
+        # fit parameters from dataset
+        datagen.fit(X_train)
+
+        # configure batch size and get one batch of images
+        for x_batch, y_batch in datagen.flow(X_train, y_train, batch_size=9):
+            # display first 9 images
+            for i in range(0, 9):
+                plt.subplot(330+1+i)
+                plt.imshow(x_batch[i].reshape(x_batch.shape[1], x_batch.shape[2]), cmap='gray')
+            plt.show()
+            break
+
+        # fit model on data
+        result = cnn.fit_generator(datagen.flow(X_train, y_train, batch_size=batchSize),
+                                   steps_per_epoch=X_train.shape[0]//batchSize,
+                                   epochs=iEpochs,
+                                   validation_data=(X_test, y_test),
+                                   callbacks=callbacks,
+                                   workers=1,
+                                   use_multiprocessing=False
+        )
+    else:
+        result = cnn.fit(X_train,
+                         y_train,
+                         validation_data=(X_test, y_test),
+                         epochs=iEpochs,
+                         batch_size=batchSize,
+                         callbacks=callbacks,
+                         verbose=1)
+
+    # return the loss value and metrics values for the model in test mode
     score_test, acc_test = cnn.evaluate(X_test, y_test, batch_size=batchSize, verbose=1)
 
     prob_test = cnn.predict(X_test, batchSize, 0)
 
     # save model
-    json_string = cnn.to_json()
     open(model_json, 'w').write(json_string)
 
     # wei = cnn.get_weights()

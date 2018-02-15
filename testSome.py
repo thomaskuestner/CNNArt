@@ -1,5 +1,6 @@
 import numpy as np
 from keras.layers import *
+from matplotlib import pyplot as plt
 
 # from sklearn.model_selection import KFold
 #
@@ -14,8 +15,12 @@ from keras.layers import *
 #    print("TRAIN:", train_index, "TEST:", test_index)
 #    X_train, X_test = X[train_index], X[test_index]
 #    y_train, y_test = y[train_index], y[test_index]
-y_train = [1, 1, 0, 0, 1, 1]
 
-a = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32)-1)]).T
+imgs = np.ones([9, 32, 32, 1])
+img = imgs[2].reshape(32, 32)
 
-print(a)
+plt.imshow(img.reshape(32, 32), cmap='gray')
+plt.show()
+print()
+
+

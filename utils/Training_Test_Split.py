@@ -57,6 +57,13 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
             #3D patching
             allPatches = allPatches[indexSlices, :, :, :]
 
+        shapeAllY = allY.shape
+
+        if len(shapeAllY) > 1:
+            if allY.shape[0] == patchSize[0] and allY.shape[1] == patchSize[1]:
+                allY = np.transpose(allY, (2, 0, 1))
+
+
         allY = allY[indexSlices]
 
         #num of samples in test set and validation set
@@ -75,7 +82,7 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
             # 3D patching
             # subarrays as no-copy views (array slices)
             X_test = allPatches[:numSamplesTest, :, :, :]
-            X_talid = allPatches[numSamplesTest:(numSamplesTest + numSamplesValidation), :, :, :]
+            X_valid = allPatches[numSamplesTest:(numSamplesTest + numSamplesValidation), :, :, :]
             X_train = allPatches[(numSamplesTest + numSamplesValidation):, :, :, :]
 
         y_test = allY[:numSamplesTest]
