@@ -118,10 +118,9 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 toggle_selector.LS.set_active(True)
 
         def lasso_onselect(verts):
-            print(verts)
+            # print(verts)
             p = path.Path(verts)
-            with open(self.markfile, 'r') as json_data:  # 'r'
-                saveFile = json.load(json_data)
+
             patch = None
             col_str = None
             if self.artefactbox.currentIndex() == 0:
@@ -136,15 +135,26 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.newax.add_patch(patch)
             sepkey = os.path.split(self.selectorPath)
             sepkey = sepkey[1]
-            layer_name = sepkey
-            if layer_name in saveFile:
-                number_str = str(self.ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
-                saveFile[layer_name].update({number_str: p})
-            else:
-                number_str = str(self.ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
-                saveFile[layer_name] = {number_str: p}
+            layer_name = sepkey # region
 
-            saveFile.close()
+
+            with open(self.markfile) as json_data:  # 'r' read
+                saveFile = json.load(json_data)
+                p = np.ndarray.tolist(p.vertices)  #
+
+                if layer_name in saveFile:
+                    number_str = str(self.ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
+                    saveFile[layer_name][number_str] = {'vertices': p, 'codes': None}
+                else:
+                    number_str = str(self.ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
+                    saveFile[layer_name] = {number_str: {'vertices': p, 'codes': None}}
+
+            # with open(self.markfile, 'w') as json_data:
+            #     json.dump(saveFile, json_data)
+
+            with open(self.markfile, 'w') as json_data:
+                json_data.write(json.dumps(saveFile))
+
             self.newcanvas.draw()
 
         def ronselect(eclick, erelease):
@@ -153,9 +163,9 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             ell = None
             x1, y1 = eclick.xdata, eclick.ydata
             x2, y2 = erelease.xdata, erelease.ydata
-            with open(self.markfile, 'r') as json_data:  # 'r'
-                saveFile = json.load(json_data)
+
             p = np.array(([x1, y1, x2, y2]))
+
 
             sepkey = os.path.split(self.selectorPath)
             sepkey = sepkey[1]
@@ -190,13 +200,22 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                                   width=np.abs(x1 - x2), height=np.abs(y1 - y2), edgecolor="blue", fc='None', lw=2)
                 self.newax.add_patch(ell)
 
-            if layer_name in saveFile:
-                number_str = str(self.ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
-                saveFile[layer_name].update({number_str: p})
-            else:
-                number_str = str(self.ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
-                saveFile[layer_name] = {number_str: p}
-            saveFile.close()
+            with open(self.markfile) as json_data:  # 'r' read
+                saveFile = json.load(json_data)
+                p = np.ndarray.tolist(p)   # format from datapre
+                # print(p)
+
+                if layer_name in saveFile:
+                    number_str = str(self.ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
+                    # saveFile[layer_name].update({number_str: p})
+                    saveFile[layer_name][number_str] = {'points': p}
+                else:
+                    number_str = str(self.ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
+                    saveFile[layer_name] = {number_str : {'points': p}}
+            # with open(self.markfile, 'w') as json_data:
+            #     json.dump(saveFile, json_data)
+            with open(self.markfile, 'w') as json_data:
+                json_data.write(json.dumps(saveFile))
 
         def toggle_selector(event):
             if self.brectangle.isChecked() and not toggle_selector.RS.active and (
@@ -215,7 +234,6 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 toggle_selector.RS.set_active(False)
                 toggle_selector.LS.set_active(True)
 
-
         toggle_selector.RS = RectangleSelector(self.newax, ronselect, button=[1])  # drawtype='box', useblit=False, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True
 
         toggle_selector.ES = EllipseSelector(self.newax, ronselect, drawtype='line', button=[1], minspanx=5,
@@ -233,9 +251,6 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.newfig.canvas.mpl_connect('button_press_event', self.mouse_clicked)
         self.newfig.canvas.mpl_connect('motion_notify_event', self.mouse_move)
         self.newfig.canvas.mpl_connect('button_release_event', self.mouse_release)
-
-
-
 
     def load_scan(self, path):
         if path:
@@ -531,8 +546,9 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                                                                "C:/Users/hansw/Desktop/Ma_code/PyQt/Markings",
                                                                "")[0]  #slv files(*.slv)
             if self.markfile:
-                with open(self.markfile, 'r') as json_data:   # 'r'
+                with open(self.markfile, 'r') as json_data:  ##### first time
                     self.loadFile = json.load(json_data)
+                # print(self.loadFile)
             else:
                 self.selectoron = False
                 for i in reversed(range(self.maingrids.count())):
@@ -632,70 +648,72 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.pltc = plt.imshow(np.swapaxes(self.imageforselector[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
         self.newax.set_ylabel('slice %s' % (self.ind + 1))
 
-        number_Patch = 0
-        sepkey = os.path.split(self.selectorPath)
-        sepkey = sepkey[1]
-        if sepkey in self.loadFile:
-            layer = self.loadFile[sepkey]
-            cur_no = str(self.ind)
+        with open(self.markfile) as json_data:
+            loadFile2 = json.load(json_data)
+            number_Patch = 0
+            sepkey = os.path.split(self.selectorPath)
+            sepkey = sepkey[1]
+            if sepkey in loadFile2:
+                layer = loadFile2[sepkey]
+                cur_no = str(self.ind)
 
-            while (cur_no + "_11_" + str(number_Patch)) in layer or (cur_no + "_12_" + str(number_Patch)) in layer or (
-                    cur_no + "_13_" + str(number_Patch)) in layer or (cur_no + "_21_" + str(number_Patch)) in layer or (
-                    cur_no + "_22_" + str(number_Patch)) in layer or (cur_no + "_23_" + str(number_Patch)) in layer or (
-                    cur_no + "_31_" + str(number_Patch)) in layer or (cur_no + "_32_" + str(number_Patch)) in layer or (
-                    cur_no + "_33_" + str(number_Patch)) in layer:
-                patch = None
-                if cur_no + "_11_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_11_" + str(number_Patch)]
-                    p = np.asarray(p['points'])
-                    patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
-                                          np.abs(p[1] - p[3]), fill=False,
-                                          edgecolor="red", lw=2)
-                elif cur_no + "_12_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_12_" + str(number_Patch)]
-                    p = np.asarray(p['points'])
-                    patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
-                                          np.abs(p[1] - p[3]), fill=False,
-                                          edgecolor="green", lw=2)
-                elif cur_no + "_13_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_13_" + str(number_Patch)]
-                    p = np.asarray(p['points'])
-                    patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
-                                          np.abs(p[1] - p[3]), fill=False,
-                                          edgecolor="blue", lw=2)
-                elif cur_no + "_21_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_21_" + str(number_Patch)]
-                    p = np.asarray(p['points'])
-                    patch = Ellipse(
-                        xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
-                        width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="red", fc='None', lw=2)
-                elif cur_no + "_22_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_22_" + str(number_Patch)]
-                    p = np.asarray(p['points'])
-                    patch = Ellipse(
-                        xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
-                        width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="green", fc='None', lw=2)
-                elif cur_no + "_23_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_23_" + str(number_Patch)]
-                    p = np.asarray(p['points'])
-                    patch = Ellipse(
-                        xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
-                        width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="blue", fc='None', lw=2)
-                elif cur_no + "_31_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_31_" + str(number_Patch)]
-                    p = path.Path(np.asarray(p['vertices']), p['codes'])
-                    patch = patches.PathPatch(p, fill=False, edgecolor='red', lw=2)
-                elif cur_no + "_32_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_32_" + str(number_Patch)]
-                    p = path.Path(np.asarray(p['vertices']), p['codes'])
-                    patch = patches.PathPatch(p, fill=False, edgecolor='green', lw=2)
-                elif cur_no + "_33" \
-                              "_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_33_" + str(number_Patch)]
-                    p = path.Path(np.asarray(p['vertices']), p['codes'])
-                    patch = patches.PathPatch(p, fill=False, edgecolor='blue', lw=2)
-                self.newax.add_patch(patch)
-                number_Patch += 1
+                while (cur_no + "_11_" + str(number_Patch)) in layer or (cur_no + "_12_" + str(number_Patch)) in layer or (
+                        cur_no + "_13_" + str(number_Patch)) in layer or (cur_no + "_21_" + str(number_Patch)) in layer or (
+                        cur_no + "_22_" + str(number_Patch)) in layer or (cur_no + "_23_" + str(number_Patch)) in layer or (
+                        cur_no + "_31_" + str(number_Patch)) in layer or (cur_no + "_32_" + str(number_Patch)) in layer or (
+                        cur_no + "_33_" + str(number_Patch)) in layer:
+                    patch = None
+                    if cur_no + "_11_" + str(number_Patch) in layer:
+                        p = layer[cur_no + "_11_" + str(number_Patch)]
+                        p = np.asarray(p['points'])
+                        patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
+                                              np.abs(p[1] - p[3]), fill=False,
+                                              edgecolor="red", lw=2)
+                    elif cur_no + "_12_" + str(number_Patch) in layer:
+                        p = layer[cur_no + "_12_" + str(number_Patch)]
+                        p = np.asarray(p['points'])
+                        patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
+                                              np.abs(p[1] - p[3]), fill=False,
+                                              edgecolor="green", lw=2)
+                    elif cur_no + "_13_" + str(number_Patch) in layer:
+                        p = layer[cur_no + "_13_" + str(number_Patch)]
+                        p = np.asarray(p['points'])
+                        patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
+                                              np.abs(p[1] - p[3]), fill=False,
+                                              edgecolor="blue", lw=2)
+                    elif cur_no + "_21_" + str(number_Patch) in layer:
+                        p = layer[cur_no + "_21_" + str(number_Patch)]
+                        p = np.asarray(p['points'])
+                        patch = Ellipse(
+                            xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
+                            width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="red", fc='None', lw=2)
+                    elif cur_no + "_22_" + str(number_Patch) in layer:
+                        p = layer[cur_no + "_22_" + str(number_Patch)]
+                        p = np.asarray(p['points'])
+                        patch = Ellipse(
+                            xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
+                            width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="green", fc='None', lw=2)
+                    elif cur_no + "_23_" + str(number_Patch) in layer:
+                        p = layer[cur_no + "_23_" + str(number_Patch)]
+                        p = np.asarray(p['points'])
+                        patch = Ellipse(
+                            xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
+                            width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="blue", fc='None', lw=2)
+                    elif cur_no + "_31_" + str(number_Patch) in layer:
+                        p = layer[cur_no + "_31_" + str(number_Patch)]
+                        p = path.Path(np.asarray(p['vertices']), p['codes'])
+                        patch = patches.PathPatch(p, fill=False, edgecolor='red', lw=2)
+                    elif cur_no + "_32_" + str(number_Patch) in layer:
+                        p = layer[cur_no + "_32_" + str(number_Patch)]
+                        p = path.Path(np.asarray(p['vertices']), p['codes'])
+                        patch = patches.PathPatch(p, fill=False, edgecolor='green', lw=2)
+                    elif cur_no + "_33" \
+                                  "_" + str(number_Patch) in layer:
+                        p = layer[cur_no + "_33_" + str(number_Patch)]
+                        p = path.Path(np.asarray(p['vertices']), p['codes'])
+                        patch = patches.PathPatch(p, fill=False, edgecolor='blue', lw=2)
+                    self.newax.add_patch(patch)
+                    number_Patch += 1
 
         self.newcanvas.draw()  # not self.newcanvas.show()
 
@@ -707,33 +725,38 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.mouse_second_clicked = True
 
         elif event.button == 3:
-            with open(self.markfile, 'r') as json_data:  # 'r'
+            with open(self.markfile) as json_data:
                 deleteMark = json.load(json_data)
-            sepkey = os.path.split(self.selectorPath)
-            sepkey = sepkey[1]
-            layer = deleteMark[sepkey]
-            cur_no = str(self.ind)
-            cur_pa = str(len(self.newax.patches) - 1)
-            if cur_no + "_11_" + cur_pa in layer:
-                del deleteMark[sepkey][cur_no + "_11_" + cur_pa]
-            elif cur_no + "_12_" + cur_pa in layer:
-                del deleteMark[sepkey][cur_no + "_12_" + cur_pa]
-            elif cur_no + "_13_" + cur_pa in layer:
-                del deleteMark[sepkey][cur_no + "_13_" + cur_pa]
-            elif cur_no + "_21_" + cur_pa in layer:
-                del deleteMark[sepkey][cur_no + "_21_" + cur_pa]
-            elif cur_no + "_22_" + cur_pa in layer:
-                del deleteMark[sepkey][cur_no + "_22_" + cur_pa]
-            elif cur_no + "_23_" + cur_pa in layer:
-                del deleteMark[sepkey][cur_no + "_23_" + cur_pa]
-            elif cur_no + "_31_" + cur_pa in layer:
-                del deleteMark[sepkey][cur_no + "_31_" + cur_pa]
-            elif cur_no + "_32_" + cur_pa in layer:
-                del deleteMark[sepkey][cur_no + "_32_" + cur_pa]
-            elif cur_no + "_33_" + cur_pa in layer:
-                del deleteMark[sepkey][cur_no + "_33_" + cur_pa]
+                sepkey = os.path.split(self.selectorPath)
+                sepkey = sepkey[1]
+                layer = deleteMark[sepkey]
+                cur_no = str(self.ind)
+                cur_pa = str(len(self.newax.patches) - 1)
 
-            deleteMark.close()
+                if cur_no + "_11_" + cur_pa in layer:
+                    layer.pop(cur_no + "_11_" + cur_pa, None)
+                elif cur_no + "_12_" + cur_pa in layer:
+                    layer.pop(cur_no + "_12_" + cur_pa, None)
+                elif cur_no + "_13_" + cur_pa in layer:
+                    layer.pop(cur_no + "_13_" + cur_pa, None)
+                elif cur_no + "_21_" + cur_pa in layer:
+                    layer.pop(cur_no + "_21_" + cur_pa, None)
+                elif cur_no + "_22_" + cur_pa in layer:
+                    layer.pop(cur_no + "_22_" + cur_pa, None)
+                elif cur_no + "_23_" + cur_pa in layer:
+                    layer.pop(cur_no + "_23_" + cur_pa, None)
+                elif cur_no + "_31_" + cur_pa in layer:
+                    layer.pop(cur_no + "_31_" + cur_pa, None)
+                elif cur_no + "_32_" + cur_pa in layer:
+                    layer.pop(cur_no + "_32_" + cur_pa, None)
+                elif cur_no + "_33_" + cur_pa in layer:
+                    layer.pop(cur_no + "_33_" + cur_pa, None)
+
+            # with open(self.markfile, 'w') as json_data:
+            #     json.dump(deleteMark, json_data)
+            with open(self.markfile, 'w') as json_data:
+                json_data.write(json.dumps(deleteMark))
+
             self.newslicesview()
 
     def mouse_move(self, event):

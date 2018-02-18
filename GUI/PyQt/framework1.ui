@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1389</width>
-    <height>897</height>
+    <width>1550</width>
+    <height>998</height>
    </rect>
   </property>
   <property name="acceptDrops">
@@ -28,8 +28,8 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>1361</width>
-      <height>841</height>
+      <width>1521</width>
+      <height>921</height>
      </rect>
     </property>
     <property name="tabShape">
@@ -46,7 +46,7 @@
     </property>
     <widget class="QWidget" name="tab_3">
      <attribute name="title">
-      <string>main</string>
+      <string>DICOM</string>
      </attribute>
      <widget class="QWidget" name="verticalLayoutWidget">
       <property name="geometry">
@@ -409,8 +409,8 @@
        <rect>
         <x>160</x>
         <y>10</y>
-        <width>1181</width>
-        <height>801</height>
+        <width>1351</width>
+        <height>881</height>
        </rect>
       </property>
       <property name="widgetResizable">
@@ -421,8 +421,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>1179</width>
-         <height>799</height>
+         <width>1349</width>
+         <height>879</height>
         </rect>
        </property>
       </widget>
@@ -430,7 +430,7 @@
     </widget>
     <widget class="QWidget" name="tab_4">
      <attribute name="title">
-      <string>training</string>
+      <string>train</string>
      </attribute>
      <widget class="QGroupBox" name="groupBox">
       <property name="geometry">
@@ -897,7 +897,7 @@
        <rect>
         <x>540</x>
         <y>20</y>
-        <width>451</width>
+        <width>491</width>
         <height>331</height>
        </rect>
       </property>
@@ -913,8 +913,8 @@
        <rect>
         <x>530</x>
         <y>360</y>
-        <width>471</width>
-        <height>331</height>
+        <width>501</width>
+        <height>351</height>
        </rect>
       </property>
       <property name="title">
@@ -1184,7 +1184,12 @@
     </widget>
     <widget class="QWidget" name="tab_5">
      <attribute name="title">
-      <string>network visualization</string>
+      <string>view network</string>
+     </attribute>
+    </widget>
+    <widget class="QWidget" name="tab_6">
+     <attribute name="title">
+      <string>metrics</string>
      </attribute>
     </widget>
    </widget>
@@ -1195,7 +1200,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1389</width>
+     <width>1550</width>
      <height>26</height>
     </rect>
    </property>
