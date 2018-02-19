@@ -27,7 +27,7 @@
      <bool>false</bool>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="Tab_Multiclass">
      <attribute name="title">
@@ -834,6 +834,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QCheckBox" name="CheckBox_DataAug_Zoom">
+            <property name="text">
+             <string>Zoom</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QCheckBox" name="CheckBox_DataAug_zcaWeighting">
             <property name="font">
              <font>
@@ -870,6 +877,27 @@
             </property>
             <property name="text">
              <string>Width Shift</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="RadioButton_DataAug_contrastStretching">
+            <property name="text">
+             <string>Contrast Stretching</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="RadioButton_DataAug_histogramEq">
+            <property name="text">
+             <string>Histogram Eq</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="RadioButton_DataAug_adaptiveEq">
+            <property name="text">
+             <string>Adaptive Eq</string>
             </property>
            </widget>
           </item>
@@ -1443,10 +1471,10 @@
      <widget class="QGroupBox" name="groupBox_6">
       <property name="geometry">
        <rect>
-        <x>550</x>
-        <y>20</y>
+        <x>580</x>
+        <y>10</y>
         <width>791</width>
-        <height>691</height>
+        <height>681</height>
        </rect>
       </property>
       <property name="title">
@@ -1500,6 +1528,19 @@
        </property>
        <property name="text">
         <string>0</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="Button_PerformTraining_ArtGAN">
+       <property name="geometry">
+        <rect>
+         <x>150</x>
+         <y>20</y>
+         <width>111</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Perform Training</string>
        </property>
       </widget>
      </widget>

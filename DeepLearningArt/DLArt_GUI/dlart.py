@@ -29,7 +29,9 @@ import h5py
 
 import cnn_main
 
-import shelve
+# ArtGAN
+from ArtGAN import artGAN_main as artGAN
+
 
 class DeepLearningArtApp():
     datasets = {
@@ -83,6 +85,12 @@ class DeepLearningArtApp():
     ADADELTA_OPTIMIZER = 3
     ADAM_OPTIMIZER = 4
 
+    # Data Augmentation Parameters
+    WIDTH_SHIFT_RANGE = 0.2
+    HEIGHT_SHIFT_RANGE = 0.2
+    ROTATION_RANGE = 30
+    ZOOM_RANGE = 0.2
+
 
     def __init__(self):
         # GUI handle
@@ -93,7 +101,7 @@ class DeepLearningArtApp():
         self.selectedDatasets = ''
 
         self.pathDatabase, self.pathOutputPatching, self.markingsPath, self.learningOutputPath, self.pathOutputPatchingGAN \
-            = DeepLearningArtApp.getOSPathes(operatingSystem=0)  # for windows os=0, for linse server os=1. see method for pathes
+                = DeepLearningArtApp.getOSPathes(operatingSystem=0)  # for windows os=0, for linse server os=1. see method for pathes
 
         # attributes for patching
         self.patchSizeX = 40
@@ -130,10 +138,14 @@ class DeepLearningArtApp():
         self.dataAugmentationEnabled = False
         self.horizontalFlip = True
         self.verticalFlip = False
-        self.rotation = False
+        self.rotation = 0
         self.zcaWhitening = False
-        self.heightShift = True
-        self.widthShift = False
+        self.heightShift = 0
+        self.widthShift = 0
+        self.zoom = 0
+        self.contrastStretching = False
+        self.adaptive_eq = False
+        self.histogram_eq = False
         ################################################################################################################
 
 
@@ -339,14 +351,25 @@ class DeepLearningArtApp():
             # H5py store mode
             if self.storeMode == DeepLearningArtApp.STORE_HDF5:
                 # train, validation, test datasets are computed by splitting all data
-                [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [self.Y_test] \
-                    = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients,
-                                    sSplitting=self.splittingMode,
-                                    patchSize=[self.patchSizeX, self.patchSizeY, self.patchSizeZ],
-                                    patchOverlap=self.patchOverlapp,
-                                    testTrainingDatasetRatio=self.trainTestDatasetRatio,
-                                    validationTrainRatio=self.trainValidationRatio,
-                                    outPutPath=self.pathOutputPatching, nfolds=0)
+                if self.patchingMode == DeepLearningArtApp.PATCHING_2D:
+                    [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [self.Y_test] \
+                        = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients,
+                                        sSplitting=self.splittingMode,
+                                        patchSize=[self.patchSizeX, self.patchSizeY],
+                                        patchOverlap=self.patchOverlapp,
+                                        testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                        validationTrainRatio=self.trainValidationRatio,
+                                        outPutPath=self.pathOutputPatching, nfolds=0)
+                elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
+                    [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [
+                        self.Y_test] \
+                        = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients,
+                                        sSplitting=self.splittingMode,
+                                        patchSize=[self.patchSizeX, self.patchSizeY, self.patchSizeZ],
+                                        patchOverlap=self.patchOverlapp,
+                                        testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                        validationTrainRatio=self.trainValidationRatio,
+                                        outPutPath=self.pathOutputPatching, nfolds=0)
 
                 # store datasets with h5py
                 with h5py.File(outputFolderPath+os.sep+'datasets.hdf5', 'w') as hf:
@@ -362,17 +385,25 @@ class DeepLearningArtApp():
                     json.dump(labelDict, fp)
         else:
             # no storage of patched datasets
-            [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [self.Y_test] \
-                = fSplitDataset(dAllPatches,
-                                dAllLabels,
-                                allPats=self.selectedPatients,
-                                sSplitting=self.splittingMode,
-                                patchSize = [self.patchSizeX, self.patchSizeY, self.patchSizeZ],
-                                patchOverlap=self.patchOverlapp,
-                                testTrainingDatasetRatio=self.trainTestDatasetRatio,
-                                validationTrainRatio=self.trainValidationRatio,
-                                outPutPath=self.pathOutputPatching,
-                                nfolds=self.numFolds)
+            if self.patchingMode == DeepLearningArtApp.PATCHING_2D:
+                [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [self.Y_test] \
+                    = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients,
+                                    sSplitting=self.splittingMode,
+                                    patchSize=[self.patchSizeX, self.patchSizeY],
+                                    patchOverlap=self.patchOverlapp,
+                                    testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                    validationTrainRatio=self.trainValidationRatio,
+                                    outPutPath=self.pathOutputPatching, nfolds=0)
+            elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
+                [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [
+                    self.Y_test] \
+                    = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients,
+                                    sSplitting=self.splittingMode,
+                                    patchSize=[self.patchSizeX, self.patchSizeY, self.patchSizeZ],
+                                    patchOverlap=self.patchOverlapp,
+                                    testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                    validationTrainRatio=self.trainValidationRatio,
+                                    outPutPath=self.pathOutputPatching, nfolds=0)
 
             print()
 
@@ -406,9 +437,10 @@ class DeepLearningArtApp():
             os.makedirs(outPutFolderDataPath)
 
         cnn_main.fRunCNN(
-            dData={'X_train': self.X_train, 'y_train': Y_train, 'X_test': self.X_test, 'y_test': Y_test, 'patchSize': [self.patchSizeX, self.patchSizeY, self.patchSizeZ]},
+            dData={'X_train': self.X_train, 'y_train': Y_train, 'X_valid': self.X_validation, 'y_valid': Y_validation ,
+                   'X_test': self.X_test, 'y_test': Y_test, 'patchSize': [self.patchSizeX, self.patchSizeY, self.patchSizeZ]},
             sModelIn=DeepLearningArtApp.deepNeuralNetworks[self.neuralNetworkModel],
-            lTrain=True,
+            lTrain=cnn_main.RUN_CNN_TRAIN_TEST_VALIDATION,
             sParaOptim='',
             sOutPath=outPutFolderDataPath,
             iBatchSize=self.batchSizes,
@@ -455,7 +487,6 @@ class DeepLearningArtApp():
 
         with open((outputFolderPath+os.sep+'dataset_info.json'), 'w') as fp:
             json.dump(dataDict, fp, indent=4)
-
 
     def setLabelingMode(self, mode):
         if mode == DeepLearningArtApp.MASK_LABELING or mode == DeepLearningArtApp.PATCH_LABELING:
@@ -667,7 +698,10 @@ class DeepLearningArtApp():
         return self.verticalFlip
 
     def setRotation(self, b):
-        self.rotation = b
+        if b:
+            self.rotation = DeepLearningArtApp.ROTATION_RANGE
+        else:
+            self.rotation = 0
 
     def getRotation(self):
         return self.rotation
@@ -679,16 +713,49 @@ class DeepLearningArtApp():
         return self.zcaWhitening
 
     def setHeightShift(self, b):
-        self.heightShift = b
+        if b:
+            self.heightShift = DeepLearningArtApp.HEIGHT_SHIFT_RANGE
+        else:
+            self.heightShift = 0
 
     def getHeightShift(self):
         return self.heightShift
 
     def setWidthShift(self, b):
-        self.widthShift = b
+        if b:
+            self.widthShift = DeepLearningArtApp.WIDTH_SHIFT_RANGE
+        else:
+            self.widthShift = 0
 
     def getWidthShift(self):
         return self.widthShift
+
+    def setZoom(self, r):
+        if r:
+            self.zoom = DeepLearningArtApp.ZOOM_RANGE
+        else:
+            self.zoom = 0
+
+    def getZoom(self):
+        return self.zoom
+
+    def setContrastStretching(self, c):
+        self.contrastStretching = c
+
+    def getContrastStretching(self):
+        return self.contrastStretching
+
+    def setAdaptiveEqualization(self, e):
+        self.adaptive_eq = e
+
+    def getAdaptiveEqualization(self):
+        return self.adaptive_eq
+
+    def setHistogramEqualization(self, e):
+        self.histogram_eq = e
+
+    def getHistogramEqualization(self):
+        return self.histogram_eq
 
     def setGUIHandle(self, handle):
         self.dlart_GUI_handle = handle
@@ -792,9 +859,12 @@ class DeepLearningArtApp():
             self.createDatasetInfoSummary_ArtGAN(outPutFolder, outputFolderPath)
 
             if self.storeMode_ArtGAN == DeepLearningArtApp.STORE_PATCH_BASED:
-                outPutFolderDataPath = outputFolderPath + os.sep + "data"
-                if not os.path.exists(outPutFolderDataPath):
-                    os.makedirs(outPutFolderDataPath)
+                outPutFolderDataPathArts = outputFolderPath + os.sep + "data_arts"
+                outPutFolderDataPathRefs = outputFolderPath + os.sep + "data_refs"
+                if not os.path.exists(outPutFolderDataPathArts):
+                    os.makedirs(outPutFolderDataPathArts)
+                if not os.path.exists(outPutFolderDataPathRefs):
+                    os.makedirs(outPutFolderDataPathRefs)
 
                 labelDict = {}
 
@@ -859,45 +929,53 @@ class DeepLearningArtApp():
                     dPatches_ref = np.asarray(dPatches_ref, dtype=np.float32)
 
                 if self.storeMode_ArtGAN == DeepLearningArtApp.STORE_PATCH_BASED:
-                    print()
-                    # patch based storage
-                    # for i in range(0, dPatches_art.shape[2]):
-                    #     patchSlice = np.asarray(dPatches[:, :, i], dtype=np.float32)
-                    #     np.save((outPutFolderDataPath + os.sep + "X" + str(iPatchToDisk) + ".npy"), patchSlice,
-                    #             allow_pickle=False)
-                    #     labelDict["Y" + str(iPatchToDisk)] = int(dLabels[i])
-                    #     iPatchToDisk += 1
+                    for i in range(0, dPatches_art.shape[2]):
+                        # artifact slice
+                        patchSlice = np.asarray(dPatches_art[:, :, i], dtype=np.float32)
+                        np.save((outPutFolderDataPathArts + os.sep + "Art" + str(iPatchToDisk) + ".npy"), patchSlice,
+                                allow_pickle=False)
+
+                        # reference slice
+                        patchSlice = np.asarray(dPatches_ref[:, :, i], dtype=np.float32)
+                        np.save((outPutFolderDataPathRefs + os.sep + "Ref" + str(iPatchToDisk) + ".npy"), patchSlice,
+                                allow_pickle=False)
+                        iPatchToDisk += 1
+
                 else:
                     # concatenate all patches in one array
                     dAllPatches_art = np.concatenate((dAllPatches_art, dPatches_art), axis=2)
                     dAllPatches_ref = np.concatenate((dAllPatches_ref, dPatches_ref), axis=2)
 
+        if self.storeMode_ArtGAN != DeepLearningArtApp.STORE_PATCH_BASED:
+            # dataset splitting
+            [self.Art_train], [self.Ref_train], _, _, [self.Art_test], [self.Ref_test] \
+                = fSplitDataset(dAllPatches_art,
+                                dAllPatches_ref,
+                                allPats=self.patients_ArtGAN,
+                                sSplitting=self.splittingMode_ArtGAN,
+                                patchSize=[self.patchSizeX_ArtGAN, self.patchSizeY_ArtGAN],
+                                patchOverlap=self.patchOverlap_ArtGAN,
+                                testTrainingDatasetRatio=self.trainTestDatasetRatio_ArtGAN,
+                                validationTrainRatio=self.trainValidationRatio_ArtGAN,
+                                outPutPath=self.pathOutputPatchingGAN,
+                                nfolds=self.numFolds)
 
-        # dataset splitting
-        [self.Art_train], [self.Ref_train], _, _, [self.Art_test], [self.Ref_test] \
-            = fSplitDataset(dAllPatches_art,
-                            dAllPatches_ref,
-                            allPats=self.patients_ArtGAN,
-                            sSplitting=self.splittingMode_ArtGAN,
-                            patchSize=[self.patchSizeX_ArtGAN, self.patchSizeY_ArtGAN],
-                            patchOverlap=self.patchOverlap_ArtGAN,
-                            testTrainingDatasetRatio=self.trainTestDatasetRatio_ArtGAN,
-                            validationTrainRatio=self.trainValidationRatio_ArtGAN,
-                            outPutPath=self.pathOutputPatchingGAN,
-                            nfolds=self.numFolds)
+            # H5py store mode
+            if self.storeMode_ArtGAN == DeepLearningArtApp.STORE_HDF5:
+                # store datasets with h5py
+                pathOutput = outputFolderPath + os.sep + "Pats" + str(len(self.patients_ArtGAN)) + '_' + str(self.patchSizeX_ArtGAN) + \
+                    'x' + str(self.patchSizeY_ArtGAN) + '_O' + str(self.patchOverlap_ArtGAN) + '.hdf5'
 
-        # H5py store mode
-        if self.storeMode == DeepLearningArtApp.STORE_HDF5:
-            # store datasets with h5py
-            with h5py.File(outputFolderPath + os.sep + 'datasets.hdf5', 'w') as hf:
-                hf.create_dataset('Art_train', data=self.Art_train)
-                #hf.create_dataset('X_validation', data=self.X_validation)
-                hf.create_dataset('Art_test', data=self.Art_test)
-                hf.create_dataset('Ref_train', data=self.Ref_train)
-                #hf.create_dataset('Y_validation', data=self.Y_validation)
-                hf.create_dataset('Ref_test', data=self.Ref_test)
+                with h5py.File(pathOutput, 'w') as hf:
+                    hf.create_dataset('Art_train', data=self.Art_train)
+                    #hf.create_dataset('X_validation', data=self.X_validation)
+                    hf.create_dataset('Art_test', data=self.Art_test)
+                    hf.create_dataset('Ref_train', data=self.Ref_train)
+                    #hf.create_dataset('Y_validation', data=self.Y_validation)
+                    hf.create_dataset('Ref_test', data=self.Ref_test)
 
-
+    def performTraining_ArtGAN(self):
+        artGAN.artGAN_main()
 
 
     def getOutputPathPatchingGAN(self):
@@ -1067,6 +1145,55 @@ class DeepLearningArtApp():
         ref = self.Ref_train[num]
 
         return art, ref
+
+    def loadDatasetArtGAN(self, pathToDataset):
+        '''
+        Method loads an existing dataset out of hd5f files or handles the patch based datasets
+        :param pathToDataset: path to dataset
+        :return: boolean if loading was successful, and name of loaded dataset
+        '''
+        retbool = False
+        datasetName = ''
+        #check for data info summary in json file
+        try:
+            with open(pathToDataset + os.sep + "dataset_info.json", 'r') as fp:
+                dataset_info = json.load(fp)
+
+            # hd5f or patch based?
+            if dataset_info['StoreMode'] == DeepLearningArtApp.STORE_HDF5:
+                # loading hdf5
+                datasetName = dataset_info['Name']
+                self.patchSizeX = int(dataset_info['PatchSizeX'])
+                self.patchSizeY = int(dataset_info['PatchSizeY'])
+                self.patchSizeZ = int(dataset_info['PatchSizeZ'])
+                self.patchOverlapp = float(dataset_info['PatchOverlap'])
+
+                # loading hdf5 dataset
+                try:
+                    with h5py.File(pathToDataset + os.sep + "datasets.hdf5", 'r') as hf:
+                        self.X_train = hf['X_train'][:]
+                        self.X_validation = hf['X_validation'][:]
+                        self.X_test = hf['X_test'][:]
+                        self.Y_train = hf['Y_train'][:]
+                        self.Y_validation = hf['Y_validation'][:]
+                        self.Y_test = hf['Y_test'][:]
+
+                    retbool = True
+                except:
+                    raise TypeError("Can't read HDF5 dataset!")
+
+            elif dataset_info['StoreMode'] == DeepLearningArtApp.STORE_PATCH_BASED:
+                #loading patchbased stuff
+                datasetName = dataset_info['Name']
+
+                print("still in progrss")
+            else:
+                raise NameError("No such store Mode known!")
+
+        except:
+            raise FileNotFoundError("Error: Something went wrong at trying to load the dataset!!!")
+
+        return retbool, datasetName
 
 
     ####################################################################################################################

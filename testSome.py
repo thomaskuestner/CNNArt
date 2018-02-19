@@ -16,11 +16,12 @@ from matplotlib import pyplot as plt
 #    X_train, X_test = X[train_index], X[test_index]
 #    y_train, y_test = y[train_index], y[test_index]
 
-imgs = np.ones([9, 32, 32, 1])
-img = imgs[2].reshape(32, 32)
+list = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+index = [2, 1, 4, 1, 4, 5]
 
-plt.imshow(img.reshape(32, 32), cmap='gray')
-plt.show()
+list = np.asarray(list)
+list = list[index]
+
 print()
 
 

@@ -28,7 +28,7 @@ def squeeze_excitation_block(inputSE, ratio=16):
     numChannels = inputSE_shape[channels]
 
     #squeeze operation
-    output = GlobalAveragePooling2D()(input)
+    output = GlobalAveragePooling2D(data_format=backend.image_data_format())(inputSE)
 
     #excitation operation
     output = Dense(numChannels//ratio, activation='relu', use_bias=True, kernel_initializer='he_normal')(output)

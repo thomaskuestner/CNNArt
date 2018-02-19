@@ -87,10 +87,11 @@ class MainWindow(QMainWindow):
         self.ui.CheckBox_DataAugmentation.setChecked(self.deepLearningArtApp.getDataAugmentationEnabled())
         self.ui.CheckBox_DataAug_horizontalFlip.setChecked(self.deepLearningArtApp.getHorizontalFlip())
         self.ui.CheckBox_DataAug_verticalFlip.setChecked(self.deepLearningArtApp.getVerticalFlip())
-        self.ui.CheckBox_DataAug_Rotation.setChecked(self.deepLearningArtApp.getRotation())
+        self.ui.CheckBox_DataAug_Rotation.setChecked(False if self.deepLearningArtApp.getRotation()==0 else True)
         self.ui.CheckBox_DataAug_zcaWeighting.setChecked(self.deepLearningArtApp.getZCA_Whitening())
-        self.ui.CheckBox_DataAug_HeightShift.setChecked(self.deepLearningArtApp.getHeightShift())
-        self.ui.CheckBox_DataAug_WidthShift.setChecked(self.deepLearningArtApp.getWidthShift())
+        self.ui.CheckBox_DataAug_HeightShift.setChecked(False if self.deepLearningArtApp.getHeightShift()==0 else True)
+        self.ui.CheckBox_DataAug_WidthShift.setChecked(False if self.deepLearningArtApp.getWidthShift()==0 else True)
+        self.ui.CheckBox_DataAug_Zoom.setChecked(False if self.deepLearningArtApp.getZoom()==0 else True)
         self.check_dataAugmentation_enabled()
 
         ################################################################################################################
@@ -103,6 +104,8 @@ class MainWindow(QMainWindow):
         self.ui.Button_Patching_ArtGAN.clicked.connect(self.button_patching_ArtGAN_clicked)
         self.ui.HorizontalSlider_ArtGAN.sliderMoved.connect(self.slider_ArtGAN_moved)
         self.ui.HorizontalSlider_ArtGAN.valueChanged.connect(self.slider_ArtGAN_changed)
+        self.ui.Button_selectDataset_ArtGAN.clicked.connect(self.button_selectDataset_ArtGAN_clicked)
+        self.ui.Button_PerformTraining_ArtGAN.clicked.connect(self.performTraining_ArtGAN)
 
         self.figureImg = Figure(figsize=(5, 5))
         self.canvas_figImg = FigureCanvas(self.figureImg)
@@ -235,6 +238,29 @@ class MainWindow(QMainWindow):
                 self.deepLearningArtApp.setWidthShift(True)
             else:
                 self.deepLearningArtApp.setWidthShift(False)
+
+            if self.ui.CheckBox_DataAug_Zoom.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setZoom(True)
+            else:
+                self.deepLearningArtApp.setZoom(False)
+
+
+            # contrast improvement (contrast stretching, adaptive equalization, histogram equalization)
+            # it is not recommended to set more than one of them to true
+            if self.ui.RadioButton_DataAug_contrastStretching.isChecked():
+                self.deepLearningArtApp.setContrastStretching(True)
+            else:
+                self.deepLearningArtApp.setContrastStretching(False)
+
+            if self.ui.RadioButton_DataAug_histogramEq.isChecked():
+                self.deepLearningArtApp.setHistogramEqualization(True)
+            else:
+                self.deepLearningArtApp.setHistogramEqualization(False)
+
+            if self.ui.RadioButton_DataAug_adaptiveEq.isChecked():
+                self.deepLearningArtApp.setAdaptiveEqualization(True)
+            else:
+                self.deepLearningArtApp.setAdaptiveEqualization(False)
         else:
             # disable data augmentation
             self.deepLearningArtApp.setDataAugmentationEnabled(False)
@@ -490,6 +516,10 @@ class MainWindow(QMainWindow):
             self.ui.CheckBox_DataAug_zcaWeighting.setEnabled(True)
             self.ui.CheckBox_DataAug_HeightShift.setEnabled(True)
             self.ui.CheckBox_DataAug_WidthShift.setEnabled(True)
+            self.ui.CheckBox_DataAug_Zoom.setEnabled(True)
+            self.ui.RadioButton_DataAug_contrastStretching.setEnabled(True)
+            self.ui.RadioButton_DataAug_histogramEq.setEnabled(True)
+            self.ui.RadioButton_DataAug_adaptiveEq.setEnabled(True)
         else:
             self.ui.CheckBox_DataAug_horizontalFlip.setEnabled(False)
             self.ui.CheckBox_DataAug_verticalFlip.setEnabled(False)
@@ -497,7 +527,23 @@ class MainWindow(QMainWindow):
             self.ui.CheckBox_DataAug_zcaWeighting.setEnabled(False)
             self.ui.CheckBox_DataAug_HeightShift.setEnabled(False)
             self.ui.CheckBox_DataAug_WidthShift.setEnabled(False)
+            self.ui.CheckBox_DataAug_Zoom.setEnabled(False)
 
+            self.ui.RadioButton_DataAug_contrastStretching.setEnabled(False)
+            self.ui.RadioButton_DataAug_contrastStretching.setAutoExclusive(False)
+            self.ui.RadioButton_DataAug_contrastStretching.setChecked(False)
+            self.ui.RadioButton_DataAug_contrastStretching.setAutoExclusive(True)
+
+            self.ui.RadioButton_DataAug_histogramEq.setEnabled(False)
+            self.ui.RadioButton_DataAug_histogramEq.setAutoExclusive(False)
+            self.ui.RadioButton_DataAug_histogramEq.setChecked(False)
+            self.ui.RadioButton_DataAug_histogramEq.setAutoExclusive(True)
+
+
+            self.ui.RadioButton_DataAug_adaptiveEq.setEnabled(False)
+            self.ui.RadioButton_DataAug_adaptiveEq.setAutoExclusive(False)
+            self.ui.RadioButton_DataAug_adaptiveEq.setChecked(False)
+            self.ui.RadioButton_DataAug_adaptiveEq.setAutoExclusive(True)
 
 
     ###################################################################################################################
@@ -506,7 +552,7 @@ class MainWindow(QMainWindow):
     def button_patching_ArtGAN_clicked(self):
 
         # handle store mode
-        self.deepLearningArtApp.setStoreMode_ArtGAN(self.ui.ComboBox_StoreOptions.currentIndex())
+        self.deepLearningArtApp.setStoreMode_ArtGAN(self.ui.ComboBox_StoreOptions_ArtGAN.currentIndex())
         self.deepLearningArtApp.setPatchSizeX_ArtGAN(int(self.ui.SpinBox_PatchX_ArtGAN.value()))
         self.deepLearningArtApp.setPatchSizeY_ArtGAN(int(self.ui.SpinBox_PatchY_ArtGAN.value()))
         self.deepLearningArtApp.setPatchOverlap_ArtGAN(float(self.ui.SpinBox_PatchOverlapp_ArtGAN.value()))
@@ -612,7 +658,7 @@ class MainWindow(QMainWindow):
         self.ui.HorizontalSlider_ArtGAN.setMaximum(int(self.deepLearningArtApp.getArtRefPairLength()-1))
         self.ui.HorizontalSlider_ArtGAN.setMinimum(0)
         self.ui.HorizontalSlider_ArtGAN.setValue(100)
-        self.plotImg(figure=self.figureImg, canvas=self.canvas_figImg, index=100)
+        self.plotImg(figure=self.figureImg, canvas=self.canvas_figImg, index=10)
 
 
 
@@ -621,6 +667,25 @@ class MainWindow(QMainWindow):
         self.plotImg(figure=self.figureImg, canvas=self.canvas_figImg, index=val)
         self.ui.Label_Slider_ArtGAN.setText(str(val))
 
+
+
+    def button_selectDataset_ArtGAN_clicked(self):
+        pathToDataset = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathPatchingGAN())
+        retbool, datasetName = self.deepLearningArtApp.loadDatasetArtGAN(pathToDataset)
+        if retbool == True:
+            self.ui.Label_currentDataset.setText(datasetName + " is used as dataset...")
+        else:
+            self.ui.Label_currentDataset.setText("No Dataset selected!")
+
+        if self.deepLearningArtApp.datasetAvailable() == True:
+            self.ui.GroupBox_TrainNN.setEnabled(True)
+        else:
+            self.ui.GroupBox_TrainNN.setEnabled(False)
+
+
+
+    def performTraining_ArtGAN(self):
+        self.deepLearningArtApp.performTraining_ArtGAN()
 
 
     def plotImg(self, figure, canvas, index):

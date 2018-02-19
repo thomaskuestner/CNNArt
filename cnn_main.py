@@ -32,6 +32,10 @@ from hyperas import optim
 
 """functions"""
 
+RUN_CNN_TRAIN_TEST_VALIDATION = 0
+RUN_CNN_TRAIN_TEST = 1
+RUN_CNN_PREDICT = 2
+
 
 def fLoadData(conten):
     # prepared in matlab
@@ -122,7 +126,7 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
     cnnModel = __import__(sModel, globals(), locals(), ['createModel', 'fTrain', 'fPredict'], 0)  # dynamic module loading with specified functions and with absolute importing (level=0) -> work in both Python2 and Python3
 
     # train (w/ or w/o optimization) and predicting
-    if lTrain:  # training
+    if lTrain == RUN_CNN_TRAIN_TEST:  # training
         if sParaOptim == 'hyperas':  # hyperas parameter optimization
             best_run, best_model = optim.minimize(model=cnnModel.fHyperasTrain,
                                                   data=fLoadDataForOptim(args.inPath[0]),
@@ -163,14 +167,100 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
                                      'prob_test': prob_test})
 
         elif sParaOptim == 'grid':  # grid search << backward compatibility
-            cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
-                            dData['patchSize'], iBatchSize, iLearningRate, iEpochs)
+            cnnModel.fTrain(X_traind=dData['X_train'],
+                            y_traind=dData['y_train'],
+                            X_test=dData['X_test'],
+                            y_test=dData['y_test'],
+                            sOutPath=sOutPath,
+                            patchSize=dData['patchSize'],
+                            batchSizes=iBatchSize,
+                            learningRates=iLearningRate,
+                            iEpochs=iEpochs,
+                            dlart_handle=dlart_handle)
+
 
         else:  # no optimization or grid search (if batchSize|learningRate are arrays)
-            cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
-                            dData['patchSize'], iBatchSize, iLearningRate, iEpochs, dlart_handle=dlart_handle)
+            cnnModel.fTrain(X_traind=dData['X_train'],
+                            y_traind=dData['y_train'],
+                            X_test=dData['X_test'],
+                            y_test=dData['y_test'],
+                            sOutPath=sOutPath,
+                            patchSize=dData['patchSize'],
+                            batchSizes=iBatchSize,
+                            learningRates=iLearningRate,
+                            iEpochs=iEpochs,
+                            dlart_handle=dlart_handle)
 
-    else:  # predicting
+
+    elif lTrain == RUN_CNN_TRAIN_TEST_VALIDATION:
+        if sParaOptim == 'hyperas':  # hyperas parameter optimization
+            best_run, best_model = optim.minimize(model=cnnModel.fHyperasTrain,
+                                                  data=fLoadDataForOptim(args.inPath[0]),
+                                                  algo=tpe.suggest,
+                                                  max_evals=5,
+                                                  trials=Trials())
+            X_train, y_train, X_test, y_test, patchSize = fLoadDataForOptim(args.inPath[0])
+            score_test, acc_test = best_model.evaluate(X_test, y_test)
+            prob_test = best_model.predict(X_test, best_run['batch_size'], 0)
+
+            _, sPath = os.path.splitdrive(sOutPath)
+            sPath, sFilename = os.path.split(sPath)
+            sFilename, sExt = os.path.splitext(sFilename)
+            model_name = sPath + '/' + sFilename + str(patchSize[0, 0]) + str(patchSize[0, 1]) + '_best'
+            weight_name = model_name + '_weights.h5'
+            model_json = model_name + '_json'
+            model_all = model_name + '_model.h5'
+            json_string = best_model.to_json()
+            open(model_json, 'w').write(json_string)
+            # wei = best_model.get_weights()
+            best_model.save_weights(weight_name)
+            # best_model.save(model_all)
+
+            result = best_run['result']
+            # acc = result.history['acc']
+            loss = result.history['loss']
+            val_acc = result.history['val_acc']
+            val_loss = result.history['val_loss']
+            sio.savemat(model_name, {'model_settings': model_json,
+                                     'model': model_all,
+                                     'weights': weight_name,
+                                     'acc': -best_run['loss'],
+                                     'loss': loss,
+                                     'val_acc': val_acc,
+                                     'val_loss': val_loss,
+                                     'score_test': score_test,
+                                     'acc_test': acc_test,
+                                     'prob_test': prob_test})
+
+        elif sParaOptim == 'grid':  # grid search << backward compatibility
+            cnnModel.fTrain(X_traind=dData['X_train'],
+                            y_traind=dData['y_train'],
+                            X_valid=dData['X_valid'],
+                            y_valid=dData['y_valid'],
+                            X_test=dData['X_test'],
+                            y_test=dData['y_test'],
+                            sOutPath=sOutPath,
+                            patchSize=dData['patchSize'],
+                            batchSizes=iBatchSize,
+                            learningRates=iLearningRate,
+                            iEpochs=iEpochs,
+                            dlart_handle=dlart_handle)
+
+        else:  # no optimization or grid search (if batchSize|learningRate are arrays)
+            cnnModel.fTrain(X_train=dData['X_train'],
+                            y_train=dData['y_train'],
+                            X_valid=dData['X_valid'],
+                            y_valid=dData['y_valid'],
+                            X_test=dData['X_test'],
+                            y_test=dData['y_test'],
+                            sOutPath=sOutPath,
+                            patchSize=dData['patchSize'],
+                            batchSizes=iBatchSize,
+                            learningRates=iLearningRate,
+                            iEpochs=iEpochs,
+                            dlart_handle=dlart_handle)
+
+    elif lTrain == RUN_CNN_PREDICT:  # predicting
         cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, dData['patchSize'],
                           iBatchSize[0])
 
