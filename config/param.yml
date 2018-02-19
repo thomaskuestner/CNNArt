@@ -83,12 +83,12 @@ lLabelPredictImg : [ 1 ]
 sPredictModel : ""
 # sTrainingMethod
 # "None": No scaling process
-# "scalingPrior": Up and down sampling the patches for data augmentation
-# "scalingPosterior": scaling during training, to be done
+# "MultiScaleTogether": to train the donw sampled patches with the original patches together
+# "MultiScaleSeparated": to train the donw sampled patches and the original patches in different pathways
 sTrainingMethod : "None"
 # lScaleFactor: the changing rate of patch size in scaling process
 # factor < 1 means down sampling later, factor > 1 up sampling later
-lScaleFactor : [0.5, 1, 2]
+lScaleFactor : [0.5, 1]
 
 # lCorrection
 # true: artifact correction
