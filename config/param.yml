@@ -96,9 +96,9 @@ lScaleFactor : [0.5, 1, 2]
 lCorrection: false
 # parameters in artifacts correction
 correction:
-  sCorrection: "motion_VAE_48"
+  sCorrection: "motion_head_VAE2D_48"
   bestModel: "vae_weight_ps_48_bs_128"
   pl_network: "vgg19"
   kl_weight: 1
   perceptual_weight: 0.01
-  pixel_weight: 1q
+  pixel_weight: 1
