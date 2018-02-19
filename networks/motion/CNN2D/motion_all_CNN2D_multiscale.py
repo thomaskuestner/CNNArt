@@ -45,11 +45,7 @@ def createModel(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-3
     path_down = fConveBlock(input_down)
     path_down_output = fUpSample(path_down, ScaleFactor)
     path_orig_output = fConveBlock(input_orig)
-    path_orig_output_shape=np.shape(path_orig_output)
-    path_down_output_shape=np.shape(path_down_output)
-    crop_x_0, crop_x_1, crop_y_0, crop_y_1 = fcalculateToCropSize(path_orig_output_shape, path_down_output_shape)
-    path_down_crop = Cropping2D(cropping=((crop_x_0, crop_x_1), (crop_y_0, crop_y_1)))(path_down_output)
-    multi_scale_connect = concatenate([path_orig_output, path_down_crop], axis=0)
+    multi_scale_connect = fconcatenate(path_orig_output, path_down_output)
 
     # fully connect layer as dense
     flat_out = Flatten()(multi_scale_connect)
@@ -63,19 +59,22 @@ def createModel(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-3
     cnn_ms = Model(inputs=[input_orig, input_down], outputs=[output_fc])
     return cnn_ms
 
-def fcalculateToCropSize(path_orig, path_down):
-    if path_orig==path_down:
-        crop_x_0=crop_x_1=crop_y_0=crop_y_1=0
+def fconcatenate(path_orig, path_down):
+    if path_orig.size==path_down.size:
+        path_down_cropped = path_down
     else:
-        crop_x_1 = int(np.ceil(path_orig[1]-path_down[1]/2))
-        crop_x_0 = path_orig[1]-path_down[1] - crop_x_1
-        crop_y_1 = int(np.ceil(path_orig[2]-path_down[2]/2))
-        crop_y_0 = path_orig[2]-path_down[2] - crop_y_1
-    return crop_x_0, crop_x_1, crop_y_0, crop_y_1
+        crop_x_1 = int(np.ceil(path_orig._keras_shape[2]-path_down._keras_shape[2]/2))
+        crop_x_0 = path_orig._keras_shape[2]-path_down._keras_shape[2] - crop_x_1
+        crop_y_1 = int(np.ceil(path_orig._keras_shape[3]-path_down._keras_shape[3]/2))
+        crop_y_0 = path_orig._keras_shape[3]-path_down._keras_shape[3] - crop_y_1
+        path_down_cropped = Cropping2D(cropping=((crop_x_0,crop_x_1),(crop_y_0,crop_y_1)))(path_down)
+    connected = concatenate([path_orig,path_down_cropped],axis=0)
+    return connected
      
 def fUpSample(up_in, factor, method = 'repeat'):
+    factor = int(np.round(1/factor))
     if method == 'repeat':
-        up_out = UpSampling2D(size=(factor,factor), data_format='channels_first')
+        up_out = UpSampling2D(size=(factor,factor), data_format='channels_first')(up_in)
     # else: use inteporlation
     return up_out
 

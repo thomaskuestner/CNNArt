@@ -31,13 +31,18 @@ def fscaling2D(X_train, X_test, scpatchSize, iscalefactor) :
         lenTest = X_test[ifold].shape[0]
 
         # in batches
-        Batch=20
+        BatchTrain = BatchTest = 20
+        for icand in range(15,26):
+            if lenTrain % icand == 0:
+                BatchTrain = icand
+            if lenTest % icand == 0:
+                BatchTest = icand
         dx_Train = None
         dx_Test = None
-        stepTrain = int(math.ceil(lenTrain/Batch))
-        stepTest = int(math.ceil(lenTest / Batch))
+        stepTrain = int(math.ceil(lenTrain/BatchTrain))
+        stepTest = int(math.ceil(lenTest/BatchTest))
 
-        for ibatch in range(Batch):
+        for ibatch in range(BatchTrain):
             indTrain = int(stepTrain*ibatch)
             if (indTrain+stepTrain) < lenTrain:
                 inter_train0=np.mgrid[0:stepTrain, 0:afterSize, 0:afterSize]
@@ -62,7 +67,7 @@ def fscaling2D(X_train, X_test, scpatchSize, iscalefactor) :
         else:
             dAllx_train = np.concatenate((dAllx_train, dFoldx_train), axis=0)
 
-        for ibatch in range(Batch):
+        for ibatch in range(BatchTest):
             indTest = int(stepTest * ibatch)
             if (indTest + stepTest) < lenTest:
                 inter_test0 = np.mgrid[0:stepTest, 0:afterSize, 0:afterSize]
