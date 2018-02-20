@@ -44,7 +44,7 @@ def fcalculateInputOfPath2(patchSize, scaleFactor, sModelIn):
     FMperLayerPath1 = [[0]*len(patchSize) for i in range(layerNum)]
     FMperLayerPath2 = [[0]*len(patchSize) for i in range(layerNum)]
     InputOfPath2 = [0 for i in range(len(patchSize))]
-    patchSize_p2 = patchSize
+    patchSize_p2 = [0 for i in range(len(patchSize))]
     for idimension in range(len(patchSize)): # 2D/3D patch
         # calculate the size of the output feature map of pathway with unscaled patch
         FMperLayerPath1[0][idimension] = (patchSize[idimension] - Kernels[0][idimension])/Strides[0][idimension]+1

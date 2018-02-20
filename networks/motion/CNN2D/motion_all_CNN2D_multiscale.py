@@ -39,12 +39,12 @@ def fgetLayerNum():
 
 def createModel(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-3, optimizer='SGD',
                      dr_rate=0.0, input_dr_rate=0.0, max_norm=5, iPReLU=0, l2_reg=1e-6):
+    # Total params: 453,570
     input_orig = Input(shape=(1, int(patchSize[0]), int(patchSize[1])))
+    path_orig_output = fConveBlock(input_orig)
     input_down = Input(shape=(1, int(patchSize_down[0]), int(patchSize_down[1])))
-
     path_down = fConveBlock(input_down)
     path_down_output = fUpSample(path_down, ScaleFactor)
-    path_orig_output = fConveBlock(input_orig)
     multi_scale_connect = fconcatenate(path_orig_output, path_down_output)
 
     # fully connect layer as dense
@@ -55,18 +55,19 @@ def createModel(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-3
                           kernel_regularizer=l2(l2_reg))(dropout_out)
     # Fully connected layer as convo with 1X1 ?
 
-    output_fc = Activation('softmax')(dense_out)
-    cnn_ms = Model(inputs=[input_orig, input_down], outputs=[output_fc])
+    output_fc1 = Activation('softmax')(dense_out)
+    output_fc2 = Activation('softmax')(dense_out)
+    cnn_ms = Model(inputs=[input_orig, input_down], outputs=[output_fc1,output_fc2])
     return cnn_ms
 
 def fconcatenate(path_orig, path_down):
-    if path_orig.size==path_down.size:
+    if path_orig._keras_shape==path_down._keras_shape:
         path_down_cropped = path_down
     else:
-        crop_x_1 = int(np.ceil(path_orig._keras_shape[2]-path_down._keras_shape[2]/2))
-        crop_x_0 = path_orig._keras_shape[2]-path_down._keras_shape[2] - crop_x_1
-        crop_y_1 = int(np.ceil(path_orig._keras_shape[3]-path_down._keras_shape[3]/2))
-        crop_y_0 = path_orig._keras_shape[3]-path_down._keras_shape[3] - crop_y_1
+        crop_x_1 = int(np.ceil((path_down._keras_shape[2]-path_orig._keras_shape[2])/2))
+        crop_x_0 = path_down._keras_shape[2]-path_orig._keras_shape[2] - crop_x_1
+        crop_y_1 = int(np.ceil((path_down._keras_shape[3]-path_orig._keras_shape[3])/2))
+        crop_y_0 = path_down._keras_shape[3]-path_orig._keras_shape[3] - crop_y_1
         path_down_cropped = Cropping2D(cropping=((crop_x_0,crop_x_1),(crop_y_0,crop_y_1)))(path_down)
     connected = concatenate([path_orig,path_down_cropped],axis=0)
     return connected
@@ -132,6 +133,11 @@ def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=Non
     X_test = np.expand_dims(X_test, axis=1)
     y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
     y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
+    if len(X_train_p2) != 0:
+        X_train_p2 = np.expand_dims(X_train_p2, axis=1)
+        X_test_p2 = np.expand_dims(X_test_p2, axis=1)
+        y_train_p2 = np.asarray([y_train_p2[:], np.abs(np.asarray(y_train_p2[:], dtype=np.float32) - 1)]).T
+        y_test_p2 = np.asarray([y_test_p2[:], np.abs(np.asarray(y_test_p2[:], dtype=np.float32) - 1)]).T
 
     for iBatch in batchSizes:
         for iLearn in learningRates:
@@ -176,7 +182,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     # callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
     cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
-    print(cnn.summary)
+    cnn.summary()
 
     result = cnn.fit(x = [X_train, X_train_p2],
                      y = [y_train, y_train_p2],

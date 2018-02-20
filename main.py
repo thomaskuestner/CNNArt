@@ -90,10 +90,12 @@ elif lTrain:
             
     else: # perform patching
         X_train = []
-        scpatchSize = patchSize
+        scpatchSize = [0 for i in range(len(patchSize))]
                 
         if sTrainingMethod == "None":
             lScaleFactor = [1]
+        if sTrainingMethod == "MultiScaleSeparated":
+            lScaleFactor = lScaleFactor[:-1]
         # Else perform scaling:
         #   images will be split into pathces with size scpatchSize and then scaled to patchSize        
         for iscalefactor in lScaleFactor:
@@ -129,19 +131,18 @@ elif lTrain:
             spX_train, spy_train, spX_test, spy_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], scpatchSize, cfg['patchOverlap'], cfg['dSplitval'], '')
             print('Start scaling')
             # perform scaling: sc for scale
-            scX_train, scX_test= scaling.fscaling(spX_train, spX_test, scpatchSize, iscalefactor)
+            scX_train, scX_test, scedpatchSize= scaling.fscaling(spX_train, spX_test, scpatchSize, iscalefactor)
             if sTrainingMethod == "MultiScaleSeparated":
-                if iscalefactor != 1:
-                    X_train_p2 = scX_train
-                    X_test_p2 = scX_test
-                    y_train_p2 = spy_train
-                    y_test_p2 = spy_test
-                    patchSize_down = scpatchSize
-                else: 
-                    X_train = scX_train
-                    X_test = scX_test
-                    y_train = spy_train
-                    y_test = spy_test
+                X_train_p2 = scX_train
+                X_test_p2 = scX_test
+                y_train_p2 = spy_train
+                y_test_p2 = spy_test
+                patchSize_down = scedpatchSize
+                X_train_cut, X_test_cut = scaling.fcutMiddelPartOfPatch(spX_train, spX_test, scpatchSize, patchSize)
+                X_train = X_train_cut
+                X_test = X_test_cut
+                y_train = spy_train
+                y_test = spy_test
             else:
                 if len(X_train) == 0:
                     X_train = scX_train

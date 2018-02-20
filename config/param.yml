@@ -20,9 +20,9 @@ motion_abd: &id002
 motion_all: &id003
    name      : "motion_all" 
    dataref   : ["t1_tse_tra_Kopf_0002", "t1_tse_tra_fs_mbh_Leber_0004"]
-   labelref  : [0 0]
+   labelref  : [0, 0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_mbh_Leber_Motion_0005"]
-   labelart  : [1 1]
+   labelart  : [1, 1]
    pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Allcross"
    bestmodel : {CNN2D: "all_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
@@ -88,6 +88,7 @@ sPredictModel : ""
 sTrainingMethod : "None"
 # lScaleFactor: the changing rate of patch size in scaling process
 # factor < 1 means down sampling later, factor > 1 up sampling later
+# in "MultiScaleSeparated" method: only one down sample rate is supported, this corresponds one bypass in CNN
 lScaleFactor : [0.5, 1]
 
 # lCorrection
