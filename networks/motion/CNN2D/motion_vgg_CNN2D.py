@@ -43,7 +43,7 @@ def createModel(patchSize):
                    name='conv1_2'
                    ))
 
-    cnn.add(MaxPooling2D(filter_size=(2, 2),
+    cnn.add(MaxPooling2D(pool_size =(2, 2),
                          strides=(2, 2),
                          padding='SAME',
                          name='pool1'
@@ -66,7 +66,7 @@ def createModel(patchSize):
                    name='conv2_2'
                    ))
 
-    cnn.add(MaxPooling2D(filter_size=(2, 2),
+    cnn.add(MaxPooling2D(pool_size=(2, 2),
                          strides=(2, 2),
                          padding='SAME',
                          name='pool2'
@@ -97,7 +97,7 @@ def createModel(patchSize):
                    name='conv3_3'
                    ))
 
-    cnn.add(MaxPooling2D(filter_size=(2, 2),
+    cnn.add(MaxPooling2D(pool_size=(2, 2),
                          strides=(2, 2),
                          padding='SAME',
                          name='pool3'
@@ -128,7 +128,7 @@ def createModel(patchSize):
                    name='conv4_3'
                    ))
 
-    cnn.add(MaxPooling2D(filter_size=(2, 2),
+    cnn.add(MaxPooling2D(pool_size=(2, 2),
                          strides=(2, 2),
                          padding='SAME',
                          name='pool4'
@@ -140,7 +140,7 @@ def createModel(patchSize):
                    padding='same',
                    strides=(1, 1),
                    activation='relu',
-                   name='conv4_1'
+                   name='conv5_1'
                    ))
 
     cnn.add(Conv2D(512,
@@ -148,7 +148,7 @@ def createModel(patchSize):
                    padding='same',
                    strides=(1, 1),
                    activation='relu',
-                   name='conv4_2'
+                   name='conv5_2'
                    ))
 
     cnn.add(Conv2D(512,
@@ -156,13 +156,13 @@ def createModel(patchSize):
                    padding='same',
                    strides=(1, 1),
                    activation='relu',
-                   name='conv4_3'
+                   name='conv5_3'
                    ))
 
-    cnn.add(MaxPooling2D(filter_size=(2, 2),
+    cnn.add(MaxPooling2D(pool_size=(2, 2),
                          strides=(2, 2),
                          padding='SAME',
-                         name='pool4'
+                         name='pool5'
                          ))
 
 
@@ -173,6 +173,8 @@ def createModel(patchSize):
     cnn.add(Dropout(0.5, name='drop2'))
     cnn.add(Dense(units=2, activation='relu', name='fc3_relu'))
     cnn.add(Activation('softmax'))
+
+    return cnn
 
 def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None):
     # grid search on batch_sizes and learning rates
@@ -216,6 +218,8 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 
     # create model
     cnn = createModel(patchSize)
+
+    cnn.summary()
 
     # opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
     opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
