@@ -119,7 +119,6 @@ def fConveBlock(conv_input,l1_reg=0.0, l2_reg=1e-6, dr_rate=0):
     active_out_3 = Activation('relu')(conve_out_3)
     return active_out_3
 
-
 def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None,
            CV_Patient=0, X_train_p2=None, y_train_p2=None, X_test_p2=None, y_test_p2=None, patchSize_down=None, ScaleFactor=None):
     # grid search on batch_sizes and learning rates
@@ -176,10 +175,10 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     # opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
     opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     callbacks = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
-    # callbacks.append(
-    #    ModelCheckpoint('/home/sXXXX/no_backup/sXXXX/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
-    #                    period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
-    # callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
+    callbacks.append(
+       ModelCheckpoint('/home/s1241/no_backup/s1241/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
+                       period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
+    callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
     cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
     cnn.summary()
@@ -221,8 +220,35 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
                              'acc_test': acc_test,
                              'prob_test': prob_test})
 
+    # train in batch manually
+    index_train = np.random.permutation(np.arange(len(X_train)))
+    index_test = np.random.permutation(np.arange(len(X_test)))
+    for iB in range(int(np.ceil(len(X_train) / batchSize))):
+        X_train_batch = X_train[index_train[iB * batchSize:(iB + 1) * batchSize]]
+        y_train_batch = y_train[index_train[iB * batchSize:(iB + 1) * batchSize]]
+        X_train_p2_batch = X_train_p2[index_train[iB * batchSize:(iB + 1) * batchSize]]
+        y_train_p2_batch = y_train_p2[index_train[iB * batchSize:(iB + 1) * batchSize]]
+        result_train = cnn.train_on_batch(x=[X_train_batch, X_train_p2_batch],
+                                          y=[y_train_batch, y_train_p2_batch])
+    for iB in range(int(np.ceil(len(X_test) / batchSize))):
+        X_test_batch = X_test[index_test[iB * batchSize]:index_test[(iB + 1) * batchSize]]
+        y_test_batch = y_test[index_test[iB * batchSize]:index_test[(iB + 1) * batchSize]]
+        X_test_p2_batch = X_test_p2[index_test[iB * batchSize]:index_test[(iB + 1) * batchSize]]
+        y_test_p2_batch = X_test_p2[index_test[iB * batchSize]:index_test[(iB + 1) * batchSize]]
+        result_test = cnn.test_on_batch(x=[X_test_batch, X_test_p2_batch],
+                                          y=[y_test_batch, y_test_p2_batch])
+    # save model
+    json_string = cnn.to_json()
+    open(model_json, 'w').write(json_string)
+    cnn.save_weights(weight_name, overwrite=True)
+    print('Saving results: ' + model_name)
+    sio.savemat(model_name, {'model_settings': model_json,
+                             'model': model_all,
+                             'weights': weight_name,
+                             'result_train': result_train,
+                             'result_test': result_test})
 
-def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
+def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize, X_test_p2=None, y_test_p2=None, patchSize_down=None, ScaleFactor=None):
     weight_name = sOutPath + '/' + model_name + '_weights.h5'
     model_json = sOutPath + model_name + '_json'
     model_all = sOutPath + model_name + '_model.h5'
@@ -246,7 +272,7 @@ def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
 
     # load weights and model (new way)
     # model = model_from_json(model_json)
-    model = createModel(patchSize)
+    model = createModel(patchSize, patchSize_down=patchSize_down, ScaleFactor=ScaleFactor)
     opti = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
 
@@ -261,98 +287,16 @@ def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
 
     X_test = np.expand_dims(X_test, axis=1)
     y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
+    X_test_p2 = np.expand_dims(X_test_p2, axis=1)
+    y_test_p2 = np.asarray([y_test_p2[:], np.abs(np.asarray(y_test_p2[:], dtype=np.float32) - 1)]).T
 
-    score_test, acc_test = model.evaluate(X_test, y_test, batch_size=batchSize)
-    prob_pre = model.predict(X_test, batchSize, 1)
+    score_test, acc_test = model.evaluate([X_test, X_test_p2], [y_test, y_test_p2], batch_size=batchSize)
+    prob_pre = model.predict([X_test,X_test_p2], batch_size=batchSize, verbose=0)
 
     # modelSave = model_name[:-5] + '_pred.mat'
     modelSave = sOutPath + '/' + model_name + '_pred.mat'
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
     model.save(model_all)
-
-
-###############################################################################
-## OPTIMIZATIONS ##
-###############################################################################
-def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
-    # explicitly stated here instead of cnn = createModel() to allow optimization
-    cnn = Sequential()
-    #    cnn.add(Convolution2D(32,
-    #                            14,
-    #                            14,
-    #                            init='normal',
-    #                           # activation='sigmoid',
-    #                            weights=None,
-    #                            border_mode='valid',
-    #                            subsample=(1, 1),
-    #                            W_regularizer=l2(1e-6),
-    #                            input_shape=(1, patchSize[0,0], patchSize[0,1])))
-    #    cnn.add(Activation('relu'))
-
-    cnn.add(Convolution2D(32,  # 64
-                          7,
-                          7,
-                          init='normal',
-                          # activation='sigmoid',
-                          weights=None,
-                          border_mode='valid',
-                          subsample=(1, 1),
-                          W_regularizer=l2(1e-6)))
-    cnn.add(Activation('relu'))
-    cnn.add(Convolution2D(64,  # learning rate: 0.1 -> 76%
-                          3,
-                          3,
-                          init='normal',
-                          # activation='sigmoid',
-                          weights=None,
-                          border_mode='valid',
-                          subsample=(1, 1),
-                          W_regularizer=l2(1e-6)))
-    cnn.add(Activation('relu'))
-
-    cnn.add(Convolution2D(128,  # learning rate: 0.1 -> 76%
-                          3,
-                          3,
-                          init='normal',
-                          # activation='sigmoid',
-                          weights=None,
-                          border_mode='valid',
-                          subsample=(1, 1),
-                          W_regularizer=l2(1e-6)))
-    cnn.add(Activation('relu'))
-
-    # cnn.add(pool2(pool_size=(2, 2), strides=None, border_mode='valid', dim_ordering='th'))
-
-    cnn.add(Flatten())
-    # cnn.add(Dense(input_dim= 100,
-    #              output_dim= 100,
-    #              init = 'normal',
-    #              #activation = 'sigmoid',
-    #              W_regularizer='l2'))
-    # cnn.add(Activation('sigmoid'))
-    cnn.add(Dense(input_dim=100,
-                  output_dim=2,
-                  init='normal',
-                  # activation = 'sigmoid',
-                  W_regularizer='l2'))
-    cnn.add(Activation('softmax'))
-
-    opti = SGD(lr={{choice([0.1, 0.01, 0.05, 0.005, 0.001])}}, momentum=1e-8, decay=0.1, nesterov=True)
-    cnn.compile(loss='categorical_crossentropy',
-                optimizer=opti)
-
-    epochs = 300
-
-    result = cnn.fit(X_train, Y_train,
-                     batch_size=128,  # {{choice([64, 128])}}
-                     nb_epoch=epochs,
-                     show_accuracy=True,
-                     verbose=2,
-                     validation_data=(X_test, Y_test))
-    score_test, acc_test = cnn.evaluate(X_test, Y_test, verbose=0)
-
-    return {'loss': -acc_test, 'status': STATUS_OK, 'model': cnn, 'trainresult': result, 'score_test': score_test}
-
 
 ## helper functions
 def drange(start, stop, step):
