@@ -23,12 +23,16 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
 
 def createModel(patchSize):
+    l1_reg = 0
+    l2_reg = 1e-6
     cnn = Sequential()
 
     """ conv1 """
     cnn.add(Conv2D(64,
                    kernel_size=(3, 3),
                    padding='same',
+		   kernel_initializer='he_normal',
+		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    input_shape=(1, int(patchSize[0]), int(patchSize[0])),
@@ -38,6 +42,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(64,
                    kernel_size=(3, 3),
                    padding='same',
+		   kernel_initializer='he_normal',
+		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv1_2'
@@ -45,7 +51,7 @@ def createModel(patchSize):
 
     cnn.add(MaxPooling2D(pool_size =(2, 2),
                          strides=(2, 2),
-                         padding='SAME',
+                         padding='same',
                          name='pool1'
                          ))
 
@@ -53,6 +59,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(128,
                    kernel_size=(3, 3),
                    padding='same',
+		   kernel_initializer='he_normal',
+		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv2_1'
@@ -61,6 +69,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(128,
                    kernel_size=(3, 3),
                    padding='same',
+		   kernel_initializer='he_normal',
+		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv2_2'
@@ -68,7 +78,7 @@ def createModel(patchSize):
 
     cnn.add(MaxPooling2D(pool_size=(2, 2),
                          strides=(2, 2),
-                         padding='SAME',
+                         padding='same',
                          name='pool2'
                          ))
 
@@ -76,6 +86,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(256,
                    kernel_size=(3, 3),
                    padding='same',
+		   kernel_initializer='he_normal',
+		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv3_1'
@@ -84,6 +96,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(256,
                    kernel_size=(3, 3),
                    padding='same',
+		   kernel_initializer='he_normal',
+		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv3_2'
@@ -92,6 +106,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(256,
                    kernel_size=(3, 3),
                    padding='same',
+		   kernel_initializer='he_normal',
+		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv3_3'
@@ -99,7 +115,7 @@ def createModel(patchSize):
 
     cnn.add(MaxPooling2D(pool_size=(2, 2),
                          strides=(2, 2),
-                         padding='SAME',
+                         padding='same',
                          name='pool3'
                          ))
 
@@ -107,6 +123,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(512,
                    kernel_size=(3, 3),
                    padding='same',
+		   kernel_initializer='he_normal',
+		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv4_1'
@@ -115,6 +133,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(512,
                    kernel_size=(3, 3),
                    padding='same',
+		   kernel_initializer='he_normal',
+		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv4_2'
@@ -123,6 +143,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(512,
                    kernel_size=(3, 3),
                    padding='same',
+		   kernel_initializer='he_normal',
+		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv4_3'
@@ -130,7 +152,7 @@ def createModel(patchSize):
 
     cnn.add(MaxPooling2D(pool_size=(2, 2),
                          strides=(2, 2),
-                         padding='SAME',
+                         padding='same',
                          name='pool4'
                          ))
 
@@ -138,6 +160,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(512,
                    kernel_size=(3, 3),
                    padding='same',
+		   kernel_initializer='he_normal',
+		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv5_1'
@@ -146,6 +170,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(512,
                    kernel_size=(3, 3),
                    padding='same',
+		   kernel_initializer='he_normal',
+		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv5_2'
@@ -154,6 +180,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(512,
                    kernel_size=(3, 3),
                    padding='same',
+		   kernel_initializer='he_normal',
+		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv5_3'
@@ -161,17 +189,13 @@ def createModel(patchSize):
 
     cnn.add(MaxPooling2D(pool_size=(2, 2),
                          strides=(2, 2),
-                         padding='SAME',
+                         padding='same',
                          name='pool5'
                          ))
 
 
     cnn.add(Flatten(name='flatten'))
-    cnn.add(Dense(units=4096, activation='relu', name='fc1_relu'))
-    cnn.add(Dropout(0.5, name='drop1'))
-    cnn.add(Dense(units=1000, activation='relu', name='fc2_relu'))
-    cnn.add(Dropout(0.5, name='drop2'))
-    cnn.add(Dense(units=2, activation='relu', name='fc3_relu'))
+    cnn.add(Dense(units=2, kernel_initializer='he_normal', kernel_regularizer='l2', name='output'))
     cnn.add(Activation('softmax'))
 
     return cnn
@@ -223,8 +247,8 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 
     # opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
     opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-    callbacks = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
-    callbacks.append(ModelCheckpoint(weight_name, monitor='val_acc', verbose=0, period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
+    callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
+    callbacks.append(ModelCheckpoint(weight_name, monitor='val_acc', verbose=1, period=2, save_best_only=True))  # overrides the last checkpoint, its just for security
     callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
     cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
