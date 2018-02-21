@@ -57,8 +57,16 @@ def createModel(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-3
 
     output_fc1 = Activation('softmax')(dense_out)
     output_fc2 = Activation('softmax')(dense_out)
-    cnn_ms = Model(inputs=[input_orig, input_down], outputs=[output_fc1,output_fc2])
+    output_p1 = Lambda(sliceP1)(output_fc1)
+    output_p2 = Lambda(sliceP2)(output_fc2)
+    cnn_ms = Model(inputs=[input_orig, input_down], outputs=[output_p1,output_p2])
     return cnn_ms
+
+def sliceP1(input):
+    return input[:input.shape[0]//2, :]
+
+def sliceP2(input):
+    return input[input.shape[0]//2:, :]
 
 def fconcatenate(path_orig, path_down):
     if path_orig._keras_shape==path_down._keras_shape:
@@ -151,7 +159,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     learningRate = [0.01] if learningRate is None else learningRate
     iEpochs = 300 if iEpochs is None else iEpochs
 
-    print('Training 2D CNN')
+    print('Training 2D CNN multiscale')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
     # save names
@@ -191,84 +199,32 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
                      callbacks=callbacks,
                      verbose=1)
 
-    loss_test, acc_test = cnn.evaluate([X_test, X_test_p2], [y_test, y_test_p2], batch_size=batchSize)
+    test_loss, p1_loss, p2_loss, p1_acc, p2_acc = cnn.evaluate([X_test, X_test_p2], [y_test, y_test_p2], batch_size=batchSize)
 
     prob_test = cnn.predict([X_test,X_test_p2], batch_size=batchSize, verbose=0)
 
     # save model
     json_string = cnn.to_json()
     open(model_json, 'w').write(json_string)
-    # wei = cnn.get_weights()
     cnn.save_weights(weight_name, overwrite=True)
-    # cnn.save(model_all) # keras > v0.7
 
     # matlab
-    acc = result.history['acc']
-    loss = result.history['loss']
-    val_acc = result.history['val_acc']
-    val_loss = result.history['val_loss']
-
     print('Saving results: ' + model_name)
     sio.savemat(model_name, {'model_settings': model_json,
                              'model': model_all,
                              'weights': weight_name,
-                             'acc': acc,
-                             'loss': loss,
-                             'val_acc': val_acc,
-                             'val_loss': val_loss,
-                             'loss_test': loss_test,
-                             'acc_test': acc_test,
+                             'training_result':result.history,
+                             'p1_loss': p1_loss,
+                             'p2_loss': p2_loss,
+                             'p1_acc': p1_acc,
+                             'p2_acc': p2_acc,
                              'prob_test': prob_test})
 
-    # train in batch manually
-    index_train = np.random.permutation(np.arange(len(X_train)))
-    index_test = np.random.permutation(np.arange(len(X_test)))
-    for iB in range(int(np.ceil(len(X_train) / batchSize))):
-        X_train_batch = X_train[index_train[iB * batchSize:(iB + 1) * batchSize]]
-        y_train_batch = y_train[index_train[iB * batchSize:(iB + 1) * batchSize]]
-        X_train_p2_batch = X_train_p2[index_train[iB * batchSize:(iB + 1) * batchSize]]
-        y_train_p2_batch = y_train_p2[index_train[iB * batchSize:(iB + 1) * batchSize]]
-        result_train = cnn.train_on_batch(x=[X_train_batch, X_train_p2_batch],
-                                          y=[y_train_batch, y_train_p2_batch])
-    for iB in range(int(np.ceil(len(X_test) / batchSize))):
-        X_test_batch = X_test[index_test[iB * batchSize]:index_test[(iB + 1) * batchSize]]
-        y_test_batch = y_test[index_test[iB * batchSize]:index_test[(iB + 1) * batchSize]]
-        X_test_p2_batch = X_test_p2[index_test[iB * batchSize]:index_test[(iB + 1) * batchSize]]
-        y_test_p2_batch = X_test_p2[index_test[iB * batchSize]:index_test[(iB + 1) * batchSize]]
-        result_test = cnn.test_on_batch(x=[X_test_batch, X_test_p2_batch],
-                                          y=[y_test_batch, y_test_p2_batch])
-    # save model
-    json_string = cnn.to_json()
-    open(model_json, 'w').write(json_string)
-    cnn.save_weights(weight_name, overwrite=True)
-    print('Saving results: ' + model_name)
-    sio.savemat(model_name, {'model_settings': model_json,
-                             'model': model_all,
-                             'weights': weight_name,
-                             'result_train': result_train,
-                             'result_test': result_test})
 
 def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize, X_test_p2=None, y_test_p2=None, patchSize_down=None, ScaleFactor=None):
     weight_name = sOutPath + '/' + model_name + '_weights.h5'
     model_json = sOutPath + model_name + '_json'
     model_all = sOutPath + model_name + '_model.h5'
-
-    #    # load weights and model (OLD WAY)
-    #    conten = sio.loadmat(model_name)
-    #    weig = content['wei']
-    #    nSize = weig.shape
-    #    weigh = []
-    #
-    #    for i in drange(0,nSize[1],2):
-    #    	w0 = weig[0,i]
-    #    	w1 = weig[0,i+1]
-    #    	w1=w1.T
-    #    	w1 = np.concatenate(w1,axis=0)
-    #
-    #    	weigh= weigh.extend([w0, w1])
-    #
-    #    model = model_from_json(model_json)
-    #    model.set_weights(weigh)
 
     # load weights and model (new way)
     # model = model_from_json(model_json)
