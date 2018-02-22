@@ -32,9 +32,11 @@ from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
 from utils.image_preprocessing import ImageDataGenerator
 from matplotlib import pyplot as plt
 
+from networks.multiclass.SENets.deep_residual_learning_blocks import *
+
 
 def createModel(patchSize, numClasses):
-    # ResNet-56 based on CIFAR-10, for 32x32 Images
+    # SE-ResNet-56 based on CIFAR-10, for 32x32 Images
     print(K.image_data_format())
 
     if K.image_data_format() == 'channels_last':
@@ -45,42 +47,31 @@ def createModel(patchSize, numClasses):
     input_tensor = Input(shape=(patchSize[0], patchSize[1], 1))
 
     # first conv layer
-    x = Conv2D(16, (3,3), strides=(1,1), padding='same', kernel_initializer='he_normal', name='conv1')(input_tensor)
+    x = Conv2D(16, (3,3), strides=(1,1), kernel_initializer='he_normal', name='conv1')(input_tensor)
     x = BatchNormalization(axis=bn_axis, name='bn_conv1')(x)
     x = Activation('relu')(x)
 
-    # first stage of 2n=2*9=18 Convs (3x3, 16)
-    x = identity_block(x, [16, 16], stage=1, block=1)
-    x = identity_block(x, [16, 16], stage=1, block=2)
-    x = identity_block(x, [16, 16], stage=1, block=3)
-    x = identity_block(x, [16, 16], stage=1, block=4)
-    x = identity_block(x, [16, 16], stage=1, block=5)
-    x = identity_block(x, [16, 16], stage=1, block=6)
-    x = identity_block(x, [16, 16], stage=1, block=7)
-    x = identity_block(x, [16, 16], stage=1, block=8)
-    x = identity_block(x, [16, 16], stage=1, block=9)
+    # first stage of 2n=2*5=10 Convs (3x3, 16)
+    x = identity_block(x, [16, 16], stage=1, block=1, se_enabled=True)
+    x = identity_block(x, [16, 16], stage=1, block=2, se_enabled=True)
+    x = identity_block(x, [16, 16], stage=1, block=3, se_enabled=True)
+    x = identity_block(x, [16, 16], stage=1, block=4, se_enabled=True)
+    x = identity_block(x, [16, 16], stage=1, block=5, se_enabled=True)
 
-    # second stage of 2n=2*9=18 convs (3x3, 32)
-    x = projection_block(x, [32, 32], stage=2, block=1)
-    x = identity_block(x, [32, 32], stage=2, block=2)
-    x = identity_block(x, [32, 32], stage=2, block=3)
-    x = identity_block(x, [32, 32], stage=2, block=4)
-    x = identity_block(x, [32, 32], stage=2, block=5)
-    x = identity_block(x, [32, 32], stage=2, block=6)
-    x = identity_block(x, [32, 32], stage=2, block=7)
-    x = identity_block(x, [32, 32], stage=2, block=8)
-    x = identity_block(x, [32, 32], stage=2, block=9)
+    # second stage of 2n=2*5=10 convs (3x3, 32)
+    x = projection_block(x, [32, 32], stage=2, block=1, se_enabled=True)
+    x = identity_block(x, [32, 32], stage=2, block=2, se_enabled=True)
+    x = identity_block(x, [32, 32], stage=2, block=3, se_enabled=True)
+    x = identity_block(x, [32, 32], stage=2, block=4, se_enabled=True)
+    x = identity_block(x, [32, 32], stage=2, block=5, se_enabled=True)
 
-    # third stage of 3n=3*9=18 convs (3x3, 64)
-    x = projection_block(x, [64, 64], stage=3, block=1)
-    x = identity_block(x, [64, 64], stage=3, block=2)
-    x = identity_block(x, [64, 64], stage=3, block=3)
-    x = identity_block(x, [64, 64], stage=3, block=4)
-    x = identity_block(x, [64, 64], stage=3, block=5)
-    x = identity_block(x, [64, 64], stage=3, block=6)
-    x = identity_block(x, [64, 64], stage=3, block=7)
-    x = identity_block(x, [64, 64], stage=3, block=8)
-    x = identity_block(x, [64, 64], stage=3, block=9)
+
+    # third stage of 3n=3*5=18 convs (3x3, 64)
+    x = projection_block(x, [64, 64], stage=3, block=1, se_enabled=True)
+    x = identity_block(x, [64, 64], stage=3, block=2, se_enabled=True)
+    x = identity_block(x, [64, 64], stage=3, block=3, se_enabled=True)
+    x = identity_block(x, [64, 64], stage=3, block=4, se_enabled=True)
+    x = identity_block(x, [64, 64], stage=3, block=5, se_enabled=True)
 
     # global average pooling
     x = GlobalAveragePooling2D(data_format='channels_last')(x)
@@ -93,7 +84,7 @@ def createModel(patchSize, numClasses):
 
     # create model
     cnn = Model(input_tensor, output, name='ResNet-56')
-    sModelName = 'ResNet-56'
+    sModelName = 'SE-ResNet-56'
 
     return cnn, sModelName
 
@@ -152,7 +143,6 @@ def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, 
     #                     learningRate=iLearn,
     #                     iEpochs=iEpochs,
     #                     dlart_handle=dlart_handle)
-
 
 def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None):
     print('Training CNN')
@@ -215,9 +205,9 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                                                      #  embeddings_metadata=None)
 
     callbacks = [callback_earlyStopping]
-    callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0, period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
+    callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints/checker.hdf5', monitor='val_acc', verbose=0, period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
     callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
-    #callbacks.append(LearningRateScheduler(schedule=step_decay))
+    #callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
 
 
     # data augmentation
@@ -376,7 +366,6 @@ def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
     modelSave = sOutPath + sModelFileSave + '_pred.mat'
     print('saving Model:{}'.format(modelSave))
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
-
 
 
 ###############################################################################

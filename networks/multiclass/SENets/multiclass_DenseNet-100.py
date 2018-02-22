@@ -1,30 +1,42 @@
+import os
+#os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+from tensorflow.python.client import device_lib
+print(device_lib.list_local_devices)
+
 import os.path
 import scipy.io as sio
 import numpy as np
+import math
 import keras
 from keras.layers import Input
 import keras.backend as K
 from keras.layers import Conv2D
 from keras.layers import BatchNormalization
 from keras.layers import GlobalAveragePooling2D
-from keras.layers import AveragePooling2D
 from keras.layers.core import Dense, Activation, Flatten
-
 from keras.models import Model
 from keras.models import Sequential
 from keras.layers.convolutional import Convolution2D
 from keras.callbacks import EarlyStopping
+from keras.callbacks import LearningRateScheduler
+from keras.callbacks import ReduceLROnPlateau
+from keras.callbacks import ModelCheckpoint
+from keras.models import model_from_json
 from keras.regularizers import l2  # , activity_l2
 
-from networks.multiclass.SENets.densely_connected_cnn_blocks import *
-
 from keras.optimizers import SGD
+from networks.multiclass.SENets.deep_residual_learning_blocks import *
+from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
+from utils.image_preprocessing import ImageDataGenerator
+from matplotlib import pyplot as plt
 
+from networks.multiclass.SENets.densely_connected_cnn_blocks import *
 
 
 def createModel(patchSize, numClasses):
     # ResNet-56 based on CIFAR-10, for 32x32 Images
-    print(K.image_data_format())
 
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
@@ -67,8 +79,9 @@ def createModel(patchSize, numClasses):
 
     # create model
     cnn = Model(input_tensor, output, name='ResNet-56')
+    sModelName = 'DenseNet-100'
 
-    return cnn
+    return cnn, sModelName
 
 
 def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None):

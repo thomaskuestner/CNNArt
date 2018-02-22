@@ -1,3 +1,9 @@
+'''
+SE-DenseNet-BC-100
+SE-Blocks in the transitionlayers
+
+'''
+
 import os
 #os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -32,6 +38,9 @@ from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
 from utils.image_preprocessing import ImageDataGenerator
 from matplotlib import pyplot as plt
 
+from networks.multiclass.SENets.densely_connected_cnn_blocks import *
+
+
 
 def createModel(patchSize, numClasses):
     # ResNet-56 based on CIFAR-10, for 32x32 Images
@@ -42,45 +51,34 @@ def createModel(patchSize, numClasses):
     else:
         bn_axis = 1
 
+    growthRate_k = 12
+    compressionFactor = 0.5
+
     input_tensor = Input(shape=(patchSize[0], patchSize[1], 1))
 
     # first conv layer
-    x = Conv2D(16, (3,3), strides=(1,1), padding='same', kernel_initializer='he_normal', name='conv1')(input_tensor)
-    x = BatchNormalization(axis=bn_axis, name='bn_conv1')(x)
+    x = Conv2D(2*growthRate_k, (3,3), strides=(1,1), padding='same', kernel_initializer='he_normal', name='conv1')(input_tensor)
+
+    # 1. Dense Block
+    x, numFilters = dense_block(x, numInputFilters=2*growthRate_k, numLayers=16, growthRate_k=growthRate_k, bottleneck_enabled=True)
+
+    # Transition Layer
+    x, numFilters = transition_SE_layer(x, numFilters, compressionFactor=compressionFactor, se_ratio=128)
+
+    # 2. Dense Block
+    x, numFilters = dense_block(x, numInputFilters=numFilters, numLayers=16, growthRate_k=growthRate_k, bottleneck_enabled=True)
+
+    #Transition Layer
+    x, numFilters = transition_SE_layer(x, numFilters, compressionFactor=compressionFactor, se_ratio=128)
+
+    #3. Dense Block
+    x, numFilters = dense_block(x, numInputFilters=numFilters, numLayers=16, growthRate_k=growthRate_k, bottleneck_enabled=True)
+
+    # SE Block
+    x = squeeze_excitation_block(x, ratio=128)
+
+    x = BatchNormalization(axis=bn_axis)(x)
     x = Activation('relu')(x)
-
-    # first stage of 2n=2*9=18 Convs (3x3, 16)
-    x = identity_block(x, [16, 16], stage=1, block=1)
-    x = identity_block(x, [16, 16], stage=1, block=2)
-    x = identity_block(x, [16, 16], stage=1, block=3)
-    x = identity_block(x, [16, 16], stage=1, block=4)
-    x = identity_block(x, [16, 16], stage=1, block=5)
-    x = identity_block(x, [16, 16], stage=1, block=6)
-    x = identity_block(x, [16, 16], stage=1, block=7)
-    x = identity_block(x, [16, 16], stage=1, block=8)
-    x = identity_block(x, [16, 16], stage=1, block=9)
-
-    # second stage of 2n=2*9=18 convs (3x3, 32)
-    x = projection_block(x, [32, 32], stage=2, block=1)
-    x = identity_block(x, [32, 32], stage=2, block=2)
-    x = identity_block(x, [32, 32], stage=2, block=3)
-    x = identity_block(x, [32, 32], stage=2, block=4)
-    x = identity_block(x, [32, 32], stage=2, block=5)
-    x = identity_block(x, [32, 32], stage=2, block=6)
-    x = identity_block(x, [32, 32], stage=2, block=7)
-    x = identity_block(x, [32, 32], stage=2, block=8)
-    x = identity_block(x, [32, 32], stage=2, block=9)
-
-    # third stage of 3n=3*9=18 convs (3x3, 64)
-    x = projection_block(x, [64, 64], stage=3, block=1)
-    x = identity_block(x, [64, 64], stage=3, block=2)
-    x = identity_block(x, [64, 64], stage=3, block=3)
-    x = identity_block(x, [64, 64], stage=3, block=4)
-    x = identity_block(x, [64, 64], stage=3, block=5)
-    x = identity_block(x, [64, 64], stage=3, block=6)
-    x = identity_block(x, [64, 64], stage=3, block=7)
-    x = identity_block(x, [64, 64], stage=3, block=8)
-    x = identity_block(x, [64, 64], stage=3, block=9)
 
     # global average pooling
     x = GlobalAveragePooling2D(data_format='channels_last')(x)
@@ -93,9 +91,8 @@ def createModel(patchSize, numClasses):
 
     # create model
     cnn = Model(input_tensor, output, name='ResNet-56')
-    sModelName = 'ResNet-56'
 
-    return cnn, sModelName
+    return cnn
 
 
 def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
@@ -216,7 +213,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
     callbacks = [callback_earlyStopping]
     callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0, period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
-    callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
+    callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=10, min_lr=1e-4, verbose=1))
     #callbacks.append(LearningRateScheduler(schedule=step_decay))
 
 

@@ -557,7 +557,7 @@ class Ui_DLArt_GUI(object):
         DLArt_GUI.setStatusBar(self.statusBar)
 
         self.retranslateUi(DLArt_GUI)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(DLArt_GUI)
 
     def retranslateUi(self, DLArt_GUI):

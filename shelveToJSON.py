@@ -66,7 +66,7 @@ for key in inShelve.keys():
 
 with open(jPath, 'w') as fp:
     # save dict in one line in json file
-    json.dump(jsonDict, fp)
+    json.dump(jsonDict, fp, indent=4)
 
     # for human friendly reading
     #json.dump(jsonDict, fp, indent=4)

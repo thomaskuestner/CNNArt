@@ -33,59 +33,96 @@ from utils.image_preprocessing import ImageDataGenerator
 from matplotlib import pyplot as plt
 
 
+
+
 def createModel(patchSize, numClasses):
-    # ResNet-56 based on CIFAR-10, for 32x32 Images
-    print(K.image_data_format())
+
 
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
     else:
         bn_axis = 1
 
-    input_tensor = Input(shape=(patchSize[0], patchSize[1], 1))
+    input_tensor = Input(shape=(patchSize[0], patchSize[1], patchSize[2], 1))
 
-    # first conv layer
-    x = Conv2D(16, (3,3), strides=(1,1), padding='same', kernel_initializer='he_normal', name='conv1')(input_tensor)
+    # first stage
+    x = Conv3D(filters=16,
+               kernel_size=(5, 5, 5),
+               strides=(1, 1, 1),
+               padding='same',
+               kernel_initializer='he_normal',
+               name='conv1')(input_tensor)
     x = BatchNormalization(axis=bn_axis, name='bn_conv1')(x)
-    x = Activation('relu')(x)
+    x = advanced_activations.LeakyReLU(alpha=0.01)(x)
 
-    # first stage of 2n=2*9=18 Convs (3x3, 16)
-    x = identity_block(x, [16, 16], stage=1, block=1)
-    x = identity_block(x, [16, 16], stage=1, block=2)
-    x = identity_block(x, [16, 16], stage=1, block=3)
-    x = identity_block(x, [16, 16], stage=1, block=4)
-    x = identity_block(x, [16, 16], stage=1, block=5)
-    x = identity_block(x, [16, 16], stage=1, block=6)
-    x = identity_block(x, [16, 16], stage=1, block=7)
-    x = identity_block(x, [16, 16], stage=1, block=8)
-    x = identity_block(x, [16, 16], stage=1, block=9)
+    x_after_stage_1 = Add()([input_tensor, x])
 
-    # second stage of 2n=2*9=18 convs (3x3, 32)
-    x = projection_block(x, [32, 32], stage=2, block=1)
-    x = identity_block(x, [32, 32], stage=2, block=2)
-    x = identity_block(x, [32, 32], stage=2, block=3)
-    x = identity_block(x, [32, 32], stage=2, block=4)
-    x = identity_block(x, [32, 32], stage=2, block=5)
-    x = identity_block(x, [32, 32], stage=2, block=6)
-    x = identity_block(x, [32, 32], stage=2, block=7)
-    x = identity_block(x, [32, 32], stage=2, block=8)
-    x = identity_block(x, [32, 32], stage=2, block=9)
+    # first down convolution
+    x_down_conv_1 = projection_block_3D(x_after_stage_1,
+                            filters=(32, 32),
+                            kernel_size=(3, 3, 3),
+                            stage=1,
+                            block=1,
+                            se_enabled=False,
+                            se_ratio=16)
 
-    # third stage of 3n=3*9=18 convs (3x3, 64)
-    x = projection_block(x, [64, 64], stage=3, block=1)
-    x = identity_block(x, [64, 64], stage=3, block=2)
-    x = identity_block(x, [64, 64], stage=3, block=3)
-    x = identity_block(x, [64, 64], stage=3, block=4)
-    x = identity_block(x, [64, 64], stage=3, block=5)
-    x = identity_block(x, [64, 64], stage=3, block=6)
-    x = identity_block(x, [64, 64], stage=3, block=7)
-    x = identity_block(x, [64, 64], stage=3, block=8)
-    x = identity_block(x, [64, 64], stage=3, block=9)
+    # second stage
+    x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=False, se_ratio=16)
+    #x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=2, block=2, se_enabled=False, se_ratio=16)
+    x_after_stage_2 = x
+
+    # second down convolution
+    x_down_conv_2 = projection_block_3D(x_after_stage_2,
+                                        filters=(64, 64),
+                                        kernel_size=(3, 3, 3),
+                                        stage=2,
+                                        block=3,
+                                        se_enabled=False,
+                                        se_ratio=16)
+
+    # third stage
+    x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=2, se_enabled=False, se_ratio=16)
+    #x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=3, se_enabled=False, se_ratio=16)
+    x_after_stage_3 = x
+
+    # third down convolution
+    x_down_conv_3 = projection_block_3D(x_after_stage_3,
+                                        filters=(128, 128),
+                                        kernel_size=(3, 3, 3),
+                                        stage=3,
+                                        block=4,
+                                        se_enabled=False,
+                                        se_ratio=16)
+
+    # fourth stage
+    x = identity_block_3D(x_down_conv_3, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=2, se_enabled=False, se_ratio=16)
+    #x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=3, se_enabled=False, se_ratio=16)
+    x_after_stage_4 = x
+
+   #  # fourth down convolution
+   #  x_down_conv_4 = projection_block_3D(x_after_stage_4,
+   #                                      filters=(256, 256),
+   #                                      kernel_size=(3, 3, 3),
+   #                                      stage=4,
+   #                                      block=4,
+   #                                      se_enabled=False,
+   #                                      se_ratio=16)
+   #
+   #  # fifth stage
+   #  x = identity_block_3D(x_down_conv_4, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=1, se_enabled=False, se_ratio=16)
+   #  x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=2, se_enabled=False, se_ratio=16)
+   # # x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=3, se_enabled=False, se_ratio=16)
+   #  x_after_stage_5 = x
+
+    ### end of encoder path
+    ### classification output
 
     # global average pooling
-    x = GlobalAveragePooling2D(data_format='channels_last')(x)
+    x = GlobalAveragePooling3D(data_format=K.image_data_format())(x_after_stage_4)
 
-    # fully-connected layer
+    # fully connected layer
     output = Dense(units=numClasses,
                    activation='softmax',
                    kernel_initializer='he_normal',
@@ -93,12 +130,13 @@ def createModel(patchSize, numClasses):
 
     # create model
     cnn = Model(input_tensor, output, name='ResNet-56')
-    sModelName = 'ResNet-56'
+    sModelName = cnn.name
 
     return cnn, sModelName
 
 
 def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
+
     # grid search on batch_sizes and learning rates
     # parse inputs
     batchSize = batchSizes[0]

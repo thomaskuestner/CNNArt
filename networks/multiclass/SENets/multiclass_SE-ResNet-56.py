@@ -216,9 +216,9 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                                                      #  embeddings_metadata=None)
 
     callbacks = [callback_earlyStopping]
-    callbacks.append(ModelCheckpoint(sOutPath + 'checkpoints/checker.hdf5', monitor='val_acc', verbose=0, period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
-    callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=10, min_lr=1e-4, verbose=1))
-    #callbacks.append(LearningRateScheduler(schedule=step_decay))
+    callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints/checker.hdf5', monitor='val_acc', verbose=0, period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
+    callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
+    #callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
 
 
     # data augmentation

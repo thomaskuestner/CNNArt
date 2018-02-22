@@ -10,6 +10,7 @@ import sys
 from DeepLearningArt.DLArt_GUI.RigidPatching import *
 from DeepLearningArt.DLArt_GUI.DataPreprocessing import *
 from utils.Training_Test_Split import *
+import scipy.io as sio
 
 #from RigidPatching import *
 #from DataPreprocessing import *
@@ -54,7 +55,13 @@ class DeepLearningArtApp():
         'Mulitclass ResNet-56': 'networks.multiclass.SENets.multiclass_ResNet-56',
         'Multiclass SE-ResNet-56': 'networks.multiclass.SENets.multiclass_SE-ResNet-56',
         'Mulitclass ResNet-50': 'networks.multiclass.SENets.multiclass_ResNet-50',
-        'Multiclass SE-ResNet-50': 'networks.multiclass.SENets.multiclass_SE-ResNet-50'
+        'Multiclass SE-ResNet-50': 'networks.multiclass.SENets.multiclass_SE-ResNet-50',
+        'Multiclass DenseNet-100': 'networks.multiclass.SENets.multiclass_DenseNet-100',
+        'Multiclass DenseNet-BC-100': 'networks.multiclass.SENets.multiclass_DenseNet-BC-100',
+        'Multiclass SE-DenseNet-BC-100': 'networks.multiclass.SENets.multiclass_SE-DenseNet-BC-100',
+        'Multiclass SE-ResNet-32': 'networks.multiclass.SENets.multiclass_SE-ResNet-32',
+        'Multiclass 3D ResNet': 'networks.multiclass.CNN3D.multiclass_3D_ResNet',
+        'Multiclass 3D SE-ResNet': 'networks.multiclass.CNN3D.multiclass_3D_SE-ResNet'
     }
 
     modelSubDir = "dicom_sorted"
@@ -249,13 +256,16 @@ class DeepLearningArtApp():
                     # Combine DICOM Slices to a single 3D image (voxel)
                     try:
                         voxel_ndarray, ijk_to_xyz = dicom_np.combine_slices(dicomDataset)
+                        voxel_ndarray = voxel_ndarray.astype(float)
+                        voxel_ndarray = np.swapaxes(voxel_ndarray, 0, 1)
                     except dicom_np.DicomImportException as e:
                         #invalid DICOM data
                         raise
 
                     # normalization of DICOM voxel
                     rangeNorm = [0,1]
-                    norm_voxel_ndarray = (voxel_ndarray-np.min(voxel_ndarray))*(rangeNorm[1]-rangeNorm[0])/(np.max(voxel_ndarray)-np.min(voxel_ndarray))
+                    #norm_voxel_ndarray = (voxel_ndarray-np.min(voxel_ndarray))*(rangeNorm[1]-rangeNorm[0])/(np.max(voxel_ndarray)-np.min(voxel_ndarray))
+                    norm_voxel_ndarray = voxel_ndarray
 
                     # 2D or 3D patching?
                     if self.patchingMode == DeepLearningArtApp.PATCHING_2D:
@@ -274,6 +284,19 @@ class DeepLearningArtApp():
                                                                             self.patchOverlapp,
                                                                             labelMask_ndarray, 0.5,
                                                                             DeepLearningArtApp.datasets[dataset])
+
+                            ############################################################################################
+                            # dPatchesOfMask, dLabelsMask = fRigidPatching_maskLabeling(labelMask_ndarray,
+                            #                                                 [self.patchSizeX, self.patchSizeY],
+                            #                                                 self.patchOverlapp,
+                            #                                                 labelMask_ndarray, 0.5,
+                            #                                                 DeepLearningArtApp.datasets[dataset])
+                            #
+                            # sio.savemat('D:med_data/' + patient + '_' + dataset + '_voxel_and_mask.mat',
+                            #             {'mask': labelMask_ndarray, 'voxel': voxel_ndarray,
+                            #              'dicomPatches': dPatches, 'dicomLabels': dLabels, 'maskPatches': dPatchesOfMask,
+                            #              'maskLabels': dLabelsMask})
+                            ############################################################################################
 
                             #convert to float32
                             dPatches = np.asarray(dPatches, dtype=np.float32)
@@ -435,6 +458,9 @@ class DeepLearningArtApp():
                                "_" + str(self.patchSizeX) + "x" + str(self.patchSizeY)
         if not os.path.exists(outPutFolderDataPath):
             os.makedirs(outPutFolderDataPath)
+
+        if not os.path.exists(outPutFolderDataPath + os.sep + 'checkpoints'):
+            os.makedirs(outPutFolderDataPath + os.sep + 'checkpoints')
 
         cnn_main.fRunCNN(
             dData={'X_train': self.X_train, 'y_train': Y_train, 'X_valid': self.X_validation, 'y_valid': Y_validation ,
@@ -894,7 +920,11 @@ class DeepLearningArtApp():
                     # Combine DICOM Slices to a single 3D image (voxel)
                     try:
                         voxel_ndarray_art, ijk_to_xyz_art = dicom_np.combine_slices(dicomDatasetArt)
+                        voxel_ndarray_art = voxel_ndarray_art.astype(float)
+                        voxel_ndarray_art = np.swapaxes(voxel_ndarray_art, 0, 1)
                         voxel_ndarray_ref, ijk_to_xyz_ref = dicom_np.combine_slices(dicomDatasetRef)
+                        voxel_ndarray_ref = voxel_ndarray_ref.astype(float)
+                        voxel_ndarray_ref = np.swapaxes(voxel_ndarray_ref, 0, 1)
                     except dicom_np.DicomImportException as e:
                         # invalid DICOM data
                         raise
