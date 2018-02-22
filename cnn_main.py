@@ -178,7 +178,10 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
 
 def fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, lTrain):
     if 'motion' in sModelIn:
-        sModel = 'correction.networks.motion.' + sModelIn
+        if 'VAE2D' in sModelIn:
+            sModel = 'correction.networks.motion.VAE2D.' + sModelIn
+        elif 'VAE3D' in sModelIn:
+            sModel = 'correction.networks.motion.VAE3D.' + sModelIn
     else:
         sys.exit("Model is not supported")
 
