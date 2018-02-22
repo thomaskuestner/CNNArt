@@ -1,40 +1,14 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from keras.layers import Input, Lambda, Layer, concatenate, LeakyReLU, Dense, Reshape, Flatten
-from keras.layers import Conv2D, Conv2DTranspose
+from keras.layers import Input, Lambda, concatenate, Dense, Reshape, Flatten
+from keras.layers import Conv2DTranspose
 from keras.models import Model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
-from keras.applications.vgg19 import VGG19
 from keras import backend as K
-from keras import metrics
-import os
-
-def LeakyReluConv2D(filters, kernel_size, strides, padding):
-    def f(inputs):
-        conv2d = Conv2D(filters,
-                        kernel_size=kernel_size,
-                        strides=strides,
-                        padding=padding)(inputs)
-        return LeakyReLU()(conv2d)
-    return f
-
-def LeakyReluConv2DTranspose(filters, kernel_size, strides, padding):
-    def f(inputs):
-        conv2d = Conv2DTranspose(filters=filters,
-                                 kernel_size=kernel_size,
-                                 strides=strides,
-                                 padding=padding)(inputs)
-        return LeakyReLU()(conv2d)
-    return f
-
-def preprocessing(input):
-    output = input * 255
-    K.update_sub(output[:, 0, :, :], 123.68)
-    K.update_sub(output[:, 1, :, :], 116.779)
-    K.update_sub(output[:, 2, :, :], 103.939)
-
-    return output[:, ::-1, :, :]
+from utils.MotionCorrection.network import LeakyReluConv2D, LeakyReluConv2DTranspose
+from utils.MotionCorrection.PerceptualLoss import addPerceptualLoss
 
 def sliceRef(input):
     return input[:input.shape[0]//2, :, :, :]
@@ -75,7 +49,7 @@ def decode(input):
     output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
     return output
 
-def createModel(patchSize, kl_weight, perceptual_weight):
+def createModel(patchSize, kl_weight, perceptual_weight, pl_network):
     # input corrupted and non-corrupted image
     x_ref = Input(shape=(1, patchSize[0], patchSize[1]))
     x_art = Input(shape=(1, patchSize[0], patchSize[1]))
@@ -111,59 +85,7 @@ def createModel(patchSize, kl_weight, perceptual_weight):
     # vae.add_loss(K.mean(loss_ref2ref + loss_art2ref + loss_kl))
 
     # add perceptual loss
-    x_ref_triple = concatenate([x_ref, x_ref, x_ref], axis=1)
-    decoded_ref_triple = concatenate([decoded_ref2ref, decoded_ref2ref, decoded_ref2ref], axis=1)
-    decoded_art_triple = concatenate([decoded_art2ref, decoded_art2ref, decoded_art2ref], axis=1)
-
-    x_ref_triple = Lambda(preprocessing)(x_ref_triple)
-    decoded_ref_triple = Lambda(preprocessing)(decoded_ref_triple)
-    decoded_art_triple = Lambda(preprocessing)(decoded_art_triple)
-
-    vgg_input = Input(shape=(3, patchSize[0], patchSize[1]))
-
-    vgg = VGG19(include_top=False, weights='imagenet', input_tensor=vgg_input)
-    vgg.trainable = False
-    for l in vgg.layers:
-        l.trainable = False
-
-    l1 = vgg.layers[1].output
-    l2 = vgg.layers[4].output
-    l3 = vgg.layers[7].output
-
-    # making model Model(inputs, outputs)
-    l1_model = Model(vgg_input, l1)
-    l2_model = Model(vgg_input, l2)
-    l3_model = Model(vgg_input, l3)
-
-    l1_model.trainable = False
-    l2_model.trainable = False
-    l3_model.trainable = False
-    for l in l1_model.layers:
-        l.trainable = False
-    for l in l2_model.layers:
-        l.trainable = False
-    for l in l3_model.layers:
-        l.trainable = False
-
-    f_l1_ref = l1_model(x_ref_triple)
-    f_l2_ref = l2_model(x_ref_triple)
-    f_l3_ref = l3_model(x_ref_triple)
-    f_l1_art = l1_model(decoded_art_triple)
-    f_l2_art = l2_model(decoded_art_triple)
-    f_l3_art = l3_model(decoded_art_triple)
-    f_l1_predict = l1_model(decoded_ref_triple)
-    f_l2_predict = l2_model(decoded_ref_triple)
-    f_l3_predict = l3_model(decoded_ref_triple)
-
-    p1_loss_ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l1_ref, f_l1_predict])
-    p2_loss_ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l2_ref, f_l2_predict])
-    p3_loss_ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l3_ref, f_l3_predict])
-
-    p1_loss_art = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l1_art, f_l1_predict])
-    p2_loss_art = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l2_art, f_l2_predict])
-    p3_loss_art = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l3_art, f_l3_predict])
-
-    p_loss = perceptual_weight * (p1_loss_ref + p2_loss_ref + p3_loss_ref + p1_loss_art + p2_loss_art + p3_loss_art)
+    p_loss = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, perceptual_weight, pl_network)
 
     vae.add_loss(p_loss)
 
@@ -178,9 +100,9 @@ def fTrain(dData, sOutPath, patchSize, dHyper):
     for iBatch in batchSize:
         for iLearn in learningRate:
             fTrainInner(dData, sOutPath, patchSize, epochs, iBatch, iLearn, dHyper['kl_weight'],
-                        dHyper['perceptual_weight'])
+                        dHyper['perceptual_weight'], dHyper['pl_network'])
 
-def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, perceptual_weight):
+def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, perceptual_weight, pl_network):
     train_ref = dData['train_ref']
     train_art = dData['train_art']
     test_ref = dData['test_ref']
@@ -191,7 +113,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pe
     test_ref = np.expand_dims(test_ref, axis=1)
     test_art = np.expand_dims(test_art, axis=1)
 
-    vae = createModel(patchSize, kl_weight, perceptual_weight)
+    vae = createModel(patchSize, kl_weight, perceptual_weight, pl_network)
     vae.compile(optimizer='adam', loss=None)
     vae.summary()
 
@@ -216,8 +138,9 @@ def fPredict(dData, sOutPath, patchSize, dHyper):
 
     kl_weight = dHyper['kl_weight']
     perceptual_weight = dHyper['perceptual_weight']
+    pl_network = dHyper['pl_network']
 
-    vae = createModel(patchSize, kl_weight, perceptual_weight)
+    vae = createModel(patchSize, kl_weight, perceptual_weight, pl_network)
     vae.compile(optimizer='adam', loss=None)
 
     vae.load_weights(weights_file)
@@ -248,5 +171,3 @@ def fPredict(dData, sOutPath, patchSize, dHyper):
             axes[j, 3].imshow(predict_art[6*i+j])
 
         plt.show()
-
-
