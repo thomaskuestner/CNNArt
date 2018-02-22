@@ -57,5 +57,5 @@ def fcalculateInputOfPath2(patchSize, scaleFactor, sModelIn):
         # calculate the size of the input of pathway with scaled patch
         patchSize_p2[idimension] = (FMperLayerPath2[0][idimension] -1) * Strides[0][idimension] + Kernels[0][idimension]
         InputOfPath2[idimension] = int(patchSize_p2[idimension]/scaleFactor)
-        
+    InputOfPath2[-1] = max(InputOfPath2[-1],patchSize[-1])
     return InputOfPath2

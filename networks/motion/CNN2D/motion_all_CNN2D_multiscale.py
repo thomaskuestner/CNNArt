@@ -57,8 +57,8 @@ def createModel(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-3
 
     output_fc1 = Activation('softmax')(dense_out)
     output_fc2 = Activation('softmax')(dense_out)
-    output_p1 = Lambda(sliceP1)(output_fc1)
-    output_p2 = Lambda(sliceP2)(output_fc2)
+    output_p1 = Lambda(sliceP1,name='path1_output')(output_fc1)
+    output_p2 = Lambda(sliceP2,name='path2_output')(output_fc2)
     cnn_ms = Model(inputs=[input_orig, input_down], outputs=[output_p1,output_p2])
     return cnn_ms
 

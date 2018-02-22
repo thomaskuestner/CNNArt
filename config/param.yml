@@ -39,6 +39,7 @@ selectedDatabase: *id001
 # artifactType: motion, multiclass
 # bodyRegion: abd, head, all
 # network: CNN2D, CNN3D, MNetArt, VNetArt
+# network with muntiscaleSeparated method: motion_all_CNN2D_multiscale, motion_VNet_multiscale
 network : "motion_all_CNN2D"
 
 # scaling range

@@ -61,7 +61,7 @@ def fTrain(X_train, Y_train, X_test, Y_test, sOutPath, patchSize, batchSizes=Non
 
     for iBatch in batchSizes:
         for iLearn in learningRates:
-            cnn = fCreateModel(patchSize, learningRate=iLearn, optimizer='Adam')
+            cnn = fCreateModel(patchSize, patchSize_down=patchSize_down, ScaleFactor=ScaleFactor, learningRate=iLearn, optimizer='Adam')
             fTrainInner(sOutPath, cnn, learningRate=iLearn, X_train=X_train, y_train=Y_train, X_test=X_test, y_test=Y_test,batchSize=iBatch, iEpochs=iEpochs, CV_Patient=CV_Patient,
                         X_train_p2=X_train_p2, y_train_p2=y_train_p2, X_test_p2=X_test_p2, y_test_p2=y_test_p2, patchSize_down=patchSize_down,ScaleFactor=ScaleFactor)
 
@@ -71,6 +71,7 @@ def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=No
 
     print('Training VNet multiscale')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
+    model.summary()
 
     # save names
     _, sPath = os.path.splitdrive(sOutPath)
@@ -167,7 +168,7 @@ def fCreateModel(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-
 
     input_orig = Input(shape=(1, int(patchSize[0]), int(patchSize[1]), int(patchSize[2])))
     path_orig_output = fpathway(input_orig)
-    input_down = Input(shape=(1, int(patchSize_down[0]), int(patchSize_down[1]), int(patchSize_down[1])))
+    input_down = Input(shape=(1, int(patchSize_down[0]), int(patchSize_down[1]), int(patchSize_down[2])))
     path_down = fpathway(input_down)
     path_down_output = fUpSample(path_down, ScaleFactor)
     multi_scale_connect = fconcatenate(path_orig_output, path_down_output)
@@ -181,8 +182,8 @@ def fCreateModel(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-
 
     output_fc1 = Activation('softmax')(dense_out)
     output_fc2 = Activation('softmax')(dense_out)
-    output_p1 = Lambda(sliceP1)(output_fc1)
-    output_p2 = Lambda(sliceP2)(output_fc2)
+    output_p1 = Lambda(sliceP1, name='path1_output')(output_fc1)
+    output_p2 = Lambda(sliceP2, name='path2_output')(output_fc2)
     cnn_ms = Model(inputs=[input_orig, input_down], outputs=[output_p1,output_p2])
 
     opti, loss = fGetOptimizerAndLoss(optimizer, learningRate=learningRate)  # loss cat_crosent default
@@ -204,15 +205,18 @@ def fconcatenate(path_orig, path_down):
         crop_x_0 = path_down._keras_shape[2] - path_orig._keras_shape[2] - crop_x_1
         crop_y_1 = int(np.ceil((path_down._keras_shape[3] - path_orig._keras_shape[3]) / 2))
         crop_y_0 = path_down._keras_shape[3] - path_orig._keras_shape[3] - crop_y_1
-        path_down_cropped = Cropping3D(cropping=((crop_x_0, crop_x_1), (crop_y_0, crop_y_1)))(path_down)
+        crop_z_1 = int(np.ceil((path_down._keras_shape[4] - path_orig._keras_shape[4]) / 2))
+        crop_z_0 = path_down._keras_shape[4] - path_orig._keras_shape[4] - crop_z_1
+        path_down_cropped = Cropping3D(cropping=((crop_x_0, crop_x_1), (crop_y_0, crop_y_1), (crop_z_0, crop_z_1)))(path_down)
     connected = concatenate([path_orig, path_down_cropped], axis=0)
     return connected
 
 def fUpSample(up_in, factor, method='repeat'):
     factor = int(np.round(1 / factor))
     if method == 'repeat':
-        up_out = UpSampling3D(size=(factor, factor), data_format='channels_first')(up_in)
-    # else: use inteporlation
+        up_out = UpSampling3D(size=(factor, factor, factor), data_format='channels_first')(up_in)
+        #else:  use inteporlation
+        #up_out = scaling.fscalingLayer3D(up_in, factor, [up_in._keras_shape[2],up_in._keras_shape[3],up_in._keras_shape[4]])
     return up_out
 
 def fGetActivation(input_t,  iPReLU=0):
@@ -233,11 +237,11 @@ def fpathway(input_t, dr_rate=0.0, iPReLU=0, l2_reg=1e-6):
     after_DownConv1_t = fCreateVNet_DownConv_Block(after_res1_t, after_res1_t._keras_shape[1], Strides[0],
                                                      iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
 
-    after_res2_t = fCreateVNet_Block(after_DownConv1_t, KernelNumber[2], type=fgetLayerNumUnscaled(), iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+    after_res2_t = fCreateVNet_Block(after_DownConv1_t, KernelNumber[1], type=fgetLayerNumUnscaled(), iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
     after_DownConv2_t = fCreateVNet_DownConv_Block(after_res2_t, after_res2_t._keras_shape[1], Strides[1],
                                                      iPReLU=iPReLU, l2_reg=l2_reg, dr_rate=dr_rate)
 
-    after_res3_t = fCreateVNet_Block(after_DownConv2_t, KernelNumber[3], type=fgetLayerNumUnscaled(), iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+    after_res3_t = fCreateVNet_Block(after_DownConv2_t, KernelNumber[2], type=fgetLayerNumUnscaled(), iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
     after_DownConv3_t = fCreateVNet_DownConv_Block(after_res3_t, after_res3_t._keras_shape[1], Strides[2],
                                                      iPReLU=iPReLU, l2_reg=l2_reg, dr_rate=dr_rate)
     return after_DownConv3_t

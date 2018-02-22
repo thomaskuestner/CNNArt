@@ -101,7 +101,7 @@ def fscaling3D(X_train, X_test, scpatchSize, iscalefactor):
 
     # Prepare for the using of scipy.interpolation: create the coordinates of grid
     if iscalefactor == 1:
-        return X_train, X_test
+        return X_train, X_test, scpatchSize
     else:
         xaxis = np.linspace(0, afterSize[0], scpatchSize[0])
         yaxis = np.linspace(0, afterSize[1], scpatchSize[1])
