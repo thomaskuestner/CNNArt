@@ -57,8 +57,8 @@ def createModel(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-3
 
     output_fc1 = Activation('softmax')(dense_out)
     output_fc2 = Activation('softmax')(dense_out)
-    output_p1 = Lambda(sliceP1,name='path1_output')(output_fc1)
-    output_p2 = Lambda(sliceP2,name='path2_output')(output_fc2)
+    output_p1 = Lambda(sliceP1,name='path1_output',output_shape=(None,2))(output_fc1)
+    output_p2 = Lambda(sliceP2,name='path2_output',output_shape=(None,2))(output_fc2)
     cnn_ms = Model(inputs=[input_orig, input_down], outputs=[output_p1,output_p2])
     return cnn_ms
 
@@ -166,7 +166,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     _, sPath = os.path.splitdrive(sOutPath)
     sPath, sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
-    model_name = sPath + '/' + sFilename  + '/' + sFilename + '_MS' + '_lr_' + str(learningRate) + '_bs_' + str(batchSize)
+    model_name = sPath + '/' + sFilename  + '/' + sFilename + '_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     if CV_Patient != 0: model_name = model_name + '_' + 'CV' + str(
         CV_Patient)  # determine if crossValPatient is used...
     weight_name = model_name + '_weights.h5'
@@ -221,38 +221,38 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
                              'prob_test': prob_test})
 
 
-def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize, X_test_p2=None, y_test_p2=None, patchSize_down=None, ScaleFactor=None):
+def fPredict(X_test, y_test, model_name, sOutPath, batchSize, X_test_p2=None, y_test_p2=None,  patchSize=[]):
     weight_name = sOutPath + '/' + model_name + '_weights.h5'
-    model_json = sOutPath + model_name + '_json'
-    model_all = sOutPath + model_name + '_model.h5'
+    model_json = sOutPath + '/' + model_name + '_json'
+    model_all = sOutPath + '/' + model_name + '_model.h5'
 
     # load weights and model (new way)
-    # model = model_from_json(model_json)
-    model = createModel(patchSize, patchSize_down=patchSize_down, ScaleFactor=ScaleFactor)
-    opti = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-    callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
+    model_json = open(model_json, 'r')
+    model_string = model_json.read()
+    model_json.close()
+    model = model_from_json(model_string)
 
-    model.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
+    # model = createModel(patchSize, patchSize_down=patchSize_down, ScaleFactor=ScaleFactor)
+    # opti = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+    # callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
+
+    model.compile(loss='categorical_crossentropy', optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
     model.load_weights(weight_name)
-
-    # load complete model (including weights); keras > 0.7
-    # model = load_model(model_all)
-
-    # assume artifact affected shall be tested!
-    # y_test = np.ones((len(X_test),1))
 
     X_test = np.expand_dims(X_test, axis=1)
     y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
     X_test_p2 = np.expand_dims(X_test_p2, axis=1)
     y_test_p2 = np.asarray([y_test_p2[:], np.abs(np.asarray(y_test_p2[:], dtype=np.float32) - 1)]).T
 
-    score_test, acc_test = model.evaluate([X_test, X_test_p2], [y_test, y_test_p2], batch_size=batchSize)
-    prob_pre = model.predict([X_test,X_test_p2], batch_size=batchSize, verbose=0)
+    test_loss, p1_loss, p2_loss, p1_acc, p2_acc = model.evaluate([X_test, X_test_p2], [y_test, y_test_p2], batch_size=batchSize, verbose=1)
+    print('p1_loss:' + str(p1_loss) + '   p1_acc:' + str(p1_acc) + '   p2_loss:' + str(p2_loss) + '   p2_acc:' + str(p2_acc))
+    prob_pre = model.predict([X_test,X_test_p2], batch_size=batchSize, verbose=1)
 
     # modelSave = model_name[:-5] + '_pred.mat'
     modelSave = sOutPath + '/' + model_name + '_pred.mat'
-    sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
-    model.save(model_all)
+    print('saving Model:{}'.format(modelSave))
+    sio.savemat(modelSave, {'prob_pre': prob_pre, 'p1_loss': p1_loss, 'p1_acc': p1_acc, 'p2_loss': p2_loss, 'p2_acc': p2_acc})
+    #model.save(model_all)
 
 ## helper functions
 def drange(start, stop, step):

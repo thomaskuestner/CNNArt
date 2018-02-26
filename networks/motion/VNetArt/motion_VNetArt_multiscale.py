@@ -123,19 +123,17 @@ def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=No
                              'p2_acc': p2_acc,
                              'prob_test': prob_test})
 
-def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
-    """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
-    Input:
-        X: Samples to predict on. The shape of X should fit to the input shape of the model
-        y: Labels for the Samples. Number of Samples should be equal to the number of samples in X
-        sModelPath: (String) full path to a trained keras model. It should be *_json.txt file. there has to be a corresponding *_weights.h5 file in the same directory!
-        sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy stored. 
-                    The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the suffix '_pred.mat' 
-        batchSize: Batchsize, number of samples that are processed at once"""
-    sModelPath=sModelPath.replace("_json.txt", "")
-    weight_name = sModelPath + '_weights.h5'
-    model_json = sModelPath + '_json.txt'
-    model_all = sModelPath + '_model.h5'
+def fPredict(X_test,y_test, model_name, sOutPath, batchSize=64, X_test_p2=[], y_test_p2=[], patchSize=[]):
+    # Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
+
+    X = np.expand_dims(X_test, axis=1)
+    y = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
+    X_p2 = np.expand_dims(X_test_p2, axis=1)
+    y_p2 = np.asarray([y_test_p2[:], np.abs(np.asarray(y_test_p2[:], dtype=np.float32) - 1)]).T
+
+    weight_name = sOutPath + '/' + model_name + '_weights.h5'
+    model_json = sOutPath + '/' + model_name + '_json.txt'
+    model_all = sOutPath + '/' + model_name + '_model.h5'
 
     # load weights and model (new way)
     model_json= open(model_json, 'r')
@@ -146,17 +144,14 @@ def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
     model.compile(loss='categorical_crossentropy',optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
     model.load_weights(weight_name)
 
+    test_loss, p1_loss, p2_loss, p1_acc, p2_acc = model.evaluate([X, X_p2], [y, y_p2],batch_size=batchSize, verbose=1)
+    print('p1_loss:'+str(p1_loss)+ '   p1_acc:'+ str(p1_acc)+'   p2_loss:'+str(p2_loss)+ '   p2_acc:'+ str(p2_acc))
+    prob_pre = model.predict([X, X_p2], batch_size=batchSize, verbose=1)
 
-    score_test, acc_test = model.evaluate(X, y, batch_size=batchSize)
-    print('loss'+str(score_test)+ '   acc:'+ str(acc_test))
-    prob_pre = model.predict(X, batch_size=batchSize, verbose=1)
-    print(prob_pre[0:14,:])
-    _,sModelFileSave  = os.path.split(sModelPath)
-
-    modelSave = sOutPath +sModelFileSave+ '_pred.mat'
+    modelSave = sOutPath + '/' + model_name + '_pred.mat'
     print('saving Model:{}'.format(modelSave))
-    sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
-
+    sio.savemat(modelSave, {'prob_pre': prob_pre, 'p1_loss': p1_loss, 'p1_acc': p1_acc, 'p2_loss': p2_loss, 'p2_acc': p2_acc})
+    #model.save(model_all)
 
 def fCreateModel(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-3, optimizer='SGD',
                      dr_rate=0.0, input_dr_rate=0.0, max_norm=5, iPReLU=0, l2_reg=1e-6):
@@ -182,8 +177,8 @@ def fCreateModel(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-
 
     output_fc1 = Activation('softmax')(dense_out)
     output_fc2 = Activation('softmax')(dense_out)
-    output_p1 = Lambda(sliceP1, name='path1_output')(output_fc1)
-    output_p2 = Lambda(sliceP2, name='path2_output')(output_fc2)
+    output_p1 = Lambda(sliceP1, name='path1_output',output_shape=(None,2))(output_fc1)
+    output_p2 = Lambda(sliceP2, name='path2_output',output_shape=(None,2))(output_fc2)
     cnn_ms = Model(inputs=[input_orig, input_down], outputs=[output_p1,output_p2])
 
     opti, loss = fGetOptimizerAndLoss(optimizer, learningRate=learningRate)  # loss cat_crosent default

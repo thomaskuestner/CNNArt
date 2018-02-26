@@ -193,6 +193,10 @@ else:
             X_test = hf['X_test'][:]
             y_test = hf['y_test'][:]
             patchSize = hf['patchSize'][:]
+            if sTrainingMethod == "MultiScaleSeparated":
+                X_test_p2 = hf['X_test_p2'][:]
+                y_test_p2 = hf['y_test_p2'][:]
+
     else:
         X_test = np.zeros((0, patchSize[0], patchSize[1]))
         y_test = np.zeros(0)
@@ -210,4 +214,8 @@ else:
             CV_Patient = iFold + 1
         else:
             CV_Patient = 0
-        cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'model_name': sPredictModel }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+        if sTrainingMethod == "MultiScaleSeparated":
+            cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'X_train_p2': [], 'y_train_p2': [], 'X_test_p2': X_test_p2[iFold],
+                                  'y_test_p2': y_test_p2[iFold], 'model_name': sPredictModel }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+        else:
+            cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'model_name': sPredictModel }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)

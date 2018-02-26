@@ -174,7 +174,10 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
                             dData['patchSize'], iBatchSize, iLearningRate, iEpochs, CV_Patient=CV_Patient)
 
     else:  # predicting
-        cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, dData['patchSize'], iBatchSize[0], CV_Patient=CV_Patient)
+        if 'multiscale' in sModelIn:
+            cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, X_test_p2=dData['X_test_p2'], y_test_p2=dData['y_test_p2'], patchSize=dData['patchSize'], batchSize=iBatchSize[0])
+        else:
+            cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, patchSize=dData['patchSize'], batchSize=iBatchSize[0])
 
 def fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, lTrain):
     if 'motion' in sModelIn:
