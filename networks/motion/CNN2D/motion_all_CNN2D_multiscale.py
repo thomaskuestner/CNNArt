@@ -184,7 +184,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     callbacks = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
     callbacks.append(
-       ModelCheckpoint('/home/s1241/no_backup/s1241/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
+       ModelCheckpoint('/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
                        period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
     callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
