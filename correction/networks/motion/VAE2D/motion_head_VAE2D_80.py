@@ -53,7 +53,7 @@ def decode(input):
     output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
     return output
 
-def createModel(patchSize, kl_weight, perceptual_weight, pl_network):
+def createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_network):
     # input corrupted and non-corrupted image
     x_ref = Input(shape=(1, patchSize[0], patchSize[1]))
     x_art = Input(shape=(1, patchSize[0], patchSize[1]))
@@ -83,10 +83,10 @@ def createModel(patchSize, kl_weight, perceptual_weight, pl_network):
     vae.add_loss(kl_weight * K.mean(loss_kl))
 
     # compute pixel to pixel loss
-    # loss_ref2ref = patchSize[0] * patchSize[1] * metrics.binary_crossentropy(K.flatten(x_ref), K.flatten(decoded_ref2ref))
-    # loss_art2ref = patchSize[0] * patchSize[1] * metrics.binary_crossentropy(K.flatten(x_ref), K.flatten(decoded_art2ref))
+    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([Lambda(lambda x : 255*x)(x_ref), Lambda(lambda x : 255*x)(decoded_ref2ref)]) + K.epsilon()
+    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([Lambda(lambda x : 255*x)(x_ref), Lambda(lambda x : 255*x)(decoded_art2ref)]) + K.epsilon()
 
-    # vae.add_loss(K.mean(loss_ref2ref + loss_art2ref + loss_kl))
+    vae.add_loss(pixel_weight * (loss_ref2ref + loss_art2ref))
 
     # add perceptual loss
     p_loss = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, perceptual_weight, pl_network)
@@ -103,10 +103,10 @@ def fTrain(dData, sOutPath, patchSize, dHyper):
 
     for iBatch in batchSize:
         for iLearn in learningRate:
-            fTrainInner(dData, sOutPath, patchSize, epochs, iBatch, iLearn, dHyper['kl_weight'],
+            fTrainInner(dData, sOutPath, patchSize, epochs, iBatch, iLearn, dHyper['kl_weight'], dHyper['pixel_weight'],
                         dHyper['perceptual_weight'], dHyper['pl_network'])
 
-def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, perceptual_weight, pl_network):
+def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pixel_weight, perceptual_weight, pl_network):
     train_ref = dData['train_ref']
     train_art = dData['train_art']
     test_ref = dData['test_ref']
@@ -117,13 +117,13 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pe
     test_ref = np.expand_dims(test_ref, axis=1)
     test_art = np.expand_dims(test_art, axis=1)
 
-    vae = createModel(patchSize, kl_weight, perceptual_weight, pl_network)
+    vae = createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_network)
     vae.compile(optimizer='adam', loss=None)
     vae.summary()
 
     print('Training with epochs {} batch size {} learning rate {}'.format(epochs, batchSize, lr))
 
-    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_vgg_14.h5'.format(patchSize[0], batchSize)
+    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}.h5'.format(patchSize[0], batchSize)
 
     callback_list = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
     callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
@@ -137,18 +137,21 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pe
             verbose=1,
             callbacks=callback_list)
 
-def fPredict(dData, sOutPath, patchSize, dHyper):
+def fPredict(dData, sOutPath, patchSize, dHyper, lSave):
     weights_file = sOutPath + os.sep + '{}.h5'.format(dHyper['bestModel'])
 
     kl_weight = dHyper['kl_weight']
     pixel_weight = dHyper['pixel_weight']
+    perceptual_weight = dHyper['perceptual_weight']
+    pl_network = dHyper['pl_network']
 
-    vae = createModel(patchSize, kl_weight, pixel_weight)
+    vae = createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_network)
     vae.compile(optimizer='adam', loss=None)
 
     vae.load_weights(weights_file)
 
     # TODO: adapt the embedded batch size
+    # dData['test_ref'][:128] = np.zeros(shape=(128, 1, 80, 80))
     predict_ref, predict_art = vae.predict([dData['test_ref'][:128], dData['test_art'][:128]], 128, verbose=1)
 
     test_ref = np.squeeze(dData['test_ref'][:128], axis=1)
@@ -158,7 +161,7 @@ def fPredict(dData, sOutPath, patchSize, dHyper):
 
     nPatch = predict_ref.shape[0]
 
-    for i in range(nPatch//6):
+    for i in range(nPatch//5):
         fig, axes = plt.subplots(nrows=5, ncols=4)
         plt.gray()
 
@@ -168,13 +171,15 @@ def fPredict(dData, sOutPath, patchSize, dHyper):
             ax.set_title(col)
 
         for j in range(5):
-            axes[j, 0].imshow(test_ref[6*i+j])
-            axes[j, 1].imshow(predict_ref[6*i+j])
-            axes[j, 2].imshow(test_art[6*i+j])
-            axes[j, 3].imshow(predict_art[6*i+j])
+            axes[j, 0].imshow(test_ref[5*i+j])
+            axes[j, 1].imshow(predict_ref[5*i+j])
+            axes[j, 2].imshow(test_art[5*i+j])
+            axes[j, 3].imshow(predict_art[5*i+j])
 
-        figManager = plt.get_current_fig_manager()
-        figManager.resize(*figManager.window.maxsize())
+        # TODO: adapt path
+        if lSave:
+            plt.savefig('/Users/jan/results/80_vgg_147_mixed/epoch_30/' + str(i) + '.png')
+        else:
+            plt.show()
 
-        plt.show()
 

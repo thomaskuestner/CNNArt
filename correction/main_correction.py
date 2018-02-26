@@ -60,11 +60,11 @@ def run(cfg, dbinfo):
                   'pixel_weight': cfg['correction']['pixel_weight'], 'pl_network': cfg['correction']['pl_network']}
         if len(train_ref.shape) == 3:
             dData = {'train_ref': train_ref, 'test_ref': test_ref, 'train_art': train_art, 'test_art': test_art}
-            cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
+            cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'])
         elif len(train_ref.shape) == 4:
             for iFold in range(len(train_ref)):
                 dData = {'train_ref': train_ref[iFold], 'test_ref': test_ref[iFold], 'train_art': train_art[iFold], 'test_art': test_art[iFold]}
-                cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
+                cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'])
     else:
         dHyper = {'batchSize': cfg['batchSize'], 'bestModel': cfg['correction']['bestModel'],
                   'kl_weight': cfg['correction']['kl_weight'], 'perceptual_weight': cfg['correction']['perceptual_weight'],
@@ -72,5 +72,5 @@ def run(cfg, dbinfo):
         test_ref = test_ref.reshape((-1, 1, patchSize[0], patchSize[1]))
         test_art = test_art.reshape((-1, 1, patchSize[0], patchSize[1]))
         dData = {'test_ref': test_ref, 'test_art': test_art}
-        cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
+        cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'])
 
