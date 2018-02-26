@@ -133,7 +133,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pe
             verbose=1,
             callbacks=callback_list)
 
-def fPredict(dData, sOutPath, patchSize, dHyper):
+def fPredict(dData, sOutPath, patchSize, dHyper, lSave):
     weights_file = sOutPath + os.sep + '{}.h5'.format(dHyper['bestModel'])
 
     kl_weight = dHyper['kl_weight']
@@ -170,4 +170,8 @@ def fPredict(dData, sOutPath, patchSize, dHyper):
             axes[j, 2].imshow(test_art[6*i+j])
             axes[j, 3].imshow(predict_art[6*i+j])
 
-        plt.show()
+        # TODO: adapt path
+        if lSave:
+            plt.savefig('/Users/jan/results/48_pixel+vgg_147/epoch_24/' + str(i) + '.png')
+        else:
+            plt.show()
