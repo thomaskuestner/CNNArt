@@ -6,6 +6,7 @@ from keras.layers import Input, Lambda, concatenate, Dense, Reshape, Flatten
 from keras.layers import Conv2DTranspose
 from keras.models import Model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from keras.optimizers import Adam
 from keras import backend as K
 from utils.MotionCorrection.network import LeakyReluConv2D, LeakyReluConv2DTranspose
 from utils.MotionCorrection.PerceptualLoss import addPerceptualLoss
@@ -118,12 +119,12 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pi
     test_art = np.expand_dims(test_art, axis=1)
 
     vae = createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_network)
-    vae.compile(optimizer='adam', loss=None)
+    vae.compile(optimizer=Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0), loss=None)
     vae.summary()
 
     print('Training with epochs {} batch size {} learning rate {}'.format(epochs, batchSize, lr))
 
-    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}.h5'.format(patchSize[0], batchSize)
+    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}.h5'.format(patchSize[0], batchSize, lr)
 
     callback_list = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
     callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
@@ -178,7 +179,7 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave):
 
         # TODO: adapt path
         if lSave:
-            plt.savefig('/Users/jan/results/80_vgg_147_mixed/epoch_30/' + str(i) + '.png')
+            plt.savefig('/Users/jan/results/80_pixel+vgg_147/epoch_64/' + str(i) + '.png')
         else:
             plt.show()
 
