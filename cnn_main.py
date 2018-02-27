@@ -93,7 +93,7 @@ def fLoadDataForOptim(sInPath):
 #        if not any(x in sVarname for x in ['X_train', 'X_test', 'y_train', 'y_test'] ):
 #            conten[sVarname]
 
-def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearningRate, iEpochs):
+def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearningRate, iEpochs, CV_Patient=0):
     """CNN Models"""
     # check model
     if 'motion' in sModelIn:
@@ -158,15 +158,26 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
                                      'prob_test': prob_test})
 
         elif sParaOptim == 'grid':  # grid search << backward compatibility
-            cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
-                                dData['patchSize'], iBatchSize, iLearningRate, iEpochs)
+            if 'multiscale' in sModelIn:
+                cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
+                                dData['patchSize'], iBatchSize, iLearningRate, iEpochs, CV_Patient=CV_Patient, X_train_p2=dData['X_train_p2'], y_train_p2=dData['y_train_p2'], X_test_p2=dData['X_test_p2'], y_test_p2=dData['y_test_p2'], patchSize_down=dData['patchSize_down'], ScaleFactor=dData['ScaleFactor'])
+            else:
+                cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
+                                dData['patchSize'], iBatchSize, iLearningRate, iEpochs, CV_Patient=CV_Patient)
 
-        else:  # no optimization or grid search (if batchSize|learningRate are arrays)
-            cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
-                            dData['patchSize'], iBatchSize, iLearningRate, iEpochs)
+        else:# no optimization or grid search (if batchSize|learningRate are arrays)
+             if 'multiscale' in sModelIn:
+                cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
+                                dData['patchSize'], iBatchSize, iLearningRate, iEpochs, CV_Patient=CV_Patient, X_train_p2=dData['X_train_p2'], y_train_p2=dData['y_train_p2'], X_test_p2=dData['X_test_p2'], y_test_p2=dData['y_test_p2'], patchSize_down=dData['patchSize_down'], ScaleFactor=dData['ScaleFactor'])
+             else:
+                cnnModel.fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sOutPath,
+                            dData['patchSize'], iBatchSize, iLearningRate, iEpochs, CV_Patient=CV_Patient)
 
     else:  # predicting
-        cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, dData['patchSize'], iBatchSize[0])
+        if 'multiscale' in sModelIn:
+            cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, X_test_p2=dData['X_test_p2'], y_test_p2=dData['y_test_p2'], patchSize=dData['patchSize'], batchSize=iBatchSize[0])
+        else:
+            cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, patchSize=dData['patchSize'], batchSize=iBatchSize[0])
 
 def fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, lTrain):
     if 'motion' in sModelIn:
