@@ -126,13 +126,21 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pi
     callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
     callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
-    vae.fit([train_ref, train_art],
+    history = vae.fit([train_ref, train_art],
             shuffle=True,
             epochs=epochs,
             batch_size=batchSize,
             validation_data=([test_ref, test_art], None),
             verbose=1,
             callbacks=callback_list)
+
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.savefig(weights_file[:-3] + '.png')
 
 def fPredict(dData, sOutPath, patchSize, dHyper, lSave):
     weights_file = sOutPath + os.sep + '{}.h5'.format(dHyper['bestModel'])
@@ -157,7 +165,7 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave):
 
     nPatch = predict_ref.shape[0]
 
-    for i in range(nPatch//6):
+    for i in range(nPatch//5):
         fig, axes = plt.subplots(nrows=5, ncols=4)
         plt.gray()
 
@@ -167,10 +175,10 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave):
             ax.set_title(col)
 
         for j in range(5):
-            axes[j, 0].imshow(test_ref[6*i+j])
-            axes[j, 1].imshow(predict_ref[6*i+j])
-            axes[j, 2].imshow(test_art[6*i+j])
-            axes[j, 3].imshow(predict_art[6*i+j])
+            axes[j, 0].imshow(test_ref[5*i+j])
+            axes[j, 1].imshow(predict_ref[5*i+j])
+            axes[j, 2].imshow(test_art[5*i+j])
+            axes[j, 3].imshow(predict_art[5*i+j])
 
         # TODO: adapt path
         if lSave:
