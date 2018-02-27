@@ -213,6 +213,7 @@ def plot_feature_map(model, layer_id, X, n=256, ax=None, **kwargs):
     layer = model.layers[layer_id]
 
 
+
     try:
         get_activations = K.function([model.layers[0].input, K.learning_phase()], [layer.output, ])
         activations = get_activations([X, 0])[0]
@@ -232,36 +233,44 @@ def plot_feature_map(model, layer_id, X, n=256, ax=None, **kwargs):
     if not 'cmap' in kwargs.keys():
         kwargs['cmap'] = "gray"
 
-    fig = plt.figure(figsize=(15, 15))
 
-    # Compute nrows and ncols for images
-    n_mosaic = len(activations)
-    nrows = int(np.round(np.sqrt(n_mosaic)))
-    ncols = int(nrows)
-    if (nrows ** 2) < n_mosaic:
-        ncols += 1
 
-    # Compute nrows and ncols for mosaics
-    if activations[0].shape[0] < n:
-        n = activations[0].shape[0]
 
-    nrows_inside_mosaic = int(np.round(np.sqrt(n)))
-    ncols_inside_mosaic = int(nrows_inside_mosaic)
 
-    if nrows_inside_mosaic ** 2 < n:
-        ncols_inside_mosaic += 1
+
 
     for i, feature_map in enumerate(activations):
-        mosaic = make_mosaic(feature_map[:n], nrows_inside_mosaic, ncols_inside_mosaic, border=1)
+        fig1 = plt.figure()
+        fig = plt.figure()
 
-        ax = fig.add_subplot(nrows, ncols, i + 1)
-
-        im = ax.imshow(mosaic, **kwargs)
-        ax.set_title("Feature map #{} \nof layer#{} \ncalled '{}' \nof type {} ".format(i, layer_id,
+        plot_mosaic(X[i],1,1,fig1)
+        fig1.suptitle("origin patch #{} \nof layer#{} \ncalled '{}' \nof type {} ".format(i, layer_id,
                                                                                         layer.name,
                                                                                         layer.__class__.__name__))
 
-    fig.tight_layout()
+        # Compute nrows and ncols for images
+        n_mosaic = len(feature_map)
+        nrows = int(np.round(np.sqrt(n_mosaic)))
+        ncols = int(nrows)
+        if (nrows ** 2) < n_mosaic:
+            ncols += 1
+
+
+
+
+
+        plot_mosaic(feature_map,nrows, ncols,fig)
+
+        #mosaic = make_mosaic(feature_map[:n], nrows, ncols, border=1)
+
+        #ax = fig.add_subplot(nrows, ncols, i + 1)
+
+        #im = ax.imshow(mosaic, **kwargs)
+        fig.suptitle("patch #{} \nof layer#{} \ncalled '{}' \nof type {} ".format(i, layer_id,
+                                                                                        layer.name,
+                                                                                        layer.__class__.__name__))
+
+    #fig.tight_layout()
     return fig
 
 def plot_all_feature_maps(model, X, n=256, ax=None, **kwargs):
