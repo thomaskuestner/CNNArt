@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import h5py
 import matplotlib.pyplot as plt
 
 from keras.layers import Input, Lambda, concatenate, Dense, Reshape, Flatten
@@ -10,6 +11,7 @@ from keras.optimizers import Adam
 from keras import backend as K
 from utils.MotionCorrection.network import LeakyReluConv2D, LeakyReluConv2DTranspose
 from utils.MotionCorrection.PerceptualLoss import addPerceptualLoss
+from utils.Unpatching import fRigidUnpatchingCorrection
 
 def sliceRef(input):
     return input[:input.shape[0]//2, :, :, :]
@@ -159,36 +161,27 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave):
 
     vae.load_weights(weights_file)
 
-    # TODO: adapt the embedded batch size
-    # dData['test_ref'][:128] = np.zeros(shape=(128, 1, 80, 80))
-    predict_ref, predict_art = vae.predict([dData['test_ref'][:128], dData['test_art'][:128]], 128, verbose=1)
+    with h5py.File('/Users/jan/results/01_ab_8080.h5', 'r') as hf:
+        dData = hf['X_test'][:]
 
-    test_ref = np.squeeze(dData['test_ref'][:128], axis=1)
-    test_art = np.squeeze(dData['test_art'][:128], axis=1)
+    dData = np.squeeze(dData, axis=0)
+
+    # TODO: adapt the embedded batch size
+    test_ref = np.zeros(shape=(dData.shape[0], 1, 80, 80))
+    test_art = np.expand_dims(dData, axis=1)
+    predict_ref, predict_art = vae.predict([test_ref, test_art], 128, verbose=1)
+
+    test_ref = np.squeeze(test_ref, axis=1)
+    test_art = np.squeeze(test_art, axis=1)
     predict_ref = np.squeeze(predict_ref, axis=1)
     predict_art = np.squeeze(predict_art, axis=1)
 
-    nPatch = predict_ref.shape[0]
-
-    for i in range(nPatch//5):
-        fig, axes = plt.subplots(nrows=5, ncols=4)
-        plt.gray()
-
-        cols_title = ['test_ref', 'predict_ref', 'test_art', 'predict_art']
-
-        for ax, col in zip(axes[0], cols_title):
-            ax.set_title(col)
-
-        for j in range(5):
-            axes[j, 0].imshow(test_ref[5*i+j])
-            axes[j, 1].imshow(predict_ref[5*i+j])
-            axes[j, 2].imshow(test_art[5*i+j])
-            axes[j, 3].imshow(predict_art[5*i+j])
-
-        # TODO: adapt path
+    predict_art = fRigidUnpatchingCorrection([256, 196], predict_art)
+    plt.figure()
+    plt.gray()
+    for i in range(predict_art.shape[0]):
+        plt.imshow(predict_art[i])
         if lSave:
-            plt.savefig('/Users/jan/results/80_pixel+vgg_147/epoch_64/' + str(i) + '.png')
+            plt.savefig('/Users/jan/results/80_vgg_147/' + str(i) + '.png')
         else:
             plt.show()
-
-

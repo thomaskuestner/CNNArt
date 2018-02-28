@@ -58,3 +58,34 @@ def get_first_index(iX, iY, iZ, patch_nmb_layer, x_index, y_index):
         num = num - y_index - 1
 
     return num
+
+def fRigidUnpatchingCorrection(actual_size, allPatches):
+    patch_size = [allPatches.shape[1], allPatches.shape[2]]
+    height, width = actual_size[0], actual_size[1]
+    num_rows, num_cols = int(math.ceil(height*1.0/patch_size[0])), int(math.ceil(width*1.0/patch_size[1]))
+    num_slices = allPatches.shape[0]/(num_rows * num_cols)
+
+    allPatches = np.reshape(allPatches, (num_slices, -1, patch_size[0], patch_size[1]))
+    unpatchImg = np.zeros((num_slices, height, width))
+
+    for slice in range(num_slices):
+        for row in range(num_rows):
+            if row == (num_rows - 1):
+                for col in range(num_cols):
+                    index = row * num_cols + col
+                    if col == (num_cols - 1):
+                        unpatchImg[slice, row * patch_size[0]:, col * patch_size[1]:] = allPatches[slice, index, :height - row * patch_size[0], :width - col * patch_size[1]]
+                    else:
+                        unpatchImg[slice, row * patch_size[0]:, col * patch_size[1]:(col + 1) * patch_size[1]] = allPatches[slice, index, :height - row * patch_size[0], :]
+            else:
+                for col in range(num_cols):
+                    index = row * num_cols + col
+                    if col == (num_cols - 1):
+                        unpatchImg[slice, row * patch_size[0]:(row + 1) * patch_size[0], col * patch_size[1]:] = allPatches[slice, index, :, :width - col * patch_size[1]]
+                    else:
+                        unpatchImg[slice, row * patch_size[0]:(row + 1) * patch_size[0],
+                        col * patch_size[1]:(col + 1) * patch_size[1]] = allPatches[slice, index]
+
+    return unpatchImg
+
+
