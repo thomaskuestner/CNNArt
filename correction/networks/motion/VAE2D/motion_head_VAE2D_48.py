@@ -122,7 +122,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pi
 
     print('Training with epochs {} batch size {} learning rate {}'.format(epochs, batchSize, lr))
 
-    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}.h5'.format(patchSize[0], batchSize, lr)
+    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_mixed_0.1.h5'.format(patchSize[0], batchSize, lr)
 
     callback_list = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
     callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
@@ -157,19 +157,11 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave):
 
     vae.load_weights(weights_file)
 
-    with h5py.File('/Users/jan/results/01_ab_4848.h5', 'r') as hf:
-        dData = hf['X_test'][:]
-
-    dData = np.squeeze(dData, axis=0)
-
     # TODO: adapt the embedded batch size
-    test_ref = np.zeros(shape=(dData.shape[0], 1, 48, 48))
+    test_ref = np.zeros(shape=(dData.shape[0], 1, patchSize[0], patchSize[1]))
     test_art = np.expand_dims(dData, axis=1)
-    predict_ref, predict_art = vae.predict([test_ref, test_art], 128, verbose=1)
+    predict_ref, predict_art = vae.predict([test_ref, test_art], dHyper['batchSize'][0], verbose=1)
 
-    test_ref = np.squeeze(test_ref, axis=1)
-    test_art = np.squeeze(test_art, axis=1)
-    predict_ref = np.squeeze(predict_ref, axis=1)
     predict_art = np.squeeze(predict_art, axis=1)
 
     predict_art = fRigidUnpatchingCorrection([256, 196], predict_art)
@@ -178,6 +170,6 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave):
     for i in range(predict_art.shape[0]):
         plt.imshow(predict_art[i])
         if lSave:
-            plt.savefig('/Users/jan/results/48_pixel+vgg/' + str(i) + '.png')
+            plt.savefig(sOutPath + os.sep + 'result' + os.sep + str(i) + '.png')
         else:
             plt.show()

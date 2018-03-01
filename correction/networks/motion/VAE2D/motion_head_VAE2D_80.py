@@ -161,19 +161,11 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave):
 
     vae.load_weights(weights_file)
 
-    with h5py.File('/Users/jan/results/01_ab_8080.h5', 'r') as hf:
-        dData = hf['X_test'][:]
-
-    dData = np.squeeze(dData, axis=0)
-
     # TODO: adapt the embedded batch size
-    test_ref = np.zeros(shape=(dData.shape[0], 1, 80, 80))
+    test_ref = np.zeros(shape=(dData.shape[0], 1, patchSize[0], patchSize[1]))
     test_art = np.expand_dims(dData, axis=1)
-    predict_ref, predict_art = vae.predict([test_ref, test_art], 128, verbose=1)
+    predict_ref, predict_art = vae.predict([test_ref, test_art], dHyper['batchSize'][0], verbose=1)
 
-    test_ref = np.squeeze(test_ref, axis=1)
-    test_art = np.squeeze(test_art, axis=1)
-    predict_ref = np.squeeze(predict_ref, axis=1)
     predict_art = np.squeeze(predict_art, axis=1)
 
     predict_art = fRigidUnpatchingCorrection([256, 196], predict_art)
@@ -182,6 +174,6 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave):
     for i in range(predict_art.shape[0]):
         plt.imshow(predict_art[i])
         if lSave:
-            plt.savefig('/Users/jan/results/80_vgg_147/' + str(i) + '.png')
+            plt.savefig(sOutPath + os.sep + 'result' + os.sep + str(i) + '.png')
         else:
             plt.show()

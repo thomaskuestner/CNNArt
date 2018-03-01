@@ -2,10 +2,10 @@
 import glob
 import os
 import h5py
+import numpy as np
 
 # internal import
 import utils.DataPreprocessing as datapre
-import utils.Training_Test_Split as ttsplit
 import cnn_main
 
 def run(cfg, dbinfo):
@@ -71,6 +71,9 @@ def run(cfg, dbinfo):
                   'pixel_weight': cfg['correction']['pixel_weight'], 'pl_network': cfg['correction']['pl_network']}
         test_ref = test_ref.reshape((-1, 1, patchSize[0], patchSize[1]))
         test_art = test_art.reshape((-1, 1, patchSize[0], patchSize[1]))
-        dData = {'test_ref': test_ref, 'test_art': test_art}
+
+        with h5py.File(cfg['correction']['test_patient'], 'r') as hf:
+            dData = hf['X_test'][:]
+        dData = np.squeeze(dData, axis=0)
         cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'])
 

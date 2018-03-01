@@ -102,3 +102,4 @@ correction:
   kl_weight: 1
   perceptual_weight: 0.01
   pixel_weight: 1
+  test_patient: ""
