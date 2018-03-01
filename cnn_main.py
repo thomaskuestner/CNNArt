@@ -168,7 +168,7 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
     else:  # predicting
         cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, dData['patchSize'], iBatchSize[0])
 
-def fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, lTrain, lSave):
+def fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, lTrain, lSave, unpatch):
     if 'motion' in sModelIn:
         if 'VAE2D' in sModelIn:
             sModel = 'correction.networks.motion.VAE2D.' + sModelIn
@@ -187,7 +187,7 @@ def fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, lTrain, lSav
         model.fTrain(dData, sOutPath, patchSize, dHyper)
     else:
         # perform prediction
-        model.fPredict(dData, sOutPath, patchSize, dHyper, lSave)
+        model.fPredict(dData, sOutPath, patchSize, dHyper, lSave, unpatch)
 
 # Main Code
 if __name__ == "__main__": # for command line call

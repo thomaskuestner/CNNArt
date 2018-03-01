@@ -61,7 +61,6 @@ def addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, percep
     p2_loss_art = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l2_ref, f_l2_decoded_art])
     p3_loss_art = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l3_ref, f_l3_decoded_art])
 
-    # p_loss = perceptual_weight * (p1_loss_ref + p2_loss_ref + p3_loss_ref + p1_loss_art + p2_loss_art + p3_loss_art)
-    p_loss = perceptual_weight * (p1_loss_ref + p2_loss_ref + p1_loss_art + p2_loss_art)
+    p_loss = perceptual_weight * (p1_loss_ref + p2_loss_ref + p3_loss_ref + p1_loss_art + p2_loss_art + p3_loss_art)
 
     return p_loss

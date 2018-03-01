@@ -69,11 +69,9 @@ def run(cfg, dbinfo):
         dHyper = {'batchSize': cfg['batchSize'], 'bestModel': cfg['correction']['bestModel'],
                   'kl_weight': cfg['correction']['kl_weight'], 'perceptual_weight': cfg['correction']['perceptual_weight'],
                   'pixel_weight': cfg['correction']['pixel_weight'], 'pl_network': cfg['correction']['pl_network']}
-        test_ref = test_ref.reshape((-1, 1, patchSize[0], patchSize[1]))
-        test_art = test_art.reshape((-1, 1, patchSize[0], patchSize[1]))
 
         with h5py.File(cfg['correction']['test_patient'], 'r') as hf:
             dData = hf['X_test'][:]
         dData = np.squeeze(dData, axis=0)
-        cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'])
+        cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'], cfg['correction']['unpatch'])
 

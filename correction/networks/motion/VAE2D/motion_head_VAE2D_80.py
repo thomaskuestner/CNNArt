@@ -148,7 +148,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pi
     plt.legend(['train', 'test'], loc='upper left')
     plt.savefig(weights_file[:-3] + '.png')
 
-def fPredict(dData, sOutPath, patchSize, dHyper, lSave):
+def fPredict(dData, sOutPath, patchSize, dHyper, lSave, unpatch):
     weights_file = sOutPath + os.sep + '{}.h5'.format(dHyper['bestModel'])
 
     kl_weight = dHyper['kl_weight']
@@ -168,12 +168,33 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave):
 
     predict_art = np.squeeze(predict_art, axis=1)
 
-    predict_art = fRigidUnpatchingCorrection([256, 196], predict_art)
-    plt.figure()
-    plt.gray()
-    for i in range(predict_art.shape[0]):
-        plt.imshow(predict_art[i])
-        if lSave:
-            plt.savefig(sOutPath + os.sep + 'result' + os.sep + str(i) + '.png')
-        else:
-            plt.show()
+    if unpatch:
+        predict_art = fRigidUnpatchingCorrection([256, 196], predict_art)
+        plt.figure()
+        plt.gray()
+        for i in range(predict_art.shape[0]):
+            plt.imshow(predict_art[i])
+            if lSave:
+                plt.savefig(sOutPath + os.sep + 'result' + os.sep + str(i) + '.png')
+            else:
+                plt.show()
+    else:
+        nPatch = predict_art.shape[0]
+
+        for i in range(nPatch//4):
+            fig, axes = plt.subplots(nrows=5, ncols=2)
+            plt.gray()
+
+            cols_title = ['original_art', 'predicted_art']
+
+            for ax, col in zip(axes[0], cols_title):
+                ax.set_title(col)
+
+            for j in range(4):
+                axes[j, 0].imshow(test_art[4*i+j])
+                axes[j, 1].imshow(predict_art[4*i+j])
+
+            if lSave:
+                plt.imsave(sOutPath + os.sep + 'result' + os.sep + str(i) + '.png')
+            else:
+                plt.show()
