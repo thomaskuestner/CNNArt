@@ -11,6 +11,7 @@ import utils.Training_Test_Split as ttsplit
 import cnn_main
 import utils.scaling as scaling
 import correction.main_correction as correction
+from utils.calculateInputOfPath2 import fcalculateInputOfPath2
 
 with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
@@ -38,7 +39,8 @@ sOutsubdir = cfg['subdirs'][2]
 sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(map(str,patchSize)).replace(" ", "") + os.sep + sOutsubdir + str(patchSize[0]) + str(patchSize[1]) # + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
 if len(patchSize) == 3:
     sOutPath = sOutPath + str(patchSize[2])
-if sTrainingMethod == "scalingPrior":
+if sTrainingMethod != "None":
+    sOutPath = sOutPath+ '_sf' + ''.join(map(str, lScaleFactor)).replace(" ", "").replace(".", "")
     sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + 'sf' + ''.join(map(str, lScaleFactor)).replace(" ", "").replace(".", "") + '.h5'
 else:
     sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '.h5'
@@ -79,16 +81,33 @@ elif lTrain:
             y_train = hf['y_train'][:]
             y_test = hf['y_test'][:]
             patchSize = hf['patchSize'][:]
-
+            if sTrainingMethod == "MultiScaleSeparated":
+                X_train_p2 = hf['X_train_p2'][:]
+                X_test_p2 = hf['X_test_p2'][:]
+                y_train_p2 = hf['y_train_p2'][:]
+                y_test_p2 = hf['y_test_p2'][:]
+                patchSize_down = hf['patchSize_down'][:]
+            
     else: # perform patching
         X_train = []
-        scpatchSize = patchSize
-        if sTrainingMethod != "scalingPrior":
+        scpatchSize = [0 for i in range(len(patchSize))]
+                
+        if sTrainingMethod == "None":
             lScaleFactor = [1]
+        if sTrainingMethod == "MultiScaleSeparated":
+            lScaleFactor = lScaleFactor[:-1]
         # Else perform scaling:
-        #   images will be split into pathces with size scpatchSize and then scaled to patchSize
+        #   images will be split into pathces with size scpatchSize and then scaled to patchSize        
         for iscalefactor in lScaleFactor:
-            scpatchSize = [int(psi/iscalefactor) for psi in patchSize]
+            # Calculate the patchsize according to scale factor and training method
+            if iscalefactor != 1:
+                if sTrainingMethod == "MultiScaleSeparated":                    
+                    scpatchSize = fcalculateInputOfPath2(patchSize, iscalefactor, cfg['network'])
+                else: # sTrainingMethod == "MultiScaleTogether"
+                    scpatchSize = [int(psi/iscalefactor) for psi in patchSize]
+            else: 
+                scpatchSize = patchSize
+                                
             if len(patchSize) == 3:
                 dAllPatches = np.zeros((0, scpatchSize[0], scpatchSize[1], scpatchSize[2]))
             else:
@@ -112,17 +131,29 @@ elif lTrain:
             spX_train, spy_train, spX_test, spy_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], scpatchSize, cfg['patchOverlap'], cfg['dSplitval'], '')
             print('Start scaling')
             # perform scaling: sc for scale
-            scX_train, scX_test= scaling.fscaling(spX_train, spX_test, scpatchSize, iscalefactor)
-            if len(X_train) == 0:
-                X_train = scX_train
-                X_test = scX_test
+            scX_train, scX_test, scedpatchSize= scaling.fscaling(spX_train, spX_test, scpatchSize, iscalefactor)
+            if sTrainingMethod == "MultiScaleSeparated":
+                X_train_p2 = scX_train
+                X_test_p2 = scX_test
+                y_train_p2 = spy_train
+                y_test_p2 = spy_test
+                patchSize_down = scedpatchSize
+                X_train_cut, X_test_cut = scaling.fcutMiddelPartOfPatch(spX_train, spX_test, scpatchSize, patchSize)
+                X_train = X_train_cut
+                X_test = X_test_cut
                 y_train = spy_train
                 y_test = spy_test
             else:
-                X_train = np.concatenate((X_train, scX_train), axis=1)
-                X_test = np.concatenate((X_test, scX_test), axis=1)
-                y_train = np.concatenate((y_train, spy_train), axis=1)
-                y_test = np.concatenate((y_test, spy_test), axis=1)
+                if len(X_train) == 0:
+                    X_train = scX_train
+                    X_test = scX_test
+                    y_train = spy_train
+                    y_test = spy_test
+                else:
+                    X_train = np.concatenate((X_train, scX_train), axis=1)
+                    X_test = np.concatenate((X_test, scX_test), axis=1)
+                    y_train = np.concatenate((y_train, spy_train), axis=1)
+                    y_test = np.concatenate((y_test, spy_test), axis=1)
 
         print('Start saving')
         # save to file (deprecated)
@@ -135,10 +166,23 @@ elif lTrain:
                 hf.create_dataset('y_test', data=y_test)
                 hf.create_dataset('patchSize', data=patchSize)
                 hf.create_dataset('patchOverlap', data=cfg['patchOverlap'])
+                if sTrainingMethod == "MultiScaleSeparated":
+                    hf.create_dataset('X_train_p2', data=X_train_p2)
+                    hf.create_dataset('X_test_p2', data=X_test_p2)
+                    hf.create_dataset('y_train_p2', data=y_train_p2)
+                    hf.create_dataset('y_test_p2', data=y_test_p2)
+                    hf.create_dataset('patchSize_down', data=patchSize_down)
 
     # perform training
     for iFold in range(0,len(X_train)):
-        cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])
+        if len(X_train) != 1:
+            CV_Patient = iFold + 1
+        else:
+            CV_Patient = 0
+        if sTrainingMethod == "MultiScaleSeparated":
+            cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'X_train_p2': X_train_p2[iFold], 'y_train_p2': y_train_p2[iFold], 'X_test_p2': X_test_p2[iFold], 'y_test_p2': y_test_p2[iFold], 'patchSize_down':patchSize_down, 'ScaleFactor': lScaleFactor[0]}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+        else:
+            cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
 
 else: 
     ################
@@ -149,6 +193,10 @@ else:
             X_test = hf['X_test'][:]
             y_test = hf['y_test'][:]
             patchSize = hf['patchSize'][:]
+            if sTrainingMethod == "MultiScaleSeparated":
+                X_test_p2 = hf['X_test_p2'][:]
+                y_test_p2 = hf['y_test_p2'][:]
+
     else:
         X_test = np.zeros((0, patchSize[0], patchSize[1]))
         y_test = np.zeros(0)
@@ -162,4 +210,12 @@ else:
     if len(sPredictModel) == 0:
         sPredictModel = cfg['selectedDatabase']['bestmodel'][sNetworktype[2]]
     for iFold in range(0, len(X_test)):
-        cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'model_name': sPredictModel }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])
+        if len(X_test) != 1:
+            CV_Patient = iFold + 1
+        else:
+            CV_Patient = 0
+        if sTrainingMethod == "MultiScaleSeparated":
+            cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'X_train_p2': [], 'y_train_p2': [], 'X_test_p2': X_test_p2[iFold],
+                                  'y_test_p2': y_test_p2[iFold], 'model_name': sPredictModel }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+        else:
+            cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'model_name': sPredictModel }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
