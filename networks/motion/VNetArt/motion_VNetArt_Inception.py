@@ -5,7 +5,7 @@ import keras
 import keras.optimizers
 from keras.models import Sequential, Model
 from keras.layers import Input
-from keras.layers.core import Dense, Activation, Flatten,   Dropout, Lambda, Reshape
+from keras.layers.core import Dense, Activation, Flatten, Dropout, Lambda, Reshape
 from keras.activations import relu, elu, softmax
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.initializers import Constant
@@ -17,7 +17,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint,ReduceLROnPlateau
 
 def fgetKernelNumber():
     # KN[0] for conv with kernel 1X1X1, KN[1] for conv with kernel 3X3X3 or 5X5X5
-    KernelNumber = [64, 128]
+    KernelNumber = [32, 64, 128]
     return KernelNumber
 def fgetLayerNumIncep():
     LayerNum = 2
@@ -115,11 +115,11 @@ def fTrainInner(sOutPath, patchSize, learningRate=0.001, X_train=None, y_train=N
 	                         'acc_test': acc_test,
 	                         'prob_test': prob_test})
 
-def fPredict(X_test,y_test, model_name, sOutPath, batchSize=64, X_test_p2=[], y_test_p2=[], patchSize=[]):
+def fPredict(X_test,y_test, model_name, sOutPath, batchSize=64):
     # Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
 
-    X = np.expand_dims(X_test, axis=1)
-    y = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
+    X_test = np.expand_dims(X_test, axis=1)
+    y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
 
     weight_name = sOutPath + '/' + model_name + '_weights.h5'
     model_json = sOutPath + '/' + model_name + '_json.txt'
@@ -144,18 +144,20 @@ def fPredict(X_test,y_test, model_name, sOutPath, batchSize=64, X_test_p2=[], y_
     #model.save(model_all)
 
 def fCreateModel(patchSize,dr_rate=0.0, iPReLU=0, l2_reg=1e-6):
+    # Total params: 5,483,161
     Strides = fgetStrides()
+    kernelnumber = fgetKernelNumber()
     inp = Input(shape=(1, int(patchSize[0]), int(patchSize[1]), int(patchSize[2])))
 
-    after_Incep_1 =  fConvIncep(inp, layernum=fgetLayerNumIncep(),  l2_reg=l2_reg)
+    after_Incep_1 =  fConvIncep(inp, KB=kernelnumber[0], layernum=fgetLayerNumIncep(), l2_reg=l2_reg)
     after_DownConv_1 = fCreateVNet_DownConv_Block(after_Incep_1, after_Incep_1._keras_shape[1], Strides[0],
                                                      iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
 
-    after_Incep_2 = fConvIncep(after_DownConv_1, layernum=fgetLayerNumIncep(), l2_reg=l2_reg)
+    after_Incep_2 = fConvIncep(after_DownConv_1, KB=kernelnumber[1], layernum=fgetLayerNumIncep(), l2_reg=l2_reg)
     after_DownConv_2 = fCreateVNet_DownConv_Block(after_Incep_2, after_Incep_2._keras_shape[1], Strides[1],
                                                    iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
 
-    after_Incep_3 = fConvIncep(after_DownConv_2, layernum=fgetLayerNumIncep(), l2_reg=l2_reg)
+    after_Incep_3 = fConvIncep(after_DownConv_2, KB=kernelnumber[2], layernum=fgetLayerNumIncep(), l2_reg=l2_reg)
     after_DownConv_2 = fCreateVNet_DownConv_Block(after_Incep_3, after_Incep_3._keras_shape[1], Strides[2],
                                                    iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
     # fully connect layer as dense
@@ -169,26 +171,41 @@ def fCreateModel(patchSize,dr_rate=0.0, iPReLU=0, l2_reg=1e-6):
     cnn_incep = Model(inputs=inp, outputs=outp)
     return cnn_incep
 
-def fConvIncep(input_t, layernum=1, l1_reg=0.0, l2_reg=1e-6):
-    for counter in range(layernum):
-        incep_out = InceptionBlock(input_t, l1_reg=l1_reg, l2_reg=l2_reg)
+def fConvIncep(input_t, KB=64, layernum=2, l1_reg=0.0, l2_reg=1e-6, iPReLU=0):
+    tower_t = Conv3D(filters=KB,
+                     kernel_size=[2,2,1],
+                     kernel_initializer='he_normal',
+                     weights=None,
+                     padding='same',
+                     strides=(1, 1, 1),
+                     kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                     )(input_t)
+    incep = fGetActivation(tower_t, iPReLU=iPReLU)
 
-    incepblock_out = concatenate([incep_out, input_t], axis=1)
+    for counter in range(1,layernum):
+        incep = InceptionBlock(incep, l1_reg=l1_reg, l2_reg=l2_reg)
+
+    incepblock_out = concatenate([incep, input_t], axis=1)
     return incepblock_out
 
 def InceptionBlock(inp, l1_reg=0.0, l2_reg=1e-6):
     KN = fgetKernelNumber()
     branch1 = Conv3D(filters=KN[0], kernel_size=(1,1,1), kernel_initializer='he_normal', weights=None,padding='same',
                      strides=(1,1,1),kernel_regularizer=l1_l2(l1_reg, l2_reg),activation='relu')(inp)
+
     branch3 = Conv3D(filters=KN[0], kernel_size=(1, 1, 1), kernel_initializer='he_normal', weights=None, padding='same',
                      strides=(1, 1, 1), kernel_regularizer=l1_l2(l1_reg, l2_reg), activation='relu')(inp)
-    branch3 = Conv3D(filters=KN[1], kernel_size=(3, 3, 3), kernel_initializer='he_normal', weights=None, padding='same',
+    branch3 = Conv3D(filters=KN[2], kernel_size=(3, 3, 3), kernel_initializer='he_normal', weights=None, padding='same',
                      strides=(1, 1, 1), kernel_regularizer=l1_l2(l1_reg, l2_reg), activation='relu')(branch3)
+
     branch5 = Conv3D(filters=KN[0], kernel_size=(1, 1, 1), kernel_initializer='he_normal', weights=None, padding='same',
                      strides=(1, 1, 1), kernel_regularizer=l1_l2(l1_reg, l2_reg), activation='relu')(inp)
     branch5 = Conv3D(filters=KN[1], kernel_size=(5, 5, 5), kernel_initializer='he_normal', weights=None, padding='same',
                      strides=(1, 1, 1), kernel_regularizer=l1_l2(l1_reg, l2_reg), activation='relu')(branch5)
+
     branchpool = MaxPooling3D(pool_size=(3,3,3),strides=(1,1,1),padding='same',data_format='channels_first')(inp)
+    branchpool = Conv3D(filters=KN[0], kernel_size=(1, 1, 1), kernel_initializer='he_normal', weights=None, padding='same',
+                     strides=(1, 1, 1), kernel_regularizer=l1_l2(l1_reg, l2_reg), activation='relu')(branchpool)
     out = concatenate([branch1, branch3, branch5, branchpool], axis=1)
     return out
 
