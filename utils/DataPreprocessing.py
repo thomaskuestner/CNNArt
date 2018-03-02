@@ -53,6 +53,7 @@ def fPreprocessDataCorrection(cfg, dbinfo):
 
     sTrainingMethod = cfg['sTrainingMethod']  # options of multiscale
     patchSize = cfg['patchSize']
+    lScaleFactor = cfg['lScaleFactor']
 
     scpatchSize = patchSize
     if sTrainingMethod != "scalingPrior":
@@ -77,7 +78,7 @@ def fPreprocessDataCorrection(cfg, dbinfo):
                 for iseq, seq in enumerate(lDatasets):
                     # patches and labels of reference/artifact
                     tmpPatches, tmpLabels = fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq),
-                                                                    patchSize, cfg['patchOverlap'], 1, 'volume')
+                                                            scpatchSize, cfg['patchOverlap'], 1, 'volume')
 
                     if iseq == 0:
                         dRefPatches = np.concatenate((dRefPatches, tmpPatches), axis=0)
@@ -98,8 +99,8 @@ def fPreprocessDataCorrection(cfg, dbinfo):
                                                                                cfg['nFolds'])
     print('Start scaling')
     # perform scaling: sc for scale
-    train_ref_sc, test_ref_sc = scaling.fscaling(train_ref_sp, test_ref_sp, scpatchSize, iscalefactor)
-    train_art_sc, test_art_sc = scaling.fscaling(train_art_sp, test_art_sp, scpatchSize, iscalefactor)
+    train_ref_sc, test_ref_sc, _ = scaling.fscaling([train_ref_sp], [test_ref_sp], scpatchSize, iscalefactor)
+    train_art_sc, test_art_sc, _ = scaling.fscaling([train_art_sp], [test_art_sp], scpatchSize, iscalefactor)
 
     if len(train_ref) == 0:
         train_ref = train_ref_sc
