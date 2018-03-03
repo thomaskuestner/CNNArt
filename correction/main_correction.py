@@ -58,13 +58,9 @@ def run(cfg, dbinfo):
         dHyper = {'batchSize': cfg['batchSize'], 'learningRate': cfg['lr'], 'epochs': cfg['epochs'],
                   'kl_weight': cfg['correction']['kl_weight'], 'perceptual_weight': cfg['correction']['perceptual_weight'],
                   'pixel_weight': cfg['correction']['pixel_weight'], 'pl_network': cfg['correction']['pl_network']}
-        if len(train_ref.shape) == 3:
-            dData = {'train_ref': train_ref, 'test_ref': test_ref, 'train_art': train_art, 'test_art': test_art}
+        for iFold in range(len(train_ref)):
+            dData = {'train_ref': train_ref[iFold], 'test_ref': test_ref[iFold], 'train_art': train_art[iFold], 'test_art': test_art[iFold]}
             cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'], cfg['correction']['unpatch'])
-        elif len(train_ref.shape) == 4:
-            for iFold in range(len(train_ref)):
-                dData = {'train_ref': train_ref[iFold], 'test_ref': test_ref[iFold], 'train_art': train_art[iFold], 'test_art': test_art[iFold]}
-                cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'], cfg['correction']['unpatch'])
     else:
         dHyper = {'batchSize': cfg['batchSize'], 'bestModel': cfg['correction']['bestModel'],
                   'kl_weight': cfg['correction']['kl_weight'], 'perceptual_weight': cfg['correction']['perceptual_weight'],
