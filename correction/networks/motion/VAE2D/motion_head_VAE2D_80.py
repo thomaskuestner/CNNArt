@@ -86,15 +86,15 @@ def createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_networ
     vae.add_loss(kl_weight * K.mean(loss_kl))
 
     # compute pixel to pixel loss
-    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([Lambda(lambda x : 255*x)(x_ref), Lambda(lambda x : 255*x)(decoded_ref2ref)]) + K.epsilon()
-    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([Lambda(lambda x : 255*x)(x_ref), Lambda(lambda x : 255*x)(decoded_art2ref)]) + K.epsilon()
+    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([Lambda(lambda x : 255*x)(x_ref), Lambda(lambda x : 255*x)(decoded_ref2ref)]) + 1e-6
+    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([Lambda(lambda x : 255*x)(x_ref), Lambda(lambda x : 255*x)(decoded_art2ref)]) + 1e-6
 
     vae.add_loss(pixel_weight * (loss_ref2ref + loss_art2ref))
 
     # add perceptual loss
-    p_loss = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, perceptual_weight, pl_network, loss_model)
+    p_loss = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, pl_network, loss_model)
 
-    vae.add_loss(p_loss)
+    vae.add_loss(perceptual_weight * p_loss)
 
     return vae
 
@@ -162,7 +162,6 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave, unpatch):
 
     vae.load_weights(weights_file)
 
-    # TODO: adapt the embedded batch size
     test_ref = np.zeros(shape=(dData.shape[0], 1, patchSize[0], patchSize[1]))
     test_art = np.expand_dims(dData, axis=1)
     predict_ref, predict_art = vae.predict([test_ref, test_art], dHyper['batchSize'][0], verbose=1)

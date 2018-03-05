@@ -158,7 +158,6 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave, unpatch):
 
     vae.load_weights(weights_file)
 
-    # TODO: adapt the embedded batch size
     test_ref = np.zeros(shape=(dData.shape[0], 1, patchSize[0], patchSize[1]))
     test_art = np.expand_dims(dData, axis=1)
     predict_ref, predict_art = vae.predict([test_ref, test_art], dHyper['batchSize'][0], verbose=1)

@@ -58,7 +58,7 @@ def run(cfg, dbinfo):
         dHyper = {'batchSize': cfg['batchSize'], 'learningRate': cfg['lr'], 'epochs': cfg['epochs'],
                   'kl_weight': cfg['correction']['kl_weight'], 'perceptual_weight': cfg['correction']['perceptual_weight'],
                   'pixel_weight': cfg['correction']['pixel_weight'], 'pl_network': cfg['correction']['pl_network'],
-                  'loss_network': cfg['correction']['loss_network']}
+                  'loss_model': cfg['correction']['loss_model']}
         for iFold in range(len(train_ref)):
             dData = {'train_ref': train_ref[iFold], 'test_ref': test_ref[iFold], 'train_art': train_art[iFold], 'test_art': test_art[iFold]}
             cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'], cfg['correction']['unpatch'])
@@ -67,7 +67,7 @@ def run(cfg, dbinfo):
         dHyper = {'batchSize': cfg['batchSize'], 'bestModel': cfg['correction']['bestModel'],
                   'kl_weight': cfg['correction']['kl_weight'], 'perceptual_weight': cfg['correction']['perceptual_weight'],
                   'pixel_weight': cfg['correction']['pixel_weight'], 'pl_network': cfg['correction']['pl_network'],
-                  'loss_network': cfg['correction']['loss_network']}
+                  'loss_model': cfg['correction']['loss_model']}
 
         test_data = sOutPath + os.sep + 'test/testData.h5'
         iPat = cfg['correction']['test_patient']
