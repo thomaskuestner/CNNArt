@@ -12,7 +12,7 @@ def preprocessing(input):
 
     return output[:, ::-1, :, :]
 
-def addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, perceptual_weight, pl_network, loss_model):
+def addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, pl_network, loss_model):
     if pl_network == 'vgg19':
         x_ref = concatenate([x_ref, x_ref, x_ref], axis=1)
         decoded_ref2ref = concatenate([decoded_ref2ref, decoded_ref2ref, decoded_ref2ref], axis=1)
@@ -61,6 +61,6 @@ def addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, percep
     p2_loss_art = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l2_ref, f_l2_decoded_art])
     p3_loss_art = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l3_ref, f_l3_decoded_art])
 
-    p_loss = perceptual_weight * (p1_loss_ref + p2_loss_ref + p3_loss_ref + p1_loss_art + p2_loss_art + p3_loss_art)
+    p_loss = p1_loss_ref + p2_loss_ref + p3_loss_ref + p1_loss_art + p2_loss_art + p3_loss_art
 
     return p_loss

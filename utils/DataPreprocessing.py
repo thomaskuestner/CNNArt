@@ -89,29 +89,30 @@ def fPreprocessDataCorrection(cfg, dbinfo):
             else:
                 pass
 
-    assert(dRefPatches.shape == dArtPatches.shape and dRefPats.shape == dArtPats.shape)
+        assert(dRefPatches.shape == dArtPatches.shape and dRefPats.shape == dArtPats.shape)
 
-    # perform splitting
-    print('Start splitting')
-    train_ref_sp, test_ref_sp, train_art_sp, test_art_sp = ttsplit.fSplitDatasetCorrection(cfg['sSplitting'],
-                                                                               dRefPatches, dArtPatches,
-                                                                               dRefPats, cfg['dSplitval'],
-                                                                               cfg['nFolds'])
-    print('Start scaling')
-    # perform scaling: sc for scale
-    train_ref_sc, test_ref_sc, _ = scaling.fscaling([train_ref_sp], [test_ref_sp], scpatchSize, iscalefactor)
-    train_art_sc, test_art_sc, _ = scaling.fscaling([train_art_sp], [test_art_sp], scpatchSize, iscalefactor)
+        # perform splitting
+        print('Start splitting')
+        train_ref_sp, test_ref_sp, train_art_sp, test_art_sp = ttsplit.fSplitDatasetCorrection(cfg['sSplitting'],
+                                                                                   dRefPatches, dArtPatches,
+                                                                                   dRefPats, cfg['dSplitval'],
+                                                                                   cfg['nFolds'])
 
-    if len(train_ref) == 0:
-        train_ref = train_ref_sc
-        test_ref = test_ref_sc
-        train_art = train_art_sc
-        test_art = test_art_sc
-    else:
-        train_ref = np.concatenate((train_ref, train_ref_sc), axis=1)
-        test_ref = np.concatenate((test_ref, test_ref_sc), axis=1)
-        train_art = np.concatenate((train_art, train_art_sc), axis=1)
-        test_art = np.concatenate((test_art, test_art_sc), axis=1)
+        print('Start scaling')
+        # perform scaling: sc for scale
+        train_ref_sc, test_ref_sc, _ = scaling.fscaling([train_ref_sp], [test_ref_sp], scpatchSize, iscalefactor)
+        train_art_sc, test_art_sc, _ = scaling.fscaling([train_art_sp], [test_art_sp], scpatchSize, iscalefactor)
+
+        if len(train_ref) == 0:
+            train_ref = train_ref_sc
+            test_ref = test_ref_sc
+            train_art = train_art_sc
+            test_art = test_art_sc
+        else:
+            train_ref = np.concatenate((train_ref, train_ref_sc), axis=1)
+            test_ref = np.concatenate((test_ref, test_ref_sc), axis=1)
+            train_art = np.concatenate((train_art, train_art_sc), axis=1)
+            test_art = np.concatenate((test_art, test_art_sc), axis=1)
 
     return train_ref, test_ref, train_art, test_art
 
