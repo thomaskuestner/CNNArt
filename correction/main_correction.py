@@ -24,50 +24,52 @@ def run(cfg, dbinfo):
     elif cfg['sSplitting'] == 'crossvalidation_patient':
         sFSname = 'crossVal'
 
+    sModelIn = cfg['correction']['sCorrection']
     sOutsubdir = cfg['subdirs'][3]
     sOutPath = cfg['selectedDatabase']['pathout'] + os.sep \
                + ''.join(map(str, patchSize)).replace(" ", "") + os.sep + sOutsubdir
     sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '.h5'
 
     # if h5 file exists then load the dataset
-    if glob.glob(sDatafile):
-        with h5py.File(sDatafile, 'r') as hf:
-            train_ref = hf['train_ref'][:]
-            train_art = hf['train_art'][:]
-            test_ref = hf['test_ref'][:]
-            test_art = hf['test_art'][:]
-            patchSize = hf['patchSize'][:]
-
-    else:
-        # perform patching and splitting
-        train_ref, test_ref, train_art, test_art = datapre.fPreprocessDataCorrection(cfg, dbinfo)
-
-        # save to h5 file
-        if cfg['lSave']:
-            with h5py.File(sDatafile, 'w') as hf:
-                hf.create_dataset('train_ref', data=train_ref)
-                hf.create_dataset('test_ref', data=test_ref)
-                hf.create_dataset('train_art', data=train_art)
-                hf.create_dataset('test_art', data=test_art)
-                hf.create_dataset('patchSize', data=patchSize)
-                hf.create_dataset('patchOverlap', data=cfg['patchOverlap'])
-
-    sModelIn = cfg['correction']['sCorrection']
 
     if cfg['lTrain']:
+        if glob.glob(sDatafile):
+            with h5py.File(sDatafile, 'r') as hf:
+                train_ref = hf['train_ref'][:]
+                train_art = hf['train_art'][:]
+                test_ref = hf['test_ref'][:]
+                test_art = hf['test_art'][:]
+                patchSize = hf['patchSize'][:]
+
+        else:
+            # perform patching and splitting
+            train_ref, test_ref, train_art, test_art = datapre.fPreprocessDataCorrection(cfg, dbinfo)
+
+            # save to h5 file
+            if cfg['lSave']:
+                with h5py.File(sDatafile, 'w') as hf:
+                    hf.create_dataset('train_ref', data=train_ref)
+                    hf.create_dataset('test_ref', data=test_ref)
+                    hf.create_dataset('train_art', data=train_art)
+                    hf.create_dataset('test_art', data=test_art)
+                    hf.create_dataset('patchSize', data=patchSize)
+                    hf.create_dataset('patchOverlap', data=cfg['patchOverlap'])
+
         dHyper = {'batchSize': cfg['batchSize'], 'learningRate': cfg['lr'], 'epochs': cfg['epochs'],
                   'kl_weight': cfg['correction']['kl_weight'], 'perceptual_weight': cfg['correction']['perceptual_weight'],
                   'pixel_weight': cfg['correction']['pixel_weight'], 'pl_network': cfg['correction']['pl_network']}
         for iFold in range(len(train_ref)):
             dData = {'train_ref': train_ref[iFold], 'test_ref': test_ref[iFold], 'train_art': train_art[iFold], 'test_art': test_art[iFold]}
             cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'], cfg['correction']['unpatch'])
+
     else:
         dHyper = {'batchSize': cfg['batchSize'], 'bestModel': cfg['correction']['bestModel'],
                   'kl_weight': cfg['correction']['kl_weight'], 'perceptual_weight': cfg['correction']['perceptual_weight'],
                   'pixel_weight': cfg['correction']['pixel_weight'], 'pl_network': cfg['correction']['pl_network']}
 
-        with h5py.File(cfg['correction']['test_patient'], 'r') as hf:
-            dData = hf['X_test'][:]
-        dData = np.squeeze(dData, axis=0)
+        test_data = sOutPath + os.sep + 'test/testData.h5'
+        iPat = cfg['correction']['test_patient']
+        with h5py.File(test_data, 'r') as hf:
+            dData = hf['X_test'][iPat, :, :, :]
         cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'], cfg['correction']['unpatch'])
 

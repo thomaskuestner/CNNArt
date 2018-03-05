@@ -166,6 +166,7 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave, unpatch):
     test_art = np.expand_dims(dData, axis=1)
     predict_ref, predict_art = vae.predict([test_ref, test_art], dHyper['batchSize'][0], verbose=1)
 
+    test_art = np.squeeze(test_art, axis=1)
     predict_art = np.squeeze(predict_art, axis=1)
 
     if unpatch:
@@ -182,7 +183,7 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave, unpatch):
         nPatch = predict_art.shape[0]
 
         for i in range(nPatch//4):
-            fig, axes = plt.subplots(nrows=5, ncols=2)
+            fig, axes = plt.subplots(nrows=4, ncols=2)
             plt.gray()
 
             cols_title = ['original_art', 'predicted_art']
