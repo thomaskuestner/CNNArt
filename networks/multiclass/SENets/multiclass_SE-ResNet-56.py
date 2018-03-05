@@ -94,7 +94,7 @@ def createModel(patchSize, numClasses):
                    name='fully-connected')(x)
 
     # create model
-    cnn = Model(input_tensor, output, name='ResNet-56')
+    cnn = Model(input_tensor, output, name='SE-ResNet-56')
     sModelName = 'SE-ResNet-56'
 
     return cnn, sModelName
@@ -204,7 +204,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
     cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
 
     # callbacks
-    callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
+    callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=25, verbose=1)
     #callback_tensorBoard = keras.callbacks.TensorBoard(log_dir=dlart_handle.getLearningOutputPath() + '/logs',
                                                        #histogram_freq=2,
                                                        #batch_size=batchSize,
@@ -217,8 +217,8 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
     callbacks = [callback_earlyStopping]
     callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints/checker.hdf5', monitor='val_acc', verbose=0, period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
-    callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
-    #callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
+    #callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
+    callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
 
 
     # data augmentation
@@ -250,8 +250,55 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
             data_format=K.image_data_format()
         )
 
+        datagen_val = ImageDataGenerator(featurewise_center=False,
+                                         samplewise_center=False,
+                                         featurewise_std_normalization=False,
+                                         samplewise_std_normalization=False,
+                                         zca_whitening=dlart_handle.getZCA_Whitening(),
+                                         zca_epsilon=1e-6,
+                                         rotation_range=0.,
+                                         width_shift_range=0.,
+                                         height_shift_range=0.,
+                                         shear_range=0.,
+                                         zoom_range=0.,
+                                         channel_shift_range=0.,
+                                         fill_mode='constant',
+                                         cval=0.,
+                                         horizontal_flip=False,
+                                         vertical_flip=False,
+                                         rescale=None,
+                                         histogram_equalization=dlart_handle.getHistogramEqualization(),
+                                         contrast_stretching=dlart_handle.getContrastStretching(),
+                                         adaptive_equalization=dlart_handle.getAdaptiveEqualization(),
+                                         preprocessing_function=None,
+                                         data_format=K.image_data_format())
+
+        datagen_test = ImageDataGenerator(featurewise_center=False,
+                                         samplewise_center=False,
+                                         featurewise_std_normalization=False,
+                                         samplewise_std_normalization=False,
+                                         zca_whitening=dlart_handle.getZCA_Whitening(),
+                                         zca_epsilon=1e-6,
+                                         rotation_range=0.,
+                                         width_shift_range=0.,
+                                         height_shift_range=0.,
+                                         shear_range=0.,
+                                         zoom_range=0.,
+                                         channel_shift_range=0.,
+                                         fill_mode='constant',
+                                         cval=0.,
+                                         horizontal_flip=False,
+                                         vertical_flip=False,
+                                         rescale=None,
+                                         histogram_equalization=dlart_handle.getHistogramEqualization(),
+                                         contrast_stretching=dlart_handle.getContrastStretching(),
+                                         adaptive_equalization=dlart_handle.getAdaptiveEqualization(),
+                                         preprocessing_function=None,
+                                         data_format=K.image_data_format())
+
         # fit parameters from dataset
         datagen.fit(X_train)
+        datagen_test.fit(X_test)
 
         # configure batch size and get one batch of images
         for x_batch, y_batch in datagen.flow(X_train, y_train, batch_size=9):
@@ -265,23 +312,40 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
         if X_valid is not None and y_valid is not None:
             # fit model on data
             # use validation/test split
+            datagen_val.fit(X_valid)
             result = cnn.fit_generator(datagen.flow(X_train, y_train, batch_size=batchSize),
                                        steps_per_epoch=X_train.shape[0]//batchSize,
                                        epochs=iEpochs,
-                                       validation_data=(X_valid, y_valid),
+                                       validation_data=datagen_val.flow(X_valid, y_valid, batch_size=batchSize),
                                        callbacks=callbacks,
                                        workers=1,
                                        use_multiprocessing=False)
+
         else:
             # fit model on data
             # use test data for validation and test
+
             result = cnn.fit_generator(datagen.flow(X_train, y_train, batch_size=batchSize),
                                        steps_per_epoch=X_train.shape[0] // batchSize,
                                        epochs=iEpochs,
-                                       validation_data=(X_valid, y_valid),
+                                       validation_data=datagen_test.flow(X_test, y_test, batch_size=batchSize),
                                        callbacks=callbacks,
                                        workers=1,
                                        use_multiprocessing=False)
+
+        # return the loss value and metrics values for the model in test mode
+        score_test, acc_test = cnn.evaluate_generator(datagen_test.flow(X_test, y_test, batch_size=batchSize),
+                                                      steps=None,
+                                                      max_queue_size=10,
+                                                      workers=1,
+                                                      use_multiprocessing=False)
+
+        prob_test = cnn.predict_generator(datagen_test.flow(X_test, y_test, batch_size=batchSize),
+                                          steps = None,
+                                          max_queue_size = 10,
+                                          workers = 1,
+                                          use_multiprocessing = False,
+                                          verbose = 1)
 
     else:
         if X_valid is not None and y_valid is not None:
@@ -303,10 +367,11 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                              callbacks=callbacks,
                              verbose=1)
 
-    # return the loss value and metrics values for the model in test mode
-    score_test, acc_test = cnn.evaluate(X_test, y_test, batch_size=batchSize, verbose=1)
+        # return the loss value and metrics values for the model in test mode
+        score_test, acc_test = cnn.evaluate(X_test, y_test, batch_size=batchSize, verbose=1)
 
-    prob_test = cnn.predict(X_test, batchSize, 0)
+        prob_test = cnn.predict(X_test, batchSize, 0)
+
 
     # save model
     json_string = cnn.to_json()
@@ -339,9 +404,9 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 def step_decay(epoch):
    initial_lrate = 0.1
    drop = 0.1
-   epochs_drop = 2.0
+   epochs_drop = 30.0
    lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
-   print("Reduce Learningrate by 0.1")
+   print(str(lrate))
    return lrate
 
 

@@ -22,6 +22,7 @@ index = [2, 1, 4, 1, 4, 5]
 list = np.asarray(list)
 list = list[index]
 
-print()
+
+print("hi" if 10 == 23 else "hoho")
 
 

@@ -309,6 +309,9 @@ class MainWindow(QMainWindow):
             self.ui.ComboBox_Patching.setCurrentIndex(1)
             self.deepLearningArtApp.setPatchingMode(DeepLearningArtApp.PATCHING_2D)
 
+        #using segmentation mask
+        self.deepLearningArtApp.setUsingSegmentationMasks(self.ui.CheckBox_SegmentationMask.isChecked())
+
         # handle store mode
         self.deepLearningArtApp.setStoreMode(self.ui.ComboBox_StoreOptions.currentIndex())
 

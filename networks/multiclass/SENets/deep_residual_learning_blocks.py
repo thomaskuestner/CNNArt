@@ -10,11 +10,13 @@ Deep residual learning blocks
 
 from keras.layers import Conv2D
 from keras.layers import Conv3D
+from keras.layers import Conv3DTranspose
 from keras.layers import BatchNormalization
 from keras.layers import advanced_activations
 from keras.layers import Activation
 from keras.layers import MaxPooling2D
 from keras.layers import Add
+from keras.layers import LeakyReLU
 from keras.layers import Lambda
 import keras.backend as K
 from networks.multiclass.SENets.squeeze_excitation_block import *
@@ -229,7 +231,7 @@ def identity_block_3D(input_tensor, filters, kernel_size=(3, 3, 3), stage=0, blo
                name=conv_name_base + '2a')(input_tensor)
 
     x = BatchNormalization(axis=bn_axis, name=bn_name_base + '2a')(x)
-    x = advanced_activations.LeakyReLU(alpha=0.01)(x)
+    x = LeakyReLU(alpha=0.01)(x)
 
     x = Conv3D(filters=numFilters2,
                kernel_size=kernel_size,
@@ -245,7 +247,7 @@ def identity_block_3D(input_tensor, filters, kernel_size=(3, 3, 3), stage=0, blo
 
     x = Add()([x, input_tensor])
 
-    x = advanced_activations.LeakyReLU(alpha=0.01)(x)
+    x = LeakyReLU(alpha=0.01)(x)
 
 
     return x
@@ -273,7 +275,7 @@ def projection_block_3D(input_tensor, filters, kernel_size=(3,3,3) , stage=0, bl
                name=conv_name_base + '2a')(input_tensor)
 
     x = BatchNormalization(axis=bn_axis, name=bn_name_base + '2a')(x)
-    x = advanced_activations.LeakyReLU(alpha=0.01)(x)
+    x = LeakyReLU(alpha=0.01)(x)
 
     x = Conv3D(filters=numFilters2,
                kernel_size=kernel_size,
@@ -299,9 +301,70 @@ def projection_block_3D(input_tensor, filters, kernel_size=(3,3,3) , stage=0, bl
     # addition of shortcut
     x = Add()([x, x_shortcut])
 
-    x = advanced_activations.LeakyReLU(alpha=0.01)(x)
+    x = LeakyReLU(alpha=0.01)(x)
 
     return x
 
+
+########################################################################################################################
+
+
+########################################################################################################################
+### Transposed 3D projection block
+########################################################################################################################
+
+def transposed_projection_block_3D(input_tensor, filters, kernel_size=(3, 3, 3), stage=0, block=0, se_enabled=False, se_ratio=16):
+
+    numFilters1, numFilters2 = filters
+
+    if K.image_data_format() == 'channels_last':
+        bn_axis = -1
+    else:
+        bn_axis = 1
+
+    transposed_conv_name_base = 'transposed_res' + str(stage) + '_' + str(block) + '_branch'
+    conv_name_base = 'res' + str(stage) + '_' + str(block) + '_branch'
+    bn_name_base = 'bn' + str(stage) + '_' + str(block) + '_branch'
+
+    # upsampling directly by transposed convolution with stride 2
+    x = Conv3DTranspose(filters=numFilters1,
+                        kernel_size=kernel_size,
+                        strides=(2, 2, 2),
+                        padding='same',
+                        data_format=K.image_data_format(),
+                        kernel_initializer='he_normal',
+                        name=transposed_conv_name_base + '2a')(input_tensor)
+
+    x = BatchNormalization(axis=bn_axis, name=bn_name_base + '2a')(x)
+    x = LeakyReLU(alpha=0.01)(x)
+
+    x = Conv3D(filters=numFilters2,
+               kernel_size=kernel_size,
+               strides=(1, 1, 1),
+               padding='same',
+               kernel_initializer='he_normal',
+               name=conv_name_base + '2b')(x)
+
+    # squeeze and excitation block
+    if se_enabled:
+        x = squeeze_excitation_block_3D(x, ratio=se_ratio)
+    x = BatchNormalization(axis=bn_axis, name=bn_name_base + '2b')(x)
+
+    # projection shortcut transposed convolution
+    x_shortcut = Conv3DTranspose(filters=numFilters2,
+                        kernel_size=(2,2,2),
+                        strides=(2, 2, 2),
+                        padding='same',
+                        data_format=K.image_data_format(),
+                        kernel_initializer='he_normal',
+                        name=transposed_conv_name_base + '2a')(input_tensor)
+    x_shortcut = BatchNormalization(axis=bn_axis, name=bn_name_base + '1')(x_shortcut)
+
+    # addition of shortcut
+    x = Add()([x, x_shortcut])
+
+    x = LeakyReLU(alpha=0.01)(x)
+
+    return x
 
 ########################################################################################################################

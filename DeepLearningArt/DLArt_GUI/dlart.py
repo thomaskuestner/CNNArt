@@ -61,7 +61,8 @@ class DeepLearningArtApp():
         'Multiclass SE-DenseNet-BC-100': 'networks.multiclass.SENets.multiclass_SE-DenseNet-BC-100',
         'Multiclass SE-ResNet-32': 'networks.multiclass.SENets.multiclass_SE-ResNet-32',
         'Multiclass 3D ResNet': 'networks.multiclass.CNN3D.multiclass_3D_ResNet',
-        'Multiclass 3D SE-ResNet': 'networks.multiclass.CNN3D.multiclass_3D_SE-ResNet'
+        'Multiclass 3D SE-ResNet': 'networks.multiclass.CNN3D.multiclass_3D_SE-ResNet',
+        'FCN 3D-VResFCN': 'networks.FullyConvolutionalNetworks.3D_VResFCN'
     }
 
     modelSubDir = "dicom_sorted"
@@ -116,6 +117,8 @@ class DeepLearningArtApp():
         self.patchSizeZ = 5
         self.patchOverlapp = 0.6
 
+        self.usingSegmentationMasks = False
+
         #attributes for labeling
         self.labelingMode = ''
 
@@ -124,6 +127,7 @@ class DeepLearningArtApp():
         self.storeMode = ''
 
         # attributes for splitting
+        self.datasetName = 'none'
         self.splittingMode = DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING
         self.trainTestDatasetRatio = 0.2 #part of test data
         self.trainValidationRatio = 0.2 # part of Validation data in traindata
@@ -164,12 +168,15 @@ class DeepLearningArtApp():
         # train, validation, test dataset attributes
         self.X_train = None
         self.Y_train = None
+        self.Y_segMasks_train = None
 
         self.X_validation = None
         self.Y_validation = None
+        self.Y_segMasks_validation = None
 
         self.X_test = None
         self.Y_test = None
+        self.Y_segMasks_test = None
 
 
         ####################
@@ -210,19 +217,35 @@ class DeepLearningArtApp():
         if self.patchingMode == DeepLearningArtApp.PATCHING_2D:
             dAllPatches = np.zeros((self.patchSizeX, self.patchSizeY, 0))
             dAllLabels = np.zeros(0)
+            if self.usingSegmentationMasks:
+                dAllSegmentationMaskPatches = np.zeros((self.patchSizeX, self.patchSizeY, 0))
         elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
             dAllPatches = np.zeros([self.patchSizeX, self.patchSizeY, self.patchSizeZ, 0])
             dAllLabels = np.zeros(0)
+            if self.usingSegmentationMasks:
+                dAllSegmentationMaskPatches = np.zeros([self.patchSizeX, self.patchSizeY, self.patchSizeZ, 0])
         else:
             raise IOError("We do not know your patching mode...")
 
         # stuff for storing
         if self.storeMode != DeepLearningArtApp.STORE_DISABLED:
             # outPutFolder name:
-            outPutFolder = "P" + str(len(self.selectedPatients)) + "_" + "D" + str(len(self.selectedDatasets)) + "_" + \
-                           "PM" + str(self.patchingMode) + "_X" + str(self.patchSizeX) + "_Y" + str(self.patchSizeY) + "_O" + \
-                           str(self.patchOverlapp) + "_L" + str(self.labelingMode) + "_S" + str(self.splittingMode) + \
-                            "_STM" + str(self.storeMode)
+            outPutFolder = "Patients-" + str(len(self.selectedPatients)) + "_" + \
+                           "Datasets-" + str(len(self.selectedDatasets)) + "_" + \
+                           ("2D" if self.patchingMode == DeepLearningArtApp.PATCHING_2D else "3D") + "_" + \
+                           str(self.patchSizeX) + "x" + str(self.patchSizeY)
+            if self.patchingMode == DeepLearningArtApp.PATCHING_3D:
+                outPutFolder = outPutFolder + "x" + str(self.patchSizeZ)\
+
+            outPutFolder = outPutFolder + "_Overlap-" + str(self.patchOverlapp) + "_" + \
+                           "Labeling-" + ("patch" if self.labelingMode == DeepLearningArtApp.PATCH_LABELING else "mask")
+
+            if self.splittingMode == DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING:
+                outPutFolder = outPutFolder + "_Split-simpleRand"
+            elif self.splittingMode == DeepLearningArtApp.CROSS_VALIDATION_SPLITTING:
+                outPutFolder = outPutFolder + "_Split-crossVal"
+            elif self.splittingMode == DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING:
+                outPutFolder = outPutFolder + "Split-patientCrossVal"
 
             outputFolderPath = self.pathOutputPatching + os.sep + outPutFolder
 
@@ -230,6 +253,7 @@ class DeepLearningArtApp():
                 os.makedirs(outputFolderPath)
 
             # create dataset summary
+            self.datasetName = outPutFolder
             self.createDatasetInfoSummary(outPutFolder, outputFolderPath)
 
             if self.storeMode == DeepLearningArtApp.STORE_PATCH_BASED:
@@ -247,7 +271,7 @@ class DeepLearningArtApp():
                 currentDataDir = self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset
                 if os.path.exists(currentDataDir):
                     # get list with all paths of dicoms for current patient and current dataset
-                    fileNames = tf.gfile.ListDirectory(currentDataDir)
+                    fileNames = os.listdir(currentDataDir)
                     fileNames = [os.path.join(currentDataDir, f) for f in fileNames]
 
                     # read DICOMS
@@ -264,8 +288,7 @@ class DeepLearningArtApp():
 
                     # normalization of DICOM voxel
                     rangeNorm = [0,1]
-                    #norm_voxel_ndarray = (voxel_ndarray-np.min(voxel_ndarray))*(rangeNorm[1]-rangeNorm[0])/(np.max(voxel_ndarray)-np.min(voxel_ndarray))
-                    norm_voxel_ndarray = voxel_ndarray
+                    norm_voxel_ndarray = (voxel_ndarray-np.min(voxel_ndarray))*(rangeNorm[1]-rangeNorm[0])/(np.max(voxel_ndarray)-np.min(voxel_ndarray))
 
                     # 2D or 3D patching?
                     if self.patchingMode == DeepLearningArtApp.PATCHING_2D:
@@ -285,22 +308,27 @@ class DeepLearningArtApp():
                                                                             labelMask_ndarray, 0.5,
                                                                             DeepLearningArtApp.datasets[dataset])
 
+                            # convert to float32
+                            dPatches = np.asarray(dPatches, dtype=np.float32)
+                            dLabels = np.asarray(dLabels, dtype=np.float32)
+
+
                             ############################################################################################
-                            # dPatchesOfMask, dLabelsMask = fRigidPatching_maskLabeling(labelMask_ndarray,
-                            #                                                 [self.patchSizeX, self.patchSizeY],
-                            #                                                 self.patchOverlapp,
-                            #                                                 labelMask_ndarray, 0.5,
-                            #                                                 DeepLearningArtApp.datasets[dataset])
-                            #
+                            if self.usingSegmentationMasks:
+                                dPatchesOfMask, dLabelsMask = fRigidPatching_maskLabeling(labelMask_ndarray,
+                                                                                [self.patchSizeX, self.patchSizeY],
+                                                                                self.patchOverlapp,
+                                                                                labelMask_ndarray, 0.5,
+                                                                                DeepLearningArtApp.datasets[dataset])
+
+                                dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.byte)
+
                             # sio.savemat('D:med_data/' + patient + '_' + dataset + '_voxel_and_mask.mat',
                             #             {'mask': labelMask_ndarray, 'voxel': voxel_ndarray,
                             #              'dicomPatches': dPatches, 'dicomLabels': dLabels, 'maskPatches': dPatchesOfMask,
                             #              'maskLabels': dLabelsMask})
                             ############################################################################################
 
-                            #convert to float32
-                            dPatches = np.asarray(dPatches, dtype=np.float32)
-                            dLabels = np.asarray(dLabels, dtype=np.float32)
 
                         elif self.labelingMode == DeepLearningArtApp.PATCH_LABELING:
                             # get label
@@ -337,6 +365,16 @@ class DeepLearningArtApp():
                             dPatches = np.asarray(dPatches, dtype=np.float32)
                             dLabels = np.asarray(dLabels, dtype=np.float32)
 
+                            ############################################################################################
+                            if self.usingSegmentationMasks:
+                                dPatchesOfMask, dLabelsMask = fRigidPatching_maskLabeling(labelMask_ndarray,
+                                                                                          [self.patchSizeX, self.patchSizeY, self.patchSizeZ],
+                                                                                          self.patchOverlapp,
+                                                                                          labelMask_ndarray, 0.5,
+                                                                                          DeepLearningArtApp.datasets[dataset])
+                                dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.byte)
+                            ############################################################################################
+
                         elif self.labelingMode == DeepLearningArtApp.PATCH_LABELING:
                             print("3D local patch labeling not available until now!")
 
@@ -363,9 +401,13 @@ class DeepLearningArtApp():
                     if self.patchingMode == DeepLearningArtApp.PATCHING_2D:
                         dAllPatches = np.concatenate((dAllPatches, dPatches), axis=2)
                         dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
+                        if self.usingSegmentationMasks:
+                            dAllSegmentationMaskPatches = np.concatenate((dAllSegmentationMaskPatches, dPatchesOfMask), axis=2)
                     elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
                         dAllPatches = np.concatenate((dAllPatches, dPatches), axis=3)
                         dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
+                        if self.usingSegmentationMasks:
+                            dAllSegmentationMaskPatches = np.concatenate((dAllSegmentationMaskPatches, dPatchesOfMask), axis=3)
 
 
         # dataset splitting
@@ -375,15 +417,44 @@ class DeepLearningArtApp():
             if self.storeMode == DeepLearningArtApp.STORE_HDF5:
                 # train, validation, test datasets are computed by splitting all data
                 if self.patchingMode == DeepLearningArtApp.PATCHING_2D:
-                    [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [self.Y_test] \
-                        = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients,
-                                        sSplitting=self.splittingMode,
-                                        patchSize=[self.patchSizeX, self.patchSizeY],
-                                        patchOverlap=self.patchOverlapp,
-                                        testTrainingDatasetRatio=self.trainTestDatasetRatio,
-                                        validationTrainRatio=self.trainValidationRatio,
-                                        outPutPath=self.pathOutputPatching, nfolds=0)
-                elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
+                    if not self.usingSegmentationMasks:
+                        [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [self.Y_test] \
+                            = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients,
+                                            sSplitting=self.splittingMode,
+                                            patchSize=[self.patchSizeX, self.patchSizeY],
+                                            patchOverlap=self.patchOverlapp,
+                                            testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                            validationTrainRatio=self.trainValidationRatio,
+                                            outPutPath=self.pathOutputPatching, nfolds=0)
+                    else:
+                        # do segmentation mask split
+                        [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
+                        [self.X_validation], [self.Y_validation], [self.Y_segMasks_validation], \
+                        [self.X_test], [self.Y_test], [self.Y_segMasks_test] \
+                            = fSplitSegmentationDataset(dAllPatches, dAllLabels, dAllSegmentationMaskPatches,
+                                                        allPats=self.selectedPatients,
+                                                        sSplitting=self.splittingMode,
+                                                        patchSize=[self.patchSizeX, self.patchSizeY],
+                                                        patchOverlap=self.patchOverlapp,
+                                                        testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                                        validationTrainRatio=self.trainValidationRatio,
+                                                        outPutPath=self.pathOutputPatching, nfolds=0)
+
+                    # store datasets with h5py
+                    with h5py.File(outputFolderPath + os.sep + 'datasets.hdf5', 'w') as hf:
+                        hf.create_dataset('X_train', data=self.X_train)
+                        hf.create_dataset('X_validation', data=self.X_validation)
+                        hf.create_dataset('X_test', data=self.X_test)
+                        hf.create_dataset('Y_train', data=self.Y_train)
+                        hf.create_dataset('Y_validation', data=self.Y_validation)
+                        hf.create_dataset('Y_test', data=self.Y_test)
+                        if self.usingSegmentationMasks == True:
+                            hf.create_dataset('Y_segMasks_train', data=self.Y_segMasks_train)
+                            hf.create_dataset('Y_segMasks_validation', data=self.Y_segMasks_validation)
+                            hf.create_dataset('Y_segMasks_test', data=self.Y_segMasks_test)
+
+            elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
+                if not self.usingSegmentationMasks:
                     [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [
                         self.Y_test] \
                         = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients,
@@ -393,6 +464,21 @@ class DeepLearningArtApp():
                                         testTrainingDatasetRatio=self.trainTestDatasetRatio,
                                         validationTrainRatio=self.trainValidationRatio,
                                         outPutPath=self.pathOutputPatching, nfolds=0)
+                else:
+                    [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
+                    [self.X_validation], [self.Y_validation], [self.Y_segMasks_validation], \
+                    [self.X_test], [self.Y_test], [self.Y_segMasks_test]\
+                        = fSplitSegmentationDataset(dAllPatches,
+                                                    dAllLabels,
+                                                    dAllSegmentationMaskPatches,
+                                                    allPats=self.selectedPatients,
+                                                    sSplitting=self.splittingMode,
+                                                    patchSize=[self.patchSizeX, self.patchSizeY, self.patchSizeZ],
+                                                    patchOverlap=self.patchOverlapp,
+                                                    testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                                    validationTrainRatio=self.trainValidationRatio,
+                                                    outPutPath=self.pathOutputPatching,
+                                                    nfolds=0)
 
                 # store datasets with h5py
                 with h5py.File(outputFolderPath+os.sep+'datasets.hdf5', 'w') as hf:
@@ -402,6 +488,10 @@ class DeepLearningArtApp():
                     hf.create_dataset('Y_train', data=self.Y_train)
                     hf.create_dataset('Y_validation', data=self.Y_validation)
                     hf.create_dataset('Y_test', data=self.Y_test)
+                    if self.usingSegmentationMasks:
+                        hf.create_dataset('Y_segMasks_train', data=self.Y_segMasks_train)
+                        hf.create_dataset('Y_segMasks_validation', data=self.Y_segMasks_validation)
+                        hf.create_dataset('Y_segMasks_test', data=self.Y_segMasks_test)
 
             elif self.storeMode == DeepLearningArtApp.STORE_PATCH_BASED:
                 with open(outputFolderPath+os.sep+"labels.json", 'w') as fp:
@@ -409,24 +499,59 @@ class DeepLearningArtApp():
         else:
             # no storage of patched datasets
             if self.patchingMode == DeepLearningArtApp.PATCHING_2D:
-                [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [self.Y_test] \
-                    = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients,
-                                    sSplitting=self.splittingMode,
-                                    patchSize=[self.patchSizeX, self.patchSizeY],
-                                    patchOverlap=self.patchOverlapp,
-                                    testTrainingDatasetRatio=self.trainTestDatasetRatio,
-                                    validationTrainRatio=self.trainValidationRatio,
-                                    outPutPath=self.pathOutputPatching, nfolds=0)
+                if not self.usingSegmentationMasks:
+                    [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [
+                        self.Y_test] \
+                        = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients,
+                                        sSplitting=self.splittingMode,
+                                        patchSize=[self.patchSizeX, self.patchSizeY],
+                                        patchOverlap=self.patchOverlapp,
+                                        testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                        validationTrainRatio=self.trainValidationRatio,
+                                        outPutPath=self.pathOutputPatching, nfolds=0)
+                else:
+                    # do segmentation mask split
+                    [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
+                    [self.X_validation], [self.Y_validation], [self.Y_segMasks_validation], \
+                    [self.X_test], [self.Y_test], [self.Y_segMasks_test] \
+                        = fSplitSegmentationDataset(dAllPatches,
+                                                    dAllLabels,
+                                                    dAllSegmentationMaskPatches,
+                                                    allPats=self.selectedPatients,
+                                                    sSplitting=self.splittingMode,
+                                                    patchSize=[self.patchSizeX, self.patchSizeY],
+                                                    patchOverlap=self.patchOverlapp,
+                                                    testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                                    validationTrainRatio=self.trainValidationRatio,
+                                                    outPutPath=self.pathOutputPatching,
+                                                    nfolds=0)
+
             elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
-                [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [
-                    self.Y_test] \
-                    = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients,
-                                    sSplitting=self.splittingMode,
-                                    patchSize=[self.patchSizeX, self.patchSizeY, self.patchSizeZ],
-                                    patchOverlap=self.patchOverlapp,
-                                    testTrainingDatasetRatio=self.trainTestDatasetRatio,
-                                    validationTrainRatio=self.trainValidationRatio,
-                                    outPutPath=self.pathOutputPatching, nfolds=0)
+                if not self.usingSegmentationMasks:
+                    [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [
+                        self.Y_test] \
+                        = fSplitDataset(dAllPatches, dAllLabels, allPats=self.selectedPatients,
+                                        sSplitting=self.splittingMode,
+                                        patchSize=[self.patchSizeX, self.patchSizeY, self.patchSizeZ],
+                                        patchOverlap=self.patchOverlapp,
+                                        testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                        validationTrainRatio=self.trainValidationRatio,
+                                        outPutPath=self.pathOutputPatching, nfolds=0)
+                else:
+                    [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
+                    [self.X_validation], [self.Y_validation], [self.Y_segMasks_validation], \
+                    [self.X_test], [self.Y_test], [self.Y_segMasks_test] \
+                        = fSplitSegmentationDataset(dAllPatches,
+                                                    dAllLabels,
+                                                    dAllSegmentationMaskPatches,
+                                                    allPats=self.selectedPatients,
+                                                    sSplitting=self.splittingMode,
+                                                    patchSize=[self.patchSizeX, self.patchSizeY, self.patchSizeZ],
+                                                    patchOverlap=self.patchOverlapp,
+                                                    testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                                    validationTrainRatio=self.trainValidationRatio,
+                                                    outPutPath=self.pathOutputPatching,
+                                                    nfolds=0)
 
             print()
 
@@ -454,26 +579,56 @@ class DeepLearningArtApp():
         Y_test = np.asarray(Y_test)
 
         # output folder
-        outPutFolderDataPath = self.learningOutputPath + os.sep + self.neuralNetworkModel + \
-                               "_" + str(self.patchSizeX) + "x" + str(self.patchSizeY)
+        outPutFolderDataPath = self.learningOutputPath + os.sep + self.neuralNetworkModel + "_"
+        if self.patchingMode == DeepLearningArtApp.PATCHING_2D:
+            outPutFolderDataPath += "2D" + "_" + str(self.patchSizeX) + "x" + str(self.patchSizeY)
+        elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
+            outPutFolderDataPath += "3D" + "_" + str(self.patchSizeX) + "x" + str(self.patchSizeY) + \
+                                    "x" + str(self.patchSizeZ)
+
+        outPutFolderDataPath += "_" + datetime.datetime.today().strftime('%Y-%m-%d_%H-%M')
+
         if not os.path.exists(outPutFolderDataPath):
             os.makedirs(outPutFolderDataPath)
 
         if not os.path.exists(outPutFolderDataPath + os.sep + 'checkpoints'):
             os.makedirs(outPutFolderDataPath + os.sep + 'checkpoints')
 
-        cnn_main.fRunCNN(
-            dData={'X_train': self.X_train, 'y_train': Y_train, 'X_valid': self.X_validation, 'y_valid': Y_validation ,
-                   'X_test': self.X_test, 'y_test': Y_test, 'patchSize': [self.patchSizeX, self.patchSizeY, self.patchSizeZ]},
-            sModelIn=DeepLearningArtApp.deepNeuralNetworks[self.neuralNetworkModel],
-            lTrain=cnn_main.RUN_CNN_TRAIN_TEST_VALIDATION,
-            sParaOptim='',
-            sOutPath=outPutFolderDataPath,
-            iBatchSize=self.batchSizes,
-            iLearningRate=self.learningRates,
-            iEpochs=self.epochs,
-            dlart_handle=self)
+        # summarize cnn and training
+        self.create_cnn_training_summary(self.neuralNetworkModel, outPutFolderDataPath)
 
+
+        if not self.usingSegmentationMasks:
+            cnn_main.fRunCNN(dData={'X_train': self.X_train, 'y_train': Y_train, 'X_valid': self.X_validation, 'y_valid': Y_validation ,
+                                    'X_test': self.X_test, 'y_test': Y_test, 'patchSize': [self.patchSizeX, self.patchSizeY, self.patchSizeZ]},
+                             sModelIn=DeepLearningArtApp.deepNeuralNetworks[self.neuralNetworkModel],
+                             lTrain=cnn_main.RUN_CNN_TRAIN_TEST_VALIDATION,
+                             sParaOptim='',
+                             sOutPath=outPutFolderDataPath,
+                             iBatchSize=self.batchSizes,
+                             iLearningRate=self.learningRates,
+                             iEpochs=self.epochs,
+                             dlart_handle=self)
+        else:
+            # segmentation FCN training
+            cnn_main.fRunCNN(dData={'X_train': self.X_train,
+                                    'y_train': Y_train,
+                                    'Y_segMasks_train': self.Y_segMasks_train,
+                                    'X_valid': self.X_validation,
+                                    'y_valid': Y_validation,
+                                    'Y_segMasks_valid': self.Y_segMasks_validation,
+                                    'X_test': self.X_test,
+                                    'y_test': Y_test,
+                                    'Y_segMasks_test': self.Y_segMasks_test,
+                                    'patchSize': [self.patchSizeX, self.patchSizeY, self.patchSizeZ]},
+                             sModelIn=DeepLearningArtApp.deepNeuralNetworks[self.neuralNetworkModel],
+                             lTrain=cnn_main.RUN_CNN_TRAIN_TEST_VALIDATION,
+                             sParaOptim='',
+                             sOutPath=outPutFolderDataPath,
+                             iBatchSize=self.batchSizes,
+                             iLearningRate=self.learningRates,
+                             iEpochs=self.epochs,
+                             dlart_handle=self)
 
 
     def getAllDicomsPathList(self):
@@ -490,6 +645,41 @@ class DeepLearningArtApp():
                     fileNames = [os.path.join(curDataDir, f) for f in fileNames]
                     allDicomsPathList = allDicomsPathList + fileNames
         return allDicomsPathList
+
+    def create_cnn_training_summary(self, name, outputFolderPath):
+        dataDict = {}
+        dataDict['Name'] = name
+        dataDict['Date'] = datetime.datetime.today().strftime('%Y-%m-%d')
+        dataDict['BatchSize'] = ''.join(str(e) for e in self.batchSizes)
+        dataDict['LearningRate'] = ''.join(str(e) for e in self.batchSizes)
+        dataDict['DataAugmentation'] = self.dataAugmentationEnabled
+        dataDict['HorizontalFlip'] = self.horizontalFlip
+        dataDict['VerticalFlip'] = self.verticalFlip
+        dataDict['Rotation'] = self.rotation
+        dataDict['Zoom'] = self.zoom
+        dataDict['ZCA_Whitening'] = self.zcaWhitening
+        dataDict['HeightShift'] = self.heightShift
+        dataDict['WidthShift'] = self.widthShift
+        dataDict['ContrastStretching'] = self.contrastStretching
+        dataDict['HistogramEq'] = self.histogram_eq
+        dataDict['AdaptiveEq'] = self.adaptive_eq
+
+        dataDict['BodyRegions'] = self.usingBodyRegions
+        dataDict['TWeightings'] = self.usingTWeighting
+        dataDict['Artifacts'] = self.usingArtifacts
+
+        dataDict['Optimizer'] = self.optimizer
+        dataDict['Epochs'] = self.epochs
+        dataDict['WeightDecay'] = self.weightDecay
+        dataDict['Momentum'] = self.momentum
+        dataDict['NesterovEnabled'] = self.nesterovEnabled
+
+        dataDict['Dataset'] = self.datasetName
+
+        with open((outputFolderPath+os.sep+'cnn_training_info.json'), 'w') as fp:
+            json.dump(dataDict, fp, indent=4)
+
+
 
     def createDatasetInfoSummary(self, name, outputFolderPath):
         '''
@@ -509,6 +699,9 @@ class DeepLearningArtApp():
         dataDict['PatchOverlap'] = self.patchOverlapp
         dataDict['LabelingMode'] = self.labelingMode
         dataDict['SplittingMode'] = self.splittingMode
+        dataDict['NumFolds'] = self.numFolds
+        dataDict['TrainTestRatio'] = self.trainTestDatasetRatio
+        dataDict['TrainValidationRatio'] = self.trainValidationRatio
         dataDict['StoreMode'] = self.storeMode
 
         with open((outputFolderPath+os.sep+'dataset_info.json'), 'w') as fp:
@@ -789,6 +982,12 @@ class DeepLearningArtApp():
     def getGUIHandle(self):
         return self.dlart_GUI_handle
 
+    def getUsingSegmentationMasks(self):
+        return self.usingSegmentationMasks
+
+    def setUsingSegmentationMasks(self, b):
+        self.usingSegmentationMasks = b
+
     def datasetAvailable(self):
         retbool = False
         if self.storeMode != DeepLearningArtApp.STORE_PATCH_BASED:
@@ -806,7 +1005,6 @@ class DeepLearningArtApp():
         :return: boolean if loading was successful, and name of loaded dataset
         '''
         retbool = False
-        datasetName = ''
         #check for data info summary in json file
         try:
             with open(pathToDataset + os.sep + "dataset_info.json", 'r') as fp:
@@ -815,11 +1013,17 @@ class DeepLearningArtApp():
             # hd5f or patch based?
             if dataset_info['StoreMode'] == DeepLearningArtApp.STORE_HDF5:
                 # loading hdf5
-                datasetName = dataset_info['Name']
+                self.datasetName = dataset_info['Name']
                 self.patchSizeX = int(dataset_info['PatchSizeX'])
                 self.patchSizeY = int(dataset_info['PatchSizeY'])
                 self.patchSizeZ = int(dataset_info['PatchSizeZ'])
                 self.patchOverlapp = float(dataset_info['PatchOverlap'])
+                self.patchingMode = int(dataset_info['PatchMode'])
+                self.labelingMode = int(dataset_info['LabelingMode'])
+                self.splittingMode = int(dataset_info['SplittingMode'])
+                self.trainTestDatasetRatio = float(dataset_info['TrainTestRatio'])
+                self.trainValidationRatio = float(dataset_info['TrainValidationRatio'])
+                self.numFolds = int(dataset_info['NumFolds'])
 
                 # loading hdf5 dataset
                 try:
@@ -837,7 +1041,7 @@ class DeepLearningArtApp():
 
             elif dataset_info['StoreMode'] == DeepLearningArtApp.STORE_PATCH_BASED:
                 #loading patchbased stuff
-                datasetName = dataset_info['Name']
+                self.datasetName = dataset_info['Name']
 
                 print("still in progrss")
             else:
@@ -846,7 +1050,7 @@ class DeepLearningArtApp():
         except:
             raise FileNotFoundError("Error: Something went wrong at trying to load the dataset!!!")
 
-        return retbool, datasetName
+        return retbool, self.datasetName
 
 
 
@@ -1006,7 +1210,6 @@ class DeepLearningArtApp():
 
     def performTraining_ArtGAN(self):
         artGAN.artGAN_main()
-
 
     def getOutputPathPatchingGAN(self):
         return self.pathOutputPatchingGAN
@@ -1236,16 +1439,22 @@ class DeepLearningArtApp():
         if operatingSystem==0:
             # my windows PC
             pathDatabase = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "newProtocol"
-            pathOutputPatching = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "DeepLearningArt_Output"
+
+            pathOutputPatching = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "DeepLearningArt_Output" + \
+                os.sep + "Datasets"
+
             markingsPath = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "Markings"
+
             learningOutputPath = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "DeepLearningArt_Output" + \
                                       os.sep + "Output_Learning"
+
             pathOutputPatchingGAN = "D:" + os.sep + "med_data" + os.sep + "MRPhysics" + os.sep + "DeepLearningArt_GAN"
+
         elif operatingSystem==1:
             pathDatabase = "/med_data/ImageSimilarity/Databases/MRPhysics/newProtocol"
-            pathOutputPatching = "/no_backup/d1237/DeepLearningArt_Output/"
+            pathOutputPatching = "/no_backup/d1237/DeepLearningArt_Output/Datasets"
             markingsPath = "/no_backup/d1237/Markings/"
-            learningOutputPath = "/no_backup/d1237/DeepLearningArt_Output/"
+            learningOutputPath = "/no_backup/d1237/DeepLearningArt_Output/Output_Learning"
             pathOutputPatchingGAN = "/no_backup/d1237/DeepLearningArt_GAN/"
 
         return pathDatabase, pathOutputPatching, markingsPath, learningOutputPath, pathOutputPatchingGAN

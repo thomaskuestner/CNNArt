@@ -101,7 +101,7 @@ def fLoadDataForOptim(sInPath):
 #        if not any(x in sVarname for x in ['X_train', 'X_test', 'y_train', 'y_test'] ):
 #            conten[sVarname]
 
-def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearningRate, iEpochs, dlart_handle=None):
+def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearningRate, iEpochs, dlart_handle=None, usingSegmentationMasks=False):
     """CNN Models"""
     # check model
     sModel = sModelIn
@@ -248,22 +248,38 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
                             dlart_handle=dlart_handle)
 
         else:  # no optimization or grid search (if batchSize|learningRate are arrays)
-            cnnModel.fTrain(X_train=dData['X_train'],
-                            y_train=dData['y_train'],
-                            X_valid=dData['X_valid'],
-                            y_valid=dData['y_valid'],
-                            X_test=dData['X_test'],
-                            y_test=dData['y_test'],
-                            sOutPath=sOutPath,
-                            patchSize=dData['patchSize'],
-                            batchSizes=iBatchSize,
-                            learningRates=iLearningRate,
-                            iEpochs=iEpochs,
-                            dlart_handle=dlart_handle)
+            if not usingSegmentationMasks:
+                cnnModel.fTrain(X_train=dData['X_train'],
+                                y_train=dData['y_train'],
+                                X_valid=dData['X_valid'],
+                                y_valid=dData['y_valid'],
+                                X_test=dData['X_test'],
+                                y_test=dData['y_test'],
+                                sOutPath=sOutPath,
+                                patchSize=dData['patchSize'],
+                                batchSizes=iBatchSize,
+                                learningRates=iLearningRate,
+                                iEpochs=iEpochs,
+                                dlart_handle=dlart_handle)
+            else:
+                cnnModel.fTrain(X_train=dData['X_train'],
+                                y_train=dData['y_train'],
+                                Y_segMasks_train=dData['Y_segMasks_trian'],
+                                X_valid=dData['X_valid'],
+                                y_valid=dData['y_valid'],
+                                Y_segMasks_valid=dData['Y_segMasks_valid'],
+                                X_test=dData['X_test'],
+                                y_test=dData['y_test'],
+                                Y_segMasks_test=dData['Y_segMasks_test'],
+                                sOutPath=sOutPath,
+                                patchSize=dData['patchSize'],
+                                batchSizes=iBatchSize,
+                                learningRates=iLearningRate,
+                                iEpochs=iEpochs,
+                                dlart_handle=dlart_handle)
 
     elif lTrain == RUN_CNN_PREDICT:  # predicting
-        cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, dData['patchSize'],
-                          iBatchSize[0])
+        cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, dData['patchSize'], iBatchSize[0])
 
 
 # Main Code
