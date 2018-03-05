@@ -52,7 +52,7 @@ def decode(input):
     output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
     return output
 
-def createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_network):
+def createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_network, loss_model):
     # input corrupted and non-corrupted image
     x_ref = Input(shape=(1, patchSize[0], patchSize[1]))
     x_art = Input(shape=(1, patchSize[0], patchSize[1]))
@@ -88,7 +88,7 @@ def createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_networ
     vae.add_loss(pixel_weight * (loss_ref2ref + loss_art2ref))
 
     # add perceptual loss
-    p_loss = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, perceptual_weight, pl_network)
+    p_loss = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, perceptual_weight, pl_network, loss_model)
 
     vae.add_loss(p_loss)
 
@@ -103,9 +103,9 @@ def fTrain(dData, sOutPath, patchSize, dHyper):
     for iBatch in batchSize:
         for iLearn in learningRate:
             fTrainInner(dData, sOutPath, patchSize, epochs, iBatch, iLearn, dHyper['kl_weight'], dHyper['pixel_weight'],
-                        dHyper['perceptual_weight'], dHyper['pl_network'])
+                        dHyper['perceptual_weight'], dHyper['pl_network'], dHyper['loss_model'])
 
-def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pixel_weight, perceptual_weight, pl_network):
+def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pixel_weight, perceptual_weight, pl_network, loss_model):
     train_ref = dData['train_ref']
     train_art = dData['train_art']
     test_ref = dData['test_ref']
@@ -116,7 +116,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pi
     test_ref = np.expand_dims(test_ref, axis=1)
     test_art = np.expand_dims(test_art, axis=1)
 
-    vae = createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_network)
+    vae = createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_network, loss_model)
     vae.compile(optimizer=Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0), loss=None)
     vae.summary()
 
@@ -151,8 +151,9 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave, unpatch):
     pixel_weight = dHyper['pixel_weight']
     perceptual_weight = dHyper['perceptual_weight']
     pl_network = dHyper['pl_network']
+    loss_model = dHyper['loss_model']
 
-    vae = createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_network)
+    vae = createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_network, loss_model)
     vae.compile(optimizer='adam', loss=None)
 
     vae.load_weights(weights_file)

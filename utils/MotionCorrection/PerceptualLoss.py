@@ -12,7 +12,7 @@ def preprocessing(input):
 
     return output[:, ::-1, :, :]
 
-def addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, perceptual_weight, pl_network):
+def addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, perceptual_weight, pl_network, loss_model):
     if pl_network == 'vgg19':
         x_ref = concatenate([x_ref, x_ref, x_ref], axis=1)
         decoded_ref2ref = concatenate([decoded_ref2ref, decoded_ref2ref, decoded_ref2ref], axis=1)
@@ -28,7 +28,7 @@ def addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, percep
 
     # TODO: adapt the path
     elif pl_network == 'motion_head':
-        model = load_model('/no_backup/d1206/Jan/Headcross/8080/testout8080/testout8080_lr_0.0001_bs_128_model.h5')
+        model = load_model(loss_model)
         input = model.input
 
     else:
