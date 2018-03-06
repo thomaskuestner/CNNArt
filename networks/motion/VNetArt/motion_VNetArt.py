@@ -98,7 +98,7 @@ def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=No
                              'acc_test': acc_test,
                              'prob_test': prob_test})
 
-def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
+def fPredict(X_test,y_test,  model_name, sOutPath, batchSize=64,patchSize=[40,40,5]):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
     Input:
         X: Samples to predict on. The shape of X should fit to the input shape of the model
@@ -107,10 +107,9 @@ def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
         sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy stored. 
                     The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the suffix '_pred.mat' 
         batchSize: Batchsize, number of samples that are processed at once"""
-    sModelPath=sModelPath.replace("_json.txt", "")
-    weight_name = sModelPath + '_weights.h5'
-    model_json = sModelPath + '_json.txt'
-    model_all = sModelPath + '_model.h5'
+    weight_name = sOutPath + '/' + model_name + '_weights.h5'
+    model_json = sOutPath + '/' + model_name + '_json.txt'
+    model_all = sOutPath + '/' + model_name + '_model.h5'
 
     # load weights and model (new way)
     model_json= open(model_json, 'r')
@@ -121,14 +120,14 @@ def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
     model.compile(loss='categorical_crossentropy',optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
     model.load_weights(weight_name)
 
+    X_test = np.expand_dims(X_test, axis=1)
+    y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
 
-    score_test, acc_test = model.evaluate(X, y, batch_size=batchSize)
+    score_test, acc_test = model.evaluate(X_test, y_test, batch_size=batchSize)
     print('loss'+str(score_test)+ '   acc:'+ str(acc_test))
-    prob_pre = model.predict(X, batch_size=batchSize, verbose=1)
-    print(prob_pre[0:14,:])
-    _,sModelFileSave  = os.path.split(sModelPath)
+    prob_pre = model.predict(X_test, batch_size=batchSize, verbose=1)
 
-    modelSave = sOutPath +sModelFileSave+ '_pred.mat'
+    modelSave = sOutPath + '/' + model_name + '_pred.mat'
     print('saving Model:{}'.format(modelSave))
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
 
