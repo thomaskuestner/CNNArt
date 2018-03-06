@@ -145,6 +145,8 @@ def fPredict(X_test,y_test, model_name, sOutPath, batchSize=64):
 
 def fCreateModel(patchSize,dr_rate=0.0, iPReLU=0, l2_reg=1e-6):
     # Total params: 5,483,161
+    # Each convolution layer before down sampling is replaced by the inception block,
+    # all other convolution layers are reserved.
     Strides = fgetStrides()
     kernelnumber = fgetKernelNumber()
     inp = Input(shape=(1, int(patchSize[0]), int(patchSize[1]), int(patchSize[2])))
@@ -171,6 +173,38 @@ def fCreateModel(patchSize,dr_rate=0.0, iPReLU=0, l2_reg=1e-6):
     cnn_incep = Model(inputs=inp, outputs=outp)
     return cnn_incep
 
+def fCreateModel2(patchSize,dr_rate=0.0, iPReLU=0, l2_reg=1e-6):
+    # Total params: 2,802,041
+    # The three higher convolution layers except down sampling are replaced by the inception block,
+    # the three lower convolution layers are reserved.
+    # In work of GoogLeNet, it's beneficial for memory efficiency during training
+    # to start using inception modules at higher layers and to keep lower layers in traditional convolutional fashion.
+    Strides = fgetStrides()
+    kernelnumber = fgetKernelNumber()
+    inp = Input(shape=(1, int(patchSize[0]), int(patchSize[1]), int(patchSize[2])))
+
+    after_Incep_1 =  fCreateVNet_Block(inp, kernelnumber[0], type=fgetLayerNumIncep(), iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+    after_DownConv_1 = fCreateVNet_DownConv_Block(after_Incep_1, after_Incep_1._keras_shape[1], Strides[0],
+                                                     iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+
+    after_Incep_2 = fConvIncep(after_DownConv_1, KB=kernelnumber[1], layernum=fgetLayerNumIncep(), l2_reg=l2_reg)
+    after_DownConv_2 = fCreateVNet_DownConv_Block(after_Incep_2, after_Incep_2._keras_shape[1], Strides[1],
+                                                   iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+
+    after_Incep_3 = fIncepChain(after_DownConv_2, layernum=fgetLayerNumIncep(), l2_reg=l2_reg, iPReLU=iPReLU)
+    after_DownConv_2 = fCreateVNet_DownConv_Block(after_Incep_3, after_Incep_3._keras_shape[1], Strides[2],
+                                                   iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+    # fully connect layer as dense
+    flat_out = Flatten()(after_DownConv_2)
+    dropout_out = Dropout(dr_rate)(flat_out)
+    dense_out = Dense(units=2,
+                          kernel_initializer='normal',
+                          kernel_regularizer=l2(l2_reg))(dropout_out)
+
+    outp = Activation('softmax')(dense_out)
+    cnn_incep = Model(inputs=inp, outputs=outp)
+    return cnn_incep
+
 def fConvIncep(input_t, KB=64, layernum=2, l1_reg=0.0, l2_reg=1e-6, iPReLU=0):
     tower_t = Conv3D(filters=KB,
                      kernel_size=[2,2,1],
@@ -181,6 +215,15 @@ def fConvIncep(input_t, KB=64, layernum=2, l1_reg=0.0, l2_reg=1e-6, iPReLU=0):
                      kernel_regularizer=l1_l2(l1_reg, l2_reg),
                      )(input_t)
     incep = fGetActivation(tower_t, iPReLU=iPReLU)
+
+    for counter in range(1,layernum):
+        incep = InceptionBlock(incep, l1_reg=l1_reg, l2_reg=l2_reg)
+
+    incepblock_out = concatenate([incep, input_t], axis=1)
+    return incepblock_out
+
+def fIncepChain(input_t, layernum=2, l1_reg=0.0, l2_reg=1e-6, iPReLU=0):
+    incep = InceptionBlock(input_t, l1_reg=l1_reg, l2_reg=l2_reg)
 
     for counter in range(1,layernum):
         incep = InceptionBlock(incep, l1_reg=l1_reg, l2_reg=l2_reg)
@@ -221,6 +264,32 @@ def fCreateVNet_DownConv_Block(input_t, channels, stride, l1_reg=0.0, l2_reg=1e-
                     )(output_t)
     output_t=fGetActivation(output_t,iPReLU=iPReLU)
     return output_t
+
+def fCreateVNet_Block(input_t, channels, type=1, kernel_size=(3,3,3),l1_reg=0.0, l2_reg=1e-6, iPReLU=0, dr_rate=0):
+    tower_t= Dropout(dr_rate)(input_t)
+    tower_t = Conv3D(channels,
+                           kernel_size=kernel_size,
+                           kernel_initializer='he_normal',
+                           weights=None,
+                           padding='same',
+                           strides=(1, 1, 1),
+                           kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                           )(tower_t)
+
+    tower_t = fGetActivation(tower_t, iPReLU=iPReLU)
+    for counter in range(1, type):
+        tower_t = Dropout(dr_rate)(tower_t)
+        tower_t = Conv3D(channels,
+                           kernel_size=kernel_size,
+                           kernel_initializer='he_normal',
+                           weights=None,
+                           padding='same',
+                           strides=(1, 1, 1),
+                           kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                           )(tower_t)
+        tower_t = fGetActivation(tower_t, iPReLU=iPReLU)
+    tower_t = concatenate([tower_t, input_t], axis=1)
+    return tower_t
 
 def fGetActivation(input_t,  iPReLU=0):
     init=0.25
