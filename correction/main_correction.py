@@ -69,9 +69,8 @@ def run(cfg, dbinfo):
                   'pixel_weight': cfg['correction']['pixel_weight'], 'pl_network': cfg['correction']['pl_network'],
                   'loss_model': cfg['correction']['loss_model']}
 
-        test_data = sOutPath + os.sep + 'test/testData.h5'
-        iPat = cfg['correction']['test_patient']
-        with h5py.File(test_data, 'r') as hf:
-            dData = hf['X_test'][iPat, :, :, :]
+        with h5py.File(sDatafile, 'r') as hf:
+            dData = hf['train_art'][:]
+        dData = np.squeeze(dData, axis=0)
         cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'], cfg['correction']['unpatch'])
 

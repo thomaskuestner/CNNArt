@@ -100,8 +100,8 @@ def fPreprocessDataCorrection(cfg, dbinfo):
 
         print('Start scaling')
         # perform scaling: sc for scale
-        train_ref_sc, test_ref_sc, _ = scaling.fscaling([train_ref_sp], [test_ref_sp], scpatchSize, iscalefactor)
-        train_art_sc, test_art_sc, _ = scaling.fscaling([train_art_sp], [test_art_sp], scpatchSize, iscalefactor)
+        train_ref_sc, test_ref_sc, _ = scaling.fscaling(train_ref_sp, test_ref_sp, scpatchSize, iscalefactor)
+        train_art_sc, test_art_sc, _ = scaling.fscaling(train_art_sp, test_art_sp, scpatchSize, iscalefactor)
 
         if len(train_ref) == 0:
             train_ref = train_ref_sc

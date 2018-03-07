@@ -165,31 +165,26 @@ def get_first_index(iX, iY, iZ, patch_nmb_layer, x_index, y_index):
 
     return num
 
-def fRigidUnpatchingCorrection(actual_size, allPatches):
+def fRigidUnpatchingCorrection(actual_size, allPatches, patchOverlap):
     patch_size = [allPatches.shape[1], allPatches.shape[2]]
     height, width = actual_size[0], actual_size[1]
-    num_rows, num_cols = int(math.ceil(height*1.0/patch_size[0])), int(math.ceil(width*1.0/patch_size[1]))
+    dOverlap = np.multiply(patch_size, patchOverlap).astype(int)
+    dNotOverlap = np.round(np.multiply(patch_size, (1 - patchOverlap))).astype(int)
+
+    height_pad = int(math.ceil((height - dOverlap[0]) * 1.0 / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0])
+
+    width_pad = int(math.ceil((width - dOverlap[1]) * 1.0 / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1])
+
+    num_rows, num_cols = int(math.ceil(height_pad*1.0/dOverlap[0])-1), int(math.ceil(width_pad*1.0/dOverlap[1])-1)
     num_slices = allPatches.shape[0]/(num_rows * num_cols)
 
     allPatches = np.reshape(allPatches, (num_slices, -1, patch_size[0], patch_size[1]))
-    unpatchImg = np.zeros((num_slices, height, width))
+    unpatchImg = np.zeros((num_slices, height_pad, width_pad))
 
     for slice in range(num_slices):
         for row in range(num_rows):
-            if row == (num_rows - 1):
-                for col in range(num_cols):
-                    index = row * num_cols + col
-                    if col == (num_cols - 1):
-                        unpatchImg[slice, row * patch_size[0]:, col * patch_size[1]:] = allPatches[slice, index, :height - row * patch_size[0], :width - col * patch_size[1]]
-                    else:
-                        unpatchImg[slice, row * patch_size[0]:, col * patch_size[1]:(col + 1) * patch_size[1]] = allPatches[slice, index, :height - row * patch_size[0], :]
-            else:
-                for col in range(num_cols):
-                    index = row * num_cols + col
-                    if col == (num_cols - 1):
-                        unpatchImg[slice, row * patch_size[0]:(row + 1) * patch_size[0], col * patch_size[1]:] = allPatches[slice, index, :, :width - col * patch_size[1]]
-                    else:
-                        unpatchImg[slice, row * patch_size[0]:(row + 1) * patch_size[0],
-                        col * patch_size[1]:(col + 1) * patch_size[1]] = allPatches[slice, index]
+            for col in range(num_cols):
+                index = row * num_cols + col
+                unpatchImg[slice, row * dOverlap[0]:row * dOverlap[0] + patch_size[0], col * dOverlap[1]:col * dOverlap[1] + patch_size[1]] = allPatches[slice, index]
 
     return unpatchImg
