@@ -52,7 +52,7 @@ def decode(input):
     output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
     return output
 
-def createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_network, loss_model):
+def createModel(patchSize, dHyper):
     # input corrupted and non-corrupted image
     x_ref = Input(shape=(1, patchSize[0], patchSize[1]))
     x_art = Input(shape=(1, patchSize[0], patchSize[1]))
@@ -79,33 +79,34 @@ def createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_networ
 
     # compute kl loss
     loss_kl = - 0.5 * K.sum(1 + z_mean - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-    vae.add_loss(kl_weight * K.mean(loss_kl))
+    vae.add_loss(dHyper['kl_weight'] * K.mean(loss_kl))
 
     # compute pixel to pixel loss
-    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([Lambda(lambda x : 255*x)(x_ref), Lambda(lambda x : 255*x)(decoded_ref2ref)]) + K.epsilon()
-    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([Lambda(lambda x : 255*x)(x_ref), Lambda(lambda x : 255*x)(decoded_art2ref)]) + K.epsilon()
+    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))\
+                       ([Lambda(lambda x : dHyper['nScale']*x)(x_ref), Lambda(lambda x : dHyper['nScale']*x)(decoded_ref2ref)]) + 1e-6
+    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))\
+                       ([Lambda(lambda x : dHyper['nScale']*x)(x_ref), Lambda(lambda x : dHyper['nScale']*x)(decoded_art2ref)]) + 1e-6
 
-    vae.add_loss(pixel_weight * (loss_ref2ref + loss_art2ref))
+    vae.add_loss(dHyper['pixel_weight'] * (loss_ref2ref + loss_art2ref))
 
     # add perceptual loss
-    p_loss = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, pl_network, loss_model)
+    p_loss = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, dHyper['pl_network'], dHyper['loss_model'])
 
-    vae.add_loss(perceptual_weight * p_loss)
+    vae.add_loss(dHyper['perceptual_weight'] * p_loss)
 
     return vae
 
-def fTrain(dData, sOutPath, patchSize, dHyper):
+def fTrain(dData, dParam, dHyper):
     # parse inputs
-    batchSize = [128] if dHyper['batchSize'] is None else dHyper['batchSize']
-    learningRate = [0.001] if dHyper['learningRate'] is None else dHyper['learningRate']
-    epochs = 300 if dHyper['epochs'] is None else dHyper['epochs']
+    batchSize = [128] if dParam['batchSize'] is None else dParam['batchSize']
+    learningRate = [0.001] if dParam['learningRate'] is None else dParam['learningRate']
+    epochs = 300 if dParam['epochs'] is None else dParam['epochs']
 
     for iBatch in batchSize:
         for iLearn in learningRate:
-            fTrainInner(dData, sOutPath, patchSize, epochs, iBatch, iLearn, dHyper['kl_weight'], dHyper['pixel_weight'],
-                        dHyper['perceptual_weight'], dHyper['pl_network'], dHyper['loss_model'])
+            fTrainInner(dData, dParam['sOutPath'], dParam['patchSize'], epochs, iBatch, iLearn, dHyper)
 
-def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pixel_weight, perceptual_weight, pl_network, loss_model):
+def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
     train_ref = dData['train_ref']
     train_art = dData['train_art']
     test_ref = dData['test_ref']
@@ -116,7 +117,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pi
     test_ref = np.expand_dims(test_ref, axis=1)
     test_art = np.expand_dims(test_art, axis=1)
 
-    vae = createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_network, loss_model)
+    vae = createModel(patchSize, dHyper)
     vae.compile(optimizer=Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0), loss=None)
     vae.summary()
 
@@ -144,35 +145,31 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pi
     plt.legend(['train', 'test'], loc='upper left')
     plt.savefig(weights_file[:-3] + '.png')
 
-def fPredict(dData, sOutPath, patchSize, dHyper, lSave, unpatch):
-    weights_file = sOutPath + os.sep + '{}.h5'.format(dHyper['bestModel'])
+def fPredict(dData, dParam, dHyper):
+    weights_file = dParam['sOutPath'] + os.sep + '{}.h5'.format(dHyper['bestModel'])
 
-    kl_weight = dHyper['kl_weight']
-    pixel_weight = dHyper['pixel_weight']
-    perceptual_weight = dHyper['perceptual_weight']
-    pl_network = dHyper['pl_network']
-    loss_model = dHyper['loss_model']
+    patchSize = dParam['patchSize']
 
-    vae = createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_network, loss_model)
+    vae = createModel(patchSize, dHyper)
     vae.compile(optimizer='adam', loss=None)
 
     vae.load_weights(weights_file)
 
     test_ref = np.zeros(shape=(dData.shape[0], 1, patchSize[0], patchSize[1]))
     test_art = np.expand_dims(dData, axis=1)
-    predict_ref, predict_art = vae.predict([test_ref, test_art], dHyper['batchSize'][0], verbose=1)
+    predict_ref, predict_art = vae.predict([test_ref, test_art], dParam['batchSize'][0], verbose=1)
 
     test_art = np.squeeze(test_art, axis=1)
     predict_art = np.squeeze(predict_art, axis=1)
 
-    if unpatch:
+    if dHyper['unpatch']:
         predict_art = fRigidUnpatchingCorrection([256, 196], predict_art)
         plt.figure()
         plt.gray()
         for i in range(predict_art.shape[0]):
             plt.imshow(predict_art[i])
-            if lSave:
-                plt.savefig(sOutPath + os.sep + 'result' + os.sep + str(i) + '.png')
+            if dParam['lSave']:
+                plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')
             else:
                 plt.show()
     else:
@@ -191,7 +188,7 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave, unpatch):
                 axes[j, 0].imshow(test_art[5*i+j])
                 axes[j, 1].imshow(predict_art[5*i+j])
 
-            if lSave:
-                plt.savefig(sOutPath + os.sep + 'result' + os.sep + str(i) + '.png')
+            if dParam['lSave']:
+                plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')
             else:
                 plt.show()
