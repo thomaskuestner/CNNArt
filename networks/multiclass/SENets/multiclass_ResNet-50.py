@@ -34,7 +34,7 @@ from matplotlib import pyplot as plt
 
 
 def createModel(patchSize, numClasses):
-    # ResNet-50 based on Imagenet (224x224 image crops), here used for 128x128 patches
+    # ResNet-50 based on Imagenet (224x224 image crops)
 
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
@@ -48,18 +48,18 @@ def createModel(patchSize, numClasses):
     x = BatchNormalization(axis=bn_axis, name='bn_conv1')(x)
     x = Activation('relu')(x)
 
-    # first stage of 3 bottleneck layers, input shape 64x64
+    # first stage of 3 bottleneck layers
     x = projection_bottleneck_block(x, (32, 32, 128), stage=1, block=1)
     x = identity_bottleneck_block(x, (32, 32, 128), stage=1, block=2)
     x = identity_bottleneck_block(x, (32, 32, 128), stage=1, block=3)
 
-    # second stage of 4 bottleneck layers, input shape 32x32
+    # second stage of 4 bottleneck layers
     x = projection_bottleneck_block(x, (64, 64, 256), stage=2, block=1)
     x = identity_bottleneck_block(x, (64, 64, 256), stage=2, block=2)
     x = identity_bottleneck_block(x, (64, 64, 256), stage=2, block=3)
     x = identity_bottleneck_block(x, (64, 64, 256), stage=2, block=4)
 
-    # third stage of 6 bottleneck layers, input shape 16x16
+    # third stage of 6 bottleneck layers
     x = projection_bottleneck_block(x, (128, 128, 512), stage=3, block=1)
     x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=2)
     x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=3)
@@ -67,7 +67,7 @@ def createModel(patchSize, numClasses):
     x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=5)
     x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=6)
 
-    # fourth stage of 3 bottleneck layers, input shape 8x8
+    # fourth stage of 3 bottleneck layers
     x = projection_bottleneck_block(x, (256, 256, 1024), stage=4, block=1)
     x = identity_bottleneck_block(x, (256, 256, 1024), stage=4, block=2)
     x = identity_bottleneck_block(x, (256, 256, 1024), stage=4, block=3)
@@ -82,7 +82,7 @@ def createModel(patchSize, numClasses):
                    name='fully-connected')(x)
 
     # create model
-    cnn = Model(input_tensor, output, name='ResNet-56')
+    cnn = Model(input_tensor, output, name='ResNet-50')
     sModelName = 'ResNet-50'
 
     return cnn, sModelName
@@ -143,7 +143,6 @@ def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, 
     #                     iEpochs=iEpochs,
     #                     dlart_handle=dlart_handle)
 
-
 def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None):
     print('Training CNN')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
@@ -193,7 +192,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
     cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
 
     # callbacks
-    callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
+    callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=25, verbose=1)
     #callback_tensorBoard = keras.callbacks.TensorBoard(log_dir=dlart_handle.getLearningOutputPath() + '/logs',
                                                        #histogram_freq=2,
                                                        #batch_size=batchSize,
@@ -205,9 +204,9 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                                                      #  embeddings_metadata=None)
 
     callbacks = [callback_earlyStopping]
-    callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0, period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
-    callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
-    #callbacks.append(LearningRateScheduler(schedule=step_decay))
+    callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints/checker.hdf5', monitor='val_acc', verbose=0, period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
+    #callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
+    callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
 
 
     # data augmentation
@@ -239,8 +238,55 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
             data_format=K.image_data_format()
         )
 
+        datagen_val = ImageDataGenerator(featurewise_center=False,
+                                         samplewise_center=False,
+                                         featurewise_std_normalization=False,
+                                         samplewise_std_normalization=False,
+                                         zca_whitening=dlart_handle.getZCA_Whitening(),
+                                         zca_epsilon=1e-6,
+                                         rotation_range=0.,
+                                         width_shift_range=0.,
+                                         height_shift_range=0.,
+                                         shear_range=0.,
+                                         zoom_range=0.,
+                                         channel_shift_range=0.,
+                                         fill_mode='constant',
+                                         cval=0.,
+                                         horizontal_flip=False,
+                                         vertical_flip=False,
+                                         rescale=None,
+                                         histogram_equalization=dlart_handle.getHistogramEqualization(),
+                                         contrast_stretching=dlart_handle.getContrastStretching(),
+                                         adaptive_equalization=dlart_handle.getAdaptiveEqualization(),
+                                         preprocessing_function=None,
+                                         data_format=K.image_data_format())
+
+        datagen_test = ImageDataGenerator(featurewise_center=False,
+                                         samplewise_center=False,
+                                         featurewise_std_normalization=False,
+                                         samplewise_std_normalization=False,
+                                         zca_whitening=dlart_handle.getZCA_Whitening(),
+                                         zca_epsilon=1e-6,
+                                         rotation_range=0.,
+                                         width_shift_range=0.,
+                                         height_shift_range=0.,
+                                         shear_range=0.,
+                                         zoom_range=0.,
+                                         channel_shift_range=0.,
+                                         fill_mode='constant',
+                                         cval=0.,
+                                         horizontal_flip=False,
+                                         vertical_flip=False,
+                                         rescale=None,
+                                         histogram_equalization=dlart_handle.getHistogramEqualization(),
+                                         contrast_stretching=dlart_handle.getContrastStretching(),
+                                         adaptive_equalization=dlart_handle.getAdaptiveEqualization(),
+                                         preprocessing_function=None,
+                                         data_format=K.image_data_format())
+
         # fit parameters from dataset
         datagen.fit(X_train)
+        datagen_test.fit(X_test)
 
         # configure batch size and get one batch of images
         for x_batch, y_batch in datagen.flow(X_train, y_train, batch_size=9):
@@ -254,23 +300,40 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
         if X_valid is not None and y_valid is not None:
             # fit model on data
             # use validation/test split
+            datagen_val.fit(X_valid)
             result = cnn.fit_generator(datagen.flow(X_train, y_train, batch_size=batchSize),
                                        steps_per_epoch=X_train.shape[0]//batchSize,
                                        epochs=iEpochs,
-                                       validation_data=(X_valid, y_valid),
+                                       validation_data=datagen_val.flow(X_valid, y_valid, batch_size=batchSize),
                                        callbacks=callbacks,
                                        workers=1,
                                        use_multiprocessing=False)
+
         else:
             # fit model on data
             # use test data for validation and test
+
             result = cnn.fit_generator(datagen.flow(X_train, y_train, batch_size=batchSize),
                                        steps_per_epoch=X_train.shape[0] // batchSize,
                                        epochs=iEpochs,
-                                       validation_data=(X_valid, y_valid),
+                                       validation_data=datagen_test.flow(X_test, y_test, batch_size=batchSize),
                                        callbacks=callbacks,
                                        workers=1,
                                        use_multiprocessing=False)
+
+        # return the loss value and metrics values for the model in test mode
+        score_test, acc_test = cnn.evaluate_generator(datagen_test.flow(X_test, y_test, batch_size=batchSize),
+                                                      steps=None,
+                                                      max_queue_size=10,
+                                                      workers=1,
+                                                      use_multiprocessing=False)
+
+        prob_test = cnn.predict_generator(datagen_test.flow(X_test, y_test, batch_size=batchSize),
+                                          steps = None,
+                                          max_queue_size = 10,
+                                          workers = 1,
+                                          use_multiprocessing = False,
+                                          verbose = 1)
 
     else:
         if X_valid is not None and y_valid is not None:
@@ -292,10 +355,11 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                              callbacks=callbacks,
                              verbose=1)
 
-    # return the loss value and metrics values for the model in test mode
-    score_test, acc_test = cnn.evaluate(X_test, y_test, batch_size=batchSize, verbose=1)
+        # return the loss value and metrics values for the model in test mode
+        score_test, acc_test = cnn.evaluate(X_test, y_test, batch_size=batchSize, verbose=1)
 
-    prob_test = cnn.predict(X_test, batchSize, 0)
+        prob_test = cnn.predict(X_test, batchSize, 0)
+
 
     # save model
     json_string = cnn.to_json()
@@ -328,9 +392,9 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 def step_decay(epoch):
    initial_lrate = 0.1
    drop = 0.1
-   epochs_drop = 2.0
+   epochs_drop = 30.0
    lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
-   print("Reduce Learningrate by 0.1")
+   print(str(lrate))
    return lrate
 
 
@@ -366,7 +430,6 @@ def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
     modelSave = sOutPath + sModelFileSave + '_pred.mat'
     print('saving Model:{}'.format(modelSave))
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
-
 
 
 ###############################################################################

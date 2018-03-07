@@ -14,7 +14,7 @@ from keras.layers import Conv2D
 from keras.layers import AveragePooling2D
 from keras.layers import Activation
 from keras.layers import concatenate
-from networks.multiclass.SENets import squeeze_excitation_block
+from networks.multiclass.SENets.squeeze_excitation_block import *
 
 
 
@@ -27,10 +27,10 @@ def transition_layer(input_tensor, numFilters, compressionFactor=1.0):
     else:
         bn_axis = 1
 
-    x = BatchNormalization(axis=bn_axis, name='bn_conv1')(input_tensor)
+    x = BatchNormalization(axis=bn_axis)(input_tensor)
     x = Activation('relu')(x)
 
-    x = Conv2D(numOutPutFilters, (1, 1), strides=(1, 1), padding='same', kernel_initializer='he_normal', name='conv1')(x)
+    x = Conv2D(numOutPutFilters, (1, 1), strides=(1, 1), padding='same', kernel_initializer='he_normal')(x)
 
     # downsampling
     x = AveragePooling2D((2, 2), strides=(2, 2), padding='valid', data_format='channels_last', name='')(x)
@@ -48,7 +48,7 @@ def dense_block(input_tensor, numInputFilters, numLayers=1, growthRate_k=12, bot
         concat_axis = 1
         bn_axis = 1
 
-    concat_features = [input_tensor]
+    concat_features = input_tensor
 
     for i in range(numLayers):
         x = BatchNormalization(axis=bn_axis, name='')(concat_features)
@@ -77,10 +77,10 @@ def transition_SE_layer(input_tensor, numFilters, compressionFactor=1.0, se_rati
     else:
         bn_axis = 1
 
-    x = BatchNormalization(axis=bn_axis, name='bn_conv1')(input_tensor)
+    x = BatchNormalization(axis=bn_axis)(input_tensor)
     x = Activation('relu')(x)
 
-    x = Conv2D(numOutPutFilters, (1, 1), strides=(1, 1), padding='same', kernel_initializer='he_normal', name='conv1')(x)
+    x = Conv2D(numOutPutFilters, (1, 1), strides=(1, 1), padding='same', kernel_initializer='he_normal')(x)
 
     # SE Block
     x = squeeze_excitation_block(x, ratio=se_ratio)
@@ -104,7 +104,7 @@ def dense_SE_block(input_tensor, numInputFilters, numLayers=1, growthRate_k=12, 
         concat_axis = 1
         bn_axis = 1
 
-    concat_features = [input_tensor]
+    concat_features = input_tensor
 
     for i in range(numLayers):
         x = BatchNormalization(axis=bn_axis, name='')(concat_features)

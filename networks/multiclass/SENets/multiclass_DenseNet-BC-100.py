@@ -79,7 +79,7 @@ def createModel(patchSize, numClasses):
                    name='fully-connected')(x)
 
     # create model
-    cnn = Model(input_tensor, output, name='ResNet-56')
+    cnn = Model(input_tensor, output, name='DenseNet-BC-100')
     sModelName = 'DenseNet-BC-100'
 
     return cnn, sModelName

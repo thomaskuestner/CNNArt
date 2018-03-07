@@ -1,9 +1,3 @@
-'''
-SE-DenseNet-BC-100
-SE-Blocks in the transitionlayers
-
-'''
-
 import os
 #os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -41,10 +35,7 @@ from matplotlib import pyplot as plt
 from networks.multiclass.SENets.densely_connected_cnn_blocks import *
 
 
-
 def createModel(patchSize, numClasses):
-    # ResNet-56 based on CIFAR-10, for 32x32 Images
-    print(K.image_data_format())
 
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
@@ -52,30 +43,27 @@ def createModel(patchSize, numClasses):
         bn_axis = 1
 
     growthRate_k = 12
-    compressionFactor = 0.5
+    compressionFactor = 1.0
 
     input_tensor = Input(shape=(patchSize[0], patchSize[1], 1))
 
     # first conv layer
-    x = Conv2D(2*growthRate_k, (3,3), strides=(1,1), padding='same', kernel_initializer='he_normal', name='conv1')(input_tensor)
+    x = Conv2D(16, (3,3), strides=(1,1), padding='same', kernel_initializer='he_normal')(input_tensor)
 
     # 1. Dense Block
-    x, numFilters = dense_block(x, numInputFilters=2*growthRate_k, numLayers=16, growthRate_k=growthRate_k, bottleneck_enabled=True)
+    x, numFilters = dense_block(x, numInputFilters=16, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=False)
 
     # Transition Layer
-    x, numFilters = transition_SE_layer(x, numFilters, compressionFactor=compressionFactor, se_ratio=16)
+    x, numFilters = transition_layer(x, numFilters, compressionFactor=compressionFactor)
 
     # 2. Dense Block
-    x, numFilters = dense_block(x, numInputFilters=numFilters, numLayers=16, growthRate_k=growthRate_k, bottleneck_enabled=True)
+    x, numFilters = dense_block(x, numInputFilters=numFilters, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=False)
 
     #Transition Layer
-    x, numFilters = transition_SE_layer(x, numFilters, compressionFactor=compressionFactor, se_ratio=16)
+    x, numFilters = transition_layer(x, numFilters, compressionFactor=compressionFactor)
 
     #3. Dense Block
-    x, numFilters = dense_block(x, numInputFilters=numFilters, numLayers=16, growthRate_k=growthRate_k, bottleneck_enabled=True)
-
-    # SE Block
-    x = squeeze_excitation_block(x, ratio=128)
+    x, numFilters = dense_block(x, numInputFilters=numFilters, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=False)
 
     x = BatchNormalization(axis=bn_axis)(x)
     x = Activation('relu')(x)
@@ -90,8 +78,9 @@ def createModel(patchSize, numClasses):
                    name='fully-connected')(x)
 
     # create model
-    cnn = Model(input_tensor, output, name='SE-DenseNet-BC-100')
-    sModelName = 'SE-DenseNet-BC-100'
+    cnn = Model(input_tensor, output, name='DenseNet-34')
+    sModelName = 'DenseNet-34'
+
     return cnn, sModelName
 
 

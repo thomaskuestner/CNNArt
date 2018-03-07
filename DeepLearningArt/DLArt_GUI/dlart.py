@@ -56,7 +56,7 @@ class DeepLearningArtApp():
         'Multiclass SE-ResNet-56': 'networks.multiclass.SENets.multiclass_SE-ResNet-56',
         'Mulitclass ResNet-50': 'networks.multiclass.SENets.multiclass_ResNet-50',
         'Multiclass SE-ResNet-50': 'networks.multiclass.SENets.multiclass_SE-ResNet-50',
-        'Multiclass DenseNet-100': 'networks.multiclass.SENets.multiclass_DenseNet-100',
+        'Multiclass DenseNet-34': 'networks.multiclass.SENets.multiclass_DenseNet-34',
         'Multiclass DenseNet-BC-100': 'networks.multiclass.SENets.multiclass_DenseNet-BC-100',
         'Multiclass SE-DenseNet-BC-100': 'networks.multiclass.SENets.multiclass_SE-DenseNet-BC-100',
         'Multiclass SE-ResNet-32': 'networks.multiclass.SENets.multiclass_SE-ResNet-32',
