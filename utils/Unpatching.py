@@ -175,7 +175,7 @@ def fRigidUnpatchingCorrection(actual_size, allPatches, patchOverlap):
 
     width_pad = int(math.ceil((width - dOverlap[1]) * 1.0 / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1])
 
-    num_rows, num_cols = int(math.ceil(height_pad*1.0/dOverlap[0])-1), int(math.ceil(width_pad*1.0/dOverlap[1])-1)
+    num_rows, num_cols = int(math.ceil((height_pad-patch_size[0])*1.0/dNotOverlap[0])+1), int(math.ceil((width_pad-patch_size[1])*1.0/dNotOverlap[1])+1)
     num_slices = allPatches.shape[0]/(num_rows * num_cols)
 
     allPatches = np.reshape(allPatches, (num_slices, -1, patch_size[0], patch_size[1]))
@@ -185,6 +185,6 @@ def fRigidUnpatchingCorrection(actual_size, allPatches, patchOverlap):
         for row in range(num_rows):
             for col in range(num_cols):
                 index = row * num_cols + col
-                unpatchImg[slice, row * dOverlap[0]:row * dOverlap[0] + patch_size[0], col * dOverlap[1]:col * dOverlap[1] + patch_size[1]] = allPatches[slice, index]
+                unpatchImg[slice, row * dNotOverlap[0]:row * dNotOverlap[0] + patch_size[0], col * dNotOverlap[1]:col * dNotOverlap[1] + patch_size[1]] = allPatches[slice, index]
 
     return unpatchImg
