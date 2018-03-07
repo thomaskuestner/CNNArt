@@ -70,7 +70,8 @@ def run(cfg, dbinfo):
                   'loss_model': cfg['correction']['loss_model']}
 
         with h5py.File(sDatafile, 'r') as hf:
-            dData = hf['train_art'][:]
-        dData = np.squeeze(dData, axis=0)
-        cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'], cfg['correction']['unpatch'])
+            dData = hf['test_art'][:]
+
+        for i in range(dData.shape[0]):
+            cnn_main.fRunCNNCorrection(dData[i], sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'], cfg['lSave'], cfg['correction']['unpatch'], cfg['patchOverlap'])
 

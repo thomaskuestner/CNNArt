@@ -148,7 +148,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pi
     plt.legend(['train', 'test'], loc='upper left')
     plt.savefig(weights_file[:-3] + '.png')
 
-def fPredict(dData, sOutPath, patchSize, dHyper, lSave, unpatch):
+def fPredict(dData, sOutPath, patchSize, dHyper, lSave, unpatch, patchOverlap):
     weights_file = sOutPath + os.sep + '{}.h5'.format(dHyper['bestModel'])
 
     kl_weight = dHyper['kl_weight']
@@ -170,7 +170,7 @@ def fPredict(dData, sOutPath, patchSize, dHyper, lSave, unpatch):
     predict_art = np.squeeze(predict_art, axis=1)
 
     if unpatch:
-        predict_art = fRigidUnpatchingCorrection([256, 196], predict_art)
+        predict_art = fRigidUnpatchingCorrection([256, 196], predict_art, patchOverlap)
         plt.figure()
         plt.gray()
         for i in range(predict_art.shape[0]):

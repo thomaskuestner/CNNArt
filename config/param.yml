@@ -101,8 +101,8 @@ correction:
   sCorrection: "motion_head_VAE2D_48"
   bestModel: "vae_weight_ps_48_bs_128"
   pl_network: "vgg19"
+  loss_model: ""
   kl_weight: 1
-  perceptual_weight: 0.01
-  pixel_weight: 1
-  test_patient: ""
+  perceptual_weight: 0.00001
+  pixel_weight: 0.01
   unpatch: false
