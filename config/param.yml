@@ -106,3 +106,4 @@ correction:
   perceptual_weight: 0.00001
   pixel_weight: 0.01
   unpatch: false
+  nScale: 255
