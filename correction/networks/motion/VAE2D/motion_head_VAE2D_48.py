@@ -88,9 +88,9 @@ def createModel(patchSize, kl_weight, pixel_weight, perceptual_weight, pl_networ
     vae.add_loss(pixel_weight * (loss_ref2ref + loss_art2ref))
 
     # add perceptual loss
-    p_loss = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, perceptual_weight, pl_network, loss_model)
+    p_loss = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, pl_network, loss_model)
 
-    vae.add_loss(p_loss)
+    vae.add_loss(perceptual_weight * p_loss)
 
     return vae
 
