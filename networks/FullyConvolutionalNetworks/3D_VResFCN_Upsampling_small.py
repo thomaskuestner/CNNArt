@@ -20,6 +20,7 @@ from keras.layers import concatenate
 from keras.layers.core import Dense, Activation, Flatten
 from keras.models import Model
 from keras.models import Sequential
+from keras.layers import UpSampling3D
 from keras.layers.convolutional import Convolution2D
 from keras.layers import LeakyReLU
 from keras.layers import Softmax
@@ -39,7 +40,7 @@ from matplotlib import pyplot as plt
 
 
 
-def createModel(patchSize, numClasses):
+def createModel(patchSize, numClasses, usingClassification=False):
 
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
@@ -70,7 +71,7 @@ def createModel(patchSize, numClasses):
 
     # second stage
     x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=False, se_ratio=16)
-    #x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=2, block=2, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=2, block=2, se_enabled=False, se_ratio=16)
     x_after_stage_2 = x
 
     # second down convolution
@@ -103,90 +104,63 @@ def createModel(patchSize, numClasses):
     #x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=3, se_enabled=False, se_ratio=16)
     x_after_stage_4 = x
 
-    # fourth down convolution
-    x_down_conv_4 = projection_block_3D(x_after_stage_4,
-                                        filters=(256, 256),
-                                        kernel_size=(2, 2, 2),
-                                        stage=4,
-                                        block=4,
-                                        se_enabled=False,
-                                        se_ratio=16)
-
-    # fifth stage
-    x = identity_block_3D(x_down_conv_4, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=1, se_enabled=False, se_ratio=16)
-    x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=2, se_enabled=False, se_ratio=16)
-    # x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=3, se_enabled=False, se_ratio=16)
-    x_after_stage_5 = x
 
     ### end of encoder path
 
+    if usingClassification:
+        # use x_after_stage_4 as quantification output
+        # global average pooling
+        x_class = GlobalAveragePooling2D(data_format='channels_last')(x_after_stage_4)
+
+        # fully-connected layer
+        classification_output = Dense(units=numClasses,
+                       activation='softmax',
+                       kernel_initializer='he_normal',
+                       name='classification_output')(x_class)
+
     ### decoder path
 
-    x = Conv3DTranspose(filters=128,
-                        kernel_size=(2, 2, 2),
-                        strides=(2, 2, 2),
-                        padding='valid',
-                        data_format=K.image_data_format(),
-                        kernel_initializer='he_normal'
-                        )(x_after_stage_5)
 
-    #input_shape = (2, 2, 2, 1)
+    # first 3D upsampling
+    x = UpSampling3D(size=(2, 2, 2), data_format=K.image_data_format())(x_after_stage_4)
+    x = Conv3D(filters=64,
+               kernel_size=(3, 3, 3),
+               strides=(1, 1, 1),
+               padding='same',
+               kernel_initializer='he_normal')(x)
 
-    # first transposed 3D Convolution
-    x = transposed_projection_block_3D(x_after_stage_5,
-                                       filters=(128, 128),
-                                       kernel_size=(2, 2, 2),
-                                       stage=5,
-                                       block=3,
-                                       se_enabled=False,
-                                       se_ratio=16)
-    x = concatenate([x, x_after_stage_4], axis=K.image_data_format())
+    x = concatenate([x, x_after_stage_3], axis=bn_axis)
 
     # first decoder stage
-    x = projection_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=1, se_enabled=False, se_ratio=16)
     x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=2, se_enabled=False, se_ratio=16)
 
-    # second transposed 3D Convolution
-    x = transposed_projection_block_3D(x,
-                                       filters=(64, 64),
-                                       kernel_size=(2, 2, 2),
-                                       stage=6,
-                                       block=3,
-                                       se_enabled=False,
-                                       se_ratio=16)
-    x = concatenate([x, x_after_stage_3], axis=K.image_data_format())
+    # second 3D upsampling
+    x = UpSampling3D(size=(2, 2, 2), data_format=K.image_data_format())(x)
+    x = Conv3D(filters=32,
+               kernel_size=(3, 3, 3),
+               strides=(1, 1, 1),
+               padding='same',
+               kernel_initializer='he_normal')(x)
 
+    x = concatenate([x, x_after_stage_2], axis=bn_axis)
 
     # second decoder stage
-    x = projection_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=1, se_enabled=False, se_ratio=16)
     x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=2, se_enabled=False, se_ratio=16)
 
-    # third transposed 3D Convolution
-    x = transposed_projection_block_3D(x,
-                                       filters=(32, 32),
-                                       kernel_size=(2, 2, 2),
-                                       stage=7,
-                                       block=3,
-                                       se_enabled=False,
-                                       se_ratio=16)
-    x = concatenate([x, x_after_stage_2])
+    # third 3D upsampling
+    x = UpSampling3D(size=(2, 2, 2), data_format=K.image_data_format())(x)
+    x = Conv3D(filters=16,
+               kernel_size=(3, 3, 3),
+               strides=(1, 1, 1),
+               padding='same',
+               kernel_initializer='he_normal')(x)
+
+    x = concatenate([x, x_after_stage_1], axis=bn_axis)
 
     # third decoder stage
-    x = projection_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=8, block=1, se_enabled=False, se_ratio=16)
-    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=8, block=2, se_enabled=False, se_ratio=16)
-
-    #fourth transposed 3D convolution
-    x = transposed_projection_block_3D(x,
-                                       filters=(16, 16),
-                                       kernel_size=(2, 2, 2),
-                                       stage=8,
-                                       block=3,
-                                       se_enabled=False,
-                                       se_ratio=16)
-    x = concatenate([x, x_after_stage_1], axis=K.image_data_format())
-
-    # fourth decoder stage
-    x = projection_block_3D(x, filters=(16, 16), kernel_size=(3, 3, 3), stage=9, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=9, block=1, se_enabled=False, se_ratio=16)
 
     ### End of decoder
 
@@ -199,16 +173,22 @@ def createModel(patchSize, numClasses):
                kernel_initializer='he_normal',
                name='conv_veryEnd')(x)
 
-    output = Softmax(axis=bn_axis)(x)
+    segmentation_output = Softmax(axis=bn_axis, name='segmentation_output')(x)
 
     # create model
-    cnn = Model(input_tensor, output, name='3D-VResFCN')
-    sModelName = cnn.name
+    if usingClassification:
+        cnn = Model(inputs =[input_tensor], outputs=[segmentation_output, classification_output], name='3D-VResFCN-Classification')
+        sModelName = cnn.name
+    else:
+        cnn = Model(inputs=[input_tensor], outputs=[segmentation_output], name='3D-VResFCN')
+        sModelName = cnn.name
 
     return cnn, sModelName
 
 
 def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
+
+    usingClassification = False
 
     # grid search on batch_sizes and learning rates
     # parse inputs
@@ -217,13 +197,24 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
 
     # change the shape of the dataset -> at color channel -> here one for grey scale
     X_train = np.expand_dims(X_train, axis=-1)
-    Y_segMasks_train = np.expand_dims(Y_segMasks_train, axis=-1)
+    Y_segMasks_train_foreground = np.expand_dims(Y_segMasks_train, axis=-1)
+    Y_segMasks_train_background = np.ones(Y_segMasks_train_foreground.shape)-Y_segMasks_train_foreground
+    Y_segMasks_train = np.concatenate((Y_segMasks_train_background, Y_segMasks_train_foreground), axis=-1)
+
     X_test = np.expand_dims(X_test, axis=-1)
-    Y_segMasks_test = np.expand_dims(Y_segMasks_test, axis=-1)
+    Y_segMasks_test_foreground = np.expand_dims(Y_segMasks_test, axis=-1)
+    Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape)-Y_segMasks_test_foreground
+    Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground), axis=-1)
 
     if X_valid is not None and y_valid is not None:
         X_valid = np.expand_dims(X_valid, axis=-1)
-        Y_segMasks_valid = np.expand_dims(Y_segMasks_valid, axis=-1)
+        Y_segMasks_valid_foreground = np.expand_dims(Y_segMasks_valid, axis=-1)
+        Y_segMasks_valid_background = np.ones(Y_segMasks_valid_foreground.shape)-Y_segMasks_valid_foreground
+        Y_segMasks_valid = np.concatenate((Y_segMasks_valid_background, Y_segMasks_valid_foreground), axis=-1)
+
+    # sio.savemat('D:med_data/voxel_and_masks.mat',
+    #                           {'voxel_train': X_train, 'Y_segMasks_train': Y_segMasks_train,
+    #                            'y_train': y_train})
 
     #y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
     #y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
@@ -232,7 +223,7 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
     numClasses = np.shape(y_train)[1]
 
     #create cnn model
-    cnn, sModelName = createModel(patchSize=patchSize, numClasses=numClasses)
+    cnn, sModelName = createModel(patchSize=patchSize, numClasses=numClasses, usingClassification=usingClassification)
 
     fTrainInner(cnn,
                 sModelName,
@@ -250,7 +241,7 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
                 batchSize=batchSize,
                 learningRate=learningRate,
                 iEpochs=iEpochs,
-                dlart_handle=dlart_handle)
+                dlart_handle=dlart_handle, usingClassification=usingClassification)
 
     # for iBatch in batchSizes:
     #     for iLearn in learningRates:
@@ -270,7 +261,7 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
     #                     dlart_handle=dlart_handle)
 
 
-def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None):
+def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None, usingClassification=False):
     print('Training CNN')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
@@ -315,7 +306,15 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     cnn.summary()
 
     # compile model
-    cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
+    if usingClassification:
+        cnn.compile(loss={'segmentation_output': 'dice_coefficient_loss', 'classification_output': 'categorical_crossentropy'},
+                    optimizer=opti,
+                    metrics={'segmentation_output': 'dice_coefficient_loss', 'classification_output': 'accuracy'})
+    else:
+        cnn.compile(loss=dice_coef_loss,
+                    optimizer=opti,
+                    metrics=[dice_coef, 'accuracy'])
+
 
     # callbacks
     callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
@@ -335,24 +334,25 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     #callbacks.append(LearningRateScheduler(schedule=step_decay))
 
 
-    if X_valid is not None and y_valid is not None:
-        # use validation/test split
+
+    if usingClassification:
         result = cnn.fit(X_train,
-                         y_train,
-                         validation_data=(X_valid, y_valid),
+                         {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
+                         validation_split=0.15,
                          epochs=iEpochs,
                          batch_size=batchSize,
                          callbacks=callbacks,
                          verbose=1)
     else:
-        # use test set for validation and test
         result = cnn.fit(X_train,
-                         y_train,
-                         validation_data=(X_test, y_test),
+                         Y_segMasks_train,
+                         validation_split=0.15,
                          epochs=iEpochs,
                          batch_size=batchSize,
                          callbacks=callbacks,
                          verbose=1)
+
+
 
     # return the loss value and metrics values for the model in test mode
     score_test, acc_test = cnn.evaluate(X_test, y_test, batch_size=batchSize, verbose=1)
@@ -428,6 +428,17 @@ def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
     modelSave = sOutPath + sModelFileSave + '_pred.mat'
     print('saving Model:{}'.format(modelSave))
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
+
+
+def dice_coef(y_true, y_pred, smooth=1.):
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+
+
+def dice_coef_loss(y_true, y_pred):
+    return -dice_coef(y_true, y_pred)
 
 
 

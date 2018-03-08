@@ -20,6 +20,7 @@ from keras.layers import concatenate
 from keras.layers.core import Dense, Activation, Flatten
 from keras.models import Model
 from keras.models import Sequential
+from keras.layers import UpSampling3D
 from keras.layers.convolutional import Convolution2D
 from keras.layers import LeakyReLU
 from keras.layers import Softmax
@@ -39,7 +40,7 @@ from matplotlib import pyplot as plt
 
 
 
-def createModel(patchSize, numClasses):
+def createModel(patchSize, numClasses, usingClassification=False):
 
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
@@ -70,7 +71,7 @@ def createModel(patchSize, numClasses):
 
     # second stage
     x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=False, se_ratio=16)
-    #x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=2, block=2, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=2, block=2, se_enabled=False, se_ratio=16)
     x_after_stage_2 = x
 
     # second down convolution
@@ -120,73 +121,74 @@ def createModel(patchSize, numClasses):
 
     ### end of encoder path
 
+    if usingClassification:
+        # use x_after_stage_5 as quantification output
+        # global average pooling
+        x_class = GlobalAveragePooling2D(data_format='channels_last')(x_after_stage_5)
+
+        # fully-connected layer
+        classification_output = Dense(units=numClasses,
+                       activation='softmax',
+                       kernel_initializer='he_normal',
+                       name='classification_output')(x_class)
+
     ### decoder path
 
-    x = Conv3DTranspose(filters=128,
-                        kernel_size=(2, 2, 2),
-                        strides=(2, 2, 2),
-                        padding='valid',
-                        data_format=K.image_data_format(),
-                        kernel_initializer='he_normal'
-                        )(x_after_stage_5)
 
-    #input_shape = (2, 2, 2, 1)
+    # first 3D upsampling
+    x = UpSampling3D(size=(2, 2, 2), data_format=K.image_data_format())(x_after_stage_5)
+    x = Conv3D(filters=128,
+               kernel_size=(3, 3, 3),
+               strides=(1, 1, 1),
+               padding='same',
+               kernel_initializer='he_normal')(x)
 
-    # first transposed 3D Convolution
-    x = transposed_projection_block_3D(x_after_stage_5,
-                                       filters=(128, 128),
-                                       kernel_size=(2, 2, 2),
-                                       stage=5,
-                                       block=3,
-                                       se_enabled=False,
-                                       se_ratio=16)
-    x = concatenate([x, x_after_stage_4], axis=K.image_data_format())
+    x = concatenate([x, x_after_stage_4], axis=bn_axis)
 
     # first decoder stage
-    x = projection_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=1, se_enabled=False, se_ratio=16)
-    x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=2, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=6, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=6, block=2, se_enabled=False, se_ratio=16)
 
-    # second transposed 3D Convolution
-    x = transposed_projection_block_3D(x,
-                                       filters=(64, 64),
-                                       kernel_size=(2, 2, 2),
-                                       stage=6,
-                                       block=3,
-                                       se_enabled=False,
-                                       se_ratio=16)
-    x = concatenate([x, x_after_stage_3], axis=K.image_data_format())
+    # second 3D upsampling
+    x = UpSampling3D(size=(2, 2, 2), data_format=K.image_data_format())(x)
+    x = Conv3D(filters=64,
+               kernel_size=(3, 3, 3),
+               strides=(1, 1, 1),
+               padding='same',
+               kernel_initializer='he_normal')(x)
 
+    x = concatenate([x, x_after_stage_3], axis=bn_axis)
 
     # second decoder stage
-    x = projection_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=1, se_enabled=False, se_ratio=16)
-    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=2, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=7, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=7, block=2, se_enabled=False, se_ratio=16)
 
-    # third transposed 3D Convolution
-    x = transposed_projection_block_3D(x,
-                                       filters=(32, 32),
-                                       kernel_size=(2, 2, 2),
-                                       stage=7,
-                                       block=3,
-                                       se_enabled=False,
-                                       se_ratio=16)
-    x = concatenate([x, x_after_stage_2])
+    # third 3D upsampling
+    x = UpSampling3D(size=(2, 2, 2), data_format=K.image_data_format())(x)
+    x = Conv3D(filters=32,
+               kernel_size=(3, 3, 3),
+               strides=(1, 1, 1),
+               padding='same',
+               kernel_initializer='he_normal')(x)
+
+    x = concatenate([x, x_after_stage_2], axis=bn_axis)
 
     # third decoder stage
-    x = projection_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=8, block=1, se_enabled=False, se_ratio=16)
-    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=8, block=2, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=8, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=8, block=2, se_enabled=False, se_ratio=16)
 
-    #fourth transposed 3D convolution
-    x = transposed_projection_block_3D(x,
-                                       filters=(16, 16),
-                                       kernel_size=(2, 2, 2),
-                                       stage=8,
-                                       block=3,
-                                       se_enabled=False,
-                                       se_ratio=16)
-    x = concatenate([x, x_after_stage_1], axis=K.image_data_format())
+    # fourth 3D upsampling
+    x = UpSampling3D(size=(2, 2, 2), data_format=K.image_data_format())(x)
+    x = Conv3D(filters=16,
+               kernel_size=(3, 3, 3),
+               strides=(1, 1, 1),
+               padding='same',
+               kernel_initializer='he_normal')(x)
+
+    x = concatenate([x, x_after_stage_1], axis=bn_axis)
 
     # fourth decoder stage
-    x = projection_block_3D(x, filters=(16, 16), kernel_size=(3, 3, 3), stage=9, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=9, block=1, se_enabled=False, se_ratio=16)
 
     ### End of decoder
 
@@ -199,11 +201,15 @@ def createModel(patchSize, numClasses):
                kernel_initializer='he_normal',
                name='conv_veryEnd')(x)
 
-    output = Softmax(axis=bn_axis)(x)
+    segmentation_output = Softmax(axis=bn_axis, name='segmentation_output')(x)
 
     # create model
-    cnn = Model(input_tensor, output, name='3D-VResFCN')
-    sModelName = cnn.name
+    if usingClassification:
+        cnn = Model(inputs =[input_tensor], outputs=[segmentation_output, classification_output], name='3D-VResFCN-Classification')
+        sModelName = cnn.name
+    else:
+        cnn = Model(inputs=[input_tensor], outputs=[segmentation_output], name='3D-VResFCN')
+        sModelName = cnn.name
 
     return cnn, sModelName
 

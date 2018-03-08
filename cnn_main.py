@@ -264,10 +264,10 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
             else:
                 cnnModel.fTrain(X_train=dData['X_train'],
                                 y_train=dData['y_train'],
-                                Y_segMasks_train=dData['Y_segMasks_trian'],
+                                Y_segMasks_train=dData['Y_segMasks_train'],
                                 X_valid=dData['X_valid'],
                                 y_valid=dData['y_valid'],
-                                Y_segMasks_valid=dData['Y_segMasks_valid'],
+                                Y_segMasks_valid=dData['Y_segMasks_validation'],
                                 X_test=dData['X_test'],
                                 y_test=dData['y_test'],
                                 Y_segMasks_test=dData['Y_segMasks_test'],

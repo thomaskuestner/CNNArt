@@ -335,7 +335,7 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, s
             Y_segMasks_valid = allSegmentationMasks[numSamplesTest:(numSamplesTest+numSamplesValidation), :, :]
 
             X_train = allPatches[(numSamplesTest+numSamplesValidation):, :, :]
-            Y_segMasks_train = allPatches[(numSamplesTest+numSamplesValidation):, :, :]
+            Y_segMasks_train = allSegmentationMasks[(numSamplesTest+numSamplesValidation):, :, :]
 
 
         elif len(patchSize) == 3:
@@ -348,7 +348,7 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, s
             Y_segMasks_valid = allSegmentationMasks[numSamplesTest:(numSamplesTest + numSamplesValidation), :, :, :]
 
             X_train = allPatches[(numSamplesTest + numSamplesValidation):, :, :, :]
-            Y_segMasks_train = allPatches[(numSamplesTest + numSamplesValidation):, :, :, :]
+            Y_segMasks_train = allSegmentationMasks[(numSamplesTest + numSamplesValidation):, :, :, :]
 
         y_test = allY[:numSamplesTest]
         y_valid = allY[numSamplesTest:(numSamplesTest + numSamplesValidation)]

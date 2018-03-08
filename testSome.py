@@ -16,12 +16,14 @@ from matplotlib import pyplot as plt
 #    X_train, X_test = X[train_index], X[test_index]
 #    y_train, y_test = y[train_index], y[test_index]
 
-list = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-index = [2, 1, 4, 1, 4, 5]
+voxel = np.zeros((2,3,5))
+voxel[0,0,0] = 1
+voxel[0,1,0] = 1
 
-list = np.asarray(list)
-list = list[index]
+voxel2 = np.ones((2, 3, 5))
+voxel2 = voxel2-voxel
 
+asdf = voxel2.shape
 
 print("hi" if 10 == 23 else "hoho")
 

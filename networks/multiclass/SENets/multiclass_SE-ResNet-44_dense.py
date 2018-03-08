@@ -15,14 +15,10 @@ import keras.backend as K
 from keras.layers import Conv2D
 from keras.layers import BatchNormalization
 from keras.layers import GlobalAveragePooling2D
-from keras.activations import softmax
-from keras.layers import concatenate
 from keras.layers.core import Dense, Activation, Flatten
 from keras.models import Model
 from keras.models import Sequential
 from keras.layers.convolutional import Convolution2D
-from keras.layers import LeakyReLU
-from keras.layers import Softmax
 from keras.callbacks import EarlyStopping
 from keras.callbacks import LearningRateScheduler
 from keras.callbacks import ReduceLROnPlateau
@@ -37,179 +33,60 @@ from utils.image_preprocessing import ImageDataGenerator
 from matplotlib import pyplot as plt
 
 
-
-
 def createModel(patchSize, numClasses):
+    # SE-ResNet-50 based on Imagenet (224x224 image crops)
 
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
     else:
         bn_axis = 1
 
-    input_tensor = Input(shape=(patchSize[0], patchSize[1], patchSize[2], 1))
+    input_tensor = Input(shape=(patchSize[0], patchSize[1], 1))
 
-    # first stage
-    x = Conv3D(filters=16,
-               kernel_size=(5, 5, 5),
-               strides=(1, 1, 1),
-               padding='same',
-               kernel_initializer='he_normal')(input_tensor)
+    # first conv layer
+    x = Conv2D(32, (7,7), strides=(2,2), padding='same', kernel_initializer='he_normal', name='conv1')(input_tensor)
     x = BatchNormalization(axis=bn_axis, name='bn_conv1')(x)
-    x = LeakyReLU(alpha=0.01)(x)
+    x = Activation('relu')(x)
 
-    x_after_stage_1 = Add()([input_tensor, x])
+    # first stage of 3 bottleneck layers
+    x = projection_bottleneck_block(x, (16, 16, 64), stage=1, block=1, se_enabled=True, se_ratio=16)
+    x = identity_bottleneck_block(x, (16, 16, 64), stage=1, block=2, se_enabled=True, se_ratio=16)
+    x = identity_bottleneck_block(x, (16, 16, 64), stage=1, block=3, se_enabled=True, se_ratio=16)
 
-    # first down convolution
-    x_down_conv_1 = projection_block_3D(x_after_stage_1,
-                            filters=(32, 32),
-                            kernel_size=(2, 2, 2),
-                            stage=1,
-                            block=1,
-                            se_enabled=False,
-                            se_ratio=16)
+    # second stage of 4 bottleneck layers
+    x = projection_bottleneck_block(x, (32, 32, 128), stage=2, block=1, se_enabled=True, se_ratio=16)
+    x = identity_bottleneck_block(x, (32, 32, 128), stage=2, block=2, se_enabled=True, se_ratio=16)
+    x = identity_bottleneck_block(x, (32, 32, 128), stage=2, block=3, se_enabled=True, se_ratio=16)
+    x = identity_bottleneck_block(x, (32, 32, 128), stage=2, block=4, se_enabled=True, se_ratio=16)
 
-    # second stage
-    x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=False, se_ratio=16)
-    #x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=2, block=2, se_enabled=False, se_ratio=16)
-    x_after_stage_2 = x
+    # third stage of 4 bottleneck layers
+    x = projection_bottleneck_block(x, (64, 64, 256), stage=3, block=1, se_enabled=True, se_ratio=16)
+    x = identity_bottleneck_block(x, (64, 64, 256), stage=3, block=2, se_enabled=True, se_ratio=16)
+    x = identity_bottleneck_block(x, (64, 64, 256), stage=3, block=3, se_enabled=True, se_ratio=16)
+    x = identity_bottleneck_block(x, (64, 64, 256), stage=3, block=4, se_enabled=True, se_ratio=16)
 
-    # second down convolution
-    x_down_conv_2 = projection_block_3D(x_after_stage_2,
-                                        filters=(64, 64),
-                                        kernel_size=(2, 2, 2),
-                                        stage=2,
-                                        block=3,
-                                        se_enabled=False,
-                                        se_ratio=16)
+    # fourth stage of 3 bottleneck layers, without SE blocks due to performance considerations (see original paper)
+    x = projection_bottleneck_block(x, (128, 128, 512), stage=4, block=1, se_enabled=False, se_ratio=16)
+    x = identity_bottleneck_block(x, (128, 128, 512), stage=4, block=2, se_enabled=False, se_ratio=16)
+    x = identity_bottleneck_block(x, (128, 128, 512), stage=4, block=3, se_enabled=False, se_ratio=16)
 
-    # third stage
-    x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=False, se_ratio=16)
-    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=2, se_enabled=False, se_ratio=16)
-    #x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=3, se_enabled=False, se_ratio=16)
-    x_after_stage_3 = x
+    # global average pooling
+    x = GlobalAveragePooling2D(data_format='channels_last')(x)
 
-    # third down convolution
-    x_down_conv_3 = projection_block_3D(x_after_stage_3,
-                                        filters=(128, 128),
-                                        kernel_size=(2, 2, 2),
-                                        stage=3,
-                                        block=4,
-                                        se_enabled=False,
-                                        se_ratio=16)
-
-    # fourth stage
-    x = identity_block_3D(x_down_conv_3, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=1, se_enabled=False, se_ratio=16)
-    x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=2, se_enabled=False, se_ratio=16)
-    #x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=3, se_enabled=False, se_ratio=16)
-    x_after_stage_4 = x
-
-    # fourth down convolution
-    x_down_conv_4 = projection_block_3D(x_after_stage_4,
-                                        filters=(256, 256),
-                                        kernel_size=(2, 2, 2),
-                                        stage=4,
-                                        block=4,
-                                        se_enabled=False,
-                                        se_ratio=16)
-
-    # fifth stage
-    x = identity_block_3D(x_down_conv_4, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=1, se_enabled=False, se_ratio=16)
-    x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=2, se_enabled=False, se_ratio=16)
-    # x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=3, se_enabled=False, se_ratio=16)
-    x_after_stage_5 = x
-
-    ### end of encoder path
-
-    ### decoder path
-
-    x = Conv3DTranspose(filters=128,
-                        kernel_size=(2, 2, 2),
-                        strides=(2, 2, 2),
-                        padding='valid',
-                        data_format=K.image_data_format(),
-                        kernel_initializer='he_normal'
-                        )(x_after_stage_5)
-
-    #input_shape = (2, 2, 2, 1)
-
-    # first transposed 3D Convolution
-    x = transposed_projection_block_3D(x_after_stage_5,
-                                       filters=(128, 128),
-                                       kernel_size=(2, 2, 2),
-                                       stage=5,
-                                       block=3,
-                                       se_enabled=False,
-                                       se_ratio=16)
-    x = concatenate([x, x_after_stage_4], axis=K.image_data_format())
-
-    # first decoder stage
-    x = projection_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=1, se_enabled=False, se_ratio=16)
-    x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=2, se_enabled=False, se_ratio=16)
-
-    # second transposed 3D Convolution
-    x = transposed_projection_block_3D(x,
-                                       filters=(64, 64),
-                                       kernel_size=(2, 2, 2),
-                                       stage=6,
-                                       block=3,
-                                       se_enabled=False,
-                                       se_ratio=16)
-    x = concatenate([x, x_after_stage_3], axis=K.image_data_format())
-
-
-    # second decoder stage
-    x = projection_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=1, se_enabled=False, se_ratio=16)
-    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=2, se_enabled=False, se_ratio=16)
-
-    # third transposed 3D Convolution
-    x = transposed_projection_block_3D(x,
-                                       filters=(32, 32),
-                                       kernel_size=(2, 2, 2),
-                                       stage=7,
-                                       block=3,
-                                       se_enabled=False,
-                                       se_ratio=16)
-    x = concatenate([x, x_after_stage_2])
-
-    # third decoder stage
-    x = projection_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=8, block=1, se_enabled=False, se_ratio=16)
-    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=8, block=2, se_enabled=False, se_ratio=16)
-
-    #fourth transposed 3D convolution
-    x = transposed_projection_block_3D(x,
-                                       filters=(16, 16),
-                                       kernel_size=(2, 2, 2),
-                                       stage=8,
-                                       block=3,
-                                       se_enabled=False,
-                                       se_ratio=16)
-    x = concatenate([x, x_after_stage_1], axis=K.image_data_format())
-
-    # fourth decoder stage
-    x = projection_block_3D(x, filters=(16, 16), kernel_size=(3, 3, 3), stage=9, block=1, se_enabled=False, se_ratio=16)
-
-    ### End of decoder
-
-    ### last segmentation segments
-    # 1x1x1-Conv3 produces 2 featuremaps for probabilistic  segmentations of the foreground and background
-    x = Conv3D(filters=2,
-               kernel_size=(1, 1, 1),
-               strides=(1, 1, 1),
-               padding='same',
-               kernel_initializer='he_normal',
-               name='conv_veryEnd')(x)
-
-    output = Softmax(axis=bn_axis)(x)
+    # fully-connected layer
+    output = Dense(units=numClasses,
+                   activation='softmax',
+                   kernel_initializer='he_normal',
+                   name='fully-connected')(x)
 
     # create model
-    cnn = Model(input_tensor, output, name='3D-VResFCN')
-    sModelName = cnn.name
+    cnn = Model(input_tensor, output, name='ResNet-56')
+    sModelName = 'SE-ResNet-50'
 
     return cnn, sModelName
 
 
-def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
-
+def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
     # grid search on batch_sizes and learning rates
     # parse inputs
     batchSize = batchSizes[0]
@@ -217,13 +94,10 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
 
     # change the shape of the dataset -> at color channel -> here one for grey scale
     X_train = np.expand_dims(X_train, axis=-1)
-    Y_segMasks_train = np.expand_dims(Y_segMasks_train, axis=-1)
     X_test = np.expand_dims(X_test, axis=-1)
-    Y_segMasks_test = np.expand_dims(Y_segMasks_test, axis=-1)
 
     if X_valid is not None and y_valid is not None:
         X_valid = np.expand_dims(X_valid, axis=-1)
-        Y_segMasks_valid = np.expand_dims(Y_segMasks_valid, axis=-1)
 
     #y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
     #y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
@@ -238,19 +112,17 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
                 sModelName,
                 X_train=X_train,
                 y_train=y_train,
-                Y_segMasks_train=Y_segMasks_train,
                 X_valid=X_valid,
                 y_valid=y_valid,
-                Y_segMasks_valid=Y_segMasks_valid,
                 X_test=X_test,
                 y_test=y_test,
-                Y_segMasks_test=Y_segMasks_test,
                 sOutPath=sOutPath,
                 patchSize=patchSize,
                 batchSize=batchSize,
                 learningRate=learningRate,
                 iEpochs=iEpochs,
                 dlart_handle=dlart_handle)
+
 
     # for iBatch in batchSizes:
     #     for iLearn in learningRates:
@@ -269,8 +141,7 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
     #                     iEpochs=iEpochs,
     #                     dlart_handle=dlart_handle)
 
-
-def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None):
+def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None):
     print('Training CNN')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
@@ -288,6 +159,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     if (os.path.isfile(model_mat)):  # no training if output file exists
         print('------- already trained -> go to next')
         return
+
 
     # create optimizer
     if dlart_handle != None:
@@ -318,7 +190,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
 
     # callbacks
-    callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
+    callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=25, verbose=1)
     #callback_tensorBoard = keras.callbacks.TensorBoard(log_dir=dlart_handle.getLearningOutputPath() + '/logs',
                                                        #histogram_freq=2,
                                                        #batch_size=batchSize,
@@ -330,34 +202,162 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
                                                      #  embeddings_metadata=None)
 
     callbacks = [callback_earlyStopping]
-    callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0, period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
-    callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
-    #callbacks.append(LearningRateScheduler(schedule=step_decay))
+    callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints/checker.hdf5', monitor='val_acc', verbose=0, period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
+    #callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
+    callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
 
 
-    if X_valid is not None and y_valid is not None:
-        # use validation/test split
-        result = cnn.fit(X_train,
-                         y_train,
-                         validation_data=(X_valid, y_valid),
-                         epochs=iEpochs,
-                         batch_size=batchSize,
-                         callbacks=callbacks,
-                         verbose=1)
+    # data augmentation
+    if dlart_handle.getDataAugmentationEnabled() == True:
+        # Initialize Image Generator
+        # all shifted and rotated images are filled with zero padded pixels
+        datagen = ImageDataGenerator(
+            featurewise_center=False,
+            samplewise_center=False,
+            featurewise_std_normalization=False,
+            samplewise_std_normalization=False,
+            zca_whitening=dlart_handle.getZCA_Whitening(),
+            zca_epsilon=1e-6,
+            rotation_range=dlart_handle.getRotation(),
+            width_shift_range=dlart_handle.getWidthShift(),
+            height_shift_range=dlart_handle.getHeightShift(),
+            shear_range=0.,
+            zoom_range=dlart_handle.getZoom(),
+            channel_shift_range=0.,
+            fill_mode='constant',
+            cval=0.,
+            horizontal_flip=dlart_handle.getHorizontalFlip(),
+            vertical_flip=dlart_handle.getVerticalFlip(),
+            rescale=None,
+            histogram_equalization=dlart_handle.getHistogramEqualization(),
+            contrast_stretching=dlart_handle.getContrastStretching(),
+            adaptive_equalization=dlart_handle.getAdaptiveEqualization(),
+            preprocessing_function=None,
+            data_format=K.image_data_format()
+        )
+
+        datagen_val = ImageDataGenerator(featurewise_center=False,
+                                         samplewise_center=False,
+                                         featurewise_std_normalization=False,
+                                         samplewise_std_normalization=False,
+                                         zca_whitening=dlart_handle.getZCA_Whitening(),
+                                         zca_epsilon=1e-6,
+                                         rotation_range=0.,
+                                         width_shift_range=0.,
+                                         height_shift_range=0.,
+                                         shear_range=0.,
+                                         zoom_range=0.,
+                                         channel_shift_range=0.,
+                                         fill_mode='constant',
+                                         cval=0.,
+                                         horizontal_flip=False,
+                                         vertical_flip=False,
+                                         rescale=None,
+                                         histogram_equalization=dlart_handle.getHistogramEqualization(),
+                                         contrast_stretching=dlart_handle.getContrastStretching(),
+                                         adaptive_equalization=dlart_handle.getAdaptiveEqualization(),
+                                         preprocessing_function=None,
+                                         data_format=K.image_data_format())
+
+        datagen_test = ImageDataGenerator(featurewise_center=False,
+                                         samplewise_center=False,
+                                         featurewise_std_normalization=False,
+                                         samplewise_std_normalization=False,
+                                         zca_whitening=dlart_handle.getZCA_Whitening(),
+                                         zca_epsilon=1e-6,
+                                         rotation_range=0.,
+                                         width_shift_range=0.,
+                                         height_shift_range=0.,
+                                         shear_range=0.,
+                                         zoom_range=0.,
+                                         channel_shift_range=0.,
+                                         fill_mode='constant',
+                                         cval=0.,
+                                         horizontal_flip=False,
+                                         vertical_flip=False,
+                                         rescale=None,
+                                         histogram_equalization=dlart_handle.getHistogramEqualization(),
+                                         contrast_stretching=dlart_handle.getContrastStretching(),
+                                         adaptive_equalization=dlart_handle.getAdaptiveEqualization(),
+                                         preprocessing_function=None,
+                                         data_format=K.image_data_format())
+
+        # fit parameters from dataset
+        datagen.fit(X_train)
+        datagen_test.fit(X_test)
+
+        # configure batch size and get one batch of images
+        for x_batch, y_batch in datagen.flow(X_train, y_train, batch_size=9):
+            # display first 9 images
+            for i in range(0, 9):
+                plt.subplot(330+1+i)
+                plt.imshow(x_batch[i].reshape(x_batch.shape[1], x_batch.shape[2]), cmap='gray')
+            plt.show()
+            break
+
+        if X_valid is not None and y_valid is not None:
+            # fit model on data
+            # use validation/test split
+            datagen_val.fit(X_valid)
+            result = cnn.fit_generator(datagen.flow(X_train, y_train, batch_size=batchSize),
+                                       steps_per_epoch=X_train.shape[0]//batchSize,
+                                       epochs=iEpochs,
+                                       validation_data=datagen_val.flow(X_valid, y_valid, batch_size=batchSize),
+                                       callbacks=callbacks,
+                                       workers=1,
+                                       use_multiprocessing=False)
+
+        else:
+            # fit model on data
+            # use test data for validation and test
+
+            result = cnn.fit_generator(datagen.flow(X_train, y_train, batch_size=batchSize),
+                                       steps_per_epoch=X_train.shape[0] // batchSize,
+                                       epochs=iEpochs,
+                                       validation_data=datagen_test.flow(X_test, y_test, batch_size=batchSize),
+                                       callbacks=callbacks,
+                                       workers=1,
+                                       use_multiprocessing=False)
+
+        # return the loss value and metrics values for the model in test mode
+        score_test, acc_test = cnn.evaluate_generator(datagen_test.flow(X_test, y_test, batch_size=batchSize),
+                                                      steps=None,
+                                                      max_queue_size=10,
+                                                      workers=1,
+                                                      use_multiprocessing=False)
+
+        prob_test = cnn.predict_generator(datagen_test.flow(X_test, y_test, batch_size=batchSize),
+                                          steps = None,
+                                          max_queue_size = 10,
+                                          workers = 1,
+                                          use_multiprocessing = False,
+                                          verbose = 1)
+
     else:
-        # use test set for validation and test
-        result = cnn.fit(X_train,
-                         y_train,
-                         validation_data=(X_test, y_test),
-                         epochs=iEpochs,
-                         batch_size=batchSize,
-                         callbacks=callbacks,
-                         verbose=1)
+        if X_valid is not None and y_valid is not None:
+            # use validation/test split
+            result = cnn.fit(X_train,
+                             y_train,
+                             validation_data=(X_valid, y_valid),
+                             epochs=iEpochs,
+                             batch_size=batchSize,
+                             callbacks=callbacks,
+                             verbose=1)
+        else:
+            # use test set for validation and test
+            result = cnn.fit(X_train,
+                             y_train,
+                             validation_data=(X_test, y_test),
+                             epochs=iEpochs,
+                             batch_size=batchSize,
+                             callbacks=callbacks,
+                             verbose=1)
 
-    # return the loss value and metrics values for the model in test mode
-    score_test, acc_test = cnn.evaluate(X_test, y_test, batch_size=batchSize, verbose=1)
+        # return the loss value and metrics values for the model in test mode
+        score_test, acc_test = cnn.evaluate(X_test, y_test, batch_size=batchSize, verbose=1)
 
-    prob_test = cnn.predict(X_test, batchSize, 0)
+        prob_test = cnn.predict(X_test, batchSize, 0)
+
 
     # save model
     json_string = cnn.to_json()
@@ -390,9 +390,9 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
 def step_decay(epoch):
    initial_lrate = 0.1
    drop = 0.1
-   epochs_drop = 2.0
+   epochs_drop = 30.0
    lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
-   print("Reduce Learningrate by 0.1")
+   print(str(lrate))
    return lrate
 
 
@@ -428,7 +428,6 @@ def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
     modelSave = sOutPath + sModelFileSave + '_pred.mat'
     print('saving Model:{}'.format(modelSave))
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
-
 
 
 ###############################################################################

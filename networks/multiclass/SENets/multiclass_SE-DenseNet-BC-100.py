@@ -75,7 +75,7 @@ def createModel(patchSize, numClasses):
     x, numFilters = dense_block(x, numInputFilters=numFilters, numLayers=16, growthRate_k=growthRate_k, bottleneck_enabled=True)
 
     # SE Block
-    x = squeeze_excitation_block(x, ratio=128)
+    x = squeeze_excitation_block(x, ratio=16)
 
     x = BatchNormalization(axis=bn_axis)(x)
     x = Activation('relu')(x)
