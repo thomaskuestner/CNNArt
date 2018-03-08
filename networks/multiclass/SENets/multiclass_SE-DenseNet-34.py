@@ -32,57 +32,44 @@ from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
 from utils.image_preprocessing import ImageDataGenerator
 from matplotlib import pyplot as plt
 
-from networks.multiclass.SENets.deep_residual_learning_blocks import *
+from networks.multiclass.SENets.densely_connected_cnn_blocks import *
 
 
 def createModel(patchSize, numClasses):
-    # SE-ResNet-56 based on CIFAR-10, for 32x32 Images
-    print(K.image_data_format())
 
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
     else:
         bn_axis = 1
 
+    growthRate_k = 12
+    compressionFactor = 1.0
+
     input_tensor = Input(shape=(patchSize[0], patchSize[1], 1))
 
     # first conv layer
-    x = Conv2D(16, (3,3), strides=(1,1), kernel_initializer='he_normal', name='conv1')(input_tensor)
-    x = BatchNormalization(axis=bn_axis, name='bn_conv1')(x)
+    x = Conv2D(16, (3,3), strides=(1,1), padding='same', kernel_initializer='he_normal')(input_tensor)
+
+    # 1. Dense Block
+    x, numFilters = dense_block(x, numInputFilters=16, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=False)
+
+    # Transition Layer
+    x, numFilters = transition_SE_layer(x, numFilters, compressionFactor=compressionFactor, se_ratio=16)
+
+    # 2. Dense Block
+    x, numFilters = dense_block(x, numInputFilters=numFilters, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=False)
+
+    #Transition Layer
+    x, numFilters = transition_SE_layer(x, numFilters, compressionFactor=compressionFactor, se_ratio=16)
+
+    #3. Dense Block
+    x, numFilters = dense_block(x, numInputFilters=numFilters, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=False)
+
+    # SE Block
+    x = squeeze_excitation_block(x, ratio=16)
+
+    x = BatchNormalization(axis=bn_axis)(x)
     x = Activation('relu')(x)
-
-    # first stage of 2n=2*9=18 Convs (3x3, 16)
-    x = identity_block(x, [16, 16], stage=1, block=1, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [16, 16], stage=1, block=2, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [16, 16], stage=1, block=3, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [16, 16], stage=1, block=4, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [16, 16], stage=1, block=5, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [16, 16], stage=1, block=6, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [16, 16], stage=1, block=7, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [16, 16], stage=1, block=8, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [16, 16], stage=1, block=9, se_enabled=True, se_ratio=4)
-
-    # second stage of 2n=2*9=18 convs (3x3, 32)
-    x = projection_block(x, [32, 32], stage=2, block=1, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [32, 32], stage=2, block=2, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [32, 32], stage=2, block=3, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [32, 32], stage=2, block=4, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [32, 32], stage=2, block=5, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [32, 32], stage=2, block=6, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [32, 32], stage=2, block=7, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [32, 32], stage=2, block=8, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [32, 32], stage=2, block=9, se_enabled=True, se_ratio=4)
-
-    # third stage of 3n=3*9=18 convs (3x3, 64)
-    x = projection_block(x, [64, 64], stage=3, block=1, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [64, 64], stage=3, block=2, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [64, 64], stage=3, block=3, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [64, 64], stage=3, block=4, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [64, 64], stage=3, block=5, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [64, 64], stage=3, block=6, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [64, 64], stage=3, block=7, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [64, 64], stage=3, block=8, se_enabled=True, se_ratio=4)
-    x = identity_block(x, [64, 64], stage=3, block=9, se_enabled=True, se_ratio=4)
 
     # global average pooling
     x = GlobalAveragePooling2D(data_format='channels_last')(x)
@@ -94,8 +81,8 @@ def createModel(patchSize, numClasses):
                    name='fully-connected')(x)
 
     # create model
-    cnn = Model(input_tensor, output, name='SE-ResNet-56')
-    sModelName = 'SE-ResNet-56'
+    cnn = Model(input_tensor, output, name='DenseNet-34')
+    sModelName = 'DenseNet-34'
 
     return cnn, sModelName
 
