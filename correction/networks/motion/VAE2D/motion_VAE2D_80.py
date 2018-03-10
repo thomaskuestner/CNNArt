@@ -1,6 +1,8 @@
 import os
 import numpy as np
 import h5py
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 from keras.layers import Input, Lambda, concatenate, Dense, Reshape, Flatten
@@ -23,7 +25,7 @@ def sampling(args):
     z_mean, z_log_var = args
     epsilon = K.random_normal(shape=(K.shape(z_mean)[0], 512), mean=0.,
                               stddev=1.0)
-    return z_mean + K.exp(z_log_var / 2) * epsilon
+    return z_mean + K.exp(z_log_var) * epsilon
 
 def encode(input):
     conv_1 = LeakyReluConv2D(filters=32, kernel_size=3, strides=1, padding='same')(input)
@@ -34,7 +36,9 @@ def encode(input):
 def encode_shared(input):
     conv_1 = LeakyReluConv2D(filters=256, kernel_size=3, strides=1, padding='same')(input)
     conv_2 = LeakyReluConv2D(filters=256, kernel_size=3, strides=2, padding='same')(conv_1)
-    flat = Flatten()(conv_2)
+    conv_3 = LeakyReluConv2D(filters=256, kernel_size=3, strides=1, padding='same')(conv_2)
+    conv_4 = LeakyReluConv2D(filters=256, kernel_size=3, strides=2, padding='same')(conv_3)
+    flat = Flatten()(conv_4)
 
     z_mean = Dense(512)(flat)
     z_log_var = Dense(512)(flat)
@@ -44,9 +48,11 @@ def encode_shared(input):
     return z, z_mean, z_log_var
 
 def decode(input):
-    dense = Dense(256 * 12 * 12)(input)
-    reshape = Reshape((256, 12, 12))(dense)
+    dense = Dense(25600)(input)
+    reshape = Reshape((256, 10, 10))(dense)
     output = LeakyReluConv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same')(reshape)
+    output = LeakyReluConv2DTranspose(filters=256, kernel_size=3, strides=1, padding='same')(output)
+    output = LeakyReluConv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same')(output)
     output = LeakyReluConv2DTranspose(filters=128, kernel_size=3, strides=1, padding='same')(output)
     output = LeakyReluConv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same')(output)
     output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
@@ -163,7 +169,7 @@ def fPredict(dData, dParam, dHyper):
     predict_art = np.squeeze(predict_art, axis=1)
 
     if dHyper['unpatch']:
-        predict_art = fRigidUnpatchingCorrection([256, 196], predict_art)
+        predict_art = fRigidUnpatchingCorrection([256, 196], predict_art, dParam['patchOverlap'])
         plt.figure()
         plt.gray()
         for i in range(predict_art.shape[0]):
@@ -175,8 +181,8 @@ def fPredict(dData, dParam, dHyper):
     else:
         nPatch = predict_art.shape[0]
 
-        for i in range(nPatch//5):
-            fig, axes = plt.subplots(nrows=5, ncols=2)
+        for i in range(nPatch//4):
+            fig, axes = plt.subplots(nrows=4, ncols=2)
             plt.gray()
 
             cols_title = ['original_art', 'predicted_art']
@@ -184,9 +190,9 @@ def fPredict(dData, dParam, dHyper):
             for ax, col in zip(axes[0], cols_title):
                 ax.set_title(col)
 
-            for j in range(5):
-                axes[j, 0].imshow(test_art[5*i+j])
-                axes[j, 1].imshow(predict_art[5*i+j])
+            for j in range(4):
+                axes[j, 0].imshow(test_art[4*i+j])
+                axes[j, 1].imshow(predict_art[4*i+j])
 
             if dParam['lSave']:
                 plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')
