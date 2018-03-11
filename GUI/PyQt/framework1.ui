@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1550</width>
-    <height>998</height>
+    <width>1718</width>
+    <height>994</height>
    </rect>
   </property>
   <property name="acceptDrops">
@@ -28,7 +28,7 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>1521</width>
+      <width>1691</width>
       <height>921</height>
      </rect>
     </property>
@@ -46,270 +46,136 @@
     </property>
     <widget class="QWidget" name="tab_3">
      <attribute name="title">
-      <string>DICOM</string>
+      <string>Data Viewing</string>
      </attribute>
-     <widget class="QWidget" name="verticalLayoutWidget">
+     <widget class="QScrollArea" name="scrollArea">
       <property name="geometry">
        <rect>
-        <x>0</x>
+        <x>160</x>
         <y>10</y>
-        <width>137</width>
-        <height>621</height>
+        <width>1511</width>
+        <height>861</height>
        </rect>
       </property>
-      <layout class="QVBoxLayout" name="layout111">
-       <item>
-        <widget class="QLabel" name="label_5">
+      <property name="widgetResizable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="scrollAreaWidgetContents">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>1509</width>
+         <height>859</height>
+        </rect>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QWidget" name="gridLayoutWidget">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>141</width>
+        <height>453</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="2" column="0">
+        <widget class="QLabel" name="linelabel">
+         <property name="text">
+          <string>line</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="visionlabel">
          <property name="font">
           <font>
+           <pointsize>16</pointsize>
            <weight>75</weight>
+           <italic>false</italic>
            <bold>true</bold>
           </font>
          </property>
-         <property name="frameShape">
-          <enum>QFrame::Panel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
          <property name="text">
-          <string>image</string>
+          <string>2D</string>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::RichText</enum>
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QTabWidget" name="tabWidget">
-         <property name="currentIndex">
-          <number>0</number>
-         </property>
-         <widget class="QWidget" name="tab">
-          <attribute name="title">
-           <string>2D</string>
-          </attribute>
-          <widget class="QWidget" name="gridLayoutWidget">
-           <property name="geometry">
-            <rect>
-             <x>0</x>
-             <y>0</y>
-             <width>121</width>
-             <height>91</height>
-            </rect>
-           </property>
-           <layout class="QGridLayout" name="gridLayout">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label">
-              <property name="text">
-               <string>lines</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QComboBox" name="combo_layline">
-              <item>
-               <property name="text">
-                <string>1</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>2</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>3</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QComboBox" name="combo_laycolumn">
-              <item>
-               <property name="text">
-                <string>1</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>2</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>3</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_2">
-              <property name="text">
-               <string>columns</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0" rowspan="2" colspan="2">
-             <widget class="QPushButton" name="grids1">
-              <property name="text">
-               <string>make grids</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </widget>
-         <widget class="QWidget" name="tab_2">
-          <attribute name="title">
-           <string>3D</string>
-          </attribute>
-          <widget class="QWidget" name="gridLayoutWidget_2">
-           <property name="geometry">
-            <rect>
-             <x>0</x>
-             <y>0</y>
-             <width>121</width>
-             <height>91</height>
-            </rect>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_2">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_3">
-              <property name="text">
-               <string>lines</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QComboBox" name="combo_3D">
-              <item>
-               <property name="text">
-                <string>1</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>2</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>3</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>4</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>5</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>6</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>7</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>8</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item row="2" column="0" colspan="2">
-             <widget class="QPushButton" name="grids2">
-              <property name="text">
-               <string>make grids</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QWidget" name="widget" native="true"/>
-            </item>
-            <item row="1" column="1">
-             <widget class="QWidget" name="widget_2" native="true"/>
-            </item>
-           </layout>
-          </widget>
-         </widget>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="openfile">
-         <property name="text">
-          <string> load image</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="resetdicom">
-         <property name="text">
-          <string>reset</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="clearimage">
-         <property name="text">
-          <string>clear</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="Line" name="line_4">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="label_6">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::Panel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <property name="text">
-          <string>result</string>
-         </property>
-        </widget>
-       </item>
-       <item>
+       <item row="6" column="0">
         <widget class="QPushButton" name="bpatch">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="text">
-          <string>load result patches</string>
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="resrc.qrc">
+           <normaloff>:/icons/Icons/folder.png</normaloff>:/icons/Icons/folder.png</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>35</width>
+           <height>35</height>
+          </size>
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="resultpatch">
+       <item row="8" column="0">
+        <widget class="QPushButton" name="bselectoron">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="text">
-          <string>view result</string>
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="resrc.qrc">
+           <normaloff>:/icons/Icons/switch1.png</normaloff>:/icons/Icons/switch1.png</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>35</width>
+           <height>35</height>
+          </size>
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="Line" name="line_5">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
+       <item row="6" column="1">
+        <widget class="QPushButton" name="bsetcolor">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="resrc.qrc">
+           <normaloff>:/icons/Icons/palette.png</normaloff>:/icons/Icons/palette.png</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>35</width>
+           <height>35</height>
+          </size>
          </property>
         </widget>
        </item>
-       <item>
+       <item row="7" column="0" colspan="2">
         <widget class="QLabel" name="label_4">
          <property name="font">
           <font>
@@ -328,18 +194,242 @@
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="bselectoron">
+       <item row="10" column="0">
+        <widget class="QRadioButton" name="brectangle">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="text">
-          <string>selector on/off</string>
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="resrc.qrc">
+           <normaloff>:/icons/Icons/Rectangle.png</normaloff>:/icons/Icons/Rectangle.png</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>35</width>
+           <height>35</height>
+          </size>
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QComboBox" name="artefactbox">
+       <item row="1" column="1">
+        <widget class="QPushButton" name="bdswitch">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="resrc.qrc">
+           <normaloff>:/icons/Icons/switch.png</normaloff>:/icons/Icons/switch.png</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>35</width>
+           <height>35</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QComboBox" name="columnbox">
          <item>
           <property name="text">
-           <string>movement</string>
+           <string>1</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>2</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>3</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>4</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QComboBox" name="linebox">
+         <item>
+          <property name="text">
+           <string>1</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>2</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>3</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>4</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="5" column="0" colspan="2">
+        <widget class="QLabel" name="label_6">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::Panel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <property name="text">
+          <string>result</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="columnlabel">
+         <property name="text">
+          <string>column</string>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="1">
+        <widget class="QRadioButton" name="bellipse">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="resrc.qrc">
+           <normaloff>:/icons/Icons/Ellipse.png</normaloff>:/icons/Icons/Ellipse.png</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>35</width>
+           <height>35</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0" colspan="2">
+        <widget class="QLabel" name="label_5">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::Panel</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <property name="text">
+          <string>image</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QPushButton" name="bgrids">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="resrc.qrc">
+           <normaloff>:/icons/Icons/grids1.png</normaloff>:/icons/Icons/grids1.png</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>35</width>
+           <height>35</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QPushButton" name="openfile">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="resrc.qrc">
+           <normaloff>:/icons/Icons/eye1.png</normaloff>:/icons/Icons/eye1.png</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>35</width>
+           <height>35</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="0">
+        <widget class="QRadioButton" name="blasso">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="resrc.qrc">
+           <normaloff>:/icons/Icons/Lasso.png</normaloff>:/icons/Icons/Lasso.png</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>35</width>
+           <height>35</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="0" colspan="2">
+        <widget class="QComboBox" name="artifactbox">
+         <item>
+          <property name="text">
+           <string>move</string>
           </property>
          </item>
          <item>
@@ -354,83 +444,29 @@
          </item>
         </widget>
        </item>
-       <item>
-        <widget class="QRadioButton" name="bnoselect">
+       <item row="8" column="1">
+        <widget class="QPushButton" name="bchoosemark">
          <property name="text">
-          <string>no selector</string>
+          <string/>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="brectangle">
-         <property name="text">
-          <string>rectangle</string>
+         <property name="icon">
+          <iconset resource="resrc.qrc">
+           <normaloff>:/icons/Icons/overlap.png</normaloff>:/icons/Icons/overlap.png</iconset>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="bellipse">
-         <property name="text">
-          <string>ellipse</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="blasso">
-         <property name="text">
-          <string>lasso</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="Line" name="line_6">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="exit">
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="text">
-          <string>Exit</string>
+         <property name="iconSize">
+          <size>
+           <width>35</width>
+           <height>35</height>
+          </size>
          </property>
         </widget>
        </item>
       </layout>
      </widget>
-     <widget class="QScrollArea" name="scrollArea">
-      <property name="geometry">
-       <rect>
-        <x>160</x>
-        <y>10</y>
-        <width>1351</width>
-        <height>881</height>
-       </rect>
-      </property>
-      <property name="widgetResizable">
-       <bool>true</bool>
-      </property>
-      <widget class="QWidget" name="scrollAreaWidgetContents">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>0</y>
-         <width>1349</width>
-         <height>879</height>
-        </rect>
-       </property>
-      </widget>
-     </widget>
     </widget>
     <widget class="QWidget" name="tab_4">
      <attribute name="title">
-      <string>train</string>
+      <string>Network Training</string>
      </attribute>
      <widget class="QGroupBox" name="groupBox">
       <property name="geometry">
@@ -1184,12 +1220,12 @@
     </widget>
     <widget class="QWidget" name="tab_5">
      <attribute name="title">
-      <string>view network</string>
+      <string>Network Visualization</string>
      </attribute>
     </widget>
     <widget class="QWidget" name="tab_6">
      <attribute name="title">
-      <string>metrics</string>
+      <string>Network Metrics</string>
      </attribute>
     </widget>
    </widget>
@@ -1200,12 +1236,14 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1550</width>
+     <width>1718</width>
      <height>26</height>
     </rect>
    </property>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="resrc.qrc"/>
+ </resources>
  <connections/>
 </ui>

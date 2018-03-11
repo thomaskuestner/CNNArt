@@ -3,26 +3,35 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 import matplotlib as mpl
 import numpy as np
+from PyQt5 import QtCore
 
 class Canvas(FigureCanvas):
-    def __init__(self, voxel, model, Y ,Z, cmap1, parent=None):
+    update_data = QtCore.pyqtSignal(list)
+    gray_data = QtCore.pyqtSignal(list)
+    new_page = QtCore.pyqtSignal()
+
+    def __init__(self, param, parent=None):
         self.figure = plt.figure()
         FigureCanvas.__init__(self, self.figure)
         self.setParent(parent)
 
-        self.voxel = voxel
-        self.Y = Y
-        self.Z = Z
-        self.model = model
-        self.cmap1 = cmap1
+        self.figure.set_facecolor("black") # white region outsides the (ax)dicom image
 
-        if self.model == 0 or self.model ==1:
+        self.voxel = param.get('image')
+        self.Y = param.get('color')
+        self.Z = param.get('hatch')
+        self.mode = param.get('mode')
+        self.cmap = param.get('cmap')
+        self.hmap = param.get('hmap')
+        self.trans = param.get('trans')
+
+        if self.mode == 0 or self.mode ==1 or self.mode ==4:
             self.slices = self.voxel.shape[2]
             self.ind = self.slices // 2
-        elif self.model == 2:
+        elif self.mode == 2 or self.mode ==5:
             self.slices = self.voxel.shape[0]
             self.ind = self.slices // 2
-        elif self.model == 3:
+        elif self.mode == 3 or self.mode ==6:
             self.slices = self.voxel.shape[1]
             self.ind = self.slices//2
 
@@ -30,11 +39,16 @@ class Canvas(FigureCanvas):
         self.y_clicked = None
         self.mouse_second_clicked = False
         self.ax1 = self.figure.add_subplot(111)
+        # self.ax1 = plt.gca()
 
         self.figure.canvas.mpl_connect('button_press_event', self.mouse_clicked)
         self.figure.canvas.mpl_connect('motion_notify_event', self.mouse_move)
         self.figure.canvas.mpl_connect('button_release_event', self.mouse_release)
         self.figure.canvas.mpl_connect('scroll_event', self.onscroll)
+
+        self.emitlist = []
+        self.emitlist.append(self.ind)
+        self.emitlist.append(self.slices)
 
         self.View_A()
 
@@ -48,49 +62,74 @@ class Canvas(FigureCanvas):
             self.ind = 0
         if self.ind <= -1:
             self.ind = self.slices - 1
-        # plt.cla() # not clf
+
+        self.ax1.clear() # not clf, cla useless
+        self.emitlist[0] = self.ind
+        self.update_data.emit(self.emitlist)
         self.View_A()
 
     def View_A(self):
-        if self.model == 0:
+        if self.mode == 0:
             self.ax1.axis('off')
             self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
-            self.ax1.set_ylabel('slice %s' % (self.ind + 1))
-            self.draw()
-        elif self.model == 1:
+            # self.ax1.set_ylabel('slice %s' % (self.ind + 1))
+            self.draw_idle()
+        elif self.mode == 1:
             self.ax1.axis('off')
             self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
 
-            self.im2 = self.ax1.imshow(np.swapaxes(self.Y[:, :, self.ind], 0, 1), cmap=self.cmap1, alpha=.3, vmin=1,
-                                     vmax=6)
+            self.im2 = self.ax1.imshow(np.swapaxes(self.Y[:, :, self.ind], 0, 1), cmap=self.cmap, alpha=.3)
             plt.rcParams['hatch.color'] = 'r'
-            self.im3 = self.ax1.contourf(np.transpose(self.Z[:, :, self.ind]), hatches=[None, '//', '\\', 'XX'],
-                                        colors='none', edges='r', levels=np.arange(5))
-            self.ax1.set_ylabel('slice %s' % (self.ind + 1))
-            self.draw()
-        elif self.model == 2:
+            self.im3 = self.ax1.contourf(np.transpose(self.Z[:, :, self.ind]), hatches=self.hmap,
+                                        colors='none', levels=np.arange(5))
+            self.draw_idle()
+        elif self.mode == 2:
             self.ax1.axis('off')
             self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[self.ind, :, :], 0, 1), cmap='gray', vmin=0, vmax=2094)
-            self.im2 = self.ax1.imshow(np.swapaxes(self.Y[self.ind, :, :], 0, 1), cmap=self.cmap1, alpha=.3, vmin=1,
-                                       vmax=6, extent=[0, self.voxel.shape[1], self.voxel.shape[2], 0])
+            self.im2 = self.ax1.imshow(np.swapaxes(self.Y[self.ind, :, :], 0, 1), cmap=self.cmap, alpha=.3,
+                                       extent=[0, self.voxel.shape[1], self.voxel.shape[2], 0])
             plt.rcParams['hatch.color'] = 'r'
             self.im3 = self.ax1.contourf(np.transpose(self.Z[self.ind, :, :]), hatches=[None, '//', '\\', 'XX'],
-                                     colors='none', edges='r', levels=np.arange(5),
+                                     colors='none', levels=np.arange(5),
                                         extent=[0, self.voxel.shape[1], self.voxel.shape[2], 0])
-            self.ax1.set_ylabel('slice %s' % (self.ind + 1))
-            self.draw()
-        elif self.model == 3:
+            self.draw_idle()
+        elif self.mode == 3:
             self.ax1.axis('off')
             self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, self.ind, :], 0, 1), cmap='gray', vmin=0, vmax=2094)
 
-            self.im2 = self.ax1.imshow(np.swapaxes(self.Y[:, self.ind, :], 0, 1), cmap=self.cmap1, alpha=.3, vmin=1,
-                                      vmax=6, extent=[0, self.voxel.shape[0], self.voxel.shape[2], 0])
+            self.im2 = self.ax1.imshow(np.swapaxes(self.Y[:, self.ind, :], 0, 1), cmap=self.cmap, alpha=.3,
+                                       extent=[0, self.voxel.shape[0], self.voxel.shape[2], 0])
             plt.rcParams['hatch.color'] = 'r'
             self.im3 = self.ax1.contourf(np.transpose(self.Z[:, self.ind, :]), hatches=[None, '//', '\\', 'XX'],
-                                        colors='none', edges='r', levels=np.arange(5),
+                                        colors='none', levels=np.arange(5),
                                         extent=[0, self.voxel.shape[0], self.voxel.shape[2], 0])
-            self.ax1.set_ylabel('slice %s' % (self.ind + 1))
-            self.draw()
+            self.draw_idle()
+
+        elif self.mode == 4:
+            self.ax1.axis('off')
+            self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
+
+            self.im2 = self.ax1.imshow(np.swapaxes(self.Y[:, :, self.ind], 0, 1), cmap=self.cmap, alpha=.3)
+            self.draw_idle()
+        elif self.mode == 5:
+            self.ax1.axis('off')
+            self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[self.ind, :, :], 0, 1), cmap='gray', vmin=0, vmax=2094)
+            self.im2 = self.ax1.imshow(np.swapaxes(self.Y[self.ind, :, :], 0, 1), cmap=self.cmap, alpha=.3,
+                                       extent=[0, self.voxel.shape[1], self.voxel.shape[2], 0])
+            self.draw_idle()
+        elif self.mode == 6:
+            self.ax1.axis('off')
+            self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, self.ind, :], 0, 1), cmap='gray', vmin=0, vmax=2094)
+
+            self.im2 = self.ax1.imshow(np.swapaxes(self.Y[:, self.ind, :], 0, 1), cmap=self.cmap, alpha=.3,
+                                       extent=[0, self.voxel.shape[0], self.voxel.shape[2], 0])
+            self.draw_idle()
+
+        v_min, v_max = self.pltc.get_clim()
+        self.graylist = []
+        self.graylist.append(v_min)
+        self.graylist.append(v_max)
+        self.new_page.emit()
 
     def mouse_clicked(self, event):
         if event.button == 2:
@@ -124,12 +163,24 @@ class Canvas(FigureCanvas):
 
             v_min += __vmin
             v_max += __vmax
-            self.pltc.set_clim(vmin=v_min.round(2), vmax=v_max.round(2))
+            self.pltc.set_clim(vmin=v_min, vmax=v_max)
+            self.graylist[0] = v_min.round(2)
+            self.graylist[1] = v_max.round(2)
+            self.gray_data.emit(self.graylist)
             self.figure.canvas.draw()
 
     def mouse_release(self, event):
         if event.button == 2:
             self.mouse_second_clicked = False
+
+    def setGreyscale(self, glist):
+        v_min = glist[0]
+        v_max = glist[1]
+        self.pltc.set_clim(vmin=v_min, vmax=v_max)
+        glist[0] = v_min
+        glist[1] = v_max
+        self.gray_data.emit(glist)
+        self.figure.canvas.draw()
 
 ''' canvas drag version
 class Canvas(FigureCanvas):

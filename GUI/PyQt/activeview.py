@@ -1,7 +1,8 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-
 class Activeview(QtWidgets.QGraphicsView):
+    zooming_data = QtCore.pyqtSignal(float)
+
     def __init__(self, parent=None):
         super(Activeview, self).__init__(parent)
 
@@ -14,7 +15,12 @@ class Activeview(QtWidgets.QGraphicsView):
         self.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
         self.setMinimumSize(500, 500)
 
-        #self.setAutoFillBackground(True) #
+        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0))
+        brush.setStyle(QtCore.Qt.SolidPattern)
+        self.setBackgroundBrush(brush)
+        #self.setAutoFillBackground(True)
+
+        self.zoomdata = 1
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:
@@ -37,11 +43,19 @@ class Activeview(QtWidgets.QGraphicsView):
             diff = newPos - self._dragPos
             self._dragPos = newPos
             factor = 1.2
-            if diff.y() > 0:  # x() is left/right , still not for sure
+            if diff.y() > 0:  # x() is left/right
                 factor = 1.0 / factor
             self.scale(factor, factor)
+            self.zoomdata = self.zoomdata * factor
+
+            self.zooming_data.emit(round(self.zoomdata, 2))
         else:
             super(Activeview, self).mouseMoveEvent(event)
+
+    def zoomback(self):
+        factor = 1/self.zoomdata
+        self.scale(factor, factor)
+        self.zoomdata = 1
 
     ''' old test version
         self._isPanning = True
