@@ -1,8 +1,62 @@
-import theano
-import theano.tensor as T
-from scipy.optimize import fmin_l_bfgs_b
-import proximal_alg
+#import theano
+#import theano.tensor as T
+#from scipy.optimize import fmin_l_bfgs_b
+#import proximal_alg
 import numpy as np
+import h5py
+import matplotlib.pyplot as plt
+
+def on_click_axes(event):
+    """Enlarge or restore the selected axis."""
+
+    ax = event.inaxes
+    layersName, layersWeights = getLayersWeights()
+    if ax is None:
+        # Occurs when a region not in an axis is clicked...
+        return
+    if event.button is 1:
+        #event.canvas.matplotlibwidget_static_2.setVisible(True)
+        f = plt.figure()
+        if ax.name=='arrow':
+            return
+
+        w = layersWeights[ax.name].value
+        if w.ndim == 4:
+            w = np.transpose(w, (3, 2, 0, 1))
+            mosaic_number = w.shape[0]
+            nrows = int(np.round(np.sqrt(mosaic_number)))
+            ncols = int(nrows)
+
+            if nrows ** 2 < mosaic_number:
+                ncols += 1
+
+            f = plot_mosaic(w[:mosaic_number, 0], nrows, ncols, f)
+            plt.suptitle("Weights of Layer '{}'".format(ax.name))
+            f.show()
+        else:
+            pass
+    else:
+        # No need to re-draw the canvas if it's not a left or right click
+        return
+    event.canvas.draw()
+
+def getLayersWeights():
+    model = h5py.File('layer2ge.h5', 'r')
+    layersName = []
+    layersWeights = {}
+
+    for i in model['layers']:
+        layerIndex = 'layers' + '/' + i
+
+        for n in model[layerIndex]:
+            layerName = layerIndex + '/' + n
+            layersName.append(n)
+
+            weightsPath = layerName + '/' + 'weights'
+            layersWeights[n] = model[weightsPath]
+    #model.close()
+    return layersName,layersWeights
+
 
 def make_mosaic(im, nrows, ncols, border=1):
 
@@ -11,19 +65,17 @@ def make_mosaic(im, nrows, ncols, border=1):
     nimgs = len(im)
     imshape = im[0].shape
 
-    mosaic = ma.masked_all((nrows * imshape[0] + (nrows - 1) * border,
-                            ncols * imshape[1] + (ncols - 1) * border),
+    mosaic = ma.masked_all((nrows * imshape[0] ,
+                            ncols * imshape[1] ),
                            dtype=np.float32)
 
-    paddedh = imshape[0] + border
-    paddedw = imshape[1] + border
-    im
+
     for i in range(nimgs):
         row = int(np.floor(i / ncols))
         col = i % ncols
 
-        mosaic[row * paddedh:row * paddedh + imshape[0],
-        col * paddedw:col * paddedw + imshape[1]] = im[i]
+        mosaic[row * imshape[0]:row * imshape[0] + imshape[0],
+        col * imshape[1]:col * imshape[1] + imshape[1]] = im[i]
 
     return mosaic
 
@@ -56,6 +108,7 @@ def on_click(event):
         return
     event.canvas.draw()
 
+
 def plot_mosaic(im, nrows, ncols, fig,**kwargs):
 
     # Set default matplotlib parameters
@@ -85,16 +138,16 @@ def plot_mosaic(im, nrows, ncols, fig,**kwargs):
         ax.set_xlim(0,imshape[0]-1)
         ax.set_ylim(0,imshape[1]-1)
 
-
         mosaic = im[i]
 
-        ax.imshow(mosaic,**kwargs)
+        ax.imshow(mosaic, **kwargs)
         ax.set_axis_off()
 
     fig.canvas.mpl_connect('button_press_event', on_click)
 
 
     return fig
+
 
 def get_weights_mosaic(model, layer_id, n):
     """
@@ -213,7 +266,6 @@ def plot_feature_map(model, layer_id, X, n=256, ax=None, **kwargs):
     layer = model.layers[layer_id]
 
 
-
     try:
         get_activations = K.function([model.layers[0].input, K.learning_phase()], [layer.output, ])
         activations = get_activations([X, 0])[0]
@@ -233,44 +285,36 @@ def plot_feature_map(model, layer_id, X, n=256, ax=None, **kwargs):
     if not 'cmap' in kwargs.keys():
         kwargs['cmap'] = "gray"
 
+    fig = plt.figure(figsize=(15, 15))
 
+    # Compute nrows and ncols for images
+    n_mosaic = len(activations)
+    nrows = int(np.round(np.sqrt(n_mosaic)))
+    ncols = int(nrows)
+    if (nrows ** 2) < n_mosaic:
+        ncols += 1
 
+    # Compute nrows and ncols for mosaics
+    if activations[0].shape[0] < n:
+        n = activations[0].shape[0]
 
+    nrows_inside_mosaic = int(np.round(np.sqrt(n)))
+    ncols_inside_mosaic = int(nrows_inside_mosaic)
 
-
+    if nrows_inside_mosaic ** 2 < n:
+        ncols_inside_mosaic += 1
 
     for i, feature_map in enumerate(activations):
-        fig1 = plt.figure()
-        fig = plt.figure()
+        mosaic = make_mosaic(feature_map[:n], nrows_inside_mosaic, ncols_inside_mosaic, border=1)
 
-        plot_mosaic(X[i],1,1,fig1)
-        fig1.suptitle("origin patch #{} \nof layer#{} \ncalled '{}' \nof type {} ".format(i, layer_id,
+        ax = fig.add_subplot(nrows, ncols, i + 1)
+
+        im = ax.imshow(mosaic, **kwargs)
+        ax.set_title("Feature map #{} \nof layer#{} \ncalled '{}' \nof type {} ".format(i, layer_id,
                                                                                         layer.name,
                                                                                         layer.__class__.__name__))
 
-        # Compute nrows and ncols for images
-        n_mosaic = len(feature_map)
-        nrows = int(np.round(np.sqrt(n_mosaic)))
-        ncols = int(nrows)
-        if (nrows ** 2) < n_mosaic:
-            ncols += 1
-
-
-
-
-
-        plot_mosaic(feature_map,nrows, ncols,fig)
-
-        #mosaic = make_mosaic(feature_map[:n], nrows, ncols, border=1)
-
-        #ax = fig.add_subplot(nrows, ncols, i + 1)
-
-        #im = ax.imshow(mosaic, **kwargs)
-        fig.suptitle("patch #{} \nof layer#{} \ncalled '{}' \nof type {} ".format(i, layer_id,
-                                                                                        layer.name,
-                                                                                        layer.__class__.__name__))
-
-    #fig.tight_layout()
+    fig.tight_layout()
     return fig
 
 def plot_all_feature_maps(model, X, n=256, ax=None, **kwargs):
@@ -286,139 +330,3 @@ def plot_all_feature_maps(model, X, n=256, ax=None, **kwargs):
             figs.append(fig)
 
     return figs
-
-
-class Visualizer():
-    
-    def __init__(self, calcGrad, calcCost, input):
-        """
-        Visualizer for Deep Neural Networks. Solves an inverse problem to find a suited input
-        that minimizes the cost function given in calcCost.
-        
-        Parameters:
-        -----------
-	  calcCost : function handle that computes the cost function for a given input
-	  calcGrad : function handle that computes the gradient of the cost function
-	  input : an input image (used for regularization or just to get the shape of the input)
-        """
-	self.calcGrad = calcGrad
-	self.calcCost = calcCost
-	self.input = np.asarray(input, dtype=np.float32)
-	self.inp_shape = input.shape
-      
-    def optimize(self, x0, cost):
-	return 0
-    
-    def map(self, x0):
-	return self.optimize(x0, self.cost)
-    
-class DeepVisualizer(Visualizer):
-    
-    def __init__(self, calcGrad, calcCost, input, alpha = 0.01):
-        """
-        Deep Visualization for Deep Neural Networks. Solves an inverse problem to find a suited input
-        that minimizes the cost function given in calcCost.
-        
-        Parameters:
-        -----------
-	  calcCost : function handle that computes the cost function for a given input
-	  calcGrad : function handle that computes the gradient of the cost function
-	  input : an input image (used for regularization or just to get the shape of the input)
-	  alpha : l2-regularization on the wanted input image to obtain feasible results
-        """
-        
-	Visualizer.__init__(self, calcGrad, calcCost, input)
-
-	self.alpha = alpha
-    
-    def costFun(self, x):
-	"""
-	Function that computes the cost value for a given x
-	
-	Parameters:
-	-----------
-	  x : input data
-	"""
-	tmp = x.reshape(self.inp_shape)
-	c = np.float64(self.calcCost(np.asarray(tmp,dtype=np.float32))) + self.alpha * np.dot(x.T, x)
-	return c
-
-    def gradFun(self, x):
-	"""
-	Function that computes the gradient of the cost function at x
-	
-	Parameters:
-	-----------
-	  x : input data
-	"""
-        tmp = x.reshape(self.inp_shape)
-        g = np.ravel(np.asarray(self.calcGrad(np.asarray(tmp,dtype=np.float32)),dtype=np.float64)) + 2*self.alpha*x
-        return g
-    
-    def optimize(self, x0):
-        """
-        Solves the inverse problem
-        
-        Parameters:
-        -----------
-	  x0 : initial solution
-        """
-        (result,f,d) = fmin_l_bfgs_b(lambda x:self.costFun(x), np.ravel(x0),lambda x: self.gradFun(x))
-        print("optimization completed with cost: " + str(f))
-        return result.reshape(self.inp_shape)
-      
-   
-class SubsetSelection(Visualizer):
-    
-    def __init__(self, calcGrad, calcCost, input, alpha = 0.01, gamma = 0.1):
-        """
-        Subset selection for Deep Neural Networks. Solves an inverse problem to find a suited input
-        that minimizes the cost function given in calcCost.
-        
-        Parameters:
-        -----------
-	  calcCost : function handle that computes the cost function for a given input
-	  calcGrad : function handle that computes the gradient of the cost function
-	  input : an input image (used for regularization or just to get the shape of the input)
-	  alpha : l2-regularization on the wanted input image to obtain feasible results
-	  gamma : step size for the proximal gradient algorithm
-        """
-	Visualizer.__init__(self, calcGrad, calcCost, input)
-	self.alpha = alpha
-	self.gamma = gamma
-    
-    def costFun(self, S, x):
-      	"""
-	Function that computes the cost value for a given x
-	
-	Parameters:
-	-----------
-	  x : input data
-	"""
-	return self.calcCost( S * x )
-
-    def gradFun(self, S, x):
-      	"""
-	Function that computes the gradient of the cost function at x
-	
-	Parameters:
-	-----------
-	  x : input data
-	"""
-        return self.calcGrad( S * x ) * x #todo: sum over the dimensions of x which are not present in s!
-    
-    def optimize(self, x0, n_iter = 50):
-        """
-        Solves the inverse problem
-        
-        Parameters:
-        -----------
-	  x0 : initial solution
-	  n_iter : number of proximal gradient steps used for optimization
-        """
-        x0 = np.asarray(x0, dtype=np.float32)
-        opt = proximal_alg.ProximalGradSolver(self.gamma, self.alpha, lambda x: self.costFun(x,self.input), lambda x: np.sum(np.abs(x)), lambda x: self.gradFun(x, self.input), proximal_alg.prox_l1_01)
-        result = opt.minimize(x0, n_iter = n_iter)
-        return result
-
-	
