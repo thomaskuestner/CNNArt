@@ -17,17 +17,20 @@ def run(cfg, dbinfo):
     # load parameters form config file and define the corresponding output path
     patchSize = cfg['patchSize']
 
-    if cfg['sSplitting'] == 'normal':
-        sFSname = 'normal'
-    elif cfg['sSplitting'] == 'crossvalidation_data':
-        sFSname = 'crossVal_data'
-    elif cfg['sSplitting'] == 'crossvalidation_patient':
-        sFSname = 'crossVal'
-
     sOutsubdir = cfg['subdirs'][3]
     sOutPath = cfg['selectedDatabase']['pathout'] + os.sep \
                + ''.join(map(str, patchSize)).replace(" ", "") + os.sep + sOutsubdir
-    sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '_' + cfg['correction']['test_patient'] + '.h5'
+
+    if cfg['sSplitting'] == 'normal':
+        sFSname = 'normal'
+        sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '.h5'
+    elif cfg['sSplitting'] == 'crossvalidation_data':
+        sFSname = 'crossVal_data'
+        sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '.h5'
+    elif cfg['sSplitting'] == 'crossvalidation_patient':
+        sFSname = 'crossVal'
+        sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '_' + \
+                    cfg['correction']['test_patient'] + '.h5'
 
     # if h5 file exists then load the dataset
     if glob.glob(sDatafile):
