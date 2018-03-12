@@ -132,9 +132,9 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
 
     weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
 
-    callback_list = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
+    callback_list = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
     callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
-    callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5, verbose=1))
+    callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=1e-5, verbose=1))
 
     history = vae.fit([train_ref, train_art],
             shuffle=True,
