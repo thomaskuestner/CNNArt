@@ -105,6 +105,8 @@ correction:
   kl_weight: 1
   perceptual_weight: 0.00001
   pixel_weight: 0.01
+  loss_ref2ref: 0.4
+  loss_art2ref: 0.6
   unpatch: false
   nScale: 255
   actualSize: [256, 196]
