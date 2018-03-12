@@ -29,10 +29,6 @@ def run(cfg, dbinfo):
                + ''.join(map(str, patchSize)).replace(" ", "") + os.sep + sOutsubdir
     sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '.h5'
 
-    dHyper = cfg['correction']
-    dParam = {'batchSize': cfg['batchSize'], 'patchSize': patchSize, 'learningRate': cfg['lr'], 'epochs': cfg['epochs'],
-              'lTrain': cfg['lTrain'], 'lSave': cfg['lSave'], 'patchOverlap': cfg['patchOverlap'], 'sOutPath': sOutPath}
-
     # if h5 file exists then load the dataset
     if glob.glob(sDatafile):
         with h5py.File(sDatafile, 'r') as hf:
@@ -41,6 +37,7 @@ def run(cfg, dbinfo):
             test_ref = hf['test_ref'][:]
             test_art = hf['test_art'][:]
             patchSize = hf['patchSize'][:]
+            patchOverlap = hf['patchOverlap'][:]
 
     else:
         # perform patching and splitting
@@ -56,7 +53,21 @@ def run(cfg, dbinfo):
                 hf.create_dataset('patchSize', data=patchSize)
                 hf.create_dataset('patchOverlap', data=cfg['patchOverlap'])
 
-    for iFold in range(len(train_ref)):
-        dData = {'train_ref': train_ref[iFold], 'test_ref': test_ref[iFold], 'train_art': train_art[iFold], 'test_art': test_art[iFold]}
-        cnn_main.fRunCNNCorrection(dData, dHyper, dParam)
+    dHyper = cfg['correction']
+    dParam = {'batchSize': cfg['batchSize'], 'patchSize': patchSize, 'patchOverlap': patchOverlap,
+              'learningRate': cfg['lr'], 'epochs': cfg['epochs'], 'lTrain': cfg['lTrain'], 'lSave': cfg['lSave'],
+              'sOutPath': sOutPath}
 
+    if len(train_ref) == 17:
+        patient_list = []
+        for ipat, pat in enumerate(dbinfo.lPats):
+            if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
+                patient_list.append(pat)
+        patient_index = patient_list.index(cfg['test_patient'])
+        dData = {'train_ref': train_ref[patient_index], 'test_ref': test_ref[patient_index],
+                 'train_art': train_art[patient_index], 'test_art': test_art[patient_index]}
+        cnn_main.fRunCNNCorrection(dData, dHyper, dParam, cfg['test_patient'])
+    else:
+        dData = {'train_ref': train_ref[0], 'test_ref': test_ref[0],
+                 'train_art': train_art[0], 'test_art': test_art[0]}
+        cnn_main.fRunCNNCorrection(dData, dHyper, dParam, cfg['test_patient'])
