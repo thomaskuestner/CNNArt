@@ -199,7 +199,7 @@ def fRunCNNCorrection(dData, dHyper, dParam):
         model.fTrain(dData, dParam, dHyper)
     else:
         # perform prediction
-        model.fPredict(dData['test_art'], dParam, dHyper)
+        model.fPredict(dData['test_ref'], dData['test_art'], dParam, dHyper)
 
 # Main Code
 if __name__ == "__main__": # for command line call

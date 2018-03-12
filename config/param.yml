@@ -107,3 +107,5 @@ correction:
   pixel_weight: 0.01
   unpatch: false
   nScale: 255
+  actualSize: [256, 196]
+  evaluate: true

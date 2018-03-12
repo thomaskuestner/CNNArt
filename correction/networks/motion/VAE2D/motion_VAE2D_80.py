@@ -1,6 +1,7 @@
 import os
 import numpy as np
-import h5py
+from skimage.measure import compare_ssim as ssim
+from sklearn.metrics import mean_squared_error
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
@@ -151,7 +152,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
     plt.legend(['train', 'test'], loc='upper left')
     plt.savefig(weights_file[:-3] + '.png')
 
-def fPredict(dData, dParam, dHyper):
+def fPredict(test_ref, test_art, dParam, dHyper):
     weights_file = dParam['sOutPath'] + os.sep + '{}.h5'.format(dHyper['bestModel'])
 
     patchSize = dParam['patchSize']
@@ -161,23 +162,51 @@ def fPredict(dData, dParam, dHyper):
 
     vae.load_weights(weights_file)
 
-    test_ref = np.zeros(shape=(dData.shape[0], 1, patchSize[0], patchSize[1]))
-    test_art = np.expand_dims(dData, axis=1)
+    test_ref = np.expand_dims(test_ref, axis=1)
+    test_art = np.expand_dims(test_art, axis=1)
+
     predict_ref, predict_art = vae.predict([test_ref, test_art], dParam['batchSize'][0], verbose=1)
 
+    test_ref = np.squeeze(test_ref, axis=1)
     test_art = np.squeeze(test_art, axis=1)
     predict_art = np.squeeze(predict_art, axis=1)
 
     if dHyper['unpatch']:
-        predict_art = fRigidUnpatchingCorrection([256, 196], predict_art, dParam['patchOverlap'])
-        plt.figure()
-        plt.gray()
-        for i in range(predict_art.shape[0]):
-            plt.imshow(predict_art[i])
-            if dParam['lSave']:
-                plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')
-            else:
-                plt.show()
+        test_ref = fRigidUnpatchingCorrection(dHyper['actualSize'], test_ref, dParam['patchOverlap'])
+        test_art = fRigidUnpatchingCorrection(dHyper['actualSize'], test_art, dParam['patchOverlap'])
+        predict_art = fRigidUnpatchingCorrection(dHyper['actualSize'], predict_art, dParam['patchOverlap'])
+        if dHyper['evaluate']:
+            fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 5), sharex=True, sharey=True)
+            ax = axes.ravel()
+            plt.gray()
+            label = 'MSE: {:.2f}, SSIM: {:.2f}'
+            for i in range(test_ref.shape[0]):
+                ax[0].imshow(test_ref[i])
+                ax[0].set_xlabel(label.format(mean_squared_error(255*test_ref[i], 255*test_ref[i]), ssim(test_ref[i], test_ref[i], data_range=(test_ref[i].max() - test_ref[i].min()))))
+                ax[0].set_title('reference image')
+
+                ax[1].imshow(test_art[i])
+                ax[1].set_xlabel(label.format(mean_squared_error(255*test_ref[i], 255*test_art[i]), ssim(test_ref[i], test_art[i], data_range=(test_art[i].max() - test_art[i].min()))))
+                ax[1].set_title('motion-affected image')
+
+                ax[2].imshow(predict_art[i])
+                ax[2].set_xlabel(label.format(mean_squared_error(255*test_ref[i], 255*predict_art[i]), ssim(test_ref[i], predict_art[i], data_range=(predict_art[i].max() - predict_art[i].min()))))
+                ax[2].set_title('corrected image')
+
+                if dParam['lSave']:
+                    plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')
+                else:
+                    plt.show()
+
+        else:
+            plt.figure()
+            plt.gray()
+            for i in range(predict_art.shape[0]):
+                plt.imshow(predict_art[i])
+                if dParam['lSave']:
+                    plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')
+                else:
+                    plt.show()
     else:
         nPatch = predict_art.shape[0]
 
