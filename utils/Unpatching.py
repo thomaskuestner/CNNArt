@@ -187,4 +187,6 @@ def fRigidUnpatchingCorrection(actual_size, allPatches, patchOverlap):
                 index = row * num_cols + col
                 unpatchImg[slice, row * dNotOverlap[0]:row * dNotOverlap[0] + patch_size[0], col * dNotOverlap[1]:col * dNotOverlap[1] + patch_size[1]] = allPatches[slice, index]
 
-    return unpatchImg
+    unpatchImg_cropped = unpatchImg[:, (height_pad - height)/2 : height_pad - (height_pad - height)/2, (width_pad - width)/2 : width_pad - (width_pad - width)/2]
+
+    return unpatchImg_cropped
