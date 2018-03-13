@@ -2,10 +2,10 @@
 import glob
 import os
 import h5py
+import numpy as np
 
 # internal import
 import utils.DataPreprocessing as datapre
-import utils.Training_Test_Split as ttsplit
 import cnn_main
 
 def run(cfg, dbinfo):
@@ -28,6 +28,10 @@ def run(cfg, dbinfo):
     sOutPath = cfg['selectedDatabase']['pathout'] + os.sep \
                + ''.join(map(str, patchSize)).replace(" ", "") + os.sep + sOutsubdir
     sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '.h5'
+
+    dHyper = cfg['correction']
+    dParam = {'batchSize': cfg['batchSize'], 'patchSize': patchSize, 'learningRate': cfg['lr'], 'epochs': cfg['epochs'],
+              'lTrain': cfg['lTrain'], 'lSave': cfg['lSave'], 'patchOverlap': cfg['patchOverlap'], 'sOutPath': sOutPath}
 
     # if h5 file exists then load the dataset
     if glob.glob(sDatafile):
@@ -52,25 +56,7 @@ def run(cfg, dbinfo):
                 hf.create_dataset('patchSize', data=patchSize)
                 hf.create_dataset('patchOverlap', data=cfg['patchOverlap'])
 
-    sModelIn = cfg['correction']['sCorrection']
-
-    if cfg['lTrain']:
-        dHyper = {'batchSize': cfg['batchSize'], 'learningRate': cfg['lr'], 'epochs': cfg['epochs'],
-                  'kl_weight': cfg['correction']['kl_weight'], 'perceptual_weight': cfg['correction']['perceptual_weight'],
-                  'pixel_weight': cfg['correction']['pixel_weight']}
-        if len(train_ref.shape) == 3:
-            dData = {'train_ref': train_ref, 'test_ref': test_ref, 'train_art': train_art, 'test_art': test_art}
-            cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
-        elif len(train_ref.shape) == 4:
-            for iFold in range(len(train_ref)):
-                dData = {'train_ref': train_ref[iFold], 'test_ref': test_ref[iFold], 'train_art': train_art[iFold], 'test_art': test_art[iFold]}
-                cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
-    else:
-        dHyper = {'batchSize': cfg['batchSize'], 'bestModel': cfg['correction']['bestModel'],
-                  'kl_weight': cfg['correction']['kl_weight'], 'perceptual_weight': cfg['correction']['perceptual_weight'],
-                  'pixel_weight': cfg['correction']['pixel_weight']}
-        test_ref = test_ref.reshape((-1, 1, patchSize[0], patchSize[1]))
-        test_art = test_art.reshape((-1, 1, patchSize[0], patchSize[1]))
-        dData = {'test_ref': test_ref, 'test_art': test_art}
-        cnn_main.fRunCNNCorrection(dData, sModelIn, patchSize, sOutPath, dHyper, cfg['lTrain'])
+    for iFold in range(len(train_ref)):
+        dData = {'train_ref': train_ref[iFold], 'test_ref': test_ref[iFold], 'train_art': train_art[iFold], 'test_art': test_art[iFold]}
+        cnn_main.fRunCNNCorrection(dData, dHyper, dParam)
 

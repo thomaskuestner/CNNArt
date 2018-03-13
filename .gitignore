@@ -201,6 +201,7 @@ var/
 sdist/
 develop-eggs/
 .installed.cfg
+venv/
 
 # Installer logs
 pip-log.txt
@@ -220,3 +221,7 @@ pip-log.txt
 *.orig
 config/paramnormal.yml
 train_after_resize.py
+testscale.py
+showpatch.py
+main_batched.py
+DatabaseInfo_saka.py
