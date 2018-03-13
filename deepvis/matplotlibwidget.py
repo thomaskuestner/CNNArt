@@ -171,25 +171,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
 class MyMplCanvas(FigureCanvas):
-    """FigureCanvas的最终的父类其实是QWidget。"""
 
     def __init__(self, parent=None, width=15, height=15):
-        # 配置中文显示
-        plt.rcParams['font.family'] = ['SimHei']  # 用来正常显示中文标签
-        plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+       
+        plt.rcParams['font.family'] = ['SimHei']  
+        plt.rcParams['axes.unicode_minus'] = False  
 
-        self.fig = plt.figure(figsize=(width, height))  # 新建一个figure
+        self.fig = plt.figure(figsize=(width, height)) 
 
         FigureCanvas.__init__(self, self.fig)
         self.setParent(parent)
 
-        '''定义FigureCanvas的尺寸策略，这部分的意思是设置FigureCanvas，使之尽可能的向外填充空间。'''
+       
         FigureCanvas.setSizePolicy(self,
                                    QSizePolicy.Expanding,
                                    QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    '''绘制静态图，可以在这里定义自己的绘图逻辑'''
+   
 
 
 
