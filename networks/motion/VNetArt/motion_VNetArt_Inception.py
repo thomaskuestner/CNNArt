@@ -56,16 +56,11 @@ def fTrainInner(sOutPath, patchSize, learningRate=0.001, X_train=None, y_train=N
     print('Training VNet with inception block')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
-    cnn_incep = fCreateModel(patchSize)
-    opti, loss = fGetOptimizerAndLoss(optimizer='Adam', learningRate=learningRate)  # loss cat_crosent default
-    cnn_incep.compile(optimizer=opti, loss=loss, metrics=['accuracy'])
-    cnn_incep.summary()
-
     # save names
     _, sPath = os.path.splitdrive(sOutPath)
     sPath,sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
-    model_name = sPath + '/' + sFilename  + '/' + sFilename + '_VNet_Incep' +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
+    model_name = sPath + '/' + sFilename  + '/' + sFilename + '_VNet_Incep2' +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     if CV_Patient != 0: model_name = model_name +'_'+ 'CV' + str(CV_Patient)# determine if crossValPatient is used...
     weight_name = model_name + '_weights.h5'
     model_json = model_name + '_json'
@@ -75,6 +70,11 @@ def fTrainInner(sOutPath, patchSize, learningRate=0.001, X_train=None, y_train=N
     if (os.path.isfile(model_mat)):  # no training if output file exists
         print('----------already trained->go to next----------')
         return
+
+    cnn_incep = fCreateModel2(patchSize)
+    opti, loss = fGetOptimizerAndLoss(optimizer='Adam', learningRate=learningRate)  # loss cat_crosent default
+    cnn_incep.compile(optimizer=opti, loss=loss, metrics=['accuracy'])
+    cnn_incep.summary()
 
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
     callbacks.append(ModelCheckpoint('/no_backup/s1241/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
