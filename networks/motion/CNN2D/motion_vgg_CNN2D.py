@@ -18,7 +18,7 @@ from keras.initializers import Constant
 from keras.layers import concatenate, add
 from keras.layers.convolutional import Conv3D, Conv2D, MaxPooling3D, MaxPooling2D, ZeroPadding3D
 from keras.regularizers import l1_l2, l2
-from keras.models import model_from_json
+from keras.models import model_from_json, load_model
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
 
@@ -31,8 +31,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(64,
                    kernel_size=(3, 3),
                    padding='same',
-		   kernel_initializer='he_normal',
-		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                   kernel_initializer='he_normal',
+                   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    input_shape=(1, int(patchSize[0]), int(patchSize[0])),
@@ -42,8 +42,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(64,
                    kernel_size=(3, 3),
                    padding='same',
-		   kernel_initializer='he_normal',
-		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                   kernel_initializer='he_normal',
+                   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv1_2'
@@ -59,8 +59,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(128,
                    kernel_size=(3, 3),
                    padding='same',
-		   kernel_initializer='he_normal',
-		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                   kernel_initializer='he_normal',
+                   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv2_1'
@@ -69,8 +69,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(128,
                    kernel_size=(3, 3),
                    padding='same',
-		   kernel_initializer='he_normal',
-		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                   kernel_initializer='he_normal',
+                   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv2_2'
@@ -86,8 +86,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(256,
                    kernel_size=(3, 3),
                    padding='same',
-		   kernel_initializer='he_normal',
-		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                   kernel_initializer='he_normal',
+                   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv3_1'
@@ -96,8 +96,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(256,
                    kernel_size=(3, 3),
                    padding='same',
-		   kernel_initializer='he_normal',
-		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                   kernel_initializer='he_normal',
+                   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv3_2'
@@ -106,8 +106,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(256,
                    kernel_size=(3, 3),
                    padding='same',
-		   kernel_initializer='he_normal',
-		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                   kernel_initializer='he_normal',
+                   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv3_3'
@@ -123,8 +123,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(512,
                    kernel_size=(3, 3),
                    padding='same',
-		   kernel_initializer='he_normal',
-		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                   kernel_initializer='he_normal',
+                   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv4_1'
@@ -133,8 +133,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(512,
                    kernel_size=(3, 3),
                    padding='same',
-		   kernel_initializer='he_normal',
-		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                   kernel_initializer='he_normal',
+                   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv4_2'
@@ -143,8 +143,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(512,
                    kernel_size=(3, 3),
                    padding='same',
-		   kernel_initializer='he_normal',
-		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                   kernel_initializer='he_normal',
+                   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv4_3'
@@ -160,8 +160,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(512,
                    kernel_size=(3, 3),
                    padding='same',
-		   kernel_initializer='he_normal',
-		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                   kernel_initializer='he_normal',
+                   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv5_1'
@@ -170,8 +170,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(512,
                    kernel_size=(3, 3),
                    padding='same',
-		   kernel_initializer='he_normal',
-		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                   kernel_initializer='he_normal',
+                   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv5_2'
@@ -180,8 +180,8 @@ def createModel(patchSize):
     cnn.add(Conv2D(512,
                    kernel_size=(3, 3),
                    padding='same',
-		   kernel_initializer='he_normal',
-		   kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                   kernel_initializer='he_normal',
+                   kernel_regularizer=l1_l2(l1_reg, l2_reg),
                    strides=(1, 1),
                    activation='relu',
                    name='conv5_3'
@@ -192,7 +192,6 @@ def createModel(patchSize):
                          padding='same',
                          name='pool5'
                          ))
-
 
     cnn.add(Flatten(name='flatten'))
     cnn.add(Dense(units=2, kernel_initializer='he_normal', kernel_regularizer='l2', name='output'))
@@ -248,64 +247,40 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     # opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
     opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
-    callbacks.append(ModelCheckpoint(weight_name, monitor='val_acc', verbose=1, period=2, save_best_only=True))  # overrides the last checkpoint, its just for security
+    callbacks.append(ModelCheckpoint(model_all, save_weights_only=False, monitor='val_acc', verbose=1, period=2, save_best_only=True))  # overrides the last checkpoint, its just for security
     callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
     cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
     print(cnn.summary)
 
-    result = cnn.fit(X_train,
-                     y_train,
-                     validation_data=[X_test, y_test],
-                     nb_epoch=iEpochs,
-                     batch_size=batchSize,
-                     callbacks=callbacks,
-                     verbose=1)
-
-    loss_test, acc_test = cnn.evaluate(X_test, y_test, batch_size=batchSize)
-
-    prob_test = cnn.predict(X_test, batchSize, 0)
+    cnn.fit(X_train,
+            y_train,
+            validation_data=[X_test, y_test],
+            epochs=iEpochs,
+            batch_size=batchSize,
+            callbacks=callbacks,
+            verbose=1)
 
     # save model
-    json_string = cnn.to_json()
-    open(model_json, 'w').write(json_string)
-    # wei = cnn.get_weights()
-    cnn.save_weights(weight_name, overwrite=True)
-    # cnn.save(model_all) # keras > v0.7
+    # cnn.save_weights(weight_name, overwrite=True)
+    cnn.save(model_all)  # keras > v0.7
 
-    # matlab
-    acc = result.history['acc']
-    loss = result.history['loss']
-    val_acc = result.history['val_acc']
-    val_loss = result.history['val_loss']
-
-    print('Saving results: ' + model_name)
-    sio.savemat(model_name, {'model_settings': model_json,
-                             'model': model_all,
-                             'weights': weight_name,
-                             'acc': acc,
-                             'loss': loss,
-                             'val_acc': val_acc,
-                             'val_loss': val_loss,
-                             'loss_test': loss_test,
-                             'acc_test': acc_test,
-                             'prob_test': prob_test})
 
 
 def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
-    weight_name = sOutPath + '/' + model_name + '_weights.h5'
-    model_json = sOutPath + model_name + '_json'
+    # weight_name = sOutPath + '/' + model_name + '_weights.h5'
+    # model_json = sOutPath + model_name + '_json'
     model_all = sOutPath + model_name + '_model.h5'
 
-    model = createModel(patchSize)
-    opti = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-    callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
-
-    model.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
-    model.load_weights(weight_name)
+    # model = createModel(patchSize)
+    # opti = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+    # callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
+    #
+    # model.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
+    # model.load_weights(weight_name)
 
     # load complete model (including weights); keras > 0.7
-    # model = load_model(model_all)
+    model = load_model(model_all)
 
     # assume artifact affected shall be tested!
     # y_test = np.ones((len(X_test),1))
@@ -319,4 +294,3 @@ def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
     # modelSave = model_name[:-5] + '_pred.mat'
     modelSave = sOutPath + '/' + model_name + '_pred.mat'
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
-    model.save(model_all)
