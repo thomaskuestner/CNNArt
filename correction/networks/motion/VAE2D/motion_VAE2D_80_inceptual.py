@@ -181,15 +181,15 @@ def fPredict(test_ref, test_art, dParam, dHyper):
             label = 'MSE: {:.2f}, SSIM: {:.2f}'
             for i in range(test_ref.shape[0]):
                 ax[0].imshow(test_ref[i])
-                ax[0].set_xlabel(label.format(mean_squared_error(255*test_ref[i], 255*test_ref[i]), ssim(test_ref[i], test_ref[i], data_range=(test_ref[i].max() - test_ref[i].min()))))
+                ax[0].set_xlabel(label.format(mean_squared_error(test_ref[i], test_ref[i]), ssim(test_ref[i], test_ref[i], data_range=(test_ref[i].max() - test_ref[i].min()))))
                 ax[0].set_title('reference image')
 
                 ax[1].imshow(test_art[i])
-                ax[1].set_xlabel(label.format(mean_squared_error(255*test_ref[i], 255*test_art[i]), ssim(test_ref[i], test_art[i], data_range=(test_art[i].max() - test_art[i].min()))))
+                ax[1].set_xlabel(label.format(mean_squared_error(test_ref[i], test_art[i]), ssim(test_ref[i], test_art[i], data_range=(test_art[i].max() - test_art[i].min()))))
                 ax[1].set_title('motion-affected image')
 
                 ax[2].imshow(predict_art[i])
-                ax[2].set_xlabel(label.format(mean_squared_error(255*test_ref[i], 255*predict_art[i]), ssim(test_ref[i], predict_art[i], data_range=(predict_art[i].max() - predict_art[i].min()))))
+                ax[2].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art[i]), ssim(test_ref[i], predict_art[i], data_range=(predict_art[i].max() - predict_art[i].min()))))
                 ax[2].set_title('corrected image')
 
                 if dParam['lSave']:

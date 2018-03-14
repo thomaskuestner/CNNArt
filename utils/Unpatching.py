@@ -166,6 +166,7 @@ def get_first_index(iX, iY, iZ, patch_nmb_layer, x_index, y_index):
     return num
 
 def fRigidUnpatchingCorrection(actual_size, allPatches, patchOverlap):
+    allPatches = 255 * allPatches
     patch_size = [allPatches.shape[1], allPatches.shape[2]]
     height, width = actual_size[0], actual_size[1]
     dOverlap = np.multiply(patch_size, patchOverlap).astype(int)
