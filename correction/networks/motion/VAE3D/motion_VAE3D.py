@@ -6,21 +6,20 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-from keras.layers import Input, Lambda, concatenate, Dense, Reshape, Flatten
-from keras.layers import Conv2DTranspose
+from keras.layers import Input, Lambda, concatenate, Dense, Reshape, Flatten, Conv3DTranspose
 from keras.models import Model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.optimizers import Adam
 from keras import backend as K
-from utils.MotionCorrection.network import fCreateEncoder2D_Block, fCreateDownConv2D_Block, fCreateConv2DTranspose
+from utils.MotionCorrection.network import fCreateEncoder3D_Block, fCreateDownConv3D_Block, fCreateConv3DTranspose
 from utils.MotionCorrection.PerceptualLoss import addPerceptualLoss
 from utils.Unpatching import fRigidUnpatchingCorrection
 
 def sliceRef(input):
-    return input[:input.shape[0]//2, :, :, :]
+    return input[:input.shape[0]//2, :, :, :, :]
 
 def sliceArt(input):
-    return input[input.shape[0]//2:, :, :, :]
+    return input[input.shape[0]//2:, :, :, :, :]
 
 def sampling(args):
     z_mean, z_log_var = args
@@ -29,15 +28,15 @@ def sampling(args):
     return z_mean + K.exp(z_log_var) * epsilon
 
 def encode(input):
-    res_1 = fCreateEncoder2D_Block(filters=32)(input)
-    down_1 = fCreateDownConv2D_Block(filters=64)(res_1)
-    res_2 = fCreateEncoder2D_Block(filters=64)(down_1)
-    down_2 = fCreateDownConv2D_Block(filters=128)(res_2)
+    res_1 = fCreateEncoder3D_Block(filters=32)(input)
+    down_1 = fCreateDownConv3D_Block(filters=64, strides=(2, 2, 2), kernel_size=(2, 2, 2))(res_1)
+    res_2 = fCreateEncoder3D_Block(filters=64)(down_1)
+    down_2 = fCreateDownConv3D_Block(filters=128, strides=(2, 2, 1), kernel_size=(2, 2, 1))(res_2)
     return down_2
 
 def encode_shared(input):
-    res_1 = fCreateEncoder2D_Block(filters=128)(input)
-    down_1 = fCreateDownConv2D_Block(filters=256)(res_1)
+    res_1 = fCreateEncoder3D_Block(filters=128)(input)
+    down_1 = fCreateDownConv3D_Block(filters=256, strides=(2, 2, 1), kernel_size=(2, 2, 1))(res_1)
     flat = Flatten()(down_1)
 
     z_mean = Dense(512)(flat)
@@ -48,20 +47,20 @@ def encode_shared(input):
     return z, z_mean, z_log_var
 
 def decode(input):
-    dense = Dense(25600)(input)
-    reshape = Reshape((256, 10, 10))(dense)
-    output = fCreateConv2DTranspose(filters=256, strides=2)(reshape)
-    output = fCreateConv2DTranspose(filters=256, strides=1)(output)
-    output = fCreateConv2DTranspose(filters=128, strides=2)(output)
-    output = fCreateConv2DTranspose(filters=128, strides=1)(output)
-    output = fCreateConv2DTranspose(filters=64, strides=2)(output)
-    output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
+    dense = Dense(25600*5)(input)
+    reshape = Reshape((256, 10, 10, 5))(dense)
+    output = fCreateConv3DTranspose(filters=256, strides=(2, 2, 1))(reshape)
+    output = fCreateConv3DTranspose(filters=256, strides=(1, 1, 1))(output)
+    output = fCreateConv3DTranspose(filters=128, strides=(2, 2, 1))(output)
+    output = fCreateConv3DTranspose(filters=128, strides=(1, 1, 1))(output)
+    output = fCreateConv3DTranspose(filters=64, strides=(2, 2, 2))(output)
+    output = Conv3DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
     return output
 
 def createModel(patchSize, dHyper):
     # input corrupted and non-corrupted image
-    x_ref = Input(shape=(1, patchSize[0], patchSize[1]))
-    x_art = Input(shape=(1, patchSize[0], patchSize[1]))
+    x_ref = Input(shape=(1, patchSize[0], patchSize[1], patchSize[2]))
+    x_art = Input(shape=(1, patchSize[0], patchSize[1], patchSize[2]))
 
     # create respective encoders
     encoded_ref = encode(x_ref)
@@ -77,8 +76,8 @@ def createModel(patchSize, dHyper):
     decoded = decode(z)
 
     # separate the concatenated images
-    decoded_ref2ref = Lambda(sliceRef, output_shape=(1, patchSize[0], patchSize[1]))(decoded)
-    decoded_art2ref = Lambda(sliceArt, output_shape=(1, patchSize[0], patchSize[1]))(decoded)
+    decoded_ref2ref = Lambda(sliceRef, output_shape=(1, patchSize[0], patchSize[1], patchSize[2]))(decoded)
+    decoded_art2ref = Lambda(sliceArt, output_shape=(1, patchSize[0], patchSize[1], patchSize[2]))(decoded)
 
     # generate the VAE and encoder model
     vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
@@ -88,15 +87,26 @@ def createModel(patchSize, dHyper):
     vae.add_loss(dHyper['kl_weight'] * K.mean(loss_kl))
 
     # compute pixel to pixel loss
-    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))\
+    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3, 4])))\
                        ([Lambda(lambda x : dHyper['nScale']*x)(x_ref), Lambda(lambda x : dHyper['nScale']*x)(decoded_ref2ref)]) + 1e-6
-    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))\
+    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3, 4])))\
                        ([Lambda(lambda x : dHyper['nScale']*x)(x_ref), Lambda(lambda x : dHyper['nScale']*x)(decoded_art2ref)]) + 1e-6
 
     vae.add_loss(dHyper['pixel_weight'] * (dHyper['loss_ref2ref']*loss_ref2ref + dHyper['loss_art2ref']*loss_art2ref))
 
     # add perceptual loss
-    perceptual_loss_ref2ref, perceptual_loss_art2ref = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, dHyper['pl_network'], dHyper['loss_model'])
+    perceptual_loss_ref2ref, perceptual_loss_art2ref = 0, 0
+    for i in range(patchSize[2]):
+        tmp_x_ref = Lambda(lambda input: input[:, :, :, :, i], output_shape=(1, patchSize[0], patchSize[1]))(x_ref)
+        tmp_decoded_ref2ref = Lambda(lambda input: input[:, :, :, :, i], output_shape=(1, patchSize[0], patchSize[1]))(decoded_ref2ref)
+        tmp_decoded_art2ref = Lambda(lambda input: input[:, :, :, :, i], output_shape=(1, patchSize[0], patchSize[1]))(decoded_art2ref)
+
+        tmp_perceptual_loss_ref2ref, tmp_perceptual_loss_art2ref = addPerceptualLoss(tmp_x_ref, tmp_decoded_ref2ref, tmp_decoded_art2ref, patchSize, dHyper['pl_network'], dHyper['loss_model'])
+        perceptual_loss_ref2ref += tmp_perceptual_loss_ref2ref
+        perceptual_loss_art2ref += tmp_perceptual_loss_art2ref
+
+    perceptual_loss_ref2ref = perceptual_loss_ref2ref/patchSize[2]
+    perceptual_loss_art2ref = perceptual_loss_art2ref/patchSize[2]
 
     vae.add_loss(dHyper['perceptual_weight'] * (dHyper['loss_ref2ref']*perceptual_loss_ref2ref + dHyper['loss_art2ref']*perceptual_loss_art2ref))
 
