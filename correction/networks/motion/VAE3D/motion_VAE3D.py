@@ -29,7 +29,7 @@ def createModel(patchSize, dHyper):
     combined = concatenate([encoded_ref, encoded_art], axis=0)
 
     # create the shared encoder
-    z, z_mean, z_log_var = encode_shared(combined, patchSize)
+    z, z_mean, z_log_var = encode_shared(combined, patchSize, isIncep=False)
 
     # create the decoder
     decoded = decode(z, patchSize)
@@ -46,10 +46,12 @@ def createModel(patchSize, dHyper):
     vae.add_loss(dHyper['kl_weight'] * K.mean(loss_kl))
 
     # compute pixel to pixel loss
-    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3, 4])))\
-                       ([Lambda(lambda x : dHyper['nScale']*x)(x_ref), Lambda(lambda x : dHyper['nScale']*x)(decoded_ref2ref)]) + 1e-6
-    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3, 4])))\
-                       ([Lambda(lambda x : dHyper['nScale']*x)(x_ref), Lambda(lambda x : dHyper['nScale']*x)(decoded_art2ref)]) + 1e-6
+    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3, 4])), output_shape=(None,))\
+                       ([Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(x_ref),
+                         Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(decoded_ref2ref)]) + 1e-6
+    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3, 4])), output_shape=(None,))\
+                       ([Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(x_ref),
+                         Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(decoded_art2ref)]) + 1e-6
 
     vae.add_loss(dHyper['pixel_weight'] * (dHyper['loss_ref2ref']*loss_ref2ref + dHyper['loss_art2ref']*loss_art2ref))
 
