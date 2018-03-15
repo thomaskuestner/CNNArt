@@ -18,9 +18,9 @@ def addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, pl_net
         decoded_ref2ref = concatenate([decoded_ref2ref, decoded_ref2ref, decoded_ref2ref], axis=1)
         decoded_art2ref = concatenate([decoded_art2ref, decoded_art2ref, decoded_art2ref], axis=1)
 
-        x_ref = Lambda(preprocessing)(x_ref)
-        decoded_ref2ref = Lambda(preprocessing)(decoded_ref2ref)
-        decoded_art2ref = Lambda(preprocessing)(decoded_art2ref)
+        x_ref = Lambda(preprocessing, output_shape=(3, patchSize[0], patchSize[1]))(x_ref)
+        decoded_ref2ref = Lambda(preprocessing, output_shape=(3, patchSize[0], patchSize[1]))(decoded_ref2ref)
+        decoded_art2ref = Lambda(preprocessing, output_shape=(3, patchSize[0], patchSize[1]))(decoded_art2ref)
 
         input = Input(shape=(3, patchSize[0], patchSize[1]))
 
@@ -53,13 +53,13 @@ def addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, pl_net
     f_l2_decoded_art = l2_model(decoded_art2ref)
     f_l3_decoded_art = l3_model(decoded_art2ref)
 
-    p1_loss_ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l1_ref, f_l1_decoded_ref])
-    p2_loss_ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l2_ref, f_l2_decoded_ref])
-    p3_loss_ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l3_ref, f_l3_decoded_ref])
+    p1_loss_ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,))([f_l1_ref, f_l1_decoded_ref])
+    p2_loss_ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,))([f_l2_ref, f_l2_decoded_ref])
+    p3_loss_ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,))([f_l3_ref, f_l3_decoded_ref])
 
-    p1_loss_art = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l1_ref, f_l1_decoded_art])
-    p2_loss_art = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l2_ref, f_l2_decoded_art])
-    p3_loss_art = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))([f_l3_ref, f_l3_decoded_art])
+    p1_loss_art = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,))([f_l1_ref, f_l1_decoded_art])
+    p2_loss_art = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,))([f_l2_ref, f_l2_decoded_art])
+    p3_loss_art = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,))([f_l3_ref, f_l3_decoded_art])
 
     perceptual_loss_ref2ref = p1_loss_ref + p2_loss_ref + p3_loss_ref
     perceptual_loss_art2ref = p1_loss_art + p2_loss_art + p3_loss_art

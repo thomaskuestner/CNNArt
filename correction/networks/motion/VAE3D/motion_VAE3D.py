@@ -11,51 +11,10 @@ from keras.models import Model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.optimizers import Adam
 from keras import backend as K
-from utils.MotionCorrection.network import fCreateEncoder3D_Block, fCreateDownConv3D_Block, fCreateConv3DTranspose
+from utils.MotionCorrection.network_block import encode, encode_shared, decode
 from utils.MotionCorrection.PerceptualLoss import addPerceptualLoss
 from utils.Unpatching import fRigidUnpatchingCorrection
 
-def sliceRef(input):
-    return input[:input.shape[0]//2, :, :, :, :]
-
-def sliceArt(input):
-    return input[input.shape[0]//2:, :, :, :, :]
-
-def sampling(args):
-    z_mean, z_log_var = args
-    epsilon = K.random_normal(shape=(K.shape(z_mean)[0], 512), mean=0.,
-                              stddev=1.0)
-    return z_mean + K.exp(z_log_var) * epsilon
-
-def encode(input):
-    res_1 = fCreateEncoder3D_Block(filters=32)(input)
-    down_1 = fCreateDownConv3D_Block(filters=64, strides=(2, 2, 2), kernel_size=(2, 2, 2))(res_1)
-    res_2 = fCreateEncoder3D_Block(filters=64)(down_1)
-    down_2 = fCreateDownConv3D_Block(filters=128, strides=(2, 2, 1), kernel_size=(2, 2, 1))(res_2)
-    return down_2
-
-def encode_shared(input):
-    res_1 = fCreateEncoder3D_Block(filters=128)(input)
-    down_1 = fCreateDownConv3D_Block(filters=256, strides=(2, 2, 1), kernel_size=(2, 2, 1))(res_1)
-    flat = Flatten()(down_1)
-
-    z_mean = Dense(512)(flat)
-    z_log_var = Dense(512)(flat)
-
-    z = Lambda(sampling, output_shape=(512,))([z_mean, z_log_var])
-
-    return z, z_mean, z_log_var
-
-def decode(input):
-    dense = Dense(25600*5)(input)
-    reshape = Reshape((256, 10, 10, 5))(dense)
-    output = fCreateConv3DTranspose(filters=256, strides=(2, 2, 1))(reshape)
-    output = fCreateConv3DTranspose(filters=256, strides=(1, 1, 1))(output)
-    output = fCreateConv3DTranspose(filters=128, strides=(2, 2, 1))(output)
-    output = fCreateConv3DTranspose(filters=128, strides=(1, 1, 1))(output)
-    output = fCreateConv3DTranspose(filters=64, strides=(2, 2, 2))(output)
-    output = Conv3DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
-    return output
 
 def createModel(patchSize, dHyper):
     # input corrupted and non-corrupted image
@@ -63,21 +22,21 @@ def createModel(patchSize, dHyper):
     x_art = Input(shape=(1, patchSize[0], patchSize[1], patchSize[2]))
 
     # create respective encoders
-    encoded_ref = encode(x_ref)
-    encoded_art = encode(x_art)
+    encoded_ref = encode(x_ref, patchSize)
+    encoded_art = encode(x_art, patchSize)
 
     # concatenate the encoded features together
     combined = concatenate([encoded_ref, encoded_art], axis=0)
 
     # create the shared encoder
-    z, z_mean, z_log_var = encode_shared(combined)
+    z, z_mean, z_log_var = encode_shared(combined, patchSize)
 
     # create the decoder
-    decoded = decode(z)
+    decoded = decode(z, patchSize)
 
     # separate the concatenated images
-    decoded_ref2ref = Lambda(sliceRef, output_shape=(1, patchSize[0], patchSize[1], patchSize[2]))(decoded)
-    decoded_art2ref = Lambda(sliceArt, output_shape=(1, patchSize[0], patchSize[1], patchSize[2]))(decoded)
+    decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :, :], output_shape=(1, patchSize[0], patchSize[1], patchSize[2]))(decoded)
+    decoded_art2ref = Lambda(lambda input: input[input.shape[0]//2:, :, :, :, :], output_shape=(1, patchSize[0], patchSize[1], patchSize[2]))(decoded)
 
     # generate the VAE and encoder model
     vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])

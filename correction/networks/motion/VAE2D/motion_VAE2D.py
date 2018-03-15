@@ -6,13 +6,14 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-from keras.layers import Input, Lambda, concatenate, Dense, Reshape, Flatten
-from keras.layers import Conv2DTranspose
+from keras.layers import Input, Lambda, concatenate
+
 from keras.models import Model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.optimizers import Adam
 from keras import backend as K
-from utils.MotionCorrection.network import LeakyReluConv2D, LeakyReluConv2DTranspose
+
+from utils.MotionCorrection.network_block import encode, encode_shared, decode
 from utils.MotionCorrection.PerceptualLoss import addPerceptualLoss
 from utils.Unpatching import fRigidUnpatchingCorrection
 
@@ -22,38 +23,6 @@ def sliceRef(input):
 def sliceArt(input):
     return input[input.shape[0]//2:, :, :, :]
 
-def sampling(args):
-    z_mean, z_log_var = args
-    epsilon = K.random_normal(shape=(K.shape(z_mean)[0], 512), mean=0.,
-                              stddev=1.0)
-    return z_mean + K.exp(z_log_var / 2) * epsilon
-
-def encode(input):
-    conv_1 = LeakyReluConv2D(filters=32, kernel_size=3, strides=1, padding='same')(input)
-    conv_2 = LeakyReluConv2D(filters=64, kernel_size=3, strides=2, padding='same')(conv_1)
-    conv_3 = LeakyReluConv2D(filters=128, kernel_size=3, strides=1, padding='same')(conv_2)
-    return conv_3
-
-def encode_shared(input):
-    conv_1 = LeakyReluConv2D(filters=256, kernel_size=3, strides=1, padding='same')(input)
-    conv_2 = LeakyReluConv2D(filters=256, kernel_size=3, strides=2, padding='same')(conv_1)
-    flat = Flatten()(conv_2)
-
-    z_mean = Dense(512)(flat)
-    z_log_var = Dense(512)(flat)
-
-    z = Lambda(sampling, output_shape=(512,))([z_mean, z_log_var])
-
-    return z, z_mean, z_log_var
-
-def decode(input):
-    dense = Dense(256 * 12 * 12)(input)
-    reshape = Reshape((256, 12, 12))(dense)
-    output = LeakyReluConv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same')(reshape)
-    output = LeakyReluConv2DTranspose(filters=128, kernel_size=3, strides=1, padding='same')(output)
-    output = LeakyReluConv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same')(output)
-    output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
-    return output
 
 def createModel(patchSize, dHyper):
     # input corrupted and non-corrupted image
@@ -61,21 +30,21 @@ def createModel(patchSize, dHyper):
     x_art = Input(shape=(1, patchSize[0], patchSize[1]))
 
     # create respective encoders
-    encoded_ref = encode(x_ref)
-    encoded_art = encode(x_art)
+    encoded_ref = encode(x_ref, patchSize)
+    encoded_art = encode(x_art, patchSize)
 
     # concatenate the encoded features together
     combined = concatenate([encoded_ref, encoded_art], axis=0)
 
     # create the shared encoder
-    z, z_mean, z_log_var = encode_shared(combined)
+    z, z_mean, z_log_var = encode_shared(combined, patchSize)
 
     # create the decoder
-    decoded = decode(z)
+    decoded = decode(z, patchSize)
 
     # separate the concatenated images
-    decoded_ref2ref = Lambda(sliceRef)(decoded)
-    decoded_art2ref = Lambda(sliceArt)(decoded)
+    decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
+    decoded_art2ref = Lambda(lambda input: input[input.shape[0]//2:, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
 
     # generate the VAE and encoder model
     vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
@@ -85,10 +54,12 @@ def createModel(patchSize, dHyper):
     vae.add_loss(dHyper['kl_weight'] * K.mean(loss_kl))
 
     # compute pixel to pixel loss
-    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))\
-                       ([Lambda(lambda x : dHyper['nScale']*x)(x_ref), Lambda(lambda x : dHyper['nScale']*x)(decoded_ref2ref)]) + 1e-6
-    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))\
-                       ([Lambda(lambda x : dHyper['nScale']*x)(x_ref), Lambda(lambda x : dHyper['nScale']*x)(decoded_art2ref)]) + 1e-6
+    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,))\
+                       ([Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(x_ref),
+                         Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(decoded_ref2ref)]) + 1e-6
+    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,))\
+                       ([Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(x_ref),
+                         Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(decoded_art2ref)]) + 1e-6
 
     vae.add_loss(dHyper['pixel_weight'] * (dHyper['loss_ref2ref']*loss_ref2ref + dHyper['loss_art2ref']*loss_art2ref))
 
@@ -178,15 +149,15 @@ def fPredict(test_ref, test_art, dParam, dHyper):
             label = 'MSE: {:.2f}, SSIM: {:.2f}'
             for i in range(test_ref.shape[0]):
                 ax[0].imshow(test_ref[i])
-                ax[0].set_xlabel(label.format(mean_squared_error(255*test_ref[i], 255*test_ref[i]), ssim(test_ref[i], test_ref[i], data_range=(test_ref[i].max() - test_ref[i].min()))))
+                ax[0].set_xlabel(label.format(mean_squared_error(test_ref[i], test_ref[i]), ssim(test_ref[i], test_ref[i], data_range=(test_ref[i].max() - test_ref[i].min()))))
                 ax[0].set_title('reference image')
 
                 ax[1].imshow(test_art[i])
-                ax[1].set_xlabel(label.format(mean_squared_error(255*test_ref[i], 255*test_art[i]), ssim(test_ref[i], test_art[i], data_range=(test_art[i].max() - test_art[i].min()))))
+                ax[1].set_xlabel(label.format(mean_squared_error(test_ref[i], test_art[i]), ssim(test_ref[i], test_art[i], data_range=(test_art[i].max() - test_art[i].min()))))
                 ax[1].set_title('motion-affected image')
 
                 ax[2].imshow(predict_art[i])
-                ax[2].set_xlabel(label.format(mean_squared_error(255*test_ref[i], 255*predict_art[i]), ssim(test_ref[i], predict_art[i], data_range=(predict_art[i].max() - predict_art[i].min()))))
+                ax[2].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art[i]), ssim(test_ref[i], predict_art[i], data_range=(predict_art[i].max() - predict_art[i].min()))))
                 ax[2].set_title('corrected image')
 
                 if dParam['lSave']:
@@ -206,8 +177,8 @@ def fPredict(test_ref, test_art, dParam, dHyper):
     else:
         nPatch = predict_art.shape[0]
 
-        for i in range(nPatch//5):
-            fig, axes = plt.subplots(nrows=5, ncols=2)
+        for i in range(nPatch//4):
+            fig, axes = plt.subplots(nrows=4, ncols=2)
             plt.gray()
 
             cols_title = ['original_art', 'predicted_art']
@@ -215,9 +186,9 @@ def fPredict(test_ref, test_art, dParam, dHyper):
             for ax, col in zip(axes[0], cols_title):
                 ax.set_title(col)
 
-            for j in range(5):
-                axes[j, 0].imshow(test_art[5*i+j])
-                axes[j, 1].imshow(predict_art[5*i+j])
+            for j in range(4):
+                axes[j, 0].imshow(test_art[4*i+j])
+                axes[j, 1].imshow(predict_art[4*i+j])
 
             if dParam['lSave']:
                 plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')
