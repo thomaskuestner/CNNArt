@@ -4,9 +4,8 @@ from skimage.measure import compare_ssim as ssim
 from sklearn.metrics import mean_squared_error
 import matplotlib as mpl
 mpl.use('Agg')
-import matplotlib.pyplot as plt
 
-from keras.layers import Input, Lambda, concatenate, Dense, Reshape, Flatten, Conv3DTranspose
+from keras.layers import Input, Lambda, concatenate
 from keras.models import Model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.optimizers import Adam
@@ -14,6 +13,7 @@ from keras import backend as K
 from utils.MotionCorrection.network_block import encode, encode_shared, decode
 from utils.MotionCorrection.PerceptualLoss import addPerceptualLoss
 from utils.Unpatching import fRigidUnpatchingCorrection
+from utils.MotionCorrection.plot import *
 
 
 def createModel(patchSize, dHyper):
@@ -32,7 +32,7 @@ def createModel(patchSize, dHyper):
     z, z_mean, z_log_var = encode_shared(combined, patchSize, isIncep=False)
 
     # create the decoder
-    decoded = decode(z, patchSize)
+    decoded = decode(z, patchSize, dHyper['dropout'])
 
     # separate the concatenated images
     decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :, :], output_shape=(1, patchSize[0], patchSize[1], patchSize[2]))(decoded)
@@ -101,10 +101,15 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
     print('Training with epochs {} batch size {} learning rate {}'.format(epochs, batchSize, lr))
 
     weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
+    lossPlot_file = weights_file[:-3] + '.png'
 
-    callback_list = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
+    plotLoss = PlotLosses(lossPlot_file)
+
+    callback_list = []
+    # callback_list = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
     callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
     callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=1e-5, verbose=1))
+    callback_list.append(plotLoss)
 
     history = vae.fit([train_ref, train_art],
             shuffle=True,

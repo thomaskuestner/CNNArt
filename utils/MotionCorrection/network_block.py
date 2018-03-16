@@ -4,14 +4,14 @@ from utils.MotionCorrection.network import *
 
 def encode(input, patchSize):
     if list(patchSize) == [80, 80]:
-        input = LeakyReluConv2D(filters=32, kernel_size=(3, 3), strides=(1, 1))(input)
+        input = fCreateLeakyReluConv2D(filters=32, kernel_size=(3, 3), strides=(1, 1))(input)
         res_1 = fCreateEncoder2D_Block(filters=32)(input)
         down_1 = fCreateDownConv2D_Block(filters=64)(res_1)
         res_2 = fCreateEncoder2D_Block(filters=64)(down_1)
         output = fCreateDownConv2D_Block(filters=128)(res_2)
 
     elif list(patchSize) == [48, 48]:
-        input = LeakyReluConv2D(filters=32, kernel_size=(3, 3), strides=(1, 1))(input)
+        input = fCreateLeakyReluConv2D(filters=32, kernel_size=(3, 3), strides=(1, 1))(input)
         res_1 = fCreateEncoder2D_Block(filters=32)(input)
         down_1 = fCreateDownConv2D_Block(filters=64)(res_1)
         res_2 = fCreateEncoder2D_Block(filters=64)(down_1)
@@ -29,16 +29,14 @@ def encode(input, patchSize):
 def encode_shared(input, patchSize, isIncep):
     if isIncep:
         if list(patchSize) == [80, 80]:
-            res_1 = fCreateInception2D_Block(filters=[16, 32, 64])(input)
-            down_1 = fCreateDownConv2D_Block(filters=128)(res_1)
+            res_1 = fCreateInception2D_Block(filters=[32, 64, 128])(input)
+            down_1 = fCreateDownConv2D_Block(filters=256)(res_1)
             res_2 = fCreateInception2D_Block(filters=[32, 64, 128])(down_1)
             down_2 = fCreateDownConv2D_Block(filters=256)(res_2)
             flat = Flatten()(down_2)
 
-            dropout = Dropout(0.8)(flat)
-
-            z_mean = Dense(128)(dropout)
-            z_log_var = Dense(128)(dropout)
+            z_mean = Dense(128)(flat)
+            z_log_var = Dense(128)(flat)
 
             z = Lambda(sampling, output_shape=(128,))([z_mean, z_log_var])
 
@@ -47,10 +45,8 @@ def encode_shared(input, patchSize, isIncep):
             down_1 = fCreateDownConv2D_Block(filters=256)(res_1)
             flat = Flatten()(down_1)
 
-            dropout = Dropout(0.8)(flat)
-
-            z_mean = Dense(128)(dropout)
-            z_log_var = Dense(128)(dropout)
+            z_mean = Dense(128)(flat)
+            z_log_var = Dense(128)(flat)
 
             z = Lambda(sampling, output_shape=(128,))([z_mean, z_log_var])
 
@@ -59,10 +55,8 @@ def encode_shared(input, patchSize, isIncep):
             down_1 = fCreateDownConv3D_Block(filters=256, strides=(2, 2, 1), kernel_size=(2, 2, 1))(res_1)
             flat = Flatten()(down_1)
 
-            dropout = Dropout(0.8)(flat)
-
-            z_mean = Dense(128)(dropout)
-            z_log_var = Dense(128)(dropout)
+            z_mean = Dense(128)(flat)
+            z_log_var = Dense(128)(flat)
 
             z = Lambda(sampling, output_shape=(128,))([z_mean, z_log_var])
     else:
@@ -73,10 +67,8 @@ def encode_shared(input, patchSize, isIncep):
             down_2 = fCreateDownConv2D_Block(filters=512)(res_2)
             flat = Flatten()(down_2)
 
-            dropout = Dropout(0.8)(flat)
-
-            z_mean = Dense(128)(dropout)
-            z_log_var = Dense(128)(dropout)
+            z_mean = Dense(128)(flat)
+            z_log_var = Dense(128)(flat)
 
             z = Lambda(sampling, output_shape=(128,))([z_mean, z_log_var])
 
@@ -97,21 +89,19 @@ def encode_shared(input, patchSize, isIncep):
             down_1 = fCreateDownConv3D_Block(filters=256, strides=(2, 2, 1), kernel_size=(2, 2, 1))(res_1)
             flat = Flatten()(down_1)
 
-            dropout = Dropout(0.8)(flat)
-
-            z_mean = Dense(128)(dropout)
-            z_log_var = Dense(128)(dropout)
+            z_mean = Dense(128)(flat)
+            z_log_var = Dense(128)(flat)
 
             z = Lambda(sampling, output_shape=(128,))([z_mean, z_log_var])
 
     return z, z_mean, z_log_var
 
 
-def decode(input, patchSize):
+def decode(input, patchSize, dropout):
     if list(patchSize) == [80, 80]:
-        dense = Dense(512 * 5 * 5)(input)
-        dropout = Dropout(0.8)(dense)
-        reshape = Reshape((512, 5, 5))(dropout)
+        dense = Dense(256 * 5 * 5)(input)
+        dropout = Dropout(dropout)(dense)
+        reshape = Reshape((256, 5, 5))(dropout)
         output = fCreateConv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same')(reshape)
         output = fCreateConv2DTranspose(filters=256, kernel_size=3, strides=1, padding='same')(output)
         output = fCreateConv2DTranspose(filters=128, kernel_size=3, strides=2, padding='same')(output)
@@ -123,7 +113,7 @@ def decode(input, patchSize):
 
     elif list(patchSize) == [48, 48]:
         dense = Dense(256 * 6 * 6)(input)
-        dropout = Dropout(0.8)(dense)
+        dropout = Dropout(dropout)(dense)
         reshape = Reshape((256, 6, 6))(dropout)
         output = fCreateConv2DTranspose(filters=128, kernel_size=3, strides=2, padding='same')(reshape)
         output = fCreateConv2DTranspose(filters=128, kernel_size=3, strides=1, padding='same')(output)
@@ -134,7 +124,7 @@ def decode(input, patchSize):
 
     elif list(patchSize) == [80, 80, 10]:
         dense = Dense(25600 * 5)(input)
-        dropout = Dropout(0.8)(dense)
+        dropout = Dropout(dropout)(dense)
         reshape = Reshape((256, 10, 10, 5))(dropout)
         output = fCreateConv3DTranspose(filters=256, strides=(2, 2, 1))(reshape)
         output = fCreateConv3DTranspose(filters=256, strides=(1, 1, 1))(output)

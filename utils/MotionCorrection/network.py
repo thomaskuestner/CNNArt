@@ -9,7 +9,7 @@ def sampling(args):
     return z_mean + K.exp(z_log_var) * epsilon
 
 
-def LeakyReluConv2D(filters, kernel_size, strides, padding='same'):
+def fCreateLeakyReluConv2D(filters, kernel_size=(3, 3), strides=(1, 1), padding='same'):
     l1_reg = 0
     l2_reg = 1e-6
 
@@ -23,21 +23,7 @@ def LeakyReluConv2D(filters, kernel_size, strides, padding='same'):
     return f
 
 
-def LeakyReluConv2DTranspose(filters, kernel_size, strides, padding):
-    l1_reg = 0
-    l2_reg = 1e-6
-
-    def f(inputs):
-        conv2d = Conv2DTranspose(filters=filters,
-                                 kernel_size=kernel_size,
-                                 strides=strides,
-                                 padding=padding,
-                                 kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
-        return LeakyReLU()(conv2d)
-    return f
-
-
-def fCreateEncoder2D_Block(filters, strides=(1, 1), kernel_size=(3, 3), padding='same'):
+def fCreateEncoder2D_Block(filters, kernel_size=(3, 3), strides=(1, 1), padding='same'):
     l1_reg = 0
     l2_reg = 1e-6
 
@@ -61,7 +47,7 @@ def fCreateEncoder2D_Block(filters, strides=(1, 1), kernel_size=(3, 3), padding=
     return f
 
 
-def fCreateEncoder3D_Block(filters, strides=(1, 1, 1), kernel_size=(3, 3, 3), padding='same'):
+def fCreateEncoder3D_Block(filters, kernel_size=(3, 3, 3), strides=(1, 1, 1), padding='same'):
     l1_reg = 0
     l2_reg = 1e-6
 
