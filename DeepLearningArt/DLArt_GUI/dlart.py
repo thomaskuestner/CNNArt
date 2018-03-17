@@ -28,6 +28,9 @@ import json
 import datetime
 import h5py
 
+from utils.Prediction import *
+from utils.Unpatching import *
+
 import cnn_main
 
 # ArtGAN
@@ -126,6 +129,9 @@ class DeepLearningArtApp():
         #attributes for labeling
         self.labelingMode = ''
 
+        self.classMappings = None
+        self.classMappingsForPrediction = None
+
         #attributes for patching
         self.patchingMode = DeepLearningArtApp.PATCHING_2D
         self.storeMode = ''
@@ -203,6 +209,26 @@ class DeepLearningArtApp():
         self.trainTestDatasetRatio_ArtGAN = 0.2  # part of test data
         self.trainValidationRatio_ArtGAN = 0.0  # part of Validation data in traindata
         ####################
+
+        ################################################################################################################
+        #### Stuff for prediction
+        ################################################################################################################
+        self.datasetForPrediction = None
+        self.modelForPrediction = None
+        self.doUnpatching = False
+
+        self.usingSegmentationMasksForPrediction = False
+        self.confusionMatrix = None
+        self.classificationReport = None
+
+        self.acc_training = None
+        self.acc_validation = None
+        self.acc_test = None
+
+        self.predictions = None
+        self.unpatched_slices = None
+
+        ################################################################################################################
 
 
     def generateDataset(self):
@@ -563,24 +589,24 @@ class DeepLearningArtApp():
     def performTraining(self):
         # get output vector for different classes
         classes = np.asarray(np.unique(self.Y_train, ), dtype=int)
-        classMappings = Label.mapClassesToOutputVector(classes=classes,
+        self.classMappings = Label.mapClassesToOutputVector(classes=classes,
                                                        usingArtefacts=self.usingArtifacts,
                                                        usingBodyRegion=self.usingBodyRegions,
                                                        usingTWeightings=self.usingTWeighting)
 
         Y_train = []
         for i in range(self.Y_train.shape[0]):
-            Y_train.append(classMappings[self.Y_train[i]])
+            Y_train.append(self.classMappings[self.Y_train[i]])
         Y_train = np.asarray(Y_train)
 
         Y_validation = []
         for i in range(self.Y_validation.shape[0]):
-            Y_validation.append(classMappings[self.Y_validation[i]])
+            Y_validation.append(self.classMappings[self.Y_validation[i]])
         Y_validation = np.asarray(Y_validation)
 
         Y_test = []
         for i in range(self.Y_test.shape[0]):
-            Y_test.append(classMappings[self.Y_test[i]])
+            Y_test.append(self.classMappings[self.Y_test[i]])
         Y_test = np.asarray(Y_test)
 
         # output folder
@@ -661,7 +687,7 @@ class DeepLearningArtApp():
         dataDict['Name'] = name
         dataDict['Date'] = datetime.datetime.today().strftime('%Y-%m-%d')
         dataDict['BatchSize'] = ''.join(str(e) for e in self.batchSizes)
-        dataDict['LearningRate'] = ''.join(str(e) for e in self.batchSizes)
+        dataDict['LearningRate'] = ''.join(str(e) for e in self.learningRates)
         dataDict['DataAugmentation'] = self.dataAugmentationEnabled
         dataDict['HorizontalFlip'] = self.horizontalFlip
         dataDict['VerticalFlip'] = self.verticalFlip
@@ -685,6 +711,7 @@ class DeepLearningArtApp():
         dataDict['NesterovEnabled'] = self.nesterovEnabled
 
         dataDict['Dataset'] = self.datasetName
+        dataDict['ClassMappings'] = self.classMappings
 
         with open((outputFolderPath+os.sep+'cnn_training_info.json'), 'w') as fp:
             json.dump(dataDict, fp, indent=4)
@@ -813,7 +840,7 @@ class DeepLearningArtApp():
         return self.trainTestDatasetRatio
 
     def setTrainTestDatasetRatio(self, ratio):
-        if 0 < ratio < 1:
+        if 0 <= ratio <= 1:
             self.trainTestDatasetRatio = ratio
         else:
             raise ValueError('Splitting ratio train set, test set too big or too small!')
@@ -999,6 +1026,9 @@ class DeepLearningArtApp():
     def setUsingSegmentationMasks(self, b):
         self.usingSegmentationMasks = b
 
+    def getUnpatchedSlices(self):
+        return self.unpatched_slices
+
     def datasetAvailable(self):
         retbool = False
         if self.storeMode != DeepLearningArtApp.STORE_PATCH_BASED:
@@ -1037,10 +1067,15 @@ class DeepLearningArtApp():
                 self.trainTestDatasetRatio = float(dataset_info['TrainTestRatio'])
                 self.trainValidationRatio = float(dataset_info['TrainValidationRatio'])
                 self.numFolds = int(dataset_info['NumFolds'])
-                try:
+
+                if 'ClassMappings' in dataset_info:
+                    self.classMappings = dataset_info['ClassMappings']
+
+                if 'SegmentationMaskUsed' in dataset_info:
                     self.usingSegmentationMasks = bool(dataset_info['SegmentationMaskUsed'])
-                except:
+                else:
                     self.usingSegmentationMasks = False
+
 
                 # loading hdf5 dataset
                 try:
@@ -1072,6 +1107,307 @@ class DeepLearningArtApp():
             raise FileNotFoundError("Error: Something went wrong at trying to load the dataset!!!")
 
         return retbool, self.datasetName
+
+    def getDatasetForPrediction(self):
+        return self.datasetForPrediction
+
+    def setDatasetForPrediction(self, d):
+        self.datasetForPrediction = d
+
+    def getModelForPrediction(self):
+        return self.modelForPrediction
+
+    def setModelForPrediction(self, m):
+        self.modelForPrediction = m
+
+    def getClassificationReport(self):
+        return self.classificationReport
+
+    def getConfusionMatrix(self):
+        return self.confusionMatrix
+
+    def get_acc_training(self):
+        return self.acc_training
+
+    def get_acc_validation(self):
+        return self.acc_validation
+
+    def get_acc_test(self):
+        return self.acc_test
+
+    def getClassMappingsForPrediction(self):
+        return self.classMappingsForPrediction
+
+    def setDoUnpatching(self, b):
+        self.doUnpatching = b
+
+    def getDoUnpatching(self):
+        return self.doUnpatching
+
+    def performPrediction(self):
+
+        # load dataset for prediction
+        # check for data info summary in json file
+        try:
+            with open(self.datasetForPrediction + os.sep + "dataset_info.json", 'r') as fp:
+                dataset_info = json.load(fp)
+
+            patchOverlap = dataset_info['PatchOverlap']
+            patientsOfDataset = dataset_info['Patients']
+
+            if self.doUnpatching:
+                datasetForUnpatching = dataset_info['Datasets']
+                datasetForUnpatching = datasetForUnpatching[0]
+
+            # hd5f or patch based?
+            if dataset_info['StoreMode'] == DeepLearningArtApp.STORE_HDF5:
+                # loading hdf5
+                try:
+                    self.usingSegmentationMasksForPrediction = bool(dataset_info['SegmentationMaskUsed'])
+                except:
+                    self.usingSegmentationMasksForPrediction = False
+
+                # loading hdf5 dataset
+                try:
+                    with h5py.File(self.datasetForPrediction + os.sep + "datasets.hdf5", 'r') as hf:
+                        X_train = hf['X_train'][:]
+                        X_validation = hf['X_validation'][:]
+                        X_test = hf['X_test'][:]
+                        Y_train = hf['Y_train'][:]
+                        Y_validation = hf['Y_validation'][:]
+                        Y_test = hf['Y_test'][:]
+                        if self.usingSegmentationMasksForPrediction:
+                            Y_segMasks_train = hf['Y_segMasks_train'][:]
+                            Y_segMasks_validation = hf['Y_segMasks_validation'][:]
+                            Y_segMasks_test = hf['Y_segMasks_test'][:]
+                except:
+                    raise TypeError("Can't read HDF5 dataset!")
+            else:
+                raise NameError("No such store Mode known!")
+        except:
+            raise FileNotFoundError("Error: Something went wrong at trying to load the dataset!!!")
+
+
+        #
+        # dynamic loading of corresponding model
+        with open(self.modelForPrediction + os.sep + "cnn_training_info.json", 'r') as fp:
+            cnn_info = json.load(fp)
+
+        sModel = DeepLearningArtApp.deepNeuralNetworks[cnn_info['Name']]
+        batchSize = int(cnn_info['BatchSize'])
+        usingArtifacts = cnn_info['Artifacts']
+        usingBodyRegions = cnn_info['BodyRegions']
+        usingTWeighting = cnn_info['TWeightings']
+
+        # preprocess y
+        if 'ClassMappings' in cnn_info:
+            self.classMappingsForPrediction = cnn_info['ClassMappings']
+        else:
+            # in old code version no class mappings were stored in cnn_info. so we have to recreate the class mappings
+            # out of the original training dataset
+            with h5py.File(self.pathOutputPatching + os.sep + cnn_info['Dataset'] + os.sep + "datasets.hdf5", 'r') as hf:
+                Y_train_original = hf['Y_train'][:]
+
+            classes = np.asarray(np.unique(Y_train_original, ), dtype=int)
+            self.classMappingsForPrediction = Label.mapClassesToOutputVector(classes=classes,
+                                                                usingArtefacts=usingArtifacts,
+                                                                usingBodyRegion=usingBodyRegions,
+                                                                usingTWeightings=usingTWeighting)
+
+        if self.doUnpatching:
+            classLabel = int(DeepLearningArtApp.datasets[datasetForUnpatching].getDatasetLabel())
+
+        Y = []
+        for i in range(Y_train.shape[0]):
+            Y.append(self.classMappingsForPrediction[Y_train[i]])
+        Y_train = np.asarray(Y)
+
+        Y= []
+        for i in range(Y_validation.shape[0]):
+            Y.append(self.classMappingsForPrediction[Y_validation[i]])
+        Y_validation = np.asarray(Y)
+
+        Y = []
+        for i in range(Y_test.shape[0]):
+            Y.append(self.classMappingsForPrediction[Y_test[i]])
+        Y_test = np.asarray(Y)
+
+        # Y = np.zeros((Y_test.shape[0], 11))
+        # for i in range(Y_test.shape[0]):
+        #    Y[i, 0] = Y_test[i, 0]
+        #    Y[i, 1] = Y_test[i, 1]
+        # Y_test=Y
+
+        # import cnn model
+        cnnModel = __import__(sModel, globals(), locals(), ['createModel', 'fTrain', 'fPredict'], 0)
+
+
+        if self.usingSegmentationMasksForPrediction:
+             predictions = cnnModel.fPredict(X_test,
+                                            Y_test,
+                                            Y_segMasks_test,
+                                            sModelPath=self.modelForPrediction,
+                                            batch_size=batchSize)
+
+             #save to disc
+             _, sModelFileSave = os.path.split(self.modelForPrediction)
+             modelSave = self.modelForPrediction + os.sep + 'model_predictions.mat'
+             print('saving Model:{}'.format(modelSave))
+             sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
+                                    'score_test': predictions['score_test'],
+                                    'acc_test': predictions['acc_test']})
+
+             # load training results
+             _, sPath = os.path.splitdrive(self.modelForPrediction)
+             sPath, sFilename = os.path.split(sPath)
+             sFilename, sExt = os.path.splitext(sFilename)
+
+             training_results = sio.loadmat(self.modelForPrediction + os.sep + sFilename + ".mat")
+             self.acc_training = training_results['acc']
+             self.acc_validation = training_results['val_acc']
+             self.acc_test = training_results['acc_test']
+
+
+        else:
+
+            prediction = predict_model(X_test,
+                                       Y_test,
+                                       sModelPath=self.modelForPrediction,
+                                       batch_size=batchSize,
+                                       classMappings=self.classMappingsForPrediction)
+
+            self.predictions = prediction['predictions']
+            self.confusionMatrix = prediction['confusion_matrix']
+            self.classificationReport = prediction['classification_report']
+
+            #################################
+            #path = 'D:/med_data/MRPhysics/MA Results/Output_Learning-9.3.18/Multiclass SE-ResNet-56_2D_64x64_2018-03-07_11-48/model_predictions.mat'
+            #mat = sio.loadmat(path)
+            #self.confusionMatrix = mat['confusion_matrix']
+            #self.classificationReport = mat['classification_report']
+            ############################################################
+
+
+            # organize confusion matrix
+            sum_all = np.array(np.sum(self.confusionMatrix, axis=0))
+            all = np.zeros((len(sum_all), len(sum_all)))
+            for i in range(all.shape[0]):
+                all[i, :] = sum_all
+            self.confusionMatrix = np.divide(self.confusionMatrix, all)
+
+
+            # do unpatching if is enabled
+            if self.doUnpatching:
+
+                patchSize = [X_test.shape[1], X_test.shape[2]]
+                classVec = self.classMappingsForPrediction[classLabel]
+                iClass = np.where(classVec == 1)
+                iClass = iClass[0]
+
+                # load corresponding original dataset
+                for i in DeepLearningArtApp.datasets:
+                    set = DeepLearningArtApp.datasets[i]
+                    if set.getDatasetLabel() == classLabel:
+                        originalDatasetName = set.getPathdata()
+
+                pathToOriginalDataset = self.getPathToDatabase() + os.sep + str(patientsOfDataset[0]) + os.sep + 'dicom_sorted' + os.sep + originalDatasetName
+                fileNames = os.listdir(pathToOriginalDataset)
+                fileNames = [os.path.join(pathToOriginalDataset, f) for f in fileNames]
+
+                # read DICOMS
+                dicomDataset = [dicom.read_file(f) for f in fileNames]
+
+                # Combine DICOM Slices to a single 3D image (voxel)
+                try:
+                    voxel_ndarray, ijk_to_xyz = dicom_np.combine_slices(dicomDataset)
+                    voxel_ndarray = voxel_ndarray.astype(float)
+                    voxel_ndarray = np.swapaxes(voxel_ndarray, 0, 1)
+                except dicom_np.DicomImportException as e:
+                    # invalid DICOM data
+                    raise
+
+                # load dicom mask
+                currentMarkingsPath = self.getMarkingsPath() + os.sep + str(patientsOfDataset[0]) + ".json"
+                # get the markings mask
+                labelMask_ndarray = create_MASK_Array(currentMarkingsPath,
+                                                      patientsOfDataset[0],
+                                                      originalDatasetName,
+                                                      voxel_ndarray.shape[0],
+                                                      voxel_ndarray.shape[1],
+                                                      voxel_ndarray.shape[2])
+
+                dicom_size = [voxel_ndarray.shape[0], voxel_ndarray.shape[1], voxel_ndarray.shape[2]]
+
+                probability_mask = fUnpatch2D(self.predictions,
+                                              patchSize,
+                                              patchOverlap,
+                                              dicom_size,
+                                              iClass=iClass)
+
+
+                self.unpatched_slices = {
+                    'probability_mask': probability_mask,
+                    'dicom_slices': voxel_ndarray,
+                    'dicom_masks': labelMask_ndarray
+                }
+
+            # save prediction into .mat file
+            modelSave = self.modelForPrediction + os.sep + 'model_predictions.mat'
+            print('saving Model:{}'.format(modelSave))
+            if not self.doUnpatching:
+                sio.savemat(modelSave, {'prob_pre': prediction['predictions'],
+                                        'score_test': prediction['score_test'],
+                                        'acc_test': prediction['acc_test'],
+                                        'classification_report': prediction['classification_report'],
+                                        'confusion_matrix': prediction['confusion_matrix']
+                                        })
+            else:
+                sio.savemat(modelSave, {'prob_pre': prediction['predictions'],
+                                        'score_test': prediction['score_test'],
+                                        'acc_test': prediction['acc_test'],
+                                        'classification_report': prediction['classification_report'],
+                                        'confusion_matrix': prediction['confusion_matrix'],
+                                        'unpatched_slices': self.unpatched_slices
+                                        })
+
+            # load training results
+            _, sPath = os.path.splitdrive(self.modelForPrediction)
+            sPath, sFilename = os.path.split(sPath)
+            sFilename, sExt = os.path.splitext(sFilename)
+
+            training_results = sio.loadmat(self.modelForPrediction + os.sep + sFilename + ".mat")
+            self.acc_training = training_results['acc']
+            self.acc_validation = training_results['val_acc']
+            self.acc_test = training_results['acc_test']
+
+        return True
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

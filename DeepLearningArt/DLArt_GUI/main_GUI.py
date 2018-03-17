@@ -12,6 +12,11 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.uic import *
 
+import pandas as pd
+import seaborn as sn
+
+from utils.Label import *
+
 from DeepLearningArt.DLArt_GUI.dlart_gui import Ui_DLArt_GUI
 from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
 
@@ -115,6 +120,34 @@ class MainWindow(QMainWindow):
 
         ################################################################################################################
 
+
+        ################################################################################################################
+        #### Prediction Stuff
+        ################################################################################################################
+
+        # confusion matrix
+        self.confusion_matrix_figure = Figure(figsize=(10, 10))
+        self.canvas_confusion_matrix_figure = FigureCanvas(self.confusion_matrix_figure)
+        self.toolbar_confusion_matrix_figure = NavigationToolbar(self.canvas_confusion_matrix_figure, self)
+        self.ui.verticalLayout_conf_matrix.addWidget(self.canvas_confusion_matrix_figure)
+        self.ui.verticalLayout_conf_matrix.addWidget(self.toolbar_confusion_matrix_figure)
+
+        # accuracy plot
+        self.accuracy_figure = Figure(figsize=(10,10))
+        self.canvas_accuracy_figure = FigureCanvas(self.accuracy_figure)
+        self.toolbar_accuracy_figure = NavigationToolbar(self.canvas_accuracy_figure, self)
+        self.ui.verticalLayout_accuracy.addWidget(self.canvas_accuracy_figure)
+        self.ui.verticalLayout_accuracy.addWidget(self.toolbar_accuracy_figure)
+
+        # artifact map plot
+        self.artifact_map_figure = Figure(figsize=(10, 10))
+        self.canvas_artifact_map_figure = FigureCanvas(self.artifact_map_figure)
+        self.toolbar_artifact_map_figure = NavigationToolbar(self.canvas_artifact_map_figure, self)
+        self.ui.VerticalLayout_ArtifactMaps.addWidget(self.canvas_artifact_map_figure)
+        self.ui.VerticalLayout_ArtifactMaps.addWidget(self.toolbar_artifact_map_figure)
+
+        ################################################################################################################
+
         ################################################################################################################
         # Signals and Slots
         ################################################################################################################
@@ -160,7 +193,128 @@ class MainWindow(QMainWindow):
         # data augmentation enbaled changed
         self.ui.CheckBox_DataAugmentation.stateChanged.connect(self.check_dataAugmentation_enabled)
 
+        # selection Button dataset prediction clicked
+        self.ui.Button_selectDataset_prediction.clicked.connect(self.button_selectDataset_prediction_clicked)
+
+        # select model prediction button clicked
+        self.ui.Button_selectModel_prediction.clicked.connect(self.button_selectModel_prediction_clicked)
+
+        # button predict clicked
+        self.ui.Button_predict.clicked.connect(self.button_predict_clicked)
+
+        # spinbox for selecting dicom slice index
+        self.ui.SpinBox_SliceSelect.valueChanged.connect(self.spinBox_sliceSelect_changed)
+
         ################################################################################################################
+
+    def button_predict_clicked(self):
+        self.deepLearningArtApp.setDoUnpatching(bool(self.ui.CheckBox_Unpatching.isChecked()))
+
+        bPredicted = self.deepLearningArtApp.performPrediction()
+
+        if bPredicted:
+            confusionMatrix = self.deepLearningArtApp.getConfusionMatrix()
+            classificationReport = self.deepLearningArtApp.getClassificationReport()
+
+            target_names = []
+            for i in sorted(self.deepLearningArtApp.getClassMappingsForPrediction()):
+                target_names.append(Label.LABEL_STRINGS[i])
+
+            acc_training = self.deepLearningArtApp.get_acc_training()
+            acc_validation = self.deepLearningArtApp.get_acc_validation()
+            acc_test = self.deepLearningArtApp.get_acc_test()
+
+            self.plotTrainingResults(acc_training=acc_training, acc_validation=acc_validation)
+            self.plotConfusionMatrix(confusionMatrix, target_names)
+
+            outputString = 'Test Accuracy: ' + str(acc_test) + '\n' + classificationReport
+            self.ui.textEdit_summary.setText(outputString)
+
+            # check for unpatching
+            if self.deepLearningArtApp.getDoUnpatching():
+                self.plotArtifactMaps()
+
+
+    def plotArtifactMaps(self):
+        unpatches_slices = self.deepLearningArtApp.getUnpatchedSlices()
+
+        if unpatches_slices is not None:
+            probability_mask = unpatches_slices['probability_mask']
+            dicom_slices = unpatches_slices['dicom_slices']
+            dicom_masks = unpatches_slices['dicom_masks']
+
+            index = int(self.ui.SpinBox_SliceSelect.value())
+            self.ui.SpinBox_SliceSelect.setMaximum(int(dicom_slices.shape[-1]))
+
+            if index >= 0 and index < dicom_slices.shape[-1]:
+
+                slice = np.squeeze(dicom_slices[:, :, index])
+                prob_mask = np.squeeze(probability_mask[:, :, index])
+                label_mask = np.squeeze(dicom_masks[:, :, index])
+
+                self.artifact_map_figure.clear()
+
+                ax1 = self.artifact_map_figure.add_subplot(121)
+                ax1.clear()
+                ax1.imshow(slice, cmap='gray')
+                ax1.imshow(label_mask, cmap = 'plasma', interpolation = 'nearest', alpha = .2)
+                ax1.set_title('Ground Truth')
+
+                ax2 = self.artifact_map_figure.add_subplot(122)
+                ax2.clear()
+                ax2.imshow(slice, cmap='gray')
+                map = ax2.imshow(prob_mask, cmap='plasma', interpolation='nearest', alpha=.4)
+                ax2.set_title('Artifact Map')
+
+                self.artifact_map_figure.colorbar(mappable=map, ax=ax2)
+                self.artifact_map_figure.tight_layout()
+
+                self.canvas_artifact_map_figure.draw()
+
+
+
+
+    def plotTrainingResults(self, acc_training, acc_validation):
+        ax = self.accuracy_figure.add_subplot(111)
+        ax.clear()
+        acc_training = np.squeeze(acc_training)
+        acc_validation = np.squeeze(acc_validation)
+        x = np.arange(1, acc_training.shape[0]+1)
+        ax.plot(x, np.squeeze(acc_training, 'b'))
+        ax.plot(x, np.squeeze(acc_validation), 'r')
+        ax.grid(b=True, which='both')
+        ax.legend(['training accuracy', 'validation accuracy'])
+        self.canvas_accuracy_figure.draw()
+
+
+
+    def plotConfusionMatrix(self, confusion_matrix, target_names):
+        df_cm = pd.DataFrame(confusion_matrix,
+                             index=[i for i in target_names],
+                             columns=[i for i in target_names], )
+
+        axes_confmat = self.confusion_matrix_figure.add_subplot(111)
+        axes_confmat.clear()
+
+        sn.heatmap(df_cm, annot=True, fmt='.3f', annot_kws={"size": 8} , ax=axes_confmat, linewidths=.2)
+        axes_confmat.set_xlabel('Predicted Label')
+        axes_confmat.set_ylabel('True Label')
+        self.confusion_matrix_figure.tight_layout()
+
+        self.canvas_confusion_matrix_figure.draw()
+
+
+    def button_selectModel_prediction_clicked(self):
+        pathToModel = self.openFileNamesDialog(self.deepLearningArtApp.getLearningOutputPath())
+        self.deepLearningArtApp.setModelForPrediction(pathToModel)
+        self.ui.Label_currentModel_prediction.setText(pathToModel)
+
+
+    def button_selectDataset_prediction_clicked(self):
+        pathToDataset = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
+        self.deepLearningArtApp.setDatasetForPrediction(pathToDataset)
+        self.ui.Label_currentDataset_prediction.setText(pathToDataset)
+
 
     def button_train_clicked(self):
         # set epochs
@@ -343,6 +497,9 @@ class MainWindow(QMainWindow):
         self.deepLearningArtApp.setOutputPathForPatching(dir)
 
 
+    def spinBox_sliceSelect_changed(self):
+        self.plotArtifactMaps()
+
 
     def getSelectedPatients(self):
         selectedPatients = []
@@ -381,7 +538,7 @@ class MainWindow(QMainWindow):
             subdirs = os.listdir(self.deepLearningArtApp.getPathToDatabase())
             self.ui.TreeWidget_Patients.setHeaderLabel("Patients:")
 
-            for x in subdirs:
+            for x in sorted(subdirs):
                 item = QTreeWidgetItem()
                 item.setText(0, str(x))
                 item.setCheckState(0, Qt.Unchecked)
@@ -395,7 +552,7 @@ class MainWindow(QMainWindow):
         print(os.path.dirname(self.deepLearningArtApp.getPathToDatabase()))
         # manage datasets
         self.ui.TreeWidget_Datasets.setHeaderLabel("Datasets:")
-        for ds in DeepLearningArtApp.datasets.keys():
+        for ds in sorted(DeepLearningArtApp.datasets.keys()):
             dataset = DeepLearningArtApp.datasets[ds].getPathdata()
             item = QTreeWidgetItem()
             item.setText(0, dataset)
@@ -549,6 +706,32 @@ class MainWindow(QMainWindow):
             self.ui.RadioButton_DataAug_adaptiveEq.setAutoExclusive(True)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     ###################################################################################################################
     ##############################                 ArtGAN Stuff             ###########################################
     ###################################################################################################################
@@ -689,6 +872,12 @@ class MainWindow(QMainWindow):
 
     def performTraining_ArtGAN(self):
         self.deepLearningArtApp.performTraining_ArtGAN()
+
+
+
+
+
+
 
 
     def plotImg(self, figure, canvas, index):

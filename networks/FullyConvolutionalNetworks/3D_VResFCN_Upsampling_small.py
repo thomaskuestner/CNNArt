@@ -270,9 +270,9 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     sPath, sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
 
-    model_name = sOutPath + os.sep + sFilename + '_lr_' + str(learningRate) + '_bs_' + str(batchSize)
+    model_name = sOutPath + os.sep + sFilename
     weight_name = model_name + '_weights.h5'
-    model_json = model_name + '_json'
+    model_json = model_name + '.json'
     model_all = model_name + '_model.h5'
     model_mat = model_name + '.mat'
 
@@ -390,13 +390,13 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
 def step_decay(epoch):
    initial_lrate = 0.1
    drop = 0.1
-   epochs_drop = 2.0
+   epochs_drop = 7.0
    lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
    print("Reduce Learningrate by 0.1")
    return lrate
 
 
-def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
+def fPredict(X_test, y=None, Y_segMasks_test=None, sModelPath=None, sOutPath=None, batch_size=64):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
         Input:
             X: Samples to predict on. The shape of X should fit to the input shape of the model
@@ -405,29 +405,42 @@ def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
             sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy stored.
                         The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the suffix '_pred.mat'
             batchSize: Batchsize, number of samples that are processed at once"""
-    sModelPath = sModelPath.replace("_json.txt", "")
-    weight_name = sModelPath + '_weights.h5'
-    model_json = sModelPath + '_json.txt'
-    model_all = sModelPath + '_model.h5'
+
+    X_test = np.expand_dims(X_test, axis=-1)
+    Y_segMasks_test_foreground = np.expand_dims(Y_segMasks_test, axis=-1)
+    Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape) - Y_segMasks_test_foreground
+    Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground), axis=-1)
+
+    _, sPath = os.path.splitdrive(sModelPath)
+    sPath, sFilename = os.path.split(sPath)
+    sFilename, sExt = os.path.splitext(sFilename)
+
+    listdir = os.listdir(sModelPath)
+
+    #sModelPath = sModelPath.replace("_json.txt", "")
+    #weight_name = sModelPath + '_weights.h5'
+    #model_json = sModelPath + '_json.txt'
+    #model_all = sModelPath + '_model.h5'
 
     # load weights and model (new way)
-    model_json = open(model_json, 'r')
-    model_string = model_json.read()
-    model_json.close()
+    with open(sModelPath + os.sep + sFilename + '.json', 'r') as fp:
+        model_string = fp.read()
+
     model = model_from_json(model_string)
 
-    model.compile(loss='categorical_crossentropy', optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
-    model.load_weights(weight_name)
+    model.summary()
 
-    score_test, acc_test = model.evaluate(X, y, batch_size=batchSize)
+    model.compile(loss=dice_coef_loss, optimizer=keras.optimizers.Adam(), metrics=[dice_coef])
+    model.load_weights(sModelPath+ os.sep + sFilename+'_weights.h5')
+
+    score_test, acc_test = model.evaluate(X_test, Y_segMasks_test, batch_size=2)
     print('loss' + str(score_test) + '   acc:' + str(acc_test))
-    prob_pre = model.predict(X, batch_size=batchSize, verbose=1)
-    print(prob_pre[0:14, :])
-    _, sModelFileSave = os.path.split(sModelPath)
 
-    modelSave = sOutPath + sModelFileSave + '_pred.mat'
-    print('saving Model:{}'.format(modelSave))
-    sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
+    prob_pre = model.predict(X_test, batch_size=batch_size, verbose=1)
+
+    predictions = {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test}
+
+    return predictions
 
 
 def dice_coef(y_true, y_pred, smooth=1.):

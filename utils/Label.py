@@ -12,6 +12,57 @@ class Label:
     label.
     '''
 
+
+    LABEL_STRINGS = {
+        110: "T1 Head Ref",
+        111: "T1 Head Motion",
+        120: "T1 Abdomen Ref",
+        121: "T1 Abdomen Motion",
+        130: "T1 Pelvis Ref",
+        131: "T1 Pelvis Motion",
+        220: "T2 Abdomen Ref",
+        222: "T2 Abdomen Shim",
+        230: "T2 Pelvis Ref",
+        231: "T2 Pelvis Motion",
+        232: "T2 Pelvis Shim",
+        10: "Head Ref",
+        11: "Head Motion",
+        20: "Abdomen Ref",
+        21: "Abdomen Motion",
+        22: "Abdomen Shim",
+        30: "Pelvis Ref",
+        31: "Pelvis Motion",
+        32: "Pelvis Shim",
+        0: "Ref",
+        1: "Motion",
+        2: "Shim"
+    }
+
+    LABEL_STRINGS_SHORT = {
+        110: "T1 H Ref",
+        111: "T1 H Mot",
+        120: "T1 A Ref",
+        121: "T1 A Mot",
+        130: "T1 P Ref",
+        131: "T1 P Mot",
+        220: "T2 A Ref",
+        222: "T2 A Shi",
+        230: "T2 P Ref",
+        231: "T2 P Mot",
+        232: "T2 P Shi",
+        10: "Hea Ref",
+        11: "Hea Mot",
+        20: "Abd Ref",
+        21: "Abd Mot",
+        22: "Abd Shi",
+        30: "Pel Ref",
+        31: "Pel Mot",
+        32: "Pel Shi",
+        0: "Ref",
+        1: "Mot",
+        2: "Shi"
+    }
+
     # Artefact labels
     REFERENCE = 0
     MOTION = 1
@@ -30,6 +81,21 @@ class Label:
     # MRI weighting label
     T1 = 100
     T2 = 200
+
+    DICOM_SIZES = {
+        110: [256, 196, 40],
+        111: [256, 196, 40],
+        120: [320, 320, 28],
+        121: [320, 256, 28],
+        130: [240, 320, 35],
+        131: [240, 320, 35],
+        220: [288, 384, 28],
+        223: [288, 384, 28],
+        230: [240, 320, 35],
+        231: [240, 320, 35],
+        232: [240, 320, 35]
+    }
+
 
     @staticmethod
     def getLabel(bodyRegion, artefact, tWeighting = 0):

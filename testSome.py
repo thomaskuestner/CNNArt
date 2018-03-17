@@ -1,30 +1,38 @@
 import numpy as np
-from keras.layers import *
 from matplotlib import pyplot as plt
+import scipy.io as sio
+import seaborn as sn
+import pandas as pd
 
-# from sklearn.model_selection import KFold
-#
-# X = np.ones([100, 10, 10])
-# y = np.zeros([100, 1])
-# kf = KFold(n_splits=5)
-# kf.get_n_splits(X)
-#
-# print(kf)
-#
-# for train_index, test_index in kf.split(X):
-#    print("TRAIN:", train_index, "TEST:", test_index)
-#    X_train, X_test = X[train_index], X[test_index]
-#    y_train, y_test = y[train_index], y[test_index]
 
-voxel = np.zeros((2,3,5))
-voxel[0,0,0] = 1
-voxel[0,1,0] = 1
+path = 'D:/med_data/MRPhysics/MA Results/Output_Learning-9.3.18/Multiclass SE-ResNet-56_2D_64x64_2018-03-07_11-48/model_predictions.mat'
 
-voxel2 = np.ones((2, 3, 5))
-voxel2 = voxel2-voxel
+mat = sio.loadmat(path)
 
-asdf = voxel2.shape
+confusion_matrix = mat['confusion_matrix']
+classification_report = mat['classification_report']
+stri = classification_report[0]
+print(stri)
 
-print("hi" if 10 == 23 else "hoho")
+sum_all = np.array(np.sum(confusion_matrix, axis=0))
+
+all = np.zeros((len(sum_all), len(sum_all)))
+for i in range(all.shape[0]):
+     all[i,:]=sum_all
+
+confusion_matrix = np.divide(confusion_matrix, all)
+
+df_cm = pd.DataFrame(confusion_matrix,
+                     index = [i for i in "ABCDEFGHIJK"],
+                     columns = [i for i in "ABCDEFGHIJK"], )
+
+# Set up the matplotlib figure
+f, ax = plt.subplots(figsize=(11, 9))
+
+sn.heatmap(df_cm, annot=True, fmt='.4f')
+
+plt.show(block=True)
+
+print()
 
 
