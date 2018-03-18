@@ -107,8 +107,8 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
 
     callback_list = []
     # callback_list = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
+    callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=1, min_lr=0, verbose=1))
     callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
-    callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=1e-5, verbose=1))
     callback_list.append(plotLoss)
 
     history = vae.fit([train_ref, train_art],

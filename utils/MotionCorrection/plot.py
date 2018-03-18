@@ -25,7 +25,10 @@ class PlotLosses(keras.callbacks.Callback):
         self.val_losses.append(logs.get('val_loss'))
         self.i += 1
 
-        plt.plot(self.x, self.losses, label="train_loss")
-        plt.plot(self.x, self.val_losses, label="val_loss")
-        plt.legend()
+        plt.plot(self.x, self.losses, 'r')
+        plt.plot(self.x, self.val_losses, 'b')
+        plt.legend(['train', 'test'], loc='upper left')
+        plt.title('model loss')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
         plt.savefig(self.file_name)
