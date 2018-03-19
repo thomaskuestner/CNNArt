@@ -9,14 +9,14 @@ def encode(input, patchSize):
         output = fCreateLeakyReluConv2D(filters=128)(down_1)
 
     elif list(patchSize) == [48, 48]:
-        conv_1 = fCreateLeakyReluBNConv2D(filters=32, strides=1, kernel_size=7)(input)
-        down_1 = fCreateLeakyReluBNConv2D(filters=64, strides=2, kernel_size=7)(conv_1)
-        output = fCreateLeakyReluBNConv2D(filters=128, strides=1, kernel_size=3)(down_1)
+        conv_1 = fCreateLeakyReluConv2D(filters=32, strides=1, kernel_size=7)(input)
+        down_1 = fCreateLeakyReluConv2D(filters=64, strides=2, kernel_size=7)(conv_1)
+        output = fCreateLeakyReluConv2D(filters=128, strides=1, kernel_size=3)(down_1)
 
     elif list(patchSize) == [48, 48, 4]:
-        conv_1 = fCreateLeakyReluBNConv3D(filters=32, strides=1, kernel_size=7)(input)
-        down_1 = fCreateLeakyReluBNConv3D(filters=64, strides=2, kernel_size=7)(conv_1)
-        output = fCreateLeakyReluBNConv3D(filters=128, strides=1, kernel_size=3)(down_1)
+        conv_1 = fCreateLeakyReluConv3D(filters=32, strides=1, kernel_size=7)(input)
+        down_1 = fCreateLeakyReluConv3D(filters=64, strides=2, kernel_size=7)(conv_1)
+        output = fCreateLeakyReluConv3D(filters=128, strides=1, kernel_size=3)(down_1)
 
     return output
 
@@ -60,10 +60,10 @@ def encode_shared(input, patchSize, isIncep):
             z = Lambda(samplingDense, output_shape=(512,))([z_mean, z_log_var])
 
         elif list(patchSize) == [48, 48]:
-            conv_shared_1 = fCreateLeakyReluBNConv2D(filters=256, strides=1, kernel_size=3)(input)
-            down_shared_1 = fCreateLeakyReluBNConv2D(filters=256, strides=2, kernel_size=3)(conv_shared_1)
-            conv_shared_2 = fCreateLeakyReluBNConv2D(filters=256, strides=1, kernel_size=3)(down_shared_1)
-            down_shared_2 = fCreateLeakyReluBNConv2D(filters=256, strides=2, kernel_size=3)(conv_shared_2)
+            conv_shared_1 = fCreateLeakyReluConv2D(filters=256, strides=1, kernel_size=3)(input)
+            down_shared_1 = fCreateLeakyReluConv2D(filters=256, strides=2, kernel_size=3)(conv_shared_1)
+            conv_shared_2 = fCreateLeakyReluConv2D(filters=256, strides=1, kernel_size=3)(down_shared_1)
+            down_shared_2 = fCreateLeakyReluConv2D(filters=256, strides=2, kernel_size=3)(conv_shared_2)
 
             flat = Flatten()(down_shared_2)
 
@@ -74,10 +74,10 @@ def encode_shared(input, patchSize, isIncep):
             z = Lambda(samplingDense, output_shape=(512,))([z_mean, z_log_var])
 
         elif list(patchSize) == [48, 48, 4]:
-            conv_shared_1 = fCreateLeakyReluBNConv3D(filters=256, strides=1, kernel_size=3)(input)
-            down_shared_1 = fCreateLeakyReluBNConv3D(filters=256, strides=(2, 2, 1), kernel_size=3)(conv_shared_1)
-            conv_shared_2 = fCreateLeakyReluBNConv3D(filters=256, strides=1, kernel_size=3)(down_shared_1)
-            down_shared_2 = fCreateLeakyReluBNConv3D(filters=256, strides=2, kernel_size=3)(conv_shared_2)
+            conv_shared_1 = fCreateLeakyReluConv3D(filters=256, strides=1, kernel_size=3)(input)
+            down_shared_1 = fCreateLeakyReluConv3D(filters=256, strides=(2, 2, 1), kernel_size=3)(conv_shared_1)
+            conv_shared_2 = fCreateLeakyReluConv3D(filters=256, strides=1, kernel_size=3)(down_shared_1)
+            down_shared_2 = fCreateLeakyReluConv3D(filters=256, strides=2, kernel_size=3)(conv_shared_2)
 
             flat = Flatten()(down_shared_2)
 
