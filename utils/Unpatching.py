@@ -165,7 +165,7 @@ def get_first_index(iX, iY, iZ, patch_nmb_layer, x_index, y_index):
 
     return num
 
-def fRigidUnpatchingCorrection(actual_size, allPatches, patchOverlap):
+def fRigidUnpatchingCorrection(actual_size, allPatches, patchOverlap, mode):
     allPatches = 255 * allPatches
     patch_size = [allPatches.shape[1], allPatches.shape[2]]
     height, width = actual_size[0], actual_size[1]
@@ -181,13 +181,19 @@ def fRigidUnpatchingCorrection(actual_size, allPatches, patchOverlap):
 
     allPatches = np.reshape(allPatches, (num_slices, -1, patch_size[0], patch_size[1]))
     unpatchImg = np.zeros((num_slices, height_pad, width_pad))
+    dividor_grid = np.zeros((num_slices, height_pad, width_pad))
 
     for slice in range(num_slices):
         for row in range(num_rows):
             for col in range(num_cols):
                 index = row * num_cols + col
-                unpatchImg[slice, row * dNotOverlap[0]:row * dNotOverlap[0] + patch_size[0], col * dNotOverlap[1]:col * dNotOverlap[1] + patch_size[1]] = allPatches[slice, index]
+                unpatchImg[slice, row * dNotOverlap[0]:row * dNotOverlap[0] + patch_size[0], col * dNotOverlap[1]:col * dNotOverlap[1] + patch_size[1]] += allPatches[slice, index]
+                dividor_grid[slice, row * dNotOverlap[0]:row * dNotOverlap[0] + patch_size[0], col * dNotOverlap[1]:col * dNotOverlap[1] + patch_size[1]] = np.add(
+                dividor_grid[slice, row * dNotOverlap[0]:row * dNotOverlap[0] + patch_size[0], col * dNotOverlap[1]:col * dNotOverlap[1] + patch_size[1]], 1.0)
 
-    unpatchImg_cropped = unpatchImg[:, (height_pad - height)/2 : height_pad - (height_pad - height)/2, (width_pad - width)/2 : width_pad - (width_pad - width)/2]
+    if mode == 'average':
+        unpatchImg = np.divide(unpatchImg, dividor_grid)
 
+    unpatchImg_cropped = unpatchImg[:, (height_pad - height) / 2: height_pad - (height_pad - height) / 2,
+                         (width_pad - width) / 2: width_pad - (width_pad - width) / 2]
     return unpatchImg_cropped
