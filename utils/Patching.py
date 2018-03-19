@@ -46,6 +46,7 @@ def fRigidPatching(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,
                     dPatches[:,:,idxPatch] = dPatch
                     idxPatch += 1
 
+        dPatches = dPatches[:, :, 0:idxPatch-1]
         dLabels = np.ones((dPatches.shape[2]))
     elif sLabeling == 'patch':
         Mask_zero_pad = np.lib.pad(mask_numpy_array, (
@@ -92,6 +93,8 @@ def fRigidPatching(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,
                     shim_artefact = False
                     noise_artefact = False
 
+        dPatches = dPatches[:, :, 0:idxPatch-1]
+        dLabels = dLabels[0:idxPatch-1]
     return dPatches, dLabels
 ##########################################################################################################################################
 # In case of 3D patches:                                                                                                                 #
@@ -134,6 +137,7 @@ def fRigidPatching3D(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_arra
                     dPatches[:,:,:,idxPatch] = dPatch
                     idxPatch += 1
 
+        dPatches = dPatches[:, :, :, 0:idxPatch-1]
         dLabels = np.ones((dPatches.shape[3]))
     elif sLabeling == 'patch':
         Mask_zero_pad = np.lib.pad(mask_numpy_array, (
@@ -178,5 +182,7 @@ def fRigidPatching3D(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_arra
                     move_artefact = False
                     shim_artefact = False
                     noise_artefact = False
-
+                    
+        dPatches = dPatches[:, :, :, 0:idxPatch-1]
+        dLabels = dLabels[0:idxPatch-1]
     return dPatches, dLabels
