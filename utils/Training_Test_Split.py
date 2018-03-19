@@ -212,10 +212,10 @@ def fSplitDatasetCorrection(sSplitting, dRefPatches, dArtPatches, allPats, split
         rand_num = np.random.permutation(np.arange(nPatches))
         rand_num = rand_num[0:int(dVal)].astype(int)
 
-        test_ref_fold = dRefPatches[rand_num, :, :]
-        train_ref_fold = np.delete(dRefPatches, rand_num, axis=0)
-        test_art_fold = dArtPatches[rand_num, :, :]
-        train_art_fold = np.delete(dArtPatches, rand_num, axis=0)
+        test_ref_fold.append(dRefPatches[rand_num, :, :])
+        train_ref_fold.append(np.delete(dRefPatches, rand_num, axis=0))
+        test_art_fold.append(dArtPatches[rand_num, :, :])
+        train_art_fold.append(np.delete(dArtPatches, rand_num, axis=0))
 
     # crossvalidation with mixed patient
     if sSplitting == "crossvalidation_data":

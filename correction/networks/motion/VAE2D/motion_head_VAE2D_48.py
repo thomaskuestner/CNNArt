@@ -1,14 +1,17 @@
 import os
 import numpy as np
+import h5py
 import matplotlib.pyplot as plt
 
 from keras.layers import Input, Lambda, concatenate, Dense, Reshape, Flatten
 from keras.layers import Conv2DTranspose
 from keras.models import Model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from keras.optimizers import Adam
 from keras import backend as K
 from utils.MotionCorrection.network import LeakyReluConv2D, LeakyReluConv2DTranspose
 from utils.MotionCorrection.PerceptualLoss import addPerceptualLoss
+from utils.Unpatching import fRigidUnpatchingCorrection
 
 def sliceRef(input):
     return input[:input.shape[0]//2, :, :, :]
@@ -49,7 +52,7 @@ def decode(input):
     output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
     return output
 
-def createModel(patchSize, kl_weight, perceptual_weight, pl_network):
+def createModel(patchSize, dHyper):
     # input corrupted and non-corrupted image
     x_ref = Input(shape=(1, patchSize[0], patchSize[1]))
     x_art = Input(shape=(1, patchSize[0], patchSize[1]))
@@ -76,33 +79,34 @@ def createModel(patchSize, kl_weight, perceptual_weight, pl_network):
 
     # compute kl loss
     loss_kl = - 0.5 * K.sum(1 + z_mean - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-    vae.add_loss(kl_weight * K.mean(loss_kl))
+    vae.add_loss(dHyper['kl_weight'] * K.mean(loss_kl))
 
     # compute pixel to pixel loss
-    # loss_ref2ref = patchSize[0] * patchSize[1] * metrics.binary_crossentropy(K.flatten(x_ref), K.flatten(decoded_ref2ref))
-    # loss_art2ref = patchSize[0] * patchSize[1] * metrics.binary_crossentropy(K.flatten(x_ref), K.flatten(decoded_art2ref))
+    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))\
+                       ([Lambda(lambda x : dHyper['nScale']*x)(x_ref), Lambda(lambda x : dHyper['nScale']*x)(decoded_ref2ref)]) + 1e-6
+    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])))\
+                       ([Lambda(lambda x : dHyper['nScale']*x)(x_ref), Lambda(lambda x : dHyper['nScale']*x)(decoded_art2ref)]) + 1e-6
 
-    # vae.add_loss(K.mean(loss_ref2ref + loss_art2ref + loss_kl))
+    vae.add_loss(dHyper['pixel_weight'] * (loss_ref2ref + loss_art2ref))
 
     # add perceptual loss
-    p_loss = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, perceptual_weight, pl_network)
+    p_loss = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, dHyper['pl_network'], dHyper['loss_model'])
 
-    vae.add_loss(p_loss)
+    vae.add_loss(dHyper['perceptual_weight'] * p_loss)
 
     return vae
 
-def fTrain(dData, sOutPath, patchSize, dHyper):
+def fTrain(dData, dParam, dHyper):
     # parse inputs
-    batchSize = [128] if dHyper['batchSize'] is None else dHyper['batchSize']
-    learningRate = [0.001] if dHyper['learningRate'] is None else dHyper['learningRate']
-    epochs = 300 if dHyper['epochs'] is None else dHyper['epochs']
+    batchSize = [128] if dParam['batchSize'] is None else dParam['batchSize']
+    learningRate = [0.001] if dParam['learningRate'] is None else dParam['learningRate']
+    epochs = 300 if dParam['epochs'] is None else dParam['epochs']
 
     for iBatch in batchSize:
         for iLearn in learningRate:
-            fTrainInner(dData, sOutPath, patchSize, epochs, iBatch, iLearn, dHyper['kl_weight'],
-                        dHyper['perceptual_weight'], dHyper['pl_network'])
+            fTrainInner(dData, dParam['sOutPath'], dParam['patchSize'], epochs, iBatch, iLearn, dHyper)
 
-def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, perceptual_weight, pl_network):
+def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
     train_ref = dData['train_ref']
     train_art = dData['train_art']
     test_ref = dData['test_ref']
@@ -113,19 +117,19 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pe
     test_ref = np.expand_dims(test_ref, axis=1)
     test_art = np.expand_dims(test_art, axis=1)
 
-    vae = createModel(patchSize, kl_weight, perceptual_weight, pl_network)
-    vae.compile(optimizer='adam', loss=None)
+    vae = createModel(patchSize, dHyper)
+    vae.compile(optimizer=Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0), loss=None)
     vae.summary()
 
     print('Training with epochs {} batch size {} learning rate {}'.format(epochs, batchSize, lr))
 
-    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}.h5'.format(patchSize[0], batchSize)
+    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}.h5'.format(patchSize[0], batchSize, lr)
 
     callback_list = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
     callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
-    callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
+    callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-5, verbose=1))
 
-    vae.fit([train_ref, train_art],
+    history = vae.fit([train_ref, train_art],
             shuffle=True,
             epochs=epochs,
             batch_size=batchSize,
@@ -133,41 +137,58 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, kl_weight, pe
             verbose=1,
             callbacks=callback_list)
 
-def fPredict(dData, sOutPath, patchSize, dHyper):
-    weights_file = sOutPath + os.sep + '{}.h5'.format(dHyper['bestModel'])
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.savefig(weights_file[:-3] + '.png')
 
-    kl_weight = dHyper['kl_weight']
-    perceptual_weight = dHyper['perceptual_weight']
-    pl_network = dHyper['pl_network']
+def fPredict(dData, dParam, dHyper):
+    weights_file = dParam['sOutPath'] + os.sep + '{}.h5'.format(dHyper['bestModel'])
 
-    vae = createModel(patchSize, kl_weight, perceptual_weight, pl_network)
+    patchSize = dParam['patchSize']
+
+    vae = createModel(patchSize, dHyper)
     vae.compile(optimizer='adam', loss=None)
 
     vae.load_weights(weights_file)
 
-    # TODO: adapt the embedded batch size
-    predict_ref, predict_art = vae.predict([dData['test_ref'][:128], dData['test_art'][:128]], 128, verbose=1)
+    test_ref = np.zeros(shape=(dData.shape[0], 1, patchSize[0], patchSize[1]))
+    test_art = np.expand_dims(dData, axis=1)
+    predict_ref, predict_art = vae.predict([test_ref, test_art], dParam['batchSize'][0], verbose=1)
 
-    test_ref = np.squeeze(dData['test_ref'][:128], axis=1)
-    test_art = np.squeeze(dData['test_art'][:128], axis=1)
-    predict_ref = np.squeeze(predict_ref, axis=1)
+    test_art = np.squeeze(test_art, axis=1)
     predict_art = np.squeeze(predict_art, axis=1)
 
-    nPatch = predict_ref.shape[0]
-
-    for i in range(nPatch//6):
-        fig, axes = plt.subplots(nrows=5, ncols=4)
+    if dHyper['unpatch']:
+        predict_art = fRigidUnpatchingCorrection([256, 196], predict_art)
+        plt.figure()
         plt.gray()
+        for i in range(predict_art.shape[0]):
+            plt.imshow(predict_art[i])
+            if dParam['lSave']:
+                plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')
+            else:
+                plt.show()
+    else:
+        nPatch = predict_art.shape[0]
 
-        cols_title = ['test_ref', 'predict_ref', 'test_art', 'predict_art']
+        for i in range(nPatch//5):
+            fig, axes = plt.subplots(nrows=5, ncols=2)
+            plt.gray()
 
-        for ax, col in zip(axes[0], cols_title):
-            ax.set_title(col)
+            cols_title = ['original_art', 'predicted_art']
 
-        for j in range(5):
-            axes[j, 0].imshow(test_ref[6*i+j])
-            axes[j, 1].imshow(predict_ref[6*i+j])
-            axes[j, 2].imshow(test_art[6*i+j])
-            axes[j, 3].imshow(predict_art[6*i+j])
+            for ax, col in zip(axes[0], cols_title):
+                ax.set_title(col)
 
-        plt.show()
+            for j in range(5):
+                axes[j, 0].imshow(test_art[5*i+j])
+                axes[j, 1].imshow(predict_art[5*i+j])
+
+            if dParam['lSave']:
+                plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')
+            else:
+                plt.show()

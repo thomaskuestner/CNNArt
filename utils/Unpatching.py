@@ -164,3 +164,27 @@ def get_first_index(iX, iY, iZ, patch_nmb_layer, x_index, y_index):
         num = num - y_index - 1
 
     return num
+
+def fRigidUnpatchingCorrection(actual_size, allPatches, patchOverlap):
+    patch_size = [allPatches.shape[1], allPatches.shape[2]]
+    height, width = actual_size[0], actual_size[1]
+    dOverlap = np.multiply(patch_size, patchOverlap).astype(int)
+    dNotOverlap = np.round(np.multiply(patch_size, (1 - patchOverlap))).astype(int)
+
+    height_pad = int(math.ceil((height - dOverlap[0]) * 1.0 / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0])
+
+    width_pad = int(math.ceil((width - dOverlap[1]) * 1.0 / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1])
+
+    num_rows, num_cols = int(math.ceil((height_pad-patch_size[0])*1.0/dNotOverlap[0])+1), int(math.ceil((width_pad-patch_size[1])*1.0/dNotOverlap[1])+1)
+    num_slices = allPatches.shape[0]/(num_rows * num_cols)
+
+    allPatches = np.reshape(allPatches, (num_slices, -1, patch_size[0], patch_size[1]))
+    unpatchImg = np.zeros((num_slices, height_pad, width_pad))
+
+    for slice in range(num_slices):
+        for row in range(num_rows):
+            for col in range(num_cols):
+                index = row * num_cols + col
+                unpatchImg[slice, row * dNotOverlap[0]:row * dNotOverlap[0] + patch_size[0], col * dNotOverlap[1]:col * dNotOverlap[1] + patch_size[1]] = allPatches[slice, index]
+
+    return unpatchImg
