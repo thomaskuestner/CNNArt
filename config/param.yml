@@ -40,6 +40,7 @@ selectedDatabase: *id001
 # bodyRegion: abd, head, all
 # network: CNN2D, CNN3D, MNetArt, VNetArt
 # network with muntiscaleSeparated method: motion_all_CNN2D_multiscale, motion_VNet_multiscale
+# new modification of VNet with inception block: motion_VNet_Inception
 network : "motion_all_CNN2D"
 
 # scaling range
