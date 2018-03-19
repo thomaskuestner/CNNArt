@@ -39,8 +39,7 @@ def fCreateLeakyReluBNConv2D(filters, kernel_size=(3, 3), strides=(1, 1), paddin
                         strides=strides,
                         padding=padding,
                         kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
-        bn = BatchNormalization(axis=1)(conv2d)
-        return LeakyReLU()(bn)
+        return BatchNormalization(axis=1)(LeakyReLU()(conv2d))
     return f
 
 
@@ -55,6 +54,20 @@ def fCreateLeakyReluConv3D(filters, kernel_size=(3, 3, 3), strides=(1, 1, 1), pa
                         padding=padding,
                         kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
         return LeakyReLU()(conv3d)
+    return f
+
+
+def fCreateLeakyReluBNConv3D(filters, kernel_size, strides, padding='same'):
+    l1_reg = 0
+    l2_reg = 1e-6
+
+    def f(inputs):
+        conv3d = Conv3D(filters,
+                        kernel_size=kernel_size,
+                        strides=strides,
+                        padding=padding,
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
+        return BatchNormalization(axis=1)(LeakyReLU()(conv3d))
     return f
 
 
