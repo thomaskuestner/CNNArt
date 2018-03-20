@@ -146,6 +146,13 @@ class MainWindow(QMainWindow):
         self.ui.VerticalLayout_ArtifactMaps.addWidget(self.canvas_artifact_map_figure)
         self.ui.VerticalLayout_ArtifactMaps.addWidget(self.toolbar_artifact_map_figure)
 
+        # segmentation masks plot
+        self.segmentation_masks_figure = Figure(figsize=(10, 10))
+        self.canvas_segmentation_masks_figure = FigureCanvas(self.segmentation_masks_figure)
+        self.toolbar_segmentation_masks_figure = NavigationToolbar(self.canvas_segmentation_masks_figure, self)
+        self.ui.verticalLayout_SegmentationMasks.addWidget(self.canvas_segmentation_masks_figure)
+        self.ui.verticalLayout_SegmentationMasks.addWidget(self.toolbar_segmentation_masks_figure)
+
         ################################################################################################################
 
         ################################################################################################################
@@ -208,31 +215,126 @@ class MainWindow(QMainWindow):
         ################################################################################################################
 
     def button_predict_clicked(self):
+        gpuId = self.ui.ComboBox_GPU_Prediction.currentIndex()
+        self.deepLearningArtApp.setGPUPredictionId(gpuId)
+
         self.deepLearningArtApp.setDoUnpatching(bool(self.ui.CheckBox_Unpatching.isChecked()))
 
         bPredicted = self.deepLearningArtApp.performPrediction()
 
         if bPredicted:
-            confusionMatrix = self.deepLearningArtApp.getConfusionMatrix()
-            classificationReport = self.deepLearningArtApp.getClassificationReport()
+            if not self.deepLearningArtApp.getUsingSegmentationMasksForPredictions():
+                confusionMatrix = self.deepLearningArtApp.getConfusionMatrix()
+                classificationReport = self.deepLearningArtApp.getClassificationReport()
 
-            target_names = []
-            for i in sorted(self.deepLearningArtApp.getClassMappingsForPrediction()):
-                target_names.append(Label.LABEL_STRINGS[i])
+                target_names = []
+                for i in sorted(self.deepLearningArtApp.getClassMappingsForPrediction()):
+                    target_names.append(Label.LABEL_STRINGS[i])
 
-            acc_training = self.deepLearningArtApp.get_acc_training()
-            acc_validation = self.deepLearningArtApp.get_acc_validation()
-            acc_test = self.deepLearningArtApp.get_acc_test()
+                acc_training = self.deepLearningArtApp.get_acc_training()
+                acc_validation = self.deepLearningArtApp.get_acc_validation()
+                acc_test = self.deepLearningArtApp.get_acc_test()
 
-            self.plotTrainingResults(acc_training=acc_training, acc_validation=acc_validation)
-            self.plotConfusionMatrix(confusionMatrix, target_names)
+                self.plotTrainingResults(acc_training=acc_training, acc_validation=acc_validation)
+                self.plotConfusionMatrix(confusionMatrix, target_names)
 
-            outputString = 'Test Accuracy: ' + str(acc_test) + '\n' + classificationReport
-            self.ui.textEdit_summary.setText(outputString)
+                outputString = 'Test Accuracy: ' + str(acc_test) + '\n' + classificationReport
+                self.ui.textEdit_summary.setText(outputString)
 
-            # check for unpatching
-            if self.deepLearningArtApp.getDoUnpatching():
-                self.plotArtifactMaps()
+                # check for unpatching
+                if self.deepLearningArtApp.getDoUnpatching():
+                    self.plotArtifactMaps()
+            else:
+
+                acc_training = self.deepLearningArtApp.get_acc_training()
+                acc_validation = self.deepLearningArtApp.get_acc_validation()
+                acc_test = self.deepLearningArtApp.get_acc_test()
+
+                self.plotTrainingResults(acc_training=acc_training, acc_validation=acc_validation)
+                outputString = 'Test Accuracy: ' + str(acc_test)
+                self.ui.textEdit_summary.setText(outputString)
+
+                if self.deepLearningArtApp.getDoUnpatching():
+                    self.plotSegmentationArtifactMaps()
+                    self.plotSegmentationPredictions()
+
+    def plotSegmentationPredictions(self):
+        unpatched_slices = self.deepLearningArtApp.getUnpatchedSlices()
+
+        if unpatched_slices is not None:
+            predicted_segmentation_mask = unpatched_slices['predicted_segmentation_mask']
+            dicom_slices = unpatched_slices['dicom_slices']
+            dicom_masks = unpatched_slices['dicom_masks']
+
+
+            index = int(self.ui.SpinBox_SliceSelect.value())
+            self.ui.SpinBox_SliceSelect.setMaximum(int(dicom_slices.shape[-1]))
+
+            if index >= 0 and index < dicom_slices.shape[-1]:
+                pred_seg_mask_slice = np.squeeze(predicted_segmentation_mask[:, :, index])
+                dicom_slice = np.squeeze(dicom_slices[:, :, index])
+                dicom_mask_slice = np.squeeze(dicom_masks[:, :, index])
+
+                self.segmentation_masks_figure.clear()
+                ax1 = self.segmentation_masks_figure.add_subplot(121)
+                ax1.clear()
+                ax1.imshow(dicom_slice, cmap='gray')
+                ax1.imshow(dicom_mask_slice, cmap='Reds', interpolation='nearest', alpha=.3)
+                ax1.set_title('Ground Truth')
+
+                ax2 = self.segmentation_masks_figure.add_subplot(122)
+                ax2.clear()
+                ax2.imshow(dicom_slice, cmap='gray')
+                ax2.imshow(pred_seg_mask_slice, cmap='jet', interpolation='nearest', alpha=.4)
+                ax2.set_title('Predicted Segmentation Mask')
+
+                self.segmentation_masks_figure.tight_layout()
+
+                self.canvas_segmentation_masks_figure.draw()
+
+
+    def plotSegmentationArtifactMaps(self):
+        unpatched_slices = self.deepLearningArtApp.getUnpatchedSlices()
+
+        if unpatched_slices is not None:
+            probability_mask_background = unpatched_slices['probability_mask_background']
+            probability_mask_foreground = unpatched_slices['probability_mask_foreground']
+            dicom_slices = unpatched_slices['dicom_slices']
+            dicom_masks = unpatched_slices['dicom_masks']
+
+            index = int(self.ui.SpinBox_SliceSelect.value())
+            self.ui.SpinBox_SliceSelect.setMaximum(int(dicom_slices.shape[-1]))
+
+            if index >=0 and index < dicom_slices.shape[-1]:
+                dicom_slice = np.squeeze(dicom_slices[:, :, index])
+                prob_mask_back_slice = np.squeeze(probability_mask_background[:,:,index])
+                prob_mask_fore_slice = np.squeeze(probability_mask_foreground[:,:,index])
+                dicom_mask_slice = np.squeeze(dicom_masks[:,:,index])
+
+                # plot artifact map
+                self.artifact_map_figure.clear()
+                ax1 = self.artifact_map_figure.add_subplot(131)
+                ax1.clear()
+                ax1.imshow(dicom_slice, cmap='gray')
+                ax1.imshow(dicom_mask_slice, cmap = 'Reds', interpolation = 'nearest', alpha = .3)
+                ax1.set_title('Ground Truth')
+
+                ax2 = self.artifact_map_figure.add_subplot(132)
+                ax2.clear()
+                ax2.imshow(dicom_slice, cmap='gray')
+                ax2.imshow(prob_mask_fore_slice, cmap='jet', interpolation='nearest', alpha=.4)
+                ax2.set_title('Predicted Foreground')
+
+                ax3 = self.artifact_map_figure.add_subplot(133)
+                ax3.clear()
+                ax3.imshow(dicom_slice, cmap='gray')
+                map = ax3.imshow(prob_mask_back_slice, cmap='jet', interpolation='nearest', alpha=.4)
+                ax3.set_title('Predicted Background')
+
+                self.artifact_map_figure.colorbar(mappable=map, ax=ax3)
+                self.artifact_map_figure.tight_layout()
+
+                self.canvas_artifact_map_figure.draw()
 
 
     def plotArtifactMaps(self):
@@ -257,13 +359,13 @@ class MainWindow(QMainWindow):
                 ax1 = self.artifact_map_figure.add_subplot(121)
                 ax1.clear()
                 ax1.imshow(slice, cmap='gray')
-                ax1.imshow(label_mask, cmap = 'plasma', interpolation = 'nearest', alpha = .2)
+                ax1.imshow(label_mask, cmap = 'Reds', interpolation = 'nearest', alpha = .3)
                 ax1.set_title('Ground Truth')
 
                 ax2 = self.artifact_map_figure.add_subplot(122)
                 ax2.clear()
                 ax2.imshow(slice, cmap='gray')
-                map = ax2.imshow(prob_mask, cmap='plasma', interpolation='nearest', alpha=.4)
+                map = ax2.imshow(prob_mask, cmap='jet', interpolation='nearest', alpha=.4)
                 ax2.set_title('Artifact Map')
 
                 self.artifact_map_figure.colorbar(mappable=map, ax=ax2)
@@ -317,6 +419,10 @@ class MainWindow(QMainWindow):
 
 
     def button_train_clicked(self):
+        # set gpu
+        gpuId = self.ui.ComboBox_GPU.currentIndex()
+        self.deepLearningArtApp.setGPUId(gpuId)
+
         # set epochs
         self.deepLearningArtApp.setEpochs(self.ui.SpinBox_Epochs.value())
 
@@ -498,7 +604,11 @@ class MainWindow(QMainWindow):
 
 
     def spinBox_sliceSelect_changed(self):
-        self.plotArtifactMaps()
+        if self.deepLearningArtApp.usingSegmentationMasksForPrediction:
+            self.plotSegmentationArtifactMaps()
+            self.plotSegmentationPredictions()
+        else:
+            self.plotArtifactMaps()
 
 
     def getSelectedPatients(self):

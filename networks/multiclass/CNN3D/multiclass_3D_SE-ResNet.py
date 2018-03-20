@@ -1,6 +1,6 @@
 import os
 #os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from tensorflow.python.client import device_lib
 print(device_lib.list_local_devices)
@@ -35,10 +35,106 @@ from matplotlib import pyplot as plt
 
 def createModel(patchSize, numClasses):
 
+    if K.image_data_format() == 'channels_last':
+        bn_axis = -1
+    else:
+        bn_axis = 1
 
+    input_tensor = Input(shape=(patchSize[0], patchSize[1], patchSize[2], 1))
 
+    # first stage
+    x = Conv3D(filters=16,
+               kernel_size=(5, 5, 5),
+               strides=(1, 1, 1),
+               padding='same',
+               kernel_initializer='he_normal',
+               name='conv1')(input_tensor)
+    x = BatchNormalization(axis=bn_axis, name='bn_conv1')(x)
+    x = advanced_activations.LeakyReLU(alpha=0.01)(x)
 
+    x_after_stage_1 = Add()([input_tensor, x])
 
+    # first down convolution
+    x_down_conv_1 = projection_block_3D(x_after_stage_1,
+                                        filters=(32, 32),
+                                        kernel_size=(3, 3, 3),
+                                        stage=1,
+                                        block=1,
+                                        se_enabled=True,
+                                        se_ratio=4)
+
+    # second stage
+    x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1,
+                          se_enabled=True, se_ratio=4)
+    # x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=2, block=2, se_enabled=False, se_ratio=16)
+    x_after_stage_2 = x
+
+    # second down convolution
+    x_down_conv_2 = projection_block_3D(x_after_stage_2,
+                                        filters=(64, 64),
+                                        kernel_size=(3, 3, 3),
+                                        stage=2,
+                                        block=3,
+                                        se_enabled=True,
+                                        se_ratio=4)
+
+    # third stage
+    x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=True,
+                          se_ratio=4)
+    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=2, se_enabled=True,
+                          se_ratio=4)
+    # x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=3, se_enabled=False, se_ratio=16)
+    x_after_stage_3 = x
+
+    # third down convolution
+    x_down_conv_3 = projection_block_3D(x_after_stage_3,
+                                        filters=(128, 128),
+                                        kernel_size=(3, 3, 3),
+                                        stage=3,
+                                        block=4,
+                                        se_enabled=True,
+                                        se_ratio=8)
+
+    # fourth stage
+    x = identity_block_3D(x_down_conv_3, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=1, se_enabled=True,
+                          se_ratio=8)
+    x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=2, se_enabled=True,
+                          se_ratio=8)
+    # x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=3, se_enabled=False, se_ratio=16)
+    x_after_stage_4 = x
+
+    #  # fourth down convolution
+    #  x_down_conv_4 = projection_block_3D(x_after_stage_4,
+    #                                      filters=(256, 256),
+    #                                      kernel_size=(3, 3, 3),
+    #                                      stage=4,
+    #                                      block=4,
+    #                                      se_enabled=False,
+    #                                      se_ratio=16)
+    #
+    #  # fifth stage
+    #  x = identity_block_3D(x_down_conv_4, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=1, se_enabled=False, se_ratio=16)
+    #  x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=2, se_enabled=False, se_ratio=16)
+    # # x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=3, se_enabled=False, se_ratio=16)
+    #  x_after_stage_5 = x
+
+    ### end of encoder path
+    ### classification output
+
+    # global average pooling
+    x = GlobalAveragePooling3D(data_format=K.image_data_format())(x_after_stage_4)
+
+    # fully connected layer
+    output = Dense(units=numClasses,
+                   activation='softmax',
+                   kernel_initializer='he_normal',
+                   name='fully-connected')(x)
+
+    # create model
+    cnn = Model(input_tensor, output, name='3D-SE-ResNet')
+    sModelName = cnn.name
+
+    return cnn, sModelName
 
 
 
@@ -159,12 +255,9 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
     #  embeddings_metadata=None)
 
     callbacks = [callback_earlyStopping]
-    callbacks.append(
-        ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0,
-                        period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
-    callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
-    # callbacks.append(LearningRateScheduler(schedule=step_decay))
-
+    callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0, period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
+    # callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
+    callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
 
     # data augmentation
     if dlart_handle.getDataAugmentationEnabled() == True:
@@ -229,20 +322,20 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                                        use_multiprocessing=False)
 
     else:
-        if X_valid is not None and y_valid is not None:
-            # use validation/test split
+        if not X_valid and not y_valid :
+            # no validation datasets
             result = cnn.fit(X_train,
                              y_train,
-                             validation_data=(X_valid, y_valid),
+                             validation_data=(X_test, y_test),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
                              verbose=1)
         else:
-            # use test set for validation and test
+            # using validation datasets
             result = cnn.fit(X_train,
                              y_train,
-                             validation_data=(X_test, y_test),
+                             validation_data=(X_valid, y_valid),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -280,10 +373,12 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                              'acc_test': acc_test,
                              'prob_test': prob_test})
 
+
+
 def step_decay(epoch):
     initial_lrate = 0.1
     drop = 0.1
-    epochs_drop = 2.0
+    epochs_drop = 10.0
     lrate = initial_lrate * math.pow(drop, math.floor((1 + epoch) / epochs_drop))
     print("Reduce Learningrate by 0.1")
     return lrate

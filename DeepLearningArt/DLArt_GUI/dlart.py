@@ -111,6 +111,10 @@ class DeepLearningArtApp():
         # GUI handle
         self.dlart_GUI_handle = None
 
+        # GPU id
+        self.gpu_id = 0
+        self.gpu_prediction_id = 0
+
         # attributes for paths and database
         self.selectedPatients = ''
         self.selectedDatasets = ''
@@ -250,10 +254,10 @@ class DeepLearningArtApp():
             if self.usingSegmentationMasks:
                 dAllSegmentationMaskPatches = np.zeros((self.patchSizeX, self.patchSizeY, 0))
         elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
-            dAllPatches = np.zeros([self.patchSizeX, self.patchSizeY, self.patchSizeZ, 0])
+            dAllPatches = np.zeros((self.patchSizeX, self.patchSizeY, self.patchSizeZ, 0))
             dAllLabels = np.zeros(0)
             if self.usingSegmentationMasks:
-                dAllSegmentationMaskPatches = np.zeros([self.patchSizeX, self.patchSizeY, self.patchSizeZ, 0])
+                dAllSegmentationMaskPatches = np.zeros((self.patchSizeX, self.patchSizeY, self.patchSizeZ, 0))
         else:
             raise IOError("We do not know your patching mode...")
 
@@ -412,33 +416,34 @@ class DeepLearningArtApp():
                     else:
                             print("We do not know what labeling mode you want to use :p")
 
-                if self.storeMode == DeepLearningArtApp.STORE_PATCH_BASED:
-                    # patch based storage
-                    if self.patchingMode == DeepLearningArtApp.PATCHING_3D:
-                        for i in range(0, dPatches.shape[3]):
-                            patchSlice = np.asarray(dPatches[:,:,:,i], dtype=np.float32)
-                            np.save((outPutFolderDataPath + os.sep + "X"+str(iPatchToDisk)+".npy"), patchSlice, allow_pickle=False)
-                            labelDict["Y"+str(iPatchToDisk)] = int(dLabels[i])
-                            iPatchToDisk+=1
-                    else:
-                        for i in range(0, dPatches.shape[2]):
-                            patchSlice = np.asarray(dPatches[:,:,i], dtype=np.float32)
-                            np.save((outPutFolderDataPath + os.sep + "X"+str(iPatchToDisk)+".npy"), patchSlice, allow_pickle=False)
-                            labelDict["Y"+str(iPatchToDisk)] = int(dLabels[i])
-                            iPatchToDisk+=1
 
-                else:
-                    # concatenate all patches in one array
-                    if self.patchingMode == DeepLearningArtApp.PATCHING_2D:
-                        dAllPatches = np.concatenate((dAllPatches, dPatches), axis=2)
-                        dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
-                        if self.usingSegmentationMasks:
-                            dAllSegmentationMaskPatches = np.concatenate((dAllSegmentationMaskPatches, dPatchesOfMask), axis=2)
-                    elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
-                        dAllPatches = np.concatenate((dAllPatches, dPatches), axis=3)
-                        dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
-                        if self.usingSegmentationMasks:
-                            dAllSegmentationMaskPatches = np.concatenate((dAllSegmentationMaskPatches, dPatchesOfMask), axis=3)
+                    if self.storeMode == DeepLearningArtApp.STORE_PATCH_BASED:
+                        # patch based storage
+                        if self.patchingMode == DeepLearningArtApp.PATCHING_3D:
+                            for i in range(0, dPatches.shape[3]):
+                                patchSlice = np.asarray(dPatches[:,:,:,i], dtype=np.float32)
+                                np.save((outPutFolderDataPath + os.sep + "X"+str(iPatchToDisk)+".npy"), patchSlice, allow_pickle=False)
+                                labelDict["Y"+str(iPatchToDisk)] = int(dLabels[i])
+                                iPatchToDisk+=1
+                        else:
+                            for i in range(0, dPatches.shape[2]):
+                                patchSlice = np.asarray(dPatches[:,:,i], dtype=np.float32)
+                                np.save((outPutFolderDataPath + os.sep + "X"+str(iPatchToDisk)+".npy"), patchSlice, allow_pickle=False)
+                                labelDict["Y"+str(iPatchToDisk)] = int(dLabels[i])
+                                iPatchToDisk+=1
+
+                    else:
+                        # concatenate all patches in one array
+                        if self.patchingMode == DeepLearningArtApp.PATCHING_2D:
+                            dAllPatches = np.concatenate((dAllPatches, dPatches), axis=2)
+                            dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
+                            if self.usingSegmentationMasks:
+                                dAllSegmentationMaskPatches = np.concatenate((dAllSegmentationMaskPatches, dPatchesOfMask), axis=2)
+                        elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
+                            dAllPatches = np.concatenate((dAllPatches, dPatches), axis=3)
+                            dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
+                            if self.usingSegmentationMasks:
+                                dAllSegmentationMaskPatches = np.concatenate((dAllSegmentationMaskPatches, dPatchesOfMask), axis=3)
 
 
         # dataset splitting
@@ -587,6 +592,9 @@ class DeepLearningArtApp():
             print()
 
     def performTraining(self):
+        # set GPU
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(self.gpu_id)
+
         # get output vector for different classes
         classes = np.asarray(np.unique(self.Y_train, ), dtype=int)
         self.classMappings = Label.mapClassesToOutputVector(classes=classes,
@@ -711,7 +719,16 @@ class DeepLearningArtApp():
         dataDict['NesterovEnabled'] = self.nesterovEnabled
 
         dataDict['Dataset'] = self.datasetName
-        dataDict['ClassMappings'] = self.classMappings
+        #dataDict['ClassMappings'] = self.classMappings
+
+        # dict integer keys to strings
+        classMappingsDict = {}
+        for i in self.classMappings:
+            key = str(i)
+            val = self.classMappings[i]
+            classMappingsDict[key] = val.tolist()
+
+        dataDict['ClassMappings'] = classMappingsDict
 
         with open((outputFolderPath+os.sep+'cnn_training_info.json'), 'w') as fp:
             json.dump(dataDict, fp, indent=4)
@@ -1135,6 +1152,21 @@ class DeepLearningArtApp():
     def get_acc_test(self):
         return self.acc_test
 
+    def getGPUId(self):
+        return self.gpu_id
+
+    def setGPUId(self, id):
+        self.gpu_id = id
+
+    def setGPUPredictionId(self, id):
+        self.gpu_prediction_id = id
+
+    def getGPUPredictionId(self):
+        return self.gpu_id
+
+    def getUsingSegmentationMasksForPredictions(self):
+        return self.usingSegmentationMasksForPrediction
+
     def getClassMappingsForPrediction(self):
         return self.classMappingsForPrediction
 
@@ -1145,6 +1177,8 @@ class DeepLearningArtApp():
         return self.doUnpatching
 
     def performPrediction(self):
+        # set GPU
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(self.gpu_prediction_id)
 
         # load dataset for prediction
         # check for data info summary in json file
@@ -1243,19 +1277,102 @@ class DeepLearningArtApp():
 
 
         if self.usingSegmentationMasksForPrediction:
-             predictions = cnnModel.fPredict(X_test,
-                                            Y_test,
-                                            Y_segMasks_test,
-                                            sModelPath=self.modelForPrediction,
-                                            batch_size=batchSize)
 
-             #save to disc
-             _, sModelFileSave = os.path.split(self.modelForPrediction)
+             predictions = predict_segmentation_model(X_test,
+                                                      Y_test,
+                                                      Y_segMasks_test,
+                                                      sModelPath=self.modelForPrediction,
+                                                      batch_size=batchSize)
+
+             # do unpatching if is enabled
+             if self.doUnpatching:
+
+                 patchSize = [X_test.shape[1], X_test.shape[2], X_test.shape[3]]
+
+                 # load corresponding original dataset
+                 for i in DeepLearningArtApp.datasets:
+                     set = DeepLearningArtApp.datasets[i]
+                     if set.getDatasetLabel() == classLabel:
+                         originalDatasetName = set.getPathdata()
+
+                 pathToOriginalDataset = self.getPathToDatabase() + os.sep + str(
+                     patientsOfDataset[0]) + os.sep + 'dicom_sorted' + os.sep + originalDatasetName
+                 fileNames = os.listdir(pathToOriginalDataset)
+                 fileNames = [os.path.join(pathToOriginalDataset, f) for f in fileNames]
+
+                 # read DICOMS
+                 dicomDataset = [dicom.read_file(f) for f in fileNames]
+
+                 # Combine DICOM Slices to a single 3D image (voxel)
+                 try:
+                     voxel_ndarray, ijk_to_xyz = dicom_np.combine_slices(dicomDataset)
+                     voxel_ndarray = voxel_ndarray.astype(float)
+                     voxel_ndarray = np.swapaxes(voxel_ndarray, 0, 1)
+                 except dicom_np.DicomImportException as e:
+                     # invalid DICOM data
+                     raise
+
+                 # load dicom mask
+                 currentMarkingsPath = self.getMarkingsPath() + os.sep + str(patientsOfDataset[0]) + ".json"
+                 # get the markings mask
+                 labelMask_ndarray = create_MASK_Array(currentMarkingsPath,
+                                                       patientsOfDataset[0],
+                                                       originalDatasetName,
+                                                       voxel_ndarray.shape[0],
+                                                       voxel_ndarray.shape[1],
+                                                       voxel_ndarray.shape[2])
+
+                 dicom_size = [voxel_ndarray.shape[0], voxel_ndarray.shape[1], voxel_ndarray.shape[2]]
+
+
+                 unpatched_img_foreground = fUnpatchSegmentation(predictions['prob_pre'],
+                                                                 patchSize=patchSize,
+                                                                 patchOverlap=patchOverlap,
+                                                                 actualSize=dicom_size,
+                                                                 iClass=1)
+                 unpatched_img_background = fUnpatchSegmentation(predictions['prob_pre'],
+                                                                 patchSize=patchSize,
+                                                                 patchOverlap=patchOverlap,
+                                                                 actualSize=dicom_size,
+                                                                 iClass=0)
+
+                 ones = np.ones((unpatched_img_background.shape[0], unpatched_img_background.shape[1],
+                                 unpatched_img_background.shape[2]))
+                 preds = np.divide(np.add(np.subtract(ones,unpatched_img_background), unpatched_img_foreground), 2)
+
+                 preds = preds > 0.5
+                 unpatched_img_mask = np.zeros((unpatched_img_background.shape[0], unpatched_img_background.shape[1], unpatched_img_background.shape[2]))
+                 unpatched_img_mask[preds] = unpatched_img_mask[preds] + 1
+
+                 # unpatched_img_mask = fUnpatchSegmentation(preds,
+                 #                                           patchSize=patchSize,
+                 #                                           patchOverlap=patchOverlap,
+                 #                                           actualSize=dicom_size,
+                 #                                           iClass=1000)
+
+                 self.unpatched_slices = {
+                     'probability_mask_foreground': unpatched_img_foreground,
+                     'probability_mask_background': unpatched_img_background,
+                     'predicted_segmentation_mask': unpatched_img_mask,
+                     'dicom_slices': voxel_ndarray,
+                     'dicom_masks': labelMask_ndarray,
+
+                 }
+
+             # save prediction into .mat file
              modelSave = self.modelForPrediction + os.sep + 'model_predictions.mat'
              print('saving Model:{}'.format(modelSave))
-             sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
-                                    'score_test': predictions['score_test'],
-                                    'acc_test': predictions['acc_test']})
+             if not self.doUnpatching:
+                 sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
+                                         'score_test': predictions['score_test'],
+                                         'acc_test': predictions['acc_test'],
+                                         })
+             else:
+                 sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
+                                         'score_test': predictions['score_test'],
+                                         'acc_test': predictions['acc_test'],
+                                         'unpatched_slices': self.unpatched_slices
+                                         })
 
              # load training results
              _, sPath = os.path.splitdrive(self.modelForPrediction)
@@ -1263,8 +1380,8 @@ class DeepLearningArtApp():
              sFilename, sExt = os.path.splitext(sFilename)
 
              training_results = sio.loadmat(self.modelForPrediction + os.sep + sFilename + ".mat")
-             self.acc_training = training_results['acc']
-             self.acc_validation = training_results['val_acc']
+             self.acc_training = training_results['dice_coef']
+             self.acc_validation = training_results['val_dice_coef']
              self.acc_test = training_results['acc_test']
 
 

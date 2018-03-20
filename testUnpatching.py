@@ -40,12 +40,12 @@ except dicom_np.DicomImportException as e:
 confusion_matrix = mat['confusion_matrix']
 predictions = mat['prob_pre']
 
-unpatched_img = fUnpatch2D(predictions, [64, 64], 0.5, [240, 320, 40], 1)
+#unpatched_img = fUnpatch2D(predictions, [64, 64], 0.5, [240, 320, 40], 1)
 
-sio.savemat('D:/med_data/unpatched.mat', {'unpatched_img': unpatched_img})
+#sio.savemat('D:/med_data/unpatched.mat', {'unpatched_img': unpatched_img})
 
-#unpatched_img = sio.loadmat('D:/med_data/unpatched.mat')
-#unpatched_img = unpatched_img['unpatched_img']
+unpatched_img = sio.loadmat('D:/med_data/unpatched.mat')
+unpatched_img = unpatched_img['unpatched_img']
 
 index = 25
 
@@ -54,7 +54,7 @@ slice = np.squeeze(voxel_ndarray[:,:, index])
 
 f, ax = plt.subplots(figsize=(11, 9))
 plt.imshow(slice, cmap='gray')
-plt.imshow(img, cmap='plasma', interpolation='nearest', alpha=.4)
+plt.imshow(img, cmap='jet', interpolation='nearest', alpha=.4)
 
 plt.colorbar(ax=ax)
 plt.show(block=True)

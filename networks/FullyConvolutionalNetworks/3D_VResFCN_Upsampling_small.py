@@ -1,6 +1,6 @@
 import os
 #os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 
 from tensorflow.python.client import device_lib
 print(device_lib.list_local_devices)

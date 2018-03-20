@@ -47,7 +47,7 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
     if sSplitting == dlart.DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING:
         # splitting
         indexSlices = range(allPatches.shape[0])
-        #indexSlices = np.random.permutation(indexSlices)
+        indexSlices = np.random.permutation(indexSlices)
 
         if len(patchSize)==2:
             #2D patching
@@ -300,7 +300,7 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, s
     if sSplitting == dlart.DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING:
         # splitting
         indexSlices = range(allPatches.shape[0])
-        #indexSlices = np.random.permutation(indexSlices)
+        indexSlices = np.random.permutation(indexSlices)
 
         if len(patchSize)==2:
             #2D patching

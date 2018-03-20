@@ -1,6 +1,6 @@
 import os
 #os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from tensorflow.python.client import device_lib
 print(device_lib.list_local_devices)
@@ -129,7 +129,7 @@ def createModel(patchSize, numClasses):
                    name='fully-connected')(x)
 
     # create model
-    cnn = Model(input_tensor, output, name='ResNet-56')
+    cnn = Model(input_tensor, output, name='3D-ResNet')
     sModelName = cnn.name
 
     return cnn, sModelName
@@ -211,7 +211,6 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
         print('------- already trained -> go to next')
         return
 
-
     # create optimizer
     if dlart_handle != None:
         if dlart_handle.getOptimizer() == DeepLearningArtApp.SGD_OPTIMIZER:
@@ -250,12 +249,12 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                                                       # write_images=True,
                                                       # embeddings_freq=0,
                                                       # embeddings_layer_names=None,
-                                                     #  embeddings_metadata=None)
+                                                      #  embeddings_metadata=None)
 
     callbacks = [callback_earlyStopping]
     callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0, period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
-    callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
-    #callbacks.append(LearningRateScheduler(schedule=step_decay))
+    #callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
+    callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
 
 
     # data augmentation
@@ -321,20 +320,20 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                                        use_multiprocessing=False)
 
     else:
-        if X_valid is not None and y_valid is not None:
-            # use validation/test split
+        if not X_valid and not y_valid :
+            # no validation datasets
             result = cnn.fit(X_train,
                              y_train,
-                             validation_data=(X_valid, y_valid),
+                             validation_data=(X_test, y_test),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
                              verbose=1)
         else:
-            # use test set for validation and test
+            # using validation datasets
             result = cnn.fit(X_train,
                              y_train,
-                             validation_data=(X_test, y_test),
+                             validation_data=(X_valid, y_valid),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -376,7 +375,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 def step_decay(epoch):
    initial_lrate = 0.1
    drop = 0.1
-   epochs_drop = 2.0
+   epochs_drop = 10
    lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
    print("Reduce Learningrate by 0.1")
    return lrate
