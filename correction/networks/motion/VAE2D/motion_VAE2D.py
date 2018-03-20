@@ -140,7 +140,7 @@ def fPredict(test_ref, test_art, dParam, dHyper):
     if dHyper['unpatch']:
         test_ref = fRigidUnpatchingCorrection(dHyper['actualSize'], test_ref, dParam['patchOverlap'])
         test_art = fRigidUnpatchingCorrection(dHyper['actualSize'], test_art, dParam['patchOverlap'])
-        predict_art = fRigidUnpatchingCorrection(dHyper['actualSize'], predict_art, dParam['patchOverlap'])
+        predict_art = fRigidUnpatchingCorrection(dHyper['actualSize'], predict_art, dParam['patchOverlap'], 'average')
         if dHyper['evaluate']:
             fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 5), sharex=True, sharey=True)
             ax = axes.ravel()

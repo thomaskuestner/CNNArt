@@ -99,8 +99,8 @@ lScaleFactor : [0.5, 1]
 lCorrection: false
 # parameters in artifacts correction
 correction:
-  sCorrection: "motion_VAE2D_80"
-  bestModel: "vae_weight_ps_80_bs_128"
+  sCorrection: "motion_VAE2D"
+  bestModel: "vae_weight_ps_48_bs_128"
   pl_network: "vgg19"
   loss_model: ""
   kl_weight: 1
@@ -110,6 +110,7 @@ correction:
   loss_art2ref: 0.6
   unpatch: false
   nScale: 255
+  dropout: 1
   actualSize: [256, 196]
   evaluate: true
   test_patient: "01_ab"
