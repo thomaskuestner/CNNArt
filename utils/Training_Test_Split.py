@@ -186,7 +186,7 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         if iReturn > 0:
             return X_trainFold, y_trainFold, X_testFold, y_testFold
 
-def fSplitDatasetCorrection(sSplitting, dRefPatches, dArtPatches, allPats, split_ratio, nfolds):
+def fSplitDatasetCorrection(sSplitting, dRefPatches, dArtPatches, allPats, split_ratio, nfolds, test_index):
     """
     Split dataset with three options:
     1. normal: randomly split data according to the split_ratio without cross validation
@@ -212,10 +212,10 @@ def fSplitDatasetCorrection(sSplitting, dRefPatches, dArtPatches, allPats, split
         rand_num = np.random.permutation(np.arange(nPatches))
         rand_num = rand_num[0:int(dVal)].astype(int)
 
-        test_ref_fold = dRefPatches[rand_num, :, :]
-        train_ref_fold = np.delete(dRefPatches, rand_num, axis=0)
-        test_art_fold = dArtPatches[rand_num, :, :]
-        train_art_fold = np.delete(dArtPatches, rand_num, axis=0)
+        test_ref_fold.append(dRefPatches[rand_num, :, :])
+        train_ref_fold.append(np.delete(dRefPatches, rand_num, axis=0))
+        test_art_fold.append(dArtPatches[rand_num, :, :])
+        train_art_fold.append(np.delete(dArtPatches, rand_num, axis=0))
 
     # crossvalidation with mixed patient
     if sSplitting == "crossvalidation_data":
@@ -235,8 +235,10 @@ def fSplitDatasetCorrection(sSplitting, dRefPatches, dArtPatches, allPats, split
 
     # crossvalidation with separate patient
     elif sSplitting == 'crossvalidation_patient':
-        unique_pats = np.unique(allPats)
-
+        if test_index == -1:
+            unique_pats = np.unique(allPats)
+        else:
+            unique_pats = [test_index]
         for ind_split in unique_pats:
             train_index = np.where(allPats != ind_split)[0]
             test_index = np.where(allPats == ind_split)[0]

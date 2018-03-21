@@ -20,9 +20,9 @@ motion_abd: &id002
 motion_all: &id003
    name      : "motion_all" 
    dataref   : ["t1_tse_tra_Kopf_0002", "t1_tse_tra_fs_mbh_Leber_0004"]
-   labelref  : [0 0]
+   labelref  : [0, 0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_mbh_Leber_Motion_0005"]
-   labelart  : [1 1]
+   labelart  : [1, 1]
    pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Allcross"
    bestmodel : {CNN2D: "all_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
@@ -39,12 +39,14 @@ selectedDatabase: *id001
 # artifactType: motion, multiclass
 # bodyRegion: abd, head, all
 # network: CNN2D, CNN3D, MNetArt, VNetArt
+# network with muntiscaleSeparated method: motion_all_CNN2D_multiscale, motion_VNet_multiscale
+# new modification of VNet with inception block: motion_VNet_Inception
 network : "motion_all_CNN2D"
 
 # scaling range
 range : [0, 1]
 # patches
-patchSize : [40, 40] # x,y
+patchSize : [40, 40] # [x, y] or [x,y,z], but z should not larger than 10, else too much zero-padding when scaling factor is small
 patchOverlap : 0.5 # 50%
 # sLabeling strategy
 # 'volume': volume-wise labeling
@@ -83,12 +85,13 @@ lLabelPredictImg : [ 1 ]
 sPredictModel : ""
 # sTrainingMethod
 # "None": No scaling process
-# "scalingPrior": Up and down sampling the patches for data augmentation
-# "scalingPosterior": scaling during training, to be done
+# "MultiScaleTogether": to train the donw sampled patches with the original patches together
+# "MultiScaleSeparated": to train the donw sampled patches and the original patches in different pathways
 sTrainingMethod : "None"
 # lScaleFactor: the changing rate of patch size in scaling process
 # factor < 1 means down sampling later, factor > 1 up sampling later
-lScaleFactor : [0.5, 1, 2]
+# in "MultiScaleSeparated" method: only one down sample rate is supported, this corresponds one bypass in CNN
+lScaleFactor : [0.5, 1]
 
 # lCorrection
 # true: artifact correction
@@ -96,8 +99,18 @@ lScaleFactor : [0.5, 1, 2]
 lCorrection: false
 # parameters in artifacts correction
 correction:
-  sCorrection: "motion_VAE"
-  bestModel: "vae_model_weight_bs_128"
+  sCorrection: "motion_VAE2D"
+  bestModel: "vae_weight_ps_48_bs_128"
+  pl_network: "vgg19"
+  loss_model: ""
   kl_weight: 1
-  pixel_weight: 1
-  perceptual_weight: 0.01
+  perceptual_weight: 0.00001
+  pixel_weight: 0.01
+  loss_ref2ref: 0.4
+  loss_art2ref: 0.6
+  unpatch: false
+  nScale: 255
+  dropout: 1
+  actualSize: [256, 196]
+  evaluate: true
+  test_patient: "01_ab"

@@ -6,22 +6,22 @@ import time
 
 def fscaling(X_train, X_test, scpatchSize, iscalefactor) :
     if len(scpatchSize) == 3:
-        scX_train, scX_test = fscaling3D(X_train, X_test, scpatchSize, iscalefactor)
+        scX_train, scX_test, afterSize = fscaling3D(X_train, X_test, scpatchSize, iscalefactor)
     else:
-        scX_train, scX_test = fscaling2D(X_train, X_test, scpatchSize, iscalefactor)
+        scX_train, scX_test, afterSize = fscaling2D(X_train, X_test, scpatchSize, iscalefactor)
 
-    return scX_train, scX_test
+    return scX_train, scX_test, afterSize
 
 def fscaling2D(X_train, X_test, scpatchSize, iscalefactor) :
     start = time.clock()
-    afterSize = int(scpatchSize[0] * iscalefactor)
+    afterSize = np.round(np.multiply(scpatchSize, iscalefactor)).astype(int)
 
     # Prepare for the using of scipy.interpolation: create the coordinates of grid
     if iscalefactor == 1:
-        return X_train, X_test
+        return X_train, X_test, scpatchSize
     else:
-        xaxis = np.arange(0, afterSize, iscalefactor)
-        yaxis = np.arange(0, afterSize, iscalefactor)
+        xaxis = np.linspace(0, afterSize[0], scpatchSize[0])
+        yaxis = np.linspace(0, afterSize[1], scpatchSize[1])
 
     dAllx_train = None
     dAllx_test = None
@@ -31,20 +31,25 @@ def fscaling2D(X_train, X_test, scpatchSize, iscalefactor) :
         lenTest = X_test[ifold].shape[0]
 
         # in batches
-        Batch=20
+        BatchTrain = BatchTest = 20
+        for icand in range(15,26):
+            if lenTrain % icand == 0:
+                BatchTrain = icand
+            if lenTest % icand == 0:
+                BatchTest = icand
         dx_Train = None
         dx_Test = None
-        stepTrain = int(math.ceil(lenTrain/Batch))
-        stepTest = int(math.ceil(lenTest / Batch))
+        stepTrain = int(math.ceil(lenTrain/BatchTrain))
+        stepTest = int(math.ceil(lenTest/BatchTest))
 
-        for ibatch in range(Batch):
+        for ibatch in range(BatchTrain):
             indTrain = int(stepTrain*ibatch)
             if (indTrain+stepTrain) < lenTrain:
-                inter_train0=np.mgrid[0:stepTrain, 0:afterSize, 0:afterSize]
+                inter_train0=np.mgrid[0:stepTrain, 0:afterSize[0], 0:afterSize[1]]
                 values_train = X_train[ifold][indTrain:(indTrain+stepTrain)]
                 zaxis_train = np.arange(stepTrain)
             else:
-                inter_train0 = np.mgrid[0:(lenTrain-indTrain), 0:afterSize, 0:afterSize]
+                inter_train0 = np.mgrid[0:(lenTrain-indTrain), 0:afterSize[0], 0:afterSize[1]]
                 values_train = X_train[ifold][indTrain:lenTrain]
                 zaxis_train = np.arange(lenTrain-indTrain)
             inter_train1=np.rollaxis(inter_train0, 0, 4)
@@ -55,21 +60,21 @@ def fscaling2D(X_train, X_test, scpatchSize, iscalefactor) :
             else:
                 dx_Train = np.concatenate((dx_Train,upedTrain), axis=0)
 
-        dFoldx_train=np.reshape(dx_Train,[1, lenTrain, afterSize, afterSize])
+        dFoldx_train=np.reshape(dx_Train,[1, lenTrain, afterSize[0], afterSize[1]])
 
         if dAllx_train is None:
             dAllx_train = dFoldx_train
         else:
             dAllx_train = np.concatenate((dAllx_train, dFoldx_train), axis=0)
 
-        for ibatch in range(Batch):
+        for ibatch in range(BatchTest):
             indTest = int(stepTest * ibatch)
             if (indTest + stepTest) < lenTest:
-                inter_test0 = np.mgrid[0:stepTest, 0:afterSize, 0:afterSize]
+                inter_test0 = np.mgrid[0:stepTest, 0:afterSize[0], 0:afterSize[1]]
                 values_test = X_train[ifold][indTest:(indTest + stepTest)]
                 zaxis_test = np.arange(stepTest)
             else:
-                inter_test0 = np.mgrid[0:(lenTest - indTest), 0:afterSize, 0:afterSize]
+                inter_test0 = np.mgrid[0:(lenTest - indTest), 0:afterSize[0], 0:afterSize[1]]
                 values_test = X_train[ifold][indTest:lenTest]
                 zaxis_test = np.arange(lenTest - indTest)
             inter_test1=np.rollaxis(inter_test0, 0, 4)
@@ -80,7 +85,7 @@ def fscaling2D(X_train, X_test, scpatchSize, iscalefactor) :
             else:
                 dx_Test = np.concatenate((dx_Test,upedTest), axis=0)
 
-        dFoldx_test = np.reshape(dx_Test, [1, lenTest, afterSize, afterSize])
+        dFoldx_test = np.reshape(dx_Test, [1, lenTest, afterSize[0], afterSize[1]])
 
         if dAllx_test is None:
             dAllx_test = dFoldx_test
@@ -88,19 +93,19 @@ def fscaling2D(X_train, X_test, scpatchSize, iscalefactor) :
             dAllx_test = np.concatenate((dAllx_test, dFoldx_test), axis=0)
     stop = time.clock()
     print(stop - start)
-    return dAllx_train, dAllx_test
+    return dAllx_train, dAllx_test, afterSize
 
 
 def fscaling3D(X_train, X_test, scpatchSize, iscalefactor):
-    afterSize = np.multiply(scpatchSize, iscalefactor).astype(int)
+    afterSize = np.ceil(np.multiply(scpatchSize, iscalefactor)).astype(int)
 
     # Prepare for the using of scipy.interpolation: create the coordinates of grid
     if iscalefactor == 1:
-        return X_train, X_test
+        return X_train, X_test, scpatchSize
     else:
-        xaxis = np.arange(0, afterSize[0], iscalefactor)
-        yaxis = np.arange(0, afterSize[1], iscalefactor)
-        zaxis = np.arange(0, afterSize[2], iscalefactor)
+        xaxis = np.linspace(0, afterSize[0], scpatchSize[0])
+        yaxis = np.linspace(0, afterSize[1], scpatchSize[1])
+        zaxis = np.linspace(0, afterSize[2], scpatchSize[2])
 
     dAllx_train = None
     dAllx_test = None
@@ -148,6 +153,14 @@ def fscaling3D(X_train, X_test, scpatchSize, iscalefactor):
         else:
             dAllx_test = np.concatenate((dAllx_test, dFoldx_test), axis=0)
 
-    return dAllx_train, dAllx_test
+    return dAllx_train, dAllx_test, afterSize
 
-
+def fcutMiddelPartOfPatch(X_train_sp, X_test_sp, scpatchSize, patchSize):
+    cropStart = [(scpatchSize[idim]-patchSize[idim])//2 for idim in range(len(patchSize))]
+    if len(patchSize) == 2:
+        X_train = np.array(X_train_sp)[:, :, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1]]
+        X_test = np.array(X_test_sp)[:, :, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1]]
+    else:
+        X_train = np.array(X_train_sp)[:, :, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1], cropStart[2]:cropStart[2] + patchSize[2]]
+        X_test = np.array(X_test_sp)[:, :, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1], cropStart[2]:cropStart[2] + patchSize[2]]
+    return X_train, X_test

@@ -30,7 +30,7 @@ def fTrain(X_train, Y_train, X_test, Y_test, sOutPath, patchSize, batchSizes=Non
     for iBatch in batchSizes:
         for iLearn in learningRates:
             cnn = fCreateModel(patchSize, learningRate=iLearn, optimizer='Adam')
-            fTrainInner(sOutPath, cnn, learningRate=iLearn, X_train=X_train, Y_train=Y_train, X_test=X_test, Y_test=Y_test,batchSize=iBatch, iEpochs=iEpochs)
+            fTrainInner(sOutPath, cnn, learningRate=iLearn, X_train=X_train, Y_train=Y_train, X_test=X_test, Y_test=Y_test,batchSize=iBatch, iEpochs=iEpochs, CV_Patient=CV_Patient)
 
 def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=None, sInPaths_valid=None, X_train=None, Y_train=None, X_test=None, Y_test=None,  batchSize=64, iEpochs=299, CV_Patient=0):
     '''train a model with training data X_train with labels Y_train. Validation Data should get the keywords Y_test and X_test'''
@@ -42,7 +42,7 @@ def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=No
     _, sPath = os.path.splitdrive(sOutPath)
     sPath,sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
-    model_name = sPath + '/' + sFilename + 'VNet' + '/' + sFilename +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
+    model_name = sPath + '/' + sFilename  + '/' + sFilename + '_VNet' +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     if CV_Patient != 0: model_name = model_name +'_'+ 'CV' + str(CV_Patient)# determine if crossValPatient is used...
     weight_name = model_name + '_weights.h5'
     model_json = model_name + '_json'
@@ -52,7 +52,7 @@ def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=No
     if (os.path.isfile(model_mat)):  # no training if output file exists
         print('----------already trained->go to next----------')
         return
-
+    model.summary()
 
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
     callbacks.append(ModelCheckpoint('/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
@@ -98,7 +98,7 @@ def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=No
                              'acc_test': acc_test,
                              'prob_test': prob_test})
 
-def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
+def fPredict(X_test,y_test,  model_name, sOutPath, batchSize=64,patchSize=[40,40,5]):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
     Input:
         X: Samples to predict on. The shape of X should fit to the input shape of the model
@@ -107,10 +107,9 @@ def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
         sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy stored. 
                     The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the suffix '_pred.mat' 
         batchSize: Batchsize, number of samples that are processed at once"""
-    sModelPath=sModelPath.replace("_json.txt", "")
-    weight_name = sModelPath + '_weights.h5'
-    model_json = sModelPath + '_json.txt'
-    model_all = sModelPath + '_model.h5'
+    weight_name = sOutPath + '/' + model_name + '_weights.h5'
+    model_json = sOutPath + '/' + model_name + '_json.txt'
+    model_all = sOutPath + '/' + model_name + '_model.h5'
 
     # load weights and model (new way)
     model_json= open(model_json, 'r')
@@ -121,14 +120,14 @@ def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
     model.compile(loss='categorical_crossentropy',optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
     model.load_weights(weight_name)
 
+    X_test = np.expand_dims(X_test, axis=1)
+    y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
 
-    score_test, acc_test = model.evaluate(X, y, batch_size=batchSize)
+    score_test, acc_test = model.evaluate(X_test, y_test, batch_size=batchSize)
     print('loss'+str(score_test)+ '   acc:'+ str(acc_test))
-    prob_pre = model.predict(X, batch_size=batchSize, verbose=1)
-    print(prob_pre[0:14,:])
-    _,sModelFileSave  = os.path.split(sModelPath)
+    prob_pre = model.predict(X_test, batch_size=batchSize, verbose=1)
 
-    modelSave = sOutPath +sModelFileSave+ '_pred.mat'
+    modelSave = sOutPath + '/' + model_name + '_pred.mat'
     print('saving Model:{}'.format(modelSave))
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
 

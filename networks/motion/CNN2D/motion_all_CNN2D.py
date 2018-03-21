@@ -126,7 +126,7 @@ def createModel(patchSize, architecture='new'):
 
     return cnn
 
-def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None):
+def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None, CV_Patient=0):
     # grid search on batch_sizes and learning rates
     # parse inputs
     batchSizes = [64] if batchSizes is None else batchSizes
@@ -141,9 +141,9 @@ def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=Non
 
     for iBatch in batchSizes:
         for iLearn in learningRates:
-            fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs)
+            fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs, CV_Patient=CV_Patient)
 
-def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None):
+def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None, CV_Patient=0):
     # parse inputs
     batchSize = [64] if batchSize is None else batchSize
     learningRate = [0.01] if learningRate is None else learningRate
@@ -157,6 +157,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     sPath,sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
     model_name = sPath + '/' + sFilename + '/' + sFilename +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
+    if CV_Patient != 0: model_name = model_name + '_' + 'CV' + str(CV_Patient)  # determine if crossValPatient is used...
     weight_name = model_name + '_weights.h5'
     model_json = model_name + '_json'
     model_all = model_name + '_model.h5'            
