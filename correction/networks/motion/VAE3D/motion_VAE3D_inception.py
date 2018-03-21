@@ -11,7 +11,7 @@ from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.optimizers import Adam
 from keras import backend as K
 from utils.MotionCorrection.network_block import encode, encode_shared, decode
-from utils.MotionCorrection.PerceptualLoss import addPerceptualLoss
+from utils.MotionCorrection.customLoss import addPerceptualLoss
 from utils.Unpatching import fRigidUnpatchingCorrection
 from utils.MotionCorrection.plot import *
 
