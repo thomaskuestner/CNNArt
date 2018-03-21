@@ -104,6 +104,7 @@ correction:
   pl_network: "vgg19"
   loss_model: ""
   kl_weight: 1
+  tv_loss: 0.01
   perceptual_weight: 0.00001
   pixel_weight: 0.01
   loss_ref2ref: 0.4

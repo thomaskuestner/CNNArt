@@ -13,7 +13,7 @@ from keras.optimizers import Adam
 from keras import backend as K
 
 from utils.MotionCorrection.network_block import encode, encode_shared, decode
-from utils.MotionCorrection.PerceptualLoss import addPerceptualLoss
+from utils.MotionCorrection.customLoss import *
 from utils.Unpatching import fRigidUnpatchingCorrection
 from utils.MotionCorrection.plot import *
 
@@ -48,14 +48,12 @@ def createModel(patchSize, dHyper):
     vae.add_loss(dHyper['kl_weight'] * K.mean(loss_kl))
 
     # compute pixel to pixel loss
-    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,))\
-                       ([Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(x_ref),
-                         Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(decoded_ref2ref)]) + 1e-6
-    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,))\
-                       ([Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(x_ref),
-                         Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(decoded_art2ref)]) + 1e-6
+    mse_loss_ref2ref, mse_loss_art2ref = compute_mse_loss(dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
+    vae.add_loss(dHyper['mse_weight'] * (dHyper['loss_ref2ref']*mse_loss_ref2ref + dHyper['loss_art2ref']*mse_loss_art2ref))
 
-    vae.add_loss(dHyper['pixel_weight'] * (dHyper['loss_ref2ref']*loss_ref2ref + dHyper['loss_art2ref']*loss_art2ref))
+    # compute total variation loss
+    tv_loss_ref2ref, tv_loss_art2ref = compute_tv_loss(dHyper, decoded_ref2ref, decoded_art2ref, patchSize)
+    vae.add_loss(dHyper['tv_weight'] * (dHyper['loss_ref2ref']*tv_loss_ref2ref + dHyper['loss_art2ref']*tv_loss_art2ref))
 
     # add perceptual loss
     perceptual_loss_ref2ref, perceptual_loss_art2ref = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, dHyper['pl_network'], dHyper['loss_model'])

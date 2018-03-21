@@ -4,6 +4,7 @@ from keras import backend as K
 from keras.applications.vgg19 import VGG19
 from keras.models import Model, load_model
 
+
 def preprocessing(input):
     output = input * 255
     K.update_sub(output[:, 0, :, :], 123.68)
@@ -12,7 +13,36 @@ def preprocessing(input):
 
     return output[:, ::-1, :, :]
 
-def addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, pl_network, loss_model):
+
+def compute_mse_loss(dHyper, x_ref, decoded_ref2ref, decoded_art2ref):
+    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,)) \
+                       ([Lambda(lambda x: dHyper['nScale'] * x, output_shape=x_ref._keras_shape)(x_ref),
+                         Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_ref2ref._keras_shape)(decoded_ref2ref)]) + 1e-6
+
+    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,))\
+                       ([Lambda(lambda x : dHyper['nScale']*x, output_shape=x_ref._keras_shape)(x_ref),
+                         Lambda(lambda x : dHyper['nScale']*x, output_shape=decoded_art2ref._keras_shape)(decoded_art2ref)]) + 1e-6
+
+    return loss_ref2ref, loss_art2ref
+
+
+def compute_tv_loss(dHyper, decoded_ref2ref, decoded_art2ref, patchSize):
+    assert K.ndim(decoded_ref2ref) == 4
+    decoded_ref2ref = Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_ref2ref._keras_shape)(decoded_ref2ref)
+    a_ref2ref = K.square(decoded_ref2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1] - decoded_ref2ref[:, :, 1:, :patchSize[1] - 1])
+    b_ref2ref = K.square(decoded_ref2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1] - decoded_ref2ref[:, :, :patchSize[0] - 1, 1:])
+    tv_loss_ref2ref = K.sum(K.pow(a_ref2ref + b_ref2ref, 1.25))
+
+    assert K.ndim(decoded_art2ref) == 4
+    decoded_art2ref = Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_art2ref._keras_shape)(decoded_art2ref)
+    a_art2ref = K.square(decoded_art2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1] - decoded_art2ref[:, :, 1:, :patchSize[1] - 1])
+    b_art2ref = K.square(decoded_art2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1] - decoded_art2ref[:, :, :patchSize[0] - 1, 1:])
+    tv_loss_art2ref = K.sum(K.pow(a_art2ref + b_art2ref, 1.25))
+
+    return tv_loss_ref2ref, tv_loss_art2ref
+
+
+def compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, pl_network, loss_model):
     if pl_network == 'vgg19':
         x_ref = concatenate([x_ref, x_ref, x_ref], axis=1)
         decoded_ref2ref = concatenate([decoded_ref2ref, decoded_ref2ref, decoded_ref2ref], axis=1)
