@@ -17,21 +17,20 @@ def run(cfg, dbinfo):
     # load parameters form config file and define the corresponding output path
     patchSize = cfg['patchSize']
 
-    if cfg['sSplitting'] == 'normal':
-        sFSname = 'normal'
-    elif cfg['sSplitting'] == 'crossvalidation_data':
-        sFSname = 'crossVal_data'
-    elif cfg['sSplitting'] == 'crossvalidation_patient':
-        sFSname = 'crossVal'
-
     sOutsubdir = cfg['subdirs'][3]
     sOutPath = cfg['selectedDatabase']['pathout'] + os.sep \
                + ''.join(map(str, patchSize)).replace(" ", "") + os.sep + sOutsubdir
-    sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '.h5'
 
-    dHyper = cfg['correction']
-    dParam = {'batchSize': cfg['batchSize'], 'patchSize': patchSize, 'learningRate': cfg['lr'], 'epochs': cfg['epochs'],
-              'lTrain': cfg['lTrain'], 'lSave': cfg['lSave'], 'patchOverlap': cfg['patchOverlap'], 'sOutPath': sOutPath}
+    if cfg['sSplitting'] == 'normal':
+        sFSname = 'normal'
+        sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '.h5'
+    elif cfg['sSplitting'] == 'crossvalidation_data':
+        sFSname = 'crossVal_data'
+        sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '.h5'
+    elif cfg['sSplitting'] == 'crossvalidation_patient':
+        sFSname = 'crossVal'
+        sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '_' + \
+                    cfg['correction']['test_patient'] + '.h5'
 
     # if h5 file exists then load the dataset
     if glob.glob(sDatafile):
@@ -56,7 +55,17 @@ def run(cfg, dbinfo):
                 hf.create_dataset('patchSize', data=patchSize)
                 hf.create_dataset('patchOverlap', data=cfg['patchOverlap'])
 
-    for iFold in range(len(train_ref)):
-        dData = {'train_ref': train_ref[iFold], 'test_ref': test_ref[iFold], 'train_art': train_art[iFold], 'test_art': test_art[iFold]}
-        cnn_main.fRunCNNCorrection(dData, dHyper, dParam)
+    dHyper = cfg['correction']
+    dParam = {'batchSize': cfg['batchSize'], 'patchSize': patchSize, 'patchOverlap': cfg['patchOverlap'],
+              'learningRate': cfg['lr'], 'epochs': cfg['epochs'], 'lTrain': cfg['lTrain'], 'lSave': cfg['lSave'],
+              'sOutPath': sOutPath}
 
+    if len(train_ref) == 1:
+        dData = {'train_ref': train_ref[0], 'test_ref': test_ref[0],
+                 'train_art': train_art[0], 'test_art': test_art[0]}
+        cnn_main.fRunCNNCorrection(dData, dHyper, dParam)
+    else:
+        for patient_index in range(len(train_ref)):
+            dData = {'train_ref': train_ref[patient_index], 'test_ref': test_ref[patient_index],
+                     'train_art': train_art[patient_index], 'test_art': test_art[patient_index]}
+            cnn_main.fRunCNNCorrection(dData, dHyper, dParam)
