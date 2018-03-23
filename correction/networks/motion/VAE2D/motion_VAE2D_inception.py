@@ -14,7 +14,7 @@ from keras import backend as K
 
 from utils.MotionCorrection.network_block import encode, encode_shared, decode
 from utils.MotionCorrection.customLoss import *
-from utils.Unpatching import fRigidUnpatchingCorrection
+from utils.Unpatching import *
 from utils.MotionCorrection.plot import *
 
 
@@ -136,9 +136,9 @@ def fPredict(test_ref, test_art, dParam, dHyper):
     predict_art = np.squeeze(predict_art, axis=1)
 
     if dHyper['unpatch']:
-        test_ref = fRigidUnpatchingCorrection(dHyper['actualSize'], test_ref, dParam['patchOverlap'])
-        test_art = fRigidUnpatchingCorrection(dHyper['actualSize'], test_art, dParam['patchOverlap'])
-        predict_art = fRigidUnpatchingCorrection(dHyper['actualSize'], predict_art, dParam['patchOverlap'])
+        test_ref = fRigidUnpatchingCorrection2D(dHyper['actualSize'], test_ref, dParam['patchOverlap'])
+        test_art = fRigidUnpatchingCorrection2D(dHyper['actualSize'], test_art, dParam['patchOverlap'])
+        predict_art = fRigidUnpatchingCorrection2D(dHyper['actualSize'], predict_art, dParam['patchOverlap'])
         if dHyper['evaluate']:
             fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 5), sharex=True, sharey=True)
             ax = axes.ravel()
