@@ -11,8 +11,8 @@ from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.optimizers import Adam
 from keras import backend as K
 from utils.MotionCorrection.network_block import encode, encode_shared, decode
-from utils.MotionCorrection.customLoss import addPerceptualLoss
-from utils.Unpatching import fRigidUnpatchingCorrection
+from utils.MotionCorrection.customLoss import *
+from utils.Unpatching import *
 from utils.MotionCorrection.plot import *
 
 
@@ -29,7 +29,7 @@ def createModel(patchSize, dHyper):
     combined = concatenate([encoded_ref, encoded_art], axis=0)
 
     # create the shared encoder
-    z, z_mean, z_log_var = encode_shared(combined, patchSize, isIncep=True)
+    z, z_mean, z_log_var = encode_shared(combined, patchSize)
 
     # create the decoder
     decoded = decode(z, patchSize, dHyper['dropout'])
@@ -46,29 +46,11 @@ def createModel(patchSize, dHyper):
     vae.add_loss(dHyper['kl_weight'] * K.mean(loss_kl))
 
     # compute pixel to pixel loss
-    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3, 4])), output_shape=(None,))\
-                       ([Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(x_ref),
-                         Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(decoded_ref2ref)]) + 1e-6
-    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3, 4])), output_shape=(None,))\
-                       ([Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(x_ref),
-                         Lambda(lambda x : dHyper['nScale']*x, output_shape=(None,))(decoded_art2ref)]) + 1e-6
-
-    vae.add_loss(dHyper['pixel_weight'] * (dHyper['loss_ref2ref']*loss_ref2ref + dHyper['loss_art2ref']*loss_art2ref))
+    loss_ref2ref, loss_art2ref = compute_mse_loss(dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
+    vae.add_loss(dHyper['mse_weight'] * (dHyper['loss_ref2ref']*loss_ref2ref + dHyper['loss_art2ref']*loss_art2ref))
 
     # add perceptual loss
-    perceptual_loss_ref2ref, perceptual_loss_art2ref = 0, 0
-    for i in range(patchSize[2]):
-        tmp_x_ref = Lambda(lambda input: input[:, :, :, :, i], output_shape=(1, patchSize[0], patchSize[1]))(x_ref)
-        tmp_decoded_ref2ref = Lambda(lambda input: input[:, :, :, :, i], output_shape=(1, patchSize[0], patchSize[1]))(decoded_ref2ref)
-        tmp_decoded_art2ref = Lambda(lambda input: input[:, :, :, :, i], output_shape=(1, patchSize[0], patchSize[1]))(decoded_art2ref)
-
-        tmp_perceptual_loss_ref2ref, tmp_perceptual_loss_art2ref = addPerceptualLoss(tmp_x_ref, tmp_decoded_ref2ref, tmp_decoded_art2ref, patchSize, dHyper['pl_network'], dHyper['loss_model'])
-        perceptual_loss_ref2ref += tmp_perceptual_loss_ref2ref
-        perceptual_loss_art2ref += tmp_perceptual_loss_art2ref
-
-    perceptual_loss_ref2ref = perceptual_loss_ref2ref/patchSize[2]
-    perceptual_loss_art2ref = perceptual_loss_art2ref/patchSize[2]
-
+    perceptual_loss_ref2ref, perceptual_loss_art2ref = compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, dHyper['pl_network'], dHyper['loss_model'])
     vae.add_loss(dHyper['perceptual_weight'] * (dHyper['loss_ref2ref']*perceptual_loss_ref2ref + dHyper['loss_art2ref']*perceptual_loss_art2ref))
 
     return vae

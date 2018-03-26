@@ -27,7 +27,7 @@ def createModel(patchSize, dHyper):
     combined = concatenate([encoded_ref, encoded_art], axis=0)
 
     # create the shared encoder
-    z, z_mean, z_log_var = encode_shared(combined, patchSize, isIncep=False)
+    z, z_mean, z_log_var = encode_shared(combined, patchSize)
 
     # create the decoder
     decoded = decode(z, patchSize, dHyper['dropout'])
