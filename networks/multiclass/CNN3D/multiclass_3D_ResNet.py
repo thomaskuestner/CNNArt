@@ -64,7 +64,7 @@ def createModel(patchSize, numClasses):
                             stage=1,
                             block=1,
                             se_enabled=False,
-                            se_ratio=16)
+                            se_ratio=4)
 
     # second stage
     x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=False, se_ratio=16)
@@ -78,7 +78,7 @@ def createModel(patchSize, numClasses):
                                         stage=2,
                                         block=3,
                                         se_enabled=False,
-                                        se_ratio=16)
+                                        se_ratio=8)
 
     # third stage
     x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=False, se_ratio=16)

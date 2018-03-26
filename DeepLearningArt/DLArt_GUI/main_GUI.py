@@ -23,6 +23,7 @@ from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.colors import LinearSegmentedColormap
 from DeepLearningArt.DLArt_GUI.PlotCanvas import PlotCanvas
 from matplotlib.figure import Figure
 
@@ -153,6 +154,8 @@ class MainWindow(QMainWindow):
         self.ui.verticalLayout_SegmentationMasks.addWidget(self.canvas_segmentation_masks_figure)
         self.ui.verticalLayout_SegmentationMasks.addWidget(self.toolbar_segmentation_masks_figure)
 
+
+
         ################################################################################################################
 
         ################################################################################################################
@@ -213,6 +216,12 @@ class MainWindow(QMainWindow):
         self.ui.SpinBox_SliceSelect.valueChanged.connect(self.spinBox_sliceSelect_changed)
 
         ################################################################################################################
+
+        # colormap for visualization of classification results
+        colors = [(0, 1, 0), (1, 1, 0), (1, 0, 0)]  # green -> yellow -> red
+        cmap_name = 'artifact_map_colors'
+        self.artifact_colormap = LinearSegmentedColormap.from_list(cmap_name, colors, N=100)
+
 
     def button_predict_clicked(self):
         gpuId = self.ui.ComboBox_GPU_Prediction.currentIndex()
@@ -285,7 +294,7 @@ class MainWindow(QMainWindow):
                 ax2 = self.segmentation_masks_figure.add_subplot(122)
                 ax2.clear()
                 ax2.imshow(dicom_slice, cmap='gray')
-                ax2.imshow(pred_seg_mask_slice, cmap='jet', interpolation='nearest', alpha=.4)
+                ax2.imshow(pred_seg_mask_slice, cmap=self.artifact_colormap, interpolation='nearest', alpha=.4)
                 ax2.set_title('Predicted Segmentation Mask')
 
                 self.segmentation_masks_figure.tight_layout()
@@ -322,13 +331,13 @@ class MainWindow(QMainWindow):
                 ax2 = self.artifact_map_figure.add_subplot(132)
                 ax2.clear()
                 ax2.imshow(dicom_slice, cmap='gray')
-                ax2.imshow(prob_mask_fore_slice, cmap='jet', interpolation='nearest', alpha=.4)
+                ax2.imshow(prob_mask_fore_slice, cmap=self.artifact_colormap, interpolation='nearest', alpha=.4)
                 ax2.set_title('Predicted Foreground')
 
                 ax3 = self.artifact_map_figure.add_subplot(133)
                 ax3.clear()
                 ax3.imshow(dicom_slice, cmap='gray')
-                map = ax3.imshow(prob_mask_back_slice, cmap='jet', interpolation='nearest', alpha=.4)
+                map = ax3.imshow(prob_mask_back_slice, cmap=self.artifact_colormap, interpolation='nearest', alpha=.4)
                 ax3.set_title('Predicted Background')
 
                 self.artifact_map_figure.colorbar(mappable=map, ax=ax3)
@@ -365,7 +374,7 @@ class MainWindow(QMainWindow):
                 ax2 = self.artifact_map_figure.add_subplot(122)
                 ax2.clear()
                 ax2.imshow(slice, cmap='gray')
-                map = ax2.imshow(prob_mask, cmap='jet', interpolation='nearest', alpha=.4)
+                map = ax2.imshow(prob_mask, cmap=self.artifact_colormap, interpolation='nearest', alpha=.4)
                 ax2.set_title('Artifact Map')
 
                 self.artifact_map_figure.colorbar(mappable=map, ax=ax2)
@@ -384,6 +393,8 @@ class MainWindow(QMainWindow):
         x = np.arange(1, acc_training.shape[0]+1)
         ax.plot(x, np.squeeze(acc_training, 'b'))
         ax.plot(x, np.squeeze(acc_validation), 'r')
+        ax.set_ylabel('accuracy')
+        ax.set_xlabel('epochs')
         ax.grid(b=True, which='both')
         ax.legend(['training accuracy', 'validation accuracy'])
         self.canvas_accuracy_figure.draw()
@@ -406,16 +417,19 @@ class MainWindow(QMainWindow):
         self.canvas_confusion_matrix_figure.draw()
 
 
+
     def button_selectModel_prediction_clicked(self):
         pathToModel = self.openFileNamesDialog(self.deepLearningArtApp.getLearningOutputPath())
         self.deepLearningArtApp.setModelForPrediction(pathToModel)
         self.ui.Label_currentModel_prediction.setText(pathToModel)
 
 
+
     def button_selectDataset_prediction_clicked(self):
         pathToDataset = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
         self.deepLearningArtApp.setDatasetForPrediction(pathToDataset)
         self.ui.Label_currentDataset_prediction.setText(pathToDataset)
+
 
 
     def button_train_clicked(self):

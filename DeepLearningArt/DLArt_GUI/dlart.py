@@ -69,7 +69,9 @@ class DeepLearningArtApp():
         'Multiclass SE-ResNet-44_dense': 'networks.multiclass.SENets.multiclass_SE-ResNet-44_dense',
         'FCN 3D-VResFCN': 'networks.FullyConvolutionalNetworks.3D_VResFCN',
         'FCN 3D-VResFCN-Upsampling': 'networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling',
-        'FCN 3D-VResFCN-Upsampling small': 'networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_small'
+        'FCN 3D-VResFCN-Upsampling small': 'networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_small',
+        'FCN 3D-VResFCN-Upsampling small_single': 'networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_small_single',
+        'Multiclass 3D SE-DenseNet': 'networks.multiclass.CNN3D.multiclass_3D_SE-DenseNet'
     }
 
     modelSubDir = "dicom_sorted"
@@ -356,7 +358,7 @@ class DeepLearningArtApp():
                                                                                 labelMask_ndarray, 0.5,
                                                                                 DeepLearningArtApp.datasets[dataset])
 
-                                dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.byte)
+                                dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.float32)
 
                             # sio.savemat('D:med_data/' + patient + '_' + dataset + '_voxel_and_mask.mat',
                             #             {'mask': labelMask_ndarray, 'voxel': voxel_ndarray,
@@ -1240,7 +1242,7 @@ class DeepLearningArtApp():
             # in old code version no class mappings were stored in cnn_info. so we have to recreate the class mappings
             # out of the original training dataset
             with h5py.File(self.pathOutputPatching + os.sep + cnn_info['Dataset'] + os.sep + "datasets.hdf5", 'r') as hf:
-                Y_train_original = hf['Y_train'][:]
+                Y_train_original = hf['Y_test'][:]
 
             classes = np.asarray(np.unique(Y_train_original, ), dtype=int)
             self.classMappingsForPrediction = Label.mapClassesToOutputVector(classes=classes,
@@ -1496,6 +1498,9 @@ class DeepLearningArtApp():
             self.acc_training = training_results['acc']
             self.acc_validation = training_results['val_acc']
             self.acc_test = training_results['acc_test']
+
+
+
 
         return True
 

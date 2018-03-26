@@ -54,18 +54,18 @@ def createModel(patchSize, numClasses):
     x = identity_bottleneck_block(x, (32, 32, 128), stage=1, block=3, se_enabled=True, se_ratio=8)
 
     # second stage of 4 bottleneck layers
-    x = projection_bottleneck_block(x, (64, 64, 256), stage=2, block=1, se_enabled=True, se_ratio=8)
-    x = identity_bottleneck_block(x, (64, 64, 256), stage=2, block=2, se_enabled=True, se_ratio=8)
-    x = identity_bottleneck_block(x, (64, 64, 256), stage=2, block=3, se_enabled=True, se_ratio=8)
-    x = identity_bottleneck_block(x, (64, 64, 256), stage=2, block=4, se_enabled=True, se_ratio=8)
+    x = projection_bottleneck_block(x, (64, 64, 256), stage=2, block=1, se_enabled=True, se_ratio=16)
+    x = identity_bottleneck_block(x, (64, 64, 256), stage=2, block=2, se_enabled=True, se_ratio=16)
+    x = identity_bottleneck_block(x, (64, 64, 256), stage=2, block=3, se_enabled=True, se_ratio=16)
+    x = identity_bottleneck_block(x, (64, 64, 256), stage=2, block=4, se_enabled=True, se_ratio=16)
 
     # third stage of 6 bottleneck layers
-    x = projection_bottleneck_block(x, (128, 128, 512), stage=3, block=1, se_enabled=True, se_ratio=8)
-    x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=2, se_enabled=True, se_ratio=8)
-    x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=3, se_enabled=True, se_ratio=8)
-    x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=4, se_enabled=True, se_ratio=8)
-    x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=5, se_enabled=True, se_ratio=8)
-    x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=6, se_enabled=True, se_ratio=8)
+    x = projection_bottleneck_block(x, (128, 128, 512), stage=3, block=1, se_enabled=True, se_ratio=32)
+    x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=2, se_enabled=True, se_ratio=32)
+    x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=3, se_enabled=True, se_ratio=32)
+    x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=4, se_enabled=True, se_ratio=32)
+    x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=5, se_enabled=True, se_ratio=32)
+    x = identity_bottleneck_block(x, (128, 128, 512), stage=3, block=6, se_enabled=True, se_ratio=32)
 
     # fourth stage of 3 bottleneck layers, without SE blocks due to performance considerations (see original paper)
     x = projection_bottleneck_block(x, (256, 256, 1024), stage=4, block=1, se_enabled=False, se_ratio=8)

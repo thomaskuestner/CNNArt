@@ -76,13 +76,13 @@ def createModel(patchSize, numClasses):
                                         stage=2,
                                         block=3,
                                         se_enabled=True,
-                                        se_ratio=4)
+                                        se_ratio=8)
 
     # third stage
     x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=True,
-                          se_ratio=4)
+                          se_ratio=8)
     x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=2, se_enabled=True,
-                          se_ratio=4)
+                          se_ratio=8)
     # x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=3, se_enabled=False, se_ratio=16)
     x_after_stage_3 = x
 
@@ -93,13 +93,13 @@ def createModel(patchSize, numClasses):
                                         stage=3,
                                         block=4,
                                         se_enabled=True,
-                                        se_ratio=8)
+                                        se_ratio=16)
 
     # fourth stage
     x = identity_block_3D(x_down_conv_3, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=1, se_enabled=True,
-                          se_ratio=8)
+                          se_ratio=16)
     x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=2, se_enabled=True,
-                          se_ratio=8)
+                          se_ratio=16)
     # x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=3, se_enabled=False, se_ratio=16)
     x_after_stage_4 = x
 

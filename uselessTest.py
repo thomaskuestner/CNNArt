@@ -1,33 +1,31 @@
 import numpy as np
-
-from DeepLearningArt.DLArt_GUI.Dataset import *
-
-datasets = {
-        't1_tse_tra_Kopf_0002': Dataset('t1_tse_tra_Kopf_0002', None,'ref', 'head', 't1'),
-        't1_tse_tra_Kopf_Motion_0003': Dataset('t1_tse_tra_Kopf_Motion_0003', None, 'motion','head', 't1'),
-        't1_tse_tra_fs_mbh_Leber_0004': Dataset('t1_tse_tra_fs_mbh_Leber_0004',None,'ref','abdomen', 't1'),
-        't1_tse_tra_fs_mbh_Leber_Motion_0005': Dataset('t1_tse_tra_fs_mbh_Leber_Motion_0005', None, 'motion', 'abdomen', 't1'),
-        't2_tse_tra_fs_navi_Leber_0006': Dataset('t2_tse_tra_fs_navi_Leber_0006',None,'ref','abdomen', 't2'),
-        't2_tse_tra_fs_navi_Leber_Shim_xz_0007': Dataset('t2_tse_tra_fs_navi_Leber_Shim_xz_0007', None, 'shim', 'abdomen', 't2'),
-        't1_tse_tra_fs_Becken_0008': Dataset('t1_tse_tra_fs_Becken_0008', None, 'ref', 'pelvis', 't1'),
-        't2_tse_tra_fs_Becken_0009': Dataset('t2_tse_tra_fs_Becken_0009', None, 'ref', 'pelvis', 't2'),
-        't1_tse_tra_fs_Becken_Motion_0010': Dataset('t1_tse_tra_fs_Becken_Motion_0010', None, 'motion', 'pelvis', 't1'),
-        't2_tse_tra_fs_Becken_Motion_0011': Dataset('t2_tse_tra_fs_Becken_Motion_0011', None, 'motion', 'pelvis', 't2'),
-        't2_tse_tra_fs_Becken_Shim_xz_0012': Dataset('t2_tse_tra_fs_Becken_Shim_xz_0012', None, 'shim', 'pelvis', 't2')
-    }
-
-label = 111
-
-for i in datasets:
-    set = datasets[i]
-    if set.getDatasetLabel() == label:
-        print(str(set.getPathdata()))
+from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.pyplot as plt
 
 
-from sklearn.metrics import confusion_matrix
+x = np.arange(0, np.pi, 0.01)
+y = np.arange(0, 2*np.pi, 0.01)
+X, Y = np.meshgrid(x, y)
+Z = np.cos(X) * np.sin(Y) * 10
 
-y_true = [2, 0, 2, 2, 0, 1]
-y_pred = [0, 0, 2, 2, 0, 2]
-cm = confusion_matrix(y_true, y_pred)
 
-print()
+colors = [(0, 1, 0), (1, 1, 0), (1, 0, 0)]  # R -> G -> B
+n_bins = [3, 10, 100, 1000]  # Discretizes the interpolation into bins
+cmap_name = 'my_list'
+
+fig, axs = plt.subplots(2, 2, figsize=(6, 9))
+fig.subplots_adjust(left=0.02, bottom=0.06, right=0.95, top=0.94, wspace=0.05)
+
+for n_bin, ax in zip(n_bins, axs.ravel()):
+    # Create the colormap
+    cm = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bin)
+
+    # Fewer bins will result in "coarser" colomap interpolation
+    im = ax.imshow(Z, interpolation='nearest', origin='lower', cmap=cm)
+
+    ax.set_title("N bins: %s" % n_bin)
+    fig.colorbar(im, ax=ax)
+
+plt.show()
+
+
