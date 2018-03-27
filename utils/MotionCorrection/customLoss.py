@@ -7,8 +7,8 @@ from keras.models import Model, load_model
 
 
 def preprocessing(inputs):
-    output = Lambda(lambda x: (x - K.min(x)) * 255 / (K.max(x) - K.min(x)), output_shape=inputs._keras_shape)(inputs)
-    # output = inputs * 255
+    # output = Lambda(lambda x: (x - K.min(x)) * (255 + 255) / (K.max(x) - K.min(x) - 255), output_shape=inputs._keras_shape)(inputs)
+    output = 255 * inputs
     K.update_sub(output[:, 0, :, :], 123.68)
     K.update_sub(output[:, 1, :, :], 116.779)
     K.update_sub(output[:, 2, :, :], 103.939)
@@ -22,35 +22,35 @@ def reshape(inputs, patchSize):
 
 def compute_mse_loss(dHyper, x_ref, decoded_ref2ref, decoded_art2ref):
     loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,)) \
-                       ([Lambda(lambda x: (x - K.min(x)) * dHyper['nScale'] / (K.max(x) - K.min(x)), output_shape=x_ref._keras_shape)(x_ref),
-                         Lambda(lambda x: (x - K.min(x)) * dHyper['nScale'] / (K.max(x) - K.min(x)), output_shape=decoded_ref2ref._keras_shape)(decoded_ref2ref)])
+                       ([Lambda(lambda x: dHyper['nScale'] * x, output_shape=x_ref._keras_shape)(x_ref),
+                         Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_ref2ref._keras_shape)(decoded_ref2ref)])
 
     loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,))\
-                       ([Lambda(lambda x: (x - K.min(x)) * dHyper['nScale'] / (K.max(x) - K.min(x)), output_shape=x_ref._keras_shape)(x_ref),
-                         Lambda(lambda x: (x - K.min(x)) * dHyper['nScale'] / (K.max(x) - K.min(x)), output_shape=decoded_art2ref._keras_shape)(decoded_art2ref)])
+                       ([Lambda(lambda x: dHyper['nScale'] * x, output_shape=x_ref._keras_shape)(x_ref),
+                         Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_art2ref._keras_shape)(decoded_art2ref)])
 
     return loss_ref2ref, loss_art2ref
 
 
 def compute_tv_loss(dHyper, decoded_ref2ref, decoded_art2ref, patchSize):
     if K.ndim(decoded_ref2ref) == 4 and K.ndim(decoded_art2ref) == 4:
-        decoded_ref2ref = Lambda(lambda x: (x - K.min(x)) * dHyper['nScale'] / (K.max(x) - K.min(x)), output_shape=decoded_ref2ref._keras_shape)(decoded_ref2ref)
+        decoded_ref2ref = Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_ref2ref._keras_shape)(decoded_ref2ref)
         a_ref2ref = K.square(decoded_ref2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1] - decoded_ref2ref[:, :, 1:, :patchSize[1] - 1])
         b_ref2ref = K.square(decoded_ref2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1] - decoded_ref2ref[:, :, :patchSize[0] - 1, 1:])
         tv_loss_ref2ref = K.sum(K.pow(a_ref2ref + b_ref2ref, 1.25))
 
-        decoded_art2ref = Lambda(lambda x: (x - K.min(x)) * dHyper['nScale'] / (K.max(x) - K.min(x)), output_shape=decoded_art2ref._keras_shape)(decoded_art2ref)
+        decoded_art2ref = Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_art2ref._keras_shape)(decoded_art2ref)
         a_art2ref = K.square(decoded_art2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1] - decoded_art2ref[:, :, 1:, :patchSize[1] - 1])
         b_art2ref = K.square(decoded_art2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1] - decoded_art2ref[:, :, :patchSize[0] - 1, 1:])
         tv_loss_art2ref = K.sum(K.pow(a_art2ref + b_art2ref, 1.25))
 
     elif K.ndim(decoded_ref2ref) == 5 and K.ndim(decoded_art2ref) == 5:
-        decoded_ref2ref = Lambda(lambda x: (x - K.min(x)) * dHyper['nScale'] / (K.max(x) - K.min(x)), output_shape=decoded_ref2ref._keras_shape)(decoded_ref2ref)
+        decoded_ref2ref = Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_ref2ref._keras_shape)(decoded_ref2ref)
         a_ref2ref = K.square(decoded_ref2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1, :] - decoded_ref2ref[:, :, 1:, :patchSize[1] - 1, :])
         b_ref2ref = K.square(decoded_ref2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1, :] - decoded_ref2ref[:, :, :patchSize[0] - 1, 1:, :])
         tv_loss_ref2ref = K.sum(K.pow(a_ref2ref + b_ref2ref, 1.25))
 
-        decoded_art2ref = Lambda(lambda x: (x - K.min(x)) * dHyper['nScale'] / (K.max(x) - K.min(x)), output_shape=decoded_art2ref._keras_shape)(decoded_art2ref)
+        decoded_art2ref = Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_art2ref._keras_shape)(decoded_art2ref)
         a_art2ref = K.square(decoded_art2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1, :] - decoded_art2ref[:, :, 1:, :patchSize[1] - 1, :])
         b_art2ref = K.square(decoded_art2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1, :] - decoded_art2ref[:, :, :patchSize[0] - 1, 1:, :])
         tv_loss_art2ref = K.sum(K.pow(a_art2ref + b_art2ref, 1.25))
@@ -69,9 +69,9 @@ def compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, 
         decoded_ref2ref = concatenate([decoded_ref2ref, decoded_ref2ref, decoded_ref2ref], axis=1)
         decoded_art2ref = concatenate([decoded_art2ref, decoded_art2ref, decoded_art2ref], axis=1)
 
-        # x_ref = Lambda(preprocessing, output_shape=(3, patchSize[0], patchSize[1]))(x_ref)
-        # decoded_ref2ref = Lambda(preprocessing, output_shape=(3, patchSize[0], patchSize[1]))(decoded_ref2ref)
-        # decoded_art2ref = Lambda(preprocessing, output_shape=(3, patchSize[0], patchSize[1]))(decoded_art2ref)
+        x_ref = Lambda(preprocessing, output_shape=(3, patchSize[0], patchSize[1]))(x_ref)
+        decoded_ref2ref = Lambda(preprocessing, output_shape=(3, patchSize[0], patchSize[1]))(decoded_ref2ref)
+        decoded_art2ref = Lambda(preprocessing, output_shape=(3, patchSize[0], patchSize[1]))(decoded_art2ref)
 
         input = Input(shape=(3, patchSize[0], patchSize[1]))
 
