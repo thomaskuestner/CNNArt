@@ -44,7 +44,7 @@ def createModel(patchSize, dHyper):
     vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
 
     # compute kl loss
-    loss_kl = - 0.5 * K.sum(1 + z_mean - K.square(z_mean) - K.exp(z_log_var), axis=-1)
+    loss_kl = - 0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
     vae.add_loss(dHyper['kl_weight'] * K.mean(loss_kl))
 
     # compute pixel to pixel loss
@@ -56,7 +56,7 @@ def createModel(patchSize, dHyper):
     vae.add_loss(dHyper['tv_weight'] * (dHyper['loss_ref2ref']*tv_loss_ref2ref + dHyper['loss_art2ref']*tv_loss_art2ref))
 
     # add perceptual loss
-    perceptual_loss_ref2ref, perceptual_loss_art2ref = addPerceptualLoss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, dHyper['pl_network'], dHyper['loss_model'])
+    perceptual_loss_ref2ref, perceptual_loss_art2ref = compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, dHyper['pl_network'], dHyper['loss_model'])
 
     vae.add_loss(dHyper['perceptual_weight'] * (dHyper['loss_ref2ref']*perceptual_loss_ref2ref + dHyper['loss_art2ref']*perceptual_loss_art2ref))
 
