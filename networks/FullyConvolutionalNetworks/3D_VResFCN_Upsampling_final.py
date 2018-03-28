@@ -404,9 +404,9 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
 
     # return the loss value and metrics values for the model in test mode
     if usingClassification:
-        segmentation_output_loss_test, classification_output_loss_test, segmentation_output_dice_coef_test, classification_output_acc_test, a, b = cnn.evaluate(X_test,
-                                                                                                                                                          {'segmentation_output': Y_segMasks_test, 'classification_output': y_test},
-                                                                                                                                                          batch_size=batchSize, verbose=1)
+        model_metrics = cnn.metrics_names
+        loss_test, segmentation_output_loss_test, classification_output_loss_test, segmentation_output_dice_coef_test, classification_output_acc_test \
+            = cnn.evaluate(X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}, batch_size=batchSize, verbose=1)
     else:
         score_test, dice_coef_test = cnn.evaluate(X_test, Y_segMasks_test, batch_size=batchSize, verbose=1)
 
@@ -452,9 +452,6 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         val_segmentation_output_dice_coef = result.history['val_segmentation_output_dice_coef']
         val_classification_output_acc = result.history['val_classification_output_acc']
 
-        val_dice_coef = result.history['val_dice_coef']
-        val_loss = result.history['val_loss']
-
         print('Saving results: ' + model_name)
 
         sio.savemat(model_name, {'model_settings': model_json,
@@ -468,6 +465,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
                                  'classification_output_loss_val': val_classification_output_loss,
                                  'segmentation_output_dice_coef_val': val_segmentation_output_dice_coef,
                                  'classification_output_acc_val': val_classification_output_acc,
+                                 'loss_test': loss_test,
                                  'segmentation_output_loss_test': segmentation_output_loss_test,
                                  'classification_output_loss_test': classification_output_loss_test,
                                  'segmentation_output_dice_coef_test': segmentation_output_dice_coef_test,
