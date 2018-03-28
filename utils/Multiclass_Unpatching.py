@@ -16,15 +16,33 @@ def UnpatchType(IndexType, domain, patchSize, patchOverlap, actualSize):
             a = a/a*(IndexType[iIndex])
             unpatchImg[iCorner[0]: iCorner[0] + int(patchSize[0]), iCorner[1]: iCorner[1] + int(patchSize[1]), iCorner[2]] = a
 
-        iCorner[0] =int(iCorner[0]+dNotOverlap[0])
-        if iCorner[0] + patchSize[0] - 1 > paddedSize[0]:
-            iCorner[0] = 0
-            iCorner[1] = int(iCorner[1] + dNotOverlap[1])
+
+
+        # iCorner[0] =int(iCorner[0]+dNotOverlap[0])
+        # if iCorner[0] + patchSize[0] - 1 > paddedSize[0]:
+        #     iCorner[0] = 0
+        #     iCorner[1] = int(iCorner[1] + dNotOverlap[1])
+        #
+        # if iCorner[1] + patchSize[1] - 1 > paddedSize[1]:
+        #     iCorner[1] = 0
+        #     iCorner[0] = 0
+        #     iCorner[2] = iCorner[2] + 1
+
+
+
+        iCorner[1] = int(iCorner[1] + dNotOverlap[1])
 
         if iCorner[1] + patchSize[1] - 1 > paddedSize[1]:
             iCorner[1] = 0
+            iCorner[0] = int(iCorner[0] + dNotOverlap[0])
+
+        if iCorner[0] + patchSize[0] - 1 > paddedSize[0]:
             iCorner[0] = 0
-            iCorner[2] = iCorner[2] + 1
+            iCorner[1] = 0
+            iCorner[2] = int(iCorner[2] + 1)
+
+
+
 
     if paddedSize == actualSize:
         pass

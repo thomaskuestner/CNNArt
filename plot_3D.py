@@ -47,7 +47,8 @@ class IndexTracker(object):
 
 #fig, ax = plt.subplots(1, 1)    ### 2 output?
 
-PathDicom = "D:/med_data/MRPhysics/newProtocol/01_ab/dicom_sorted/t1_tse_tra_fs_Becken_Motion_0010"
+#PathDicom = "D:/med_data/MRPhysics/newProtocol/01_ab/dicom_sorted/t1_tse_tra_fs_Becken_Motion_0010"
+PathDicom = "D:/med_data/MRPhysics/newProtocol/16_mj/dicom_sorted/t1_tse_tra_Kopf_Motion_0003"
 files = sorted([os.path.join(PathDicom, file) for file in os.listdir(PathDicom)], key=os.path.getctime)
 datasets = [dicom.read_file(f) \
                         for f in files]
@@ -58,9 +59,9 @@ except dicom_numpy.DicomImportException:
 dx, dy, dz = 1.0, 1.0, pixel_space[2][2]
 
 PatchSize = np.array((64.0, 64.0))     # only 2 elements
-PatchOverlay = 0.
+PatchOverlay = 0.5
 #Path = 'C:/Users/Yannick/Google Drive/Masterarbeit/30_Content/Pred_result'
-Path = 'D:/med_data/MRPhysics/MA Results/Output_Learning-9.3.18/Multiclass SE-ResNet-56_2D_64x64_2018-03-07_11-48/model_predictions.mat'
+Path = 'D:/med_data/MRPhysics/MA Results/2D_64x64/Multiclass SE-ResNet-56_2D_64x64_2018-03-07_11-48/model_predictions.mat'
 conten = sio.loadmat(Path)
 prob_test = conten['prob_pre']
 

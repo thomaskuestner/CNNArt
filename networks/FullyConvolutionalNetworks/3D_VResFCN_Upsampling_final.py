@@ -57,9 +57,9 @@ def createModel(patchSize, numClasses, usingClassification=False):
                padding='same',
                kernel_initializer='he_normal')(input_tensor)
     x = BatchNormalization(axis=bn_axis)(x)
-    x = LeakyReLU(alpha=0.01)(x)
+    x_after_stage_1 = LeakyReLU(alpha=0.01)(x)
 
-    x_after_stage_1 = Add()([input_tensor, x])
+    #x_after_stage_1 = Add()([input_tensor, x])
 
     # first down convolution
     x_down_conv_1 = projection_block_3D(x_after_stage_1,
@@ -71,8 +71,8 @@ def createModel(patchSize, numClasses, usingClassification=False):
                             se_ratio=16)
 
     # second stage
-    x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=False, se_ratio=16)
-    x_after_stage_2 = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=2, block=2, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=True, se_ratio=4)
+    x_after_stage_2 = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=2, block=2, se_enabled=True, se_ratio=4)
 
 
 
@@ -86,8 +86,8 @@ def createModel(patchSize, numClasses, usingClassification=False):
                                         se_ratio=16)
 
     # third stage
-    x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=False, se_ratio=16)
-    x_after_stage_3 = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=2, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=True, se_ratio=8)
+    x_after_stage_3 = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=2, se_enabled=True, se_ratio=8)
     #x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=3, se_enabled=False, se_ratio=16)
 
     # third down convolution
@@ -100,8 +100,8 @@ def createModel(patchSize, numClasses, usingClassification=False):
                                         se_ratio=16)
 
     # fourth stage
-    x = identity_block_3D(x_down_conv_3, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=1, se_enabled=False, se_ratio=16)
-    x_after_stage_4 = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=2, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x_down_conv_3, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=1, se_enabled=True, se_ratio=16)
+    x_after_stage_4 = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=2, se_enabled=True, se_ratio=16)
     #x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=3, se_enabled=False, se_ratio=16)
 
 
@@ -111,7 +111,7 @@ def createModel(patchSize, numClasses, usingClassification=False):
     if usingClassification:
         # use x_after_stage_4 as quantification output
         # global average pooling
-        x_class = GlobalAveragePooling2D(data_format='channels_last')(x_after_stage_4)
+        x_class = GlobalAveragePooling3D(data_format=K.image_data_format())(x_after_stage_4)
 
         # fully-connected layer
         classification_output = Dense(units=numClasses,
@@ -132,12 +132,11 @@ def createModel(patchSize, numClasses, usingClassification=False):
     x = BatchNormalization(axis=bn_axis)(x)
     x = LeakyReLU(alpha=0.01)(x)
 
-    #x = concatenate([x, x_after_stage_3], axis=bn_axis)
-    x = Add()([x_after_stage_3, x])
+    x = concatenate([x, x_after_stage_3], axis=bn_axis)
 
     # first decoder stage
-    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=6, block=1, se_enabled=False, se_ratio=16)
-    #x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=2, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=1, se_enabled=True, se_ratio=16)
+    x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=2, se_enabled=True, se_ratio=16)
 
     # second 3D upsampling
     x = UpSampling3D(size=(2, 2, 2), data_format=K.image_data_format())(x)
@@ -149,12 +148,11 @@ def createModel(patchSize, numClasses, usingClassification=False):
     x = BatchNormalization(axis=bn_axis)(x)
     x = LeakyReLU(alpha=0.01)(x)
 
-    #x = concatenate([x, x_after_stage_2], axis=bn_axis)
-    x = Add()([x_after_stage_2, x])
+    x = concatenate([x, x_after_stage_2], axis=bn_axis)
 
     # second decoder stage
-    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=7, block=1, se_enabled=False, se_ratio=16)
-    #x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=2, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=1, se_enabled=True, se_ratio=8)
+    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=2, se_enabled=True, se_ratio=8)
 
     # third 3D upsampling
     x = UpSampling3D(size=(2, 2, 2), data_format=K.image_data_format())(x)
@@ -166,11 +164,11 @@ def createModel(patchSize, numClasses, usingClassification=False):
     x = BatchNormalization(axis=bn_axis)(x)
     x = LeakyReLU(alpha=0.01)(x)
 
-    #x = concatenate([x, x_after_stage_1], axis=bn_axis)
-    x = Add()([x_after_stage_1, x])
+    x = concatenate([x, x_after_stage_1], axis=bn_axis)
 
     # third decoder stage
-    x = identity_block_3D(x, filters=(16, 16), kernel_size=(3,3,3), stage=9, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=9, block=1, se_enabled=True, se_ratio=4)
+    #x = identity_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=9, block=2, se_enabled=True, se_ratio=4)
 
     ### End of decoder
 
@@ -203,7 +201,7 @@ def createModel(patchSize, numClasses, usingClassification=False):
 
 def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
 
-    usingClassification = False
+    usingClassification = True
 
     # grid search on batch_sizes and learning rates
     # parse inputs
@@ -337,9 +335,9 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     # compile model
     if usingClassification:
         cnn.compile(
-            loss={'segmentation_output': 'dice_coefficient_loss', 'classification_output': 'categorical_crossentropy'},
+            loss={'segmentation_output': dice_coef_loss, 'classification_output': 'categorical_crossentropy'},
             optimizer=opti,
-            metrics={'segmentation_output': 'dice_coefficient_loss', 'classification_output': 'accuracy'})
+            metrics={'segmentation_output': dice_coef, 'classification_output': 'accuracy'})
     else:
         cnn.compile(loss=dice_coef_loss,
                     optimizer=opti,
@@ -406,9 +404,9 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
 
     # return the loss value and metrics values for the model in test mode
     if usingClassification:
-        score_test, acc_test = cnn.evaluate(X_test,
-                                            {'segmentation_output': Y_segMasks_test, 'classification_output': y_test},
-                                            batch_size=batchSize, verbose=1)
+        segmentation_output_loss_test, classification_output_loss_test, segmentation_output_dice_coef_test, classification_output_acc_test, a, b = cnn.evaluate(X_test,
+                                                                                                                                                          {'segmentation_output': Y_segMasks_test, 'classification_output': y_test},
+                                                                                                                                                          batch_size=batchSize, verbose=1)
     else:
         score_test, dice_coef_test = cnn.evaluate(X_test, Y_segMasks_test, batch_size=batchSize, verbose=1)
 
@@ -423,23 +421,59 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     cnn.save_weights(weight_name, overwrite=True)
     # cnn.save(model_all) # keras > v0.7
 
-    # matlab
-    dice_coef_training = result.history['dice_coef']
-    training_loss = result.history['loss']
-    val_dice_coef = result.history['val_dice_coef']
-    val_loss = result.history['val_loss']
+    if not usingClassification:
+        # matlab
+        dice_coef_training = result.history['dice_coef']
+        training_loss = result.history['loss']
+        val_dice_coef = result.history['val_dice_coef']
+        val_loss = result.history['val_loss']
 
-    print('Saving results: ' + model_name)
-    sio.savemat(model_name, {'model_settings': model_json,
-                             'model': model_all,
-                             'weights': weight_name,
-                             'dice_coef': dice_coef_training,
-                             'training_loss': training_loss,
-                             'val_dice_coef': val_dice_coef,
-                             'val_loss': val_loss,
-                             'score_test': score_test,
-                             'dice_coef_test': dice_coef_test,
-                             'prob_test': prob_test})
+        print('Saving results: ' + model_name)
+
+        sio.savemat(model_name, {'model_settings': model_json,
+                                 'model': model_all,
+                                 'weights': weight_name,
+                                 'dice_coef': dice_coef_training,
+                                 'training_loss': training_loss,
+                                 'val_dice_coef': val_dice_coef,
+                                 'val_loss': val_loss,
+                                 'score_test': score_test,
+                                 'dice_coef_test': dice_coef_test,
+                                 'prob_test': prob_test})
+    else:
+        # matlab
+        segmentation_output_loss_training = result.history['segmentation_output_loss']
+        classification_output_loss_training = result.history['classification_output_loss']
+        segmentation_output_dice_coef_training = result.history['segmentation_output_dice_coef']
+        classification_output_acc_training = result.history['classification_output_acc']
+
+        val_segmentation_output_loss = result.history['val_segmentation_output_loss']
+        val_classification_output_loss = result.history['val_classification_output_loss']
+        val_segmentation_output_dice_coef = result.history['val_segmentation_output_dice_coef']
+        val_classification_output_acc = result.history['val_classification_output_acc']
+
+        val_dice_coef = result.history['val_dice_coef']
+        val_loss = result.history['val_loss']
+
+        print('Saving results: ' + model_name)
+
+        sio.savemat(model_name, {'model_settings': model_json,
+                                 'model': model_all,
+                                 'weights': weight_name,
+                                 'segmentation_output_loss_training': segmentation_output_loss_training,
+                                 'classification_output_loss_training': classification_output_loss_training,
+                                 'segmentation_output_dice_coef_training': segmentation_output_dice_coef_training,
+                                 'classification_output_acc_training': classification_output_acc_training,
+                                 'segmentation_output_loss_val': val_segmentation_output_loss,
+                                 'classification_output_loss_val': val_classification_output_loss,
+                                 'segmentation_output_dice_coef_val': val_segmentation_output_dice_coef,
+                                 'classification_output_acc_val': val_classification_output_acc,
+                                 'segmentation_output_loss_test': segmentation_output_loss_test,
+                                 'classification_output_loss_test': classification_output_loss_test,
+                                 'segmentation_output_dice_coef_test': segmentation_output_dice_coef_test,
+                                 'classification_output_acc_test': classification_output_acc_test,
+                                 'prob_test': prob_test})
+
 
 
 def step_decay(epoch, lr):

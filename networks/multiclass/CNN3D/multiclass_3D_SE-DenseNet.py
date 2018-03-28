@@ -53,19 +53,19 @@ def createModel(patchSize, numClasses):
     x = Conv3D(16, (3,3,3), strides=(1,1,1), padding='same', kernel_initializer='he_normal')(input_tensor)
 
     # 1. Dense Block
-    x, numFilters = dense_block_3D(x, numInputFilters=16, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=False)
+    x, numFilters = dense_block_3D(x, numInputFilters=16, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=True)
 
     # Transition Layer
     x, numFilters = transition_SE_layer_3D(x, numFilters, compressionFactor=compressionFactor, se_ratio=16)
 
     # 2. Dense Block
-    x, numFilters = dense_block_3D(x, numInputFilters=numFilters, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=False)
+    x, numFilters = dense_block_3D(x, numInputFilters=numFilters, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=True)
 
     #Transition Layer
     x, numFilters = transition_SE_layer_3D(x, numFilters, compressionFactor=compressionFactor, se_ratio=16)
 
     #3. Dense Block
-    x, numFilters = dense_block_3D(x, numInputFilters=numFilters, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=False)
+    x, numFilters = dense_block_3D(x, numInputFilters=numFilters, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=True)
 
     # SE Block
     x = squeeze_excitation_block_3D(x, ratio=16)

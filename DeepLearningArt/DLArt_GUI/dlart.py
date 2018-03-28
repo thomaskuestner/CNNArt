@@ -71,6 +71,7 @@ class DeepLearningArtApp():
         'FCN 3D-VResFCN-Upsampling': 'networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling',
         'FCN 3D-VResFCN-Upsampling small': 'networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_small',
         'FCN 3D-VResFCN-Upsampling small_single': 'networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_small_single',
+        'FCN 3D-VResFCN-Upsampling final': 'networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_final',
         'Multiclass 3D SE-DenseNet': 'networks.multiclass.CNN3D.multiclass_3D_SE-DenseNet'
     }
 
