@@ -18,7 +18,6 @@ import theano.tensor as T
 from keras.utils import plot_model
 
 def fgetKernelNumber():
-    # KN[0] for conv with kernel 1X1X1, KN[1] for conv with kernel 3X3X3 or 5X5X5
     KernelNumber = [32, 64, 128]
     return KernelNumber
 def fgetLayerNumConv():
@@ -70,7 +69,7 @@ def fTrainInner(sOutPath, patchSize, learningRate=0.001, X_train=None, y_train=N
     _, sPath = os.path.splitdrive(sOutPath)
     sPath,sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
-    model_name = sPath + '/' + sFilename  + '/' + sFilename + '_VNet_SPP' +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
+    model_name = sPath + '/' + sFilename  + '/' + sFilename + '_VNet_FCN_MS' +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     if CV_Patient != 0: model_name = model_name +'_'+ 'CV' + str(CV_Patient)# determine if crossValPatient is used...
     weight_name = model_name + '_weights.h5'
     model_json = model_name + '_json'
@@ -81,47 +80,47 @@ def fTrainInner(sOutPath, patchSize, learningRate=0.001, X_train=None, y_train=N
         print('----------already trained->go to next----------')
         return
 
-    model = fCreateModel(patchSize)
-    plot_model(model, to_file='/no_backup/s1241/MultiScale/model.png',show_shapes='True')
+    model = fCreateModel_MultiFM_2Path(patchSize, patchSize_down)
+    plot_model(model, to_file='/no_backup/s1241/MultiScale/modelFCN.png',show_shapes='True')
     opti, loss = fGetOptimizerAndLoss(optimizer='Adam', learningRate=learningRate)  # loss cat_crosent default
     model.compile(optimizer=opti, loss=loss, metrics=['accuracy'])
     model.summary()
 
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
-    callbacks.append(ModelCheckpoint('/gitfile/MultiScale/checker.hdf5', monitor='val_acc', verbose=0,
+    callbacks.append(ModelCheckpoint('/no_backup/s1241/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
        period=5, save_best_only=True))# overrides the last checkpoint, its just for security
-    callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-5, verbose=1))
+    callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
-    # result =cnn_spp_shared.fit(x = [X_train, X_train_p2],
-    #                   y = y_train,
-    #                   validation_data=([X_test, X_test_p2], y_test),
-    #                   epochs=iEpochs,
-    #                   batch_size=batchSize,
-    #                   callbacks=callbacks,
-    #                   verbose=1)
-    #
-    # print('\nscore and acc on test set:')
-    # score_test, acc_test = cnn_spp_shared.evaluate([X_test, X_test_p2], y_test, batch_size=batchSize, verbose=1)
-    #
-    # print('\npredict class probabillities:')
-    # prob_test = cnn_spp_shared.predict([X_test, X_test_p2], batch_size=batchSize, verbose=1)
+    result =model.fit(x = [X_train, X_train_p2],
+                      y = y_train,
+                      validation_data=([X_test, X_test_p2], y_test),
+                      epochs=iEpochs,
+                      batch_size=batchSize,
+                      callbacks=callbacks,
+                      verbose=1)
 
-    result = model.fit(x=X_train,
-                        y=y_train,
-                        validation_data=(X_test, y_test),
-                        epochs=iEpochs,
-                        batch_size=batchSize,
-                        callbacks=callbacks,
-                        verbose=1)
     print('\nscore and acc on test set:')
-    score_test, acc_test = model.evaluate(X_test, y_test, batch_size=batchSize, verbose=1)
+    score_test, acc_test = model.evaluate([X_test, X_test_p2], y_test, batch_size=batchSize, verbose=1)
+
     print('\npredict class probabillities:')
-    prob_test = model.predict(X_test, batch_size=batchSize, verbose=1)
+    prob_test = model.predict([X_test, X_test_p2], batch_size=batchSize, verbose=1)
+
+    # result = model.fit(x=X_train,
+    #                     y=y_train,
+    #                     validation_data=(X_test, y_test),
+    #                     epochs=iEpochs,
+    #                     batch_size=batchSize,
+    #                     callbacks=callbacks,
+    #                     verbose=1)
+    # print('\nscore and acc on test set:')
+    # score_test, acc_test = model.evaluate(X_test, y_test, batch_size=batchSize, verbose=1)
+    # print('\npredict class probabillities:')
+    # prob_test = model.predict(X_test, batch_size=batchSize, verbose=1)
 
     # save model
-    json_string = cnn_spp_shared.to_json()
+    json_string = model.to_json()
     open(model_json +'.txt', 'w').write(json_string)
-    cnn_spp_shared.save_weights(weight_name, overwrite=True)
+    model.save_weights(weight_name, overwrite=True)
 
     # matlab
     print('Saving results: ' + model_name)
@@ -229,7 +228,6 @@ def fCreateModel_MultiFM(patchSize, dr_rate=0.0, iPReLU=0,l1_reg=0, l2_reg=1e-6)
                        kernel_regularizer=l1_l2(l1_reg, l2_reg),
                        )(dropout_out1)
     fclayer1 = GlobalAveragePooling3D()(fclayer1)
-    predict1 = Activation('softmax')(fclayer1)
     
     # Upsample FM from the deepest level, add with FM from level 2, 
     UpedFM_Level3 = Conv3DTranspose(filters=97, kernel_size=(3,3,1), strides=(2,2,1), padding='same')(after_DownConv_3)
@@ -242,13 +240,111 @@ def fCreateModel_MultiFM(patchSize, dr_rate=0.0, iPReLU=0,l1_reg=0, l2_reg=1e-6)
                        strides=(1, 1, 1),
                        kernel_regularizer=l1_l2(l1_reg, l2_reg),
                        )(conbined_FM_Level23)
-    fclayer2 = GlobalAveragePooling3D()(fclayer2)    
-    predict2 = Activation('softmax')(fclayer2)
-    
+    fclayer2 = GlobalAveragePooling3D()(fclayer2)
+
     # combine the two predictions using average
-    outp = average([predict1, predict2])
-    cnn_fcl_msfm = Model(inputs=inp, outputs=outp)
+    fcl_aver = average([fclayer1, fclayer2])
+    predict = Activation('softmax')(fcl_aver)
+    cnn_fcl_msfm = Model(inputs=inp, outputs=predict)
     return cnn_fcl_msfm
+
+
+def fCreateModel_MultiFM_2Path(patchSize, patchSize_down, dr_rate=0.0, iPReLU=0, l1_reg=0, l2_reg=1e-6):
+    # Total params: 2,841,098
+    # The dense layer is repleced by a convolutional layer with filters=2 for the two classes
+    # The FM from the third down scaled convolutional layer is upsempled by deconvolution and
+    # added with the FM from the second down scaled convolutional layer.
+    # The combined FM goes through a convolutional layer with filters=2 for the two classes
+    # The four predictions from the two pathways are averages as the final result.
+    Strides = fgetStrides()
+    kernelnumber = fgetKernelNumber()
+    sharedConv1 = fCreateVNet_Block
+    sharedDown1 = fCreateVNet_DownConv_Block
+    sharedConv2 = fCreateVNet_Block
+    sharedDown2 = fCreateVNet_DownConv_Block
+    sharedConv3 = fCreateVNet_Block
+    sharedDown3 = fCreateVNet_DownConv_Block
+
+    inp1 = Input(shape=(1, int(patchSize[0]), int(patchSize[1]), int(patchSize[2])))
+    after_1Conv_1 = sharedConv1(inp1, kernelnumber[0], type=fgetLayerNumConv(), l2_reg=l2_reg)
+    after_1DownConv_1 = sharedDown1(after_1Conv_1, after_1Conv_1._keras_shape[1], Strides[0],
+                                                  iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+
+    after_1Conv_2 = sharedConv2(after_1DownConv_1, kernelnumber[1], type=fgetLayerNumConv(), l2_reg=l2_reg)
+    after_1DownConv_2 = sharedDown2(after_1Conv_2, after_1Conv_2._keras_shape[1], Strides[1],
+                                                  iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+
+    after_1Conv_3 = sharedConv3(after_1DownConv_2, kernelnumber[2], type=fgetLayerNumConv(), l2_reg=l2_reg)
+    after_1DownConv_3 = sharedDown3(after_1Conv_3, after_1Conv_3._keras_shape[1], Strides[2],
+                                                  iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+
+    inp2 = Input(shape=(1, int(patchSize_down[0]), int(patchSize_down[1]), int(patchSize_down[2])))
+    after_2Conv_1 = sharedConv1(inp2, kernelnumber[0], type=fgetLayerNumConv(), l2_reg=l2_reg)
+    after_2DownConv_1 = sharedDown1(after_2Conv_1, after_2Conv_1._keras_shape[1], Strides[0],
+                                                  iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+
+    after_2Conv_2 = sharedConv2(after_2DownConv_1, kernelnumber[1], type=fgetLayerNumConv(), l2_reg=l2_reg)
+    after_2DownConv_2 = sharedDown2(after_2Conv_2, after_2Conv_2._keras_shape[1], Strides[1],
+                                                  iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+
+    after_2Conv_3 = sharedConv3(after_2DownConv_2, kernelnumber[2], type=fgetLayerNumConv(), l2_reg=l2_reg)
+    after_2DownConv_3 = sharedDown3(after_2Conv_3, after_2Conv_3._keras_shape[1], Strides[2],
+                                                  iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+    # fully convolution over the FM from the deepest level
+    dropout_out1 = Dropout(dr_rate)(after_1DownConv_3)
+    fclayer1 = Conv3D(2,
+                      kernel_size=(1, 1, 1),
+                      kernel_initializer='he_normal',
+                      weights=None,
+                      padding='valid',
+                      strides=(1, 1, 1),
+                      kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                      )(dropout_out1)
+    fclayer1 = GlobalAveragePooling3D()(fclayer1)
+
+    # Upsample FM from the deepest level, add with FM from level 2,
+    UpedFM_1Level3 = Conv3DTranspose(filters=97, kernel_size=(3, 3, 1), strides=(2, 2, 1), padding='same')(
+        after_1DownConv_3)
+    conbined_FM_1Level23 = add([UpedFM_1Level3, after_1DownConv_2])
+    fclayer2 = Conv3D(2,
+                      kernel_size=(1, 1, 1),
+                      kernel_initializer='he_normal',
+                      weights=None,
+                      padding='valid',
+                      strides=(1, 1, 1),
+                      kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                      )(conbined_FM_1Level23)
+    fclayer2 = GlobalAveragePooling3D()(fclayer2)
+
+    dropout_out2 = Dropout(dr_rate)(after_2DownConv_3)
+    fclayer3 = Conv3D(2,
+                      kernel_size=(1, 1, 1),
+                      kernel_initializer='he_normal',
+                      weights=None,
+                      padding='valid',
+                      strides=(1, 1, 1),
+                      kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                      )(dropout_out2)
+    fclayer3 = GlobalAveragePooling3D()(fclayer3)
+
+    # Upsample FM from the deepest level, add with FM from level 2,
+    UpedFM_2Level3 = Conv3DTranspose(filters=97, kernel_size=(3, 3, 1), strides=(2, 2, 1), padding='same')(
+        after_2DownConv_3)
+    conbined_FM_2Level23 = add([UpedFM_2Level3, after_2DownConv_2])
+    fclayer4 = Conv3D(2,
+                      kernel_size=(1, 1, 1),
+                      kernel_initializer='he_normal',
+                      weights=None,
+                      padding='valid',
+                      strides=(1, 1, 1),
+                      kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                      )(conbined_FM_2Level23)
+    fclayer4 = GlobalAveragePooling3D()(fclayer4)
+    # combine the two predictions using average
+    fcl_aver = average([fclayer1, fclayer2, fclayer3, fclayer4])
+    predict = Activation('softmax')(fcl_aver)
+    cnn_fcl_2p = Model(inputs=[inp1, inp2], outputs=predict)
+    return cnn_fcl_2p
 
 def fCreateVNet_DownConv_Block(input_t, channels, stride, l1_reg=0.0, l2_reg=1e-6, iPReLU=0, dr_rate=0):
     output_t=Dropout(dr_rate)(input_t)
