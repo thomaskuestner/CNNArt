@@ -81,15 +81,14 @@ def fTrainInner(sOutPath, patchSize, learningRate=0.001, X_train=None, y_train=N
         print('----------already trained->go to next----------')
         return
 
-    cnn_spp_shared = fCreateModel(patchSize)
-    #cnn_spp_shared = fCreateModel_Shared(patchSize, patchSize_down)
-    plot_model(cnn_spp_shared, to_file='/no_backup/s1241/MultiScale/modelSPPMS.png', show_shapes='True')
+    cnn_spp_shared = fCreateModel_Shared(patchSize, patchSize_down)
+    #plot_model(cnn_spp_shared, to_file='/modelSPPMS.png', show_shapes='True')
     opti, loss = fGetOptimizerAndLoss(optimizer='Adam', learningRate=learningRate)  # loss cat_crosent default
     cnn_spp_shared.compile(optimizer=opti, loss=loss, metrics=['accuracy'])
     cnn_spp_shared.summary()
 
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
-    callbacks.append(ModelCheckpoint('/no_backup/s1241/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
+    callbacks.append(ModelCheckpoint('/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
        period=5, save_best_only=True))# overrides the last checkpoint, its just for security
     callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
