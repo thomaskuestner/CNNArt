@@ -40,6 +40,7 @@ selectedDatabase: *id001
 # bodyRegion: abd, head, all
 # network: CNN2D, CNN3D, MNetArt, VNetArt
 # network with muntiscaleSeparated method: motion_all_CNN2D_multiscale, motion_VNet_multiscale
+# new modification of VNet with inception block: motion_VNet_Inception
 network : "motion_all_CNN2D"
 
 # scaling range
@@ -98,12 +99,18 @@ lScaleFactor : [0.5, 1]
 lCorrection: false
 # parameters in artifacts correction
 correction:
-  sCorrection: "motion_head_VAE2D_48"
+  sCorrection: "motion_VAE2D"
   bestModel: "vae_weight_ps_48_bs_128"
   pl_network: "vgg19"
   loss_model: ""
   kl_weight: 1
   perceptual_weight: 0.00001
   pixel_weight: 0.01
+  loss_ref2ref: 0.4
+  loss_art2ref: 0.6
   unpatch: false
   nScale: 255
+  dropout: 1
+  actualSize: [256, 196]
+  evaluate: true
+  test_patient: "01_ab"

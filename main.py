@@ -32,6 +32,7 @@ if cfg['sSplitting'] == 'normal':
     sFSname = 'normal'
 elif cfg['sSplitting'] == 'crossvalidation_data':
     sFSname = 'crossVal_data'
+    nFolds = cfg['nFolds']
 elif cfg['sSplitting'] == 'crossvalidation_patient':
     sFSname = 'crossVal'
 
@@ -128,7 +129,10 @@ elif lTrain:
                     pass
             print('Start splitting')
             # perform splitting: sp for split
-            spX_train, spy_train, spX_test, spy_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], scpatchSize, cfg['patchOverlap'], cfg['dSplitval'], '')
+            if cfg['sSplitting'] == 'crossvalidation_data':
+                spX_train, spy_train, spX_test, spy_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], scpatchSize, cfg['patchOverlap'], cfg['dSplitval'], '', nfolds = nFolds)
+            else:
+                spX_train, spy_train, spX_test, spy_test = ttsplit.fSplitDataset(dAllPatches, dAllLabels, dAllPats, cfg['sSplitting'], scpatchSize, cfg['patchOverlap'], cfg['dSplitval'], '')
             print('Start scaling')
             # perform scaling: sc for scale
             scX_train, scX_test, scedpatchSize= scaling.fscaling(spX_train, spX_test, scpatchSize, iscalefactor)

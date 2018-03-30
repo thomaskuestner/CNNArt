@@ -93,10 +93,16 @@ def fPreprocessDataCorrection(cfg, dbinfo):
 
         # perform splitting
         print('Start splitting')
+        if cfg['correction']['test_patient'] in dbinfo.lPats:
+            test_index = dbinfo.lPats.index(cfg['correction']['test_patient'])
+        else:
+            test_index = -1
         train_ref_sp, test_ref_sp, train_art_sp, test_art_sp = ttsplit.fSplitDatasetCorrection(cfg['sSplitting'],
-                                                                                   dRefPatches, dArtPatches,
-                                                                                   dRefPats, cfg['dSplitval'],
-                                                                                   cfg['nFolds'])
+                                                                                               dRefPatches, dArtPatches,
+                                                                                               dRefPats,
+                                                                                               cfg['dSplitval'],
+                                                                                               cfg['nFolds'],
+                                                                                               test_index)
 
         print('Start scaling')
         # perform scaling: sc for scale
