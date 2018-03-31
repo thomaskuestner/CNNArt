@@ -115,3 +115,4 @@ correction:
   actualSize: [256, 196]
   evaluate: true
   test_patient: "01_ab"
+  augmentation: false

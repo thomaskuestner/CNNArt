@@ -1,21 +1,46 @@
 import os
-import numpy as np
 from skimage.measure import compare_ssim as ssim
 from sklearn.metrics import mean_squared_error
 import matplotlib as mpl
 mpl.use('Agg')
 
-from keras.layers import Input, Lambda, concatenate
-
-from keras.models import Model
+from keras.preprocessing.image import ImageDataGenerator
+from keras.engine.topology import Layer
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.optimizers import Adam
-from keras import backend as K
 
 from utils.MotionCorrection.network_block import encode, encode_shared, decode
 from utils.MotionCorrection.customLoss import *
 from utils.Unpatching import *
 from utils.MotionCorrection.plot import *
+
+
+class CustomLossLayer(Layer):
+    def __init__(self, dHyper, patchSize, **kwargs):
+        self.dHyper = dHyper
+        self.patchSize = patchSize
+        super(CustomLossLayer, self).__init__(**kwargs)
+
+    def call(self, inputs):
+        x_ref = inputs[0]
+        decoded_ref2ref = inputs[1]
+        decoded_art2ref = inputs[2]
+        z_log_var = inputs[3]
+        z_mean = inputs[4]
+
+        # compute KL loss
+        loss_kl = - 0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
+        self.add_loss(self.dHyper['kl_weight']*K.mean(loss_kl))
+
+        # compute MSE loss
+        mse_loss_ref2ref, mse_loss_art2ref = compute_mse_loss(self.dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
+        self.add_loss(self.dHyper['mse_weight'] * (self.dHyper['loss_ref2ref']*mse_loss_ref2ref + self.dHyper['loss_art2ref']*mse_loss_art2ref))
+
+        # compute perceptual loss
+        perceptual_loss_ref2ref, perceptual_loss_art2ref = compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, self.patchSize, self.dHyper['pl_network'],self.dHyper['loss_model'])
+        self.add_loss(self.dHyper['perceptual_weight'] * (self.dHyper['loss_ref2ref'] * perceptual_loss_ref2ref + self.dHyper['loss_art2ref'] * perceptual_loss_art2ref))
+
+        return [decoded_ref2ref, decoded_art2ref]
 
 
 def createModel(patchSize, dHyper):
@@ -40,26 +65,14 @@ def createModel(patchSize, dHyper):
     decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
     decoded_art2ref = Lambda(lambda input: input[input.shape[0]//2:, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
 
+    # input to CustomLoss Layer
+    [decoded_ref2ref, decoded_art2ref] = CustomLossLayer(dHyper, patchSize)([x_ref, decoded_ref2ref, decoded_art2ref, z_log_var, z_mean])
+
     # generate the VAE and encoder model
     vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
 
-    # compute kl loss
-    loss_kl = - 0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-    vae.add_loss(dHyper['kl_weight'] * K.mean(loss_kl))
-
-    # compute pixel to pixel loss
-    mse_loss_ref2ref, mse_loss_art2ref = compute_mse_loss(dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
-    vae.add_loss(dHyper['mse_weight'] * (dHyper['loss_ref2ref']*mse_loss_ref2ref + dHyper['loss_art2ref']*mse_loss_art2ref))
-
-    # compute total variation loss
-    tv_loss_ref2ref, tv_loss_art2ref = compute_tv_loss(dHyper, decoded_ref2ref, decoded_art2ref, patchSize)
-    vae.add_loss(dHyper['tv_weight'] * (dHyper['loss_ref2ref']*tv_loss_ref2ref + dHyper['loss_art2ref']*tv_loss_art2ref))
-
-    # compute perceptual loss
-    perceptual_loss_ref2ref, perceptual_loss_art2ref = compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, dHyper['pl_network'], dHyper['loss_model'])
-    vae.add_loss(dHyper['perceptual_weight'] * (dHyper['loss_ref2ref']*perceptual_loss_ref2ref + dHyper['loss_art2ref']*perceptual_loss_art2ref))
-
     return vae
+
 
 def fTrain(dData, dParam, dHyper):
     # parse inputs
@@ -70,6 +83,7 @@ def fTrain(dData, dParam, dHyper):
     for iBatch in batchSize:
         for iLearn in learningRate:
             fTrainInner(dData, dParam['sOutPath'], dParam['patchSize'], epochs, iBatch, iLearn, dHyper)
+
 
 def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
     train_ref = dData['train_ref']
@@ -88,32 +102,55 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
 
     print('Training with epochs {} batch size {} learning rate {}'.format(epochs, batchSize, lr))
 
-    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
-    lossPlot_file = weights_file[:-3] + '.png'
+    def gen_flow_for_two_inputs(x1, x2):
+        seed = np.random.randint(0, 1e3)
+        genx1 = datagen.flow(x1, batch_size=batchSize, seed=seed)
+        genx2 = datagen.flow(x2, batch_size=batchSize, seed=seed)
+        while True:
+            X1i = genx1.next()
+            X2i = genx2.next()
+            yield [X1i, X2i], None
 
-    plotLoss = PlotLosses(lossPlot_file)
 
-    callback_list = []
-    # callback_list = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
-    callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=0, verbose=1))
-    callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
-    callback_list.append(plotLoss)
+    if dHyper['augmentation']:
+        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_augmented.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
 
-    history = vae.fit([train_ref, train_art],
-            shuffle=True,
-            epochs=epochs,
-            batch_size=batchSize,
-            validation_data=([test_ref, test_art], None),
-            verbose=1,
-            callbacks=callback_list)
+        lossPlot_file = weights_file[:-3] + '.png'
+        plotLoss = PlotLosses(lossPlot_file)
+        callback_list = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
+        callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0, verbose=1))
+        callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
+        callback_list.append(plotLoss)
+        datagen = ImageDataGenerator(rotation_range=90, vertical_flip=True, horizontal_flip=True)
+        gen_flow = gen_flow_for_two_inputs(train_ref, train_art)
 
-    plt.plot(history.history['loss'], 'r')
-    plt.plot(history.history['val_loss'], 'b')
-    plt.title('model loss')
-    plt.ylabel('loss')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'test'], loc='upper left')
-    plt.savefig(weights_file[:-3] + '.png')
+        vae.fit_generator(gen_flow,
+                          shuffle=True,
+                          steps_per_epoch=len(train_ref)//batchSize,
+                          epochs=epochs,
+                          validation_data=([test_ref, test_art], None),
+                          verbose=1,
+                          callbacks=callback_list)
+    else:
+        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
+        # vae.load_weights(weights_file)
+
+        lossPlot_file = weights_file[:-3] + '.png'
+        plotLoss = PlotLosses(lossPlot_file)
+        callback_list = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
+        callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0, verbose=1))
+        callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
+        callback_list.append(plotLoss)
+
+        # train original dataset
+        vae.fit([train_ref, train_art],
+                shuffle=True,
+                epochs=epochs,
+                batch_size=batchSize,
+                validation_data=([test_ref, test_art], None),
+                verbose=1,
+                callbacks=callback_list)
+
 
 def fPredict(test_ref, test_art, dParam, dHyper):
     weights_file = dParam['sOutPath'] + os.sep + '{}.h5'.format(dHyper['bestModel'])
