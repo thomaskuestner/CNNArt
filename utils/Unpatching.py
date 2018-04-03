@@ -203,7 +203,9 @@ def fRigidUnpatchingCorrection2D(actual_size, allPatches, patchOverlap, mode='ov
 
     unpatchImg_cropped = unpatchImg[:, (height_pad - height) / 2: height_pad - (height_pad - height) / 2,
                          (width_pad - width) / 2: width_pad - (width_pad - width) / 2]
-    return unpatchImg_cropped
+
+    # unpatchImg_cropped = (unpatchImg_cropped - np.min(unpatchImg_cropped)) * 255 / (np.max(unpatchImg_cropped) - np.min(unpatchImg_cropped))
+    return unpatchImg_cropped * 255
 
 
 def fRigidUnpatchingCorrection3D(actual_size, allPatches, patchOverlap, mode='overwritten'):

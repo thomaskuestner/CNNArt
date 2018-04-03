@@ -7,8 +7,8 @@ from keras.models import Model, load_model
 
 
 def preprocessing(inputs):
-    # output = Lambda(lambda x: (x - K.min(x)) * (255 + 255) / (K.max(x) - K.min(x) - 255), output_shape=inputs._keras_shape)(inputs)
-    output = 255 * inputs
+    output = Lambda(lambda x: (x - K.min(x)) * 255 / (K.max(x) - K.min(x)), output_shape=inputs._keras_shape)(inputs)
+    # output = 255 * inputs
     K.update_sub(output[:, 0, :, :], 123.68)
     K.update_sub(output[:, 1, :, :], 116.779)
     K.update_sub(output[:, 2, :, :], 103.939)

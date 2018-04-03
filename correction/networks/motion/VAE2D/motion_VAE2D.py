@@ -49,17 +49,17 @@ def createModel(patchSize, dHyper):
     x_art = Input(shape=(1, patchSize[0], patchSize[1]))
 
     # create respective encoders
-    encoded_ref = encode(x_ref, patchSize)
-    encoded_art = encode(x_art, patchSize)
+    encoded_ref = encode(x_ref, patchSize, dHyper['architecture'])
+    encoded_art = encode(x_art, patchSize, dHyper['architecture'])
 
     # concatenate the encoded features together
     combined = concatenate([encoded_ref, encoded_art], axis=0)
 
     # create the shared encoder
-    z, z_mean, z_log_var = encode_shared(combined, patchSize)
+    z, z_mean, z_log_var = encode_shared(combined, patchSize, dHyper['architecture'])
 
     # create the decoder
-    decoded = decode(z, patchSize, dHyper['dropout'])
+    decoded = decode(z, patchSize, dHyper['dropout'], dHyper['architecture'])
 
     # separate the concatenated images
     decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
@@ -121,7 +121,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
         callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0, verbose=1))
         callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
         callback_list.append(plotLoss)
-        datagen = ImageDataGenerator(rotation_range=90, vertical_flip=True, horizontal_flip=True)
+        datagen = ImageDataGenerator(rotation_range=10, vertical_flip=True, horizontal_flip=True)
         gen_flow = gen_flow_for_two_inputs(train_ref, train_art)
 
         vae.fit_generator(gen_flow,
@@ -133,7 +133,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
                           callbacks=callback_list)
     else:
         weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
-        # vae.load_weights(weights_file)
+        #vae.load_weights(weights_file)
 
         lossPlot_file = weights_file[:-3] + '.png'
         plotLoss = PlotLosses(lossPlot_file)

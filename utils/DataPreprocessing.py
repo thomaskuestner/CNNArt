@@ -13,7 +13,7 @@ import utils.Training_Test_Split as ttsplit
 import utils.scaling as scaling
 
 
-def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabeling):
+def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabeling, range_norm):
     # set variables
     model = os.path.basename(os.path.dirname(pathDicom))
     dir = os.path.dirname(os.path.dirname(pathDicom))
@@ -26,8 +26,7 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabelin
     dicom_numpy_array = create_DICOM_Array(os.path.join(pathDicom, ''))
     mask_numpy_array = create_MASK_Array(proband, model, dicom_numpy_array.shape[0], dicom_numpy_array.shape[1], dicom_numpy_array.shape[2])
     # Normalisation
-    range_norm = [0, 1]
-    scale_dicom_numpy_array = (dicom_numpy_array - np.min(dicom_numpy_array)) * (range_norm[1] - range_norm[0]) / (np.max(dicom_numpy_array) - np.min(dicom_numpy_array))
+    scale_dicom_numpy_array = (dicom_numpy_array - np.min(dicom_numpy_array)) * (range_norm[1] - range_norm[0]) / (np.max(dicom_numpy_array) - np.min(dicom_numpy_array)) + range_norm[0]
 
     # RigidPatching
     if len(patchSize) == 3: # 3D patches
@@ -53,6 +52,7 @@ def fPreprocessDataCorrection(cfg, dbinfo):
 
     sTrainingMethod = cfg['sTrainingMethod']  # options of multiscale
     patchSize = cfg['patchSize']
+    range_norm = cfg['range']
     lScaleFactor = cfg['lScaleFactor']
 
     scpatchSize = patchSize
@@ -78,7 +78,7 @@ def fPreprocessDataCorrection(cfg, dbinfo):
                 for iseq, seq in enumerate(lDatasets):
                     # patches and labels of reference/artifact
                     tmpPatches, tmpLabels = fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq),
-                                                            scpatchSize, cfg['patchOverlap'], 1, 'volume')
+                                                            scpatchSize, cfg['patchOverlap'], 1, 'volume', range_norm)
 
                     if iseq == 0:
                         dRefPatches = np.concatenate((dRefPatches, tmpPatches), axis=0)

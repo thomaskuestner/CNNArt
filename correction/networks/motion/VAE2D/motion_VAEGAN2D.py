@@ -67,6 +67,9 @@ def build_vae(patchSize, dHyper):
     decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
     decoded_art2ref = Lambda(lambda input: input[input.shape[0]//2:, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
 
+    # input to CustomLoss Layer
+    [decoded_ref2ref, decoded_art2ref] = CustomLossLayer(dHyper, patchSize)([x_ref, decoded_ref2ref, decoded_art2ref, z_log_var, z_mean])
+
     # generate the VAE and encoder model
     vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
 
@@ -94,12 +97,10 @@ def build_discriminator(patchSize):
     d4 = d_block(d3, df*2, strides=2)
     d5 = d_block(d4, df*4)
     d6 = d_block(d5, df*4, strides=2)
-    d7 = d_block(d6, df*8)
-    d8 = d_block(d7, df*8, strides=2)
-    flat = Flatten()(d8)
-    d9 = Dense(df*16)(flat)
-    d10 = LeakyReLU(alpha=0.2)(d9)
-    validity = Dense(1, activation='sigmoid')(d10)
+    flat = Flatten()(d6)
+    d7 = Dense(df*8)(flat)
+    d8 = LeakyReLU(alpha=0.2)(d7)
+    validity = Dense(1, activation='sigmoid')(d8)
 
     return Model(d0, validity)
 
@@ -116,10 +117,10 @@ def fTrain(dData, dParam, dHyper):
 
 
 def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
-    train_ref = dData['train_ref']/127.5 - 1
-    train_art = dData['train_art']/127.5 - 1
-    test_ref = dData['test_ref']/127.5 - 1
-    test_art = dData['test_art']/127.5 - 1
+    train_ref = dData['train_ref']
+    train_art = dData['train_art']
+    test_ref = dData['test_ref']
+    test_art = dData['test_art']
 
     train_ref = np.expand_dims(train_ref, axis=1)
     train_art = np.expand_dims(train_art, axis=1)
@@ -130,18 +131,19 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
     datagen = ImageDataGenerator()
 
     # optimizor
-    optimizer = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+    optimizer_D = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+    optimizer_G = Adam(lr=1e-5, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 
     # create and compile VAE model
     vae = build_vae(patchSize, dHyper)
-    vae.compile(optimizer=optimizer, loss=None)
+    vae.compile(optimizer=optimizer_G, loss=None)
 
     weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
     vae.load_weights(weights_file)
 
     # create and compile discriminator model
     D = build_discriminator(patchSize)
-    D.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    D.compile(loss='binary_crossentropy', optimizer=optimizer_D, metrics=['accuracy'])
 
     # create and compile combined model
     fake_ref, fake_art = vae.output
@@ -150,70 +152,71 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
     validity_art = D(fake_art)
     combined = Model(vae.inputs, [validity_ref, validity_art])
     combined.compile(loss=['binary_crossentropy', 'binary_crossentropy'],
-                     loss_weights=[0.4, 0.6],
-                     optimizer=optimizer)
+                     loss_weights=[400, 600],
+                     optimizer=optimizer_G)
 
     start_time = datetime.datetime.now()
 
     step = 0
 
     for train_ref_batch, train_art_batch in datagen.flow(train_ref, train_art, batch_size=batchSize):
-        for _ in range(2):
-            fake_ref, fake_art = vae.predict([train_ref_batch, train_art_batch])
-            valid = np.ones(shape=(batchSize, 1))
-            fake = np.zeros(shape=(batchSize, 1))
+        fake_ref, fake_art = vae.predict([train_ref_batch, train_art_batch])
+        valid = np.ones(shape=(train_ref_batch.shape[0], 1))
+        fake = np.zeros(shape=(train_ref_batch.shape[0], 1))
 
-            d_loss_real = D.train_on_batch(train_ref_batch, valid)
-            d_loss_fake_ref = D.train_on_batch(fake_ref, fake)
-            d_loss_fake_art = D.train_on_batch(fake_art, fake)
-            # d_loss = 0.5 * np.add(d_loss_real, d_loss_fake_ref, d_loss_fake_art)
-            print('==========================')
-            print('Training Discriminator')
-            print('loss real: ' + str(d_loss_real[0]) + '\taccuracy: ' + str(d_loss_real[1]))
-            print('loss ref2ref: ' + str(d_loss_fake_ref[0]) + '\taccuracy: ' + str(d_loss_fake_ref[1]))
-            print('loss art2ref: ' + str(d_loss_fake_art[0]) + '\taccuracy: ' + str(d_loss_fake_art[1]))
-            print('==========================')
+        d_loss_real = D.train_on_batch(train_ref_batch, valid)
+        d_loss_fake_ref = D.train_on_batch(fake_ref, fake)
+        d_loss_fake_art = D.train_on_batch(fake_art, fake)
+        # d_loss = 0.5 * np.add(d_loss_real, d_loss_fake_ref, d_loss_fake_art)
+        print('==========================')
+        print('Training Discriminator')
+        print('loss real: ' + str(d_loss_real[0]) + '\t\taccuracy: ' + str(d_loss_real[1]))
+        print('loss ref2ref: ' + str(d_loss_fake_ref[0]) + '\taccuracy: ' + str(d_loss_fake_ref[1]))
+        print('loss art2ref: ' + str(d_loss_fake_art[0]) + '\taccuracy: ' + str(d_loss_fake_art[1]))
+        print('==========================')
 
-        if step >= 5:
+        if step >= 150:
             # ------------------
             #  save images every 50 steps
             # ------------------
-            if step % 50 == 0:
+            if step % 200 == 0:
                 # save images after every epoch
                 print('==========================')
                 print('saving testing images...')
                 print('==========================')
+                curDir = sOutPath + os.sep + 'result' + os.sep + str(step)
+                os.mkdir(curDir)
                 predict_ref, predict_art = vae.predict([test_ref, test_art], batchSize, verbose=1)
-                test_ref = np.squeeze(test_ref, axis=1)
-                test_art = np.squeeze(test_art, axis=1)
+                test_ref_sample = np.squeeze(test_ref, axis=1)
+                test_art_sample = np.squeeze(test_art, axis=1)
                 predict_art = np.squeeze(predict_art, axis=1)
-                test_ref = fRigidUnpatchingCorrection2D(dHyper['actualSize'], test_ref, 0.8)
-                test_art = fRigidUnpatchingCorrection2D(dHyper['actualSize'], test_art, 0.8)
+                test_ref_sample = fRigidUnpatchingCorrection2D(dHyper['actualSize'], test_ref_sample, 0.8)
+                test_art_sample = fRigidUnpatchingCorrection2D(dHyper['actualSize'], test_art_sample, 0.8)
                 predict_art = fRigidUnpatchingCorrection2D(dHyper['actualSize'], predict_art, 0.8, 'average')
                 fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 5), sharex=True, sharey=True)
                 ax = axes.ravel()
                 plt.gray()
                 label = 'MSE: {:.2f}, SSIM: {:.2f}'
-                for i in range(test_ref.shape[0]):
-                    ax[0].imshow(test_ref[i])
-                    ax[0].set_xlabel(label.format(mean_squared_error(test_ref[i], test_ref[i]),
-                                                  ssim(test_ref[i], test_ref[i],
-                                                       data_range=(test_ref[i].max() - test_ref[i].min()))))
+                for i in range(test_ref_sample.shape[0]):
+                    ax[0].imshow(test_ref_sample[i])
+                    ax[0].set_xlabel(label.format(mean_squared_error(test_ref_sample[i], test_ref_sample[i]),
+                                                  ssim(test_ref_sample[i], test_ref_sample[i],
+                                                       data_range=(test_ref_sample[i].max() - test_ref_sample[i].min()))))
                     ax[0].set_title('reference image')
 
-                    ax[1].imshow(test_art[i])
-                    ax[1].set_xlabel(label.format(mean_squared_error(test_ref[i], test_art[i]),
-                                                  ssim(test_ref[i], test_art[i],
-                                                       data_range=(test_art[i].max() - test_art[i].min()))))
+                    ax[1].imshow(test_art_sample[i])
+                    ax[1].set_xlabel(label.format(mean_squared_error(test_ref_sample[i], test_art_sample[i]),
+                                                  ssim(test_ref_sample[i], test_art_sample[i],
+                                                       data_range=(test_art_sample[i].max() - test_art_sample[i].min()))))
                     ax[1].set_title('motion-affected image')
 
                     ax[2].imshow(predict_art[i])
-                    ax[2].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art[i]),
-                                                  ssim(test_ref[i], predict_art[i],
+                    ax[2].set_xlabel(label.format(mean_squared_error(test_ref_sample[i], predict_art[i]),
+                                                  ssim(test_ref_sample[i], predict_art[i],
                                                        data_range=(predict_art[i].max() - predict_art[i].min()))))
                     ax[2].set_title('corrected image')
 
-                    plt.savefig(sOutPath + os.sep + 'result' + os.sep + str(i) + '.png')
+                    plt.savefig(curDir + os.sep + str(i) + '.png')
 
             # ------------------
             #  Train Generator
@@ -222,10 +225,12 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
             print('==========================')
             print('Training Generator')
             print('loss generator: ' + str(g_loss[0]))
+            print('loss ref2ref: ' + str(g_loss[1]))
+            print('loss art2ref: ' + str(g_loss[2]))
             print('==========================')
 
         elapsed_time = datetime.datetime.now() - start_time
         # Plot the progress
         step += 1
         print ("%d step: %s" % (step, elapsed_time))
-        print ("progress: %f%%" % ((step*batchSize)*1.0/train_ref.shape[0]))
+        print ("progress: %f%%" % ((step*batchSize)*100.0/train_ref.shape[0]))
