@@ -41,8 +41,12 @@ sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(map(str,patchSi
 if len(patchSize) == 3:
     sOutPath = sOutPath + str(patchSize[2])
 if sTrainingMethod != "None":
-    sOutPath = sOutPath+ '_sf' + ''.join(map(str, lScaleFactor)).replace(" ", "").replace(".", "")
-    sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + 'sf' + ''.join(map(str, lScaleFactor)).replace(" ", "").replace(".", "") + '.h5'
+    if sTrainingMethod != "ScaleJittering":
+        sOutPath = sOutPath+ '_sf' + ''.join(map(str, lScaleFactor)).replace(" ", "").replace(".", "")
+        sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + 'sf' + ''.join(map(str, lScaleFactor)).replace(" ", "").replace(".", "") + '.h5'
+    else:
+        sOutPath = sOutPath + '_sj'
+        sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + 'sj' + '.h5'
 else:
     sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '.h5'
 
@@ -93,21 +97,20 @@ elif lTrain:
         X_train = []
         scpatchSize = [0 for i in range(len(patchSize))]
                 
-        if sTrainingMethod == "None":
+        if sTrainingMethod == "None" or sTrainingMethod == "ScaleJittering":
             lScaleFactor = [1]
-        if sTrainingMethod == "MultiScaleSeparated":
+        if sTrainingMethod == "MultiScaleSeparated" :
             lScaleFactor = lScaleFactor[:-1]
         # Else perform scaling:
         #   images will be split into pathces with size scpatchSize and then scaled to patchSize        
         for iscalefactor in lScaleFactor:
             # Calculate the patchsize according to scale factor and training method
+            scpatchSize = patchSize
             if iscalefactor != 1:
                 if sTrainingMethod == "MultiScaleSeparated":                    
                     scpatchSize = fcalculateInputOfPath2(patchSize, iscalefactor, cfg['network'])
-                else: # sTrainingMethod == "MultiScaleTogether"
+                elif sTrainingMethod == "MultiScaleTogether":
                     scpatchSize = [int(psi/iscalefactor) for psi in patchSize]
-            else: 
-                scpatchSize = patchSize
                                 
             if len(patchSize) == 3:
                 dAllPatches = np.zeros((0, scpatchSize[0], scpatchSize[1], scpatchSize[2]))
@@ -121,7 +124,7 @@ elif lTrain:
                 if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
                     for iseq, seq in enumerate(lDatasets):
                         # patches and labels of reference/artifact
-                        tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), scpatchSize, cfg['patchOverlap'], 1, cfg['sLabeling'])
+                        tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), scpatchSize, cfg['patchOverlap'], 1, cfg['sLabeling'], sTrainingMethod=sTrainingMethod)
                         dAllPatches = np.concatenate((dAllPatches, tmpPatches), axis=0)
                         dAllLabels = np.concatenate((dAllLabels, iLabels[iseq]*tmpLabels), axis=0)
                         dAllPats = np.concatenate((dAllPats, ipat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)

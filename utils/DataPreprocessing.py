@@ -13,7 +13,7 @@ import utils.Training_Test_Split as ttsplit
 import utils.scaling as scaling
 
 
-def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabeling):
+def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabeling, sTrainingMethod='None'):
     # set variables
     model = os.path.basename(os.path.dirname(pathDicom))
     dir = os.path.dirname(os.path.dirname(pathDicom))
@@ -31,7 +31,7 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabelin
 
     # RigidPatching
     if len(patchSize) == 3: # 3D patches
-        dPatches, dLabel = fRigidPatching3D(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,ratio_labeling, sLabeling)
+        dPatches, dLabel = fRigidPatching3D(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,ratio_labeling, sLabeling, sTrainingMethod)
         dPatches = np.transpose(dPatches, (3, 0, 1, 2))
     else:
         dPatches, dLabel = fRigidPatching(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,ratio_labeling, sLabeling)

@@ -3,6 +3,7 @@
 """
 import numpy as np
 import math
+from utils.scaling import fScaleOnePatch
 
 #########################################################################################################################################
 #Function: fRigidPatching                                                                                                               #
@@ -107,7 +108,7 @@ def fRigidPatching(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,
 #Output: dPatches ---> 4D-Numpy-Array, which contain all Patches.                                                                        #
 #        dLabels ---> 1D-Numpy-Array with all corresponding labels                                                                       #
 ##########################################################################################################################################
-def fRigidPatching3D(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, sLabeling):
+def fRigidPatching3D(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, sLabeling, sTrainingMethod='None'):
 
     move_artefact = False
     shim_artefact = False
@@ -129,7 +130,22 @@ def fRigidPatching3D(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_arra
     dLabels = np.zeros((int(nbPatches)), dtype = int) #float
     idxPatch = 0
 
-    if sLabeling == 'volume':
+    if sLabeling == 'volume' and sTrainingMethod == 'ScaleJittering':
+        for iZ in range(0, int(size_zero_pad[2] - dOverlap[2]), int(dNotOverlap[2])):
+            for iY in range(0, int(size_zero_pad[0] - dOverlap[0]), int(dNotOverlap[0])):
+                for iX in range(0, int(size_zero_pad[1] - dOverlap[1]), int(dNotOverlap[1])):
+                    if (iX>=int(size_zero_pad[1] - dOverlap[1]-patchSize[1])) or(iY>=int(size_zero_pad[0] - dOverlap[0]-patchSize[0])) or (iZ>=int(size_zero_pad[2] - dOverlap[2]-patchSize[2])):
+                        randPatchSize = patchSize
+                    else:
+                        randPatchSize = np.round(np.multiply(patchSize, (np.random.rand(1) + 1))).astype(int)
+                    dPatch = Img_zero_pad[iY:iY + randPatchSize[0], iX:iX + randPatchSize[1], iZ:iZ + randPatchSize[2]]
+                    scaleddPatch = fScaleOnePatch(dPatch, randPatchSize, patchSize)
+                    dPatches[:, :, :, idxPatch] = scaleddPatch
+                    idxPatch += 1
+        dPatches = dPatches[:, :, :, 0:idxPatch]
+        dLabels = np.ones((dPatches.shape[3]))
+
+    elif sLabeling == 'volume':
         for iZ in range(0, int(size_zero_pad[2] - dOverlap[2]), int(dNotOverlap[2])):
             for iY in range(0, int(size_zero_pad[0] - dOverlap[0]), int(dNotOverlap[0])):
                 for iX in range(0, int(size_zero_pad[1] - dOverlap[1]), int(dNotOverlap[1])):
