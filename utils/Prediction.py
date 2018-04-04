@@ -30,7 +30,7 @@ from keras.callbacks import ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint
 from keras.models import model_from_json
 from keras.regularizers import l2  # , activity_l2
-
+import tensorflow as tf
 from keras.optimizers import SGD
 from utils.image_preprocessing import ImageDataGenerator
 from matplotlib import pyplot as plt
@@ -92,7 +92,7 @@ def predict_model(X_test, Y_test, sModelPath, batch_size=32, classMappings=None)
     return prediction
 
 
-def predict_segmentation_model(X_test, y=None, Y_segMasks_test=None, sModelPath=None, sOutPath=None, batch_size=64):
+def predict_segmentation_model(X_test, y_test=None, Y_segMasks_test=None, sModelPath=None, sOutPath=None, batch_size=64, usingClassification=False):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
         Input:
             X: Samples to predict on. The shape of X should fit to the input shape of the model
@@ -106,6 +106,9 @@ def predict_segmentation_model(X_test, y=None, Y_segMasks_test=None, sModelPath=
     Y_segMasks_test_foreground = np.expand_dims(Y_segMasks_test, axis=-1)
     Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape) - Y_segMasks_test_foreground
     Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground), axis=-1)
+
+    #if usingClassification:
+     #   y_test = np.expand_dims(y_test, axis=-1)
 
     _, sPath = os.path.splitdrive(sModelPath)
     sPath, sFilename = os.path.split(sPath)
@@ -126,26 +129,103 @@ def predict_segmentation_model(X_test, y=None, Y_segMasks_test=None, sModelPath=
 
     model.summary()
 
-    model.compile(loss=dice_coef_loss, optimizer=keras.optimizers.Adam(), metrics=[dice_coef])
-    model.load_weights(sModelPath+ os.sep + sFilename+'_weights.h5')
+    if usingClassification:
+        model.compile(loss={'segmentation_output': dice_coef_loss, 'classification_output': 'categorical_crossentropy'},
+                      optimizer=keras.optimizers.Adam(),
+                      metrics={'segmentation_output': dice_coef, 'classification_output': 'accuracy'})
 
-    score_test, acc_test = model.evaluate(X_test, Y_segMasks_test, batch_size=2)
-    print('loss' + str(score_test) + '   acc:' + str(acc_test))
+        model.load_weights(sModelPath + os.sep + sFilename + '_weights.h5')
 
-    prob_pre = model.predict(X_test, batch_size=batch_size, verbose=1)
+        loss_test, segmentation_output_loss_test, classification_output_loss_test, segmentation_output_dice_coef_test, classification_output_acc_test \
+            = model.evaluate(X_test,
+                             {'segmentation_output': Y_segMasks_test, 'classification_output': y_test},
+                             batch_size=batch_size, verbose=1)
 
-    predictions = {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test}
+        print('loss' + str(loss_test) + ' segmentation loss:' + str(segmentation_output_loss_test) + ' classification loss: ' + str(classification_output_loss_test) + \
+              ' segmentation dice coef: ' + str(segmentation_output_dice_coef_test) + ' classification accuracy: ' + str(classification_output_acc_test))
+
+        prob_pre = model.predict(X_test, batch_size=batch_size, verbose=1)
+
+        predictions = {'prob_pre': prob_pre,
+                       'loss_test': loss_test,
+                       'segmentation_output_loss_test': segmentation_output_loss_test,
+                       'classification_output_loss_test': classification_output_loss_test,
+                       'segmentation_output_dice_coef_test': segmentation_output_dice_coef_test,
+                       'classification_output_acc_test': classification_output_acc_test}
+    else:
+        model.compile(loss=dice_coef_loss, optimizer=keras.optimizers.Adam(), metrics=[dice_coef])
+        model.load_weights(sModelPath+ os.sep + sFilename+'_weights.h5')
+
+        score_test, acc_test = model.evaluate(X_test, Y_segMasks_test, batch_size=batch_size)
+        print('loss' + str(score_test) + '   acc:' + str(acc_test))
+
+        prob_pre = model.predict(X_test, batch_size=batch_size, verbose=1)
+
+        predictions = {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test}
 
     return predictions
 
 
 
-def dice_coef(y_true, y_pred, smooth=1.):
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    intersection = K.sum(y_true_f * y_pred_f)
-    return (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+
+
+def dice_coef(y_true, y_pred, epsilon=1e-5):
+    dice_numerator = 2.0 * K.sum(y_true*y_pred, axis=[1,2,3,4])
+    dice_denominator = K.sum(y_true, axis=[1,2,3,4]) + K.sum(y_pred, axis=[1,2,3,4])
+
+    dice_score = dice_numerator / (dice_denominator + epsilon)
+    return K.mean(dice_score, axis=0)
 
 
 def dice_coef_loss(y_true, y_pred):
-    return -dice_coef(y_true, y_pred)
+    return 1-dice_coef(y_true, y_pred)
+
+
+def dice_coef_2(ground_truth, prediction, weight_map=None):
+    """
+    Function to calculate the dice loss with the definition given in
+
+        Milletari, F., Navab, N., & Ahmadi, S. A. (2016)
+        V-net: Fully convolutional neural
+        networks for volumetric medical image segmentation. 3DV 2016
+
+    using a square in the denominator
+
+    :param prediction: the logits
+    :param ground_truth: the segmentation ground_truth
+    :param weight_map:
+    :return: the loss
+    """
+    ground_truth = tf.to_int64(ground_truth)
+    prediction = tf.cast(prediction, tf.float32)
+    ids = tf.range(tf.to_int64(tf.shape(ground_truth)[0]), dtype=tf.int64)
+    ids = tf.stack([ids, ground_truth], axis=1)
+    one_hot = tf.SparseTensor(
+        indices=ids,
+        values=tf.ones_like(ground_truth, dtype=tf.float32),
+        dense_shape=tf.to_int64(tf.shape(prediction)))
+    if weight_map is not None:
+        n_classes = prediction.shape[1].value
+        weight_map_nclasses = tf.reshape(
+            tf.tile(weight_map, [n_classes]), prediction.get_shape())
+        dice_numerator = 2.0 * tf.sparse_reduce_sum(
+            weight_map_nclasses * one_hot * prediction, reduction_axes=[0])
+        dice_denominator = \
+            tf.reduce_sum(weight_map_nclasses * tf.square(prediction),
+                          reduction_indices=[0]) + \
+            tf.sparse_reduce_sum(one_hot * weight_map_nclasses,
+                                 reduction_axes=[0])
+    else:
+        dice_numerator = 2.0 * tf.sparse_reduce_sum(
+            one_hot * prediction, reduction_axes=[0])
+        dice_denominator = \
+            tf.reduce_sum(tf.square(prediction), reduction_indices=[0]) + \
+            tf.sparse_reduce_sum(one_hot, reduction_axes=[0])
+    epsilon_denominator = 0.00001
+
+    dice_score = dice_numerator / (dice_denominator + epsilon_denominator)
+    # dice_score.set_shape([n_classes])
+    # minimising (1 - dice_coefficients)
+
+    #return 1.0 - tf.reduce_mean(dice_score)
+    return tf.reduce_mean(dice_score)

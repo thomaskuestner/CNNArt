@@ -6,13 +6,15 @@ import h5py
 import os
 import dicom
 import dicom_numpy as dicom_np
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import ListedColormap
 import time
 
-path = 'D:/med_data/MRPhysics/MA Results/Output_Learning-9.3.18/FCN 3D-VResFCN-Upsampling small_3D_80x80x16_2018-03-09_13-10/model_predictions.mat'
+path = 'D:/med_data/MRPhysics/MA Results/FCN/FCN 3D-VResFCN-Upsampling small_3D_80x80x16_2018-03-09_13-10/model_predictions.mat'
 mat = sio.loadmat(path)
 
 ########################################################################################################################
-currentDataDir = 'D:/med_data/MRPhysics/newProtocol/01_ab/dicom_sorted/t1_tse_tra_Kopf_Motion_0003'
+currentDataDir = 'D:/med_data/MRPhysics/newProtocol/16_mj/dicom_sorted/t1_tse_tra_Kopf_Motion_0003'
 
 fileNames = os.listdir(currentDataDir)
 fileNames = [os.path.join(currentDataDir, f) for f in fileNames]
@@ -31,7 +33,7 @@ except dicom_np.DicomImportException as e:
 ########################################################################################################################
 
 ######
-patches = 'D:/med_data/MRPhysics/DeepLearningArt_Output/Datasets/Patients-1_Datasets-1_3D_SegMask_80x80x16_Overlap-0.4_Labeling-mask_Split-simpleRand/datasets.hdf5'
+patches = 'D:/med_data/MRPhysics/DeepLearningArt_Output/Datasets/Patients-1_Datasets-1_3D_SegMask_80x80x16_Overlap-0.6_Labeling-mask_Split-simpleRand/datasets.hdf5'
 
 with h5py.File(patches, 'r') as hf:
     X_train = hf['X_train'][:]
@@ -65,11 +67,27 @@ predictions = mat['prob_pre']
 
 #####
 
+# colormap for visualization of classification results
+colors = [(0, 1, 0), (1, 1, 0), (1, 0, 0)]  # green -> yellow -> red
+cmap_name = 'artifact_map_colors'
+artifact_colormap = LinearSegmentedColormap.from_list(cmap_name, colors, N=100)
+colormap = artifact_colormap(np.arange(artifact_colormap.N))
+# Set alpha
+colormap[:,-1] = np.linspace(0, 0.3, artifact_colormap.N)
+# Create new colormap
+colormap = ListedColormap(colormap)
 
 
-unpatched_img_foreground = fUnpatchSegmentation(predictions, [80, 80, 16], 0.4, [256, 196, 40], 1)
-unpatched_img_background = fUnpatchSegmentation(predictions, [80, 80, 16], 0.4, [256, 196, 40], 0)
-unpatched_img_mask = fUnpatchSegmentation(Y_segMasks_test, [80, 80, 16], 0.4, [256, 196, 40], 1000)
+one_colors = [(1,0,0), (1,0,0)]
+one_color_colormap = LinearSegmentedColormap.from_list('one_color', one_colors, N=100)
+one_color_colormap = one_color_colormap(np.arange(one_color_colormap.N))
+one_color_colormap[:,-1] = np.linspace(0, 0.2, 100)
+one_color_colormap = ListedColormap(one_color_colormap)
+
+
+unpatched_img_foreground = fUnpatchSegmentation(predictions, [80, 80, 16], 0.6, [256, 196, 40], 1)
+unpatched_img_background = fUnpatchSegmentation(predictions, [80, 80, 16], 0.6, [256, 196, 40], 0)
+unpatched_img_mask = fUnpatchSegmentation(Y_segMasks_test, [80, 80, 16], 0.6, [256, 196, 40], 1000)
 
 index = 25
 
@@ -81,19 +99,19 @@ slice = np.squeeze(voxel_ndarray[:,:,index]);
 
 ax2 = plt.subplot(131)
 plt.imshow(slice, cmap='gray')
-plt.imshow(unpatched_img_mask, cmap='plasma', interpolation='nearest', alpha=.4)
+plt.imshow(unpatched_img_mask, cmap=one_color_colormap, interpolation='nearest', alpha=1.)
 plt.title('Ground Truth Segmentation Mask')
 
 
 ax1 = plt.subplot(132)
 plt.imshow(slice, cmap='gray')
-plt.imshow(unpatched_img_foreground, cmap='plasma', interpolation='nearest', alpha=.4)
+plt.imshow(unpatched_img_foreground, cmap=colormap, interpolation='nearest', alpha=1.)
 plt.title('Predicted Foreground')
 plt.colorbar(ax=ax1)
 
 ax = plt.subplot(133)
 plt.imshow(slice, cmap='gray')
-plt.imshow(unpatched_img_background, cmap='plasma', interpolation='nearest', alpha=.4)
+plt.imshow(unpatched_img_background, cmap=colormap, interpolation='nearest', alpha=1.)
 plt.title('Predicted Background')
 
 

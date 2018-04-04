@@ -516,7 +516,7 @@ def fPredict(X_test, y=None, Y_segMasks_test=None, sModelPath=None, sOutPath=Non
 
 def dice_coef(y_true, y_pred, epsilon=1e-5):
     dice_numerator = 2.0 * K.sum(y_true*y_pred, axis=[1,2,3,4])
-    dice_denominator = K.sum(y_true, axis=[1,2,3,4]) + K.sum(y_pred, axis=[1,2,3,4])
+    dice_denominator = K.sum(K.square(y_true), axis=[1,2,3,4]) + K.sum(K.square(y_pred), axis=[1,2,3,4])
 
     dice_score = dice_numerator / (dice_denominator + epsilon)
     return K.mean(dice_score, axis=0)

@@ -67,8 +67,8 @@ def createModel(patchSize, numClasses, usingClassification=False):
                             kernel_size=(2, 2, 2),
                             stage=1,
                             block=1,
-                            se_enabled=False,
-                            se_ratio=16)
+                            se_enabled=True,
+                            se_ratio=4)
 
     # second stage
     x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=True, se_ratio=4)
@@ -82,8 +82,8 @@ def createModel(patchSize, numClasses, usingClassification=False):
                                         kernel_size=(2, 2, 2),
                                         stage=2,
                                         block=3,
-                                        se_enabled=False,
-                                        se_ratio=16)
+                                        se_enabled=True,
+                                        se_ratio=8)
 
     # third stage
     x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=True, se_ratio=8)
@@ -96,7 +96,7 @@ def createModel(patchSize, numClasses, usingClassification=False):
                                         kernel_size=(2, 2, 2),
                                         stage=3,
                                         block=4,
-                                        se_enabled=False,
+                                        se_enabled=True,
                                         se_ratio=16)
 
     # fourth stage
@@ -485,6 +485,7 @@ def step_decay(epoch, lr):
    return lr
 
 
+
 def step_decay_2(epoch):
    initial_lrate = 0.1
    drop = 0.1
@@ -492,6 +493,7 @@ def step_decay_2(epoch):
    lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
    print("Reduce Learningrate by 0.1")
    return lrate
+
 
 
 def fPredict(X_test, y=None, Y_segMasks_test=None, sModelPath=None, sOutPath=None, batch_size=64):
@@ -543,7 +545,7 @@ def fPredict(X_test, y=None, Y_segMasks_test=None, sModelPath=None, sOutPath=Non
 
 def dice_coef(y_true, y_pred, epsilon=1e-5):
     dice_numerator = 2.0 * K.sum(y_true*y_pred, axis=[1,2,3,4])
-    dice_denominator = K.sum(y_true, axis=[1,2,3,4]) + K.sum(y_pred, axis=[1,2,3,4])
+    dice_denominator = K.sum(K.square(y_true), axis=[1,2,3,4]) + K.sum(K.square(y_pred), axis=[1,2,3,4])
 
     dice_score = dice_numerator / (dice_denominator + epsilon)
     return K.mean(dice_score, axis=0)

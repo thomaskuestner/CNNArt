@@ -24,8 +24,13 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import ListedColormap
+import copy
 from DeepLearningArt.DLArt_GUI.PlotCanvas import PlotCanvas
 from matplotlib.figure import Figure
+import scipy.io as sio
+import dicom
+import dicom_numpy as dicom_np
 
 import random
 
@@ -100,6 +105,8 @@ class MainWindow(QMainWindow):
         self.ui.CheckBox_DataAug_Zoom.setChecked(False if self.deepLearningArtApp.getZoom()==0 else True)
         self.check_dataAugmentation_enabled()
 
+        self.multiclassCheckboxes = []
+
         ################################################################################################################
         # ArtGAN Stuff
         self.manageTreeView_DB_ArtGAN()
@@ -154,6 +161,12 @@ class MainWindow(QMainWindow):
         self.ui.verticalLayout_SegmentationMasks.addWidget(self.canvas_segmentation_masks_figure)
         self.ui.verticalLayout_SegmentationMasks.addWidget(self.toolbar_segmentation_masks_figure)
 
+        # multiclass visualisation plot
+        self.multiclassVisualisation_figure = Figure(figsize=(10,10))
+        self.canvas_multiclassVisualisation_figure = FigureCanvas(self.multiclassVisualisation_figure)
+        self.toolbar_multiclassVisualisation_figure = NavigationToolbar(self.canvas_multiclassVisualisation_figure, self)
+        self.ui.verticalLayout_multiclassVisualisation.addWidget(self.canvas_multiclassVisualisation_figure)
+        self.ui.verticalLayout_multiclassVisualisation.addWidget(self.toolbar_multiclassVisualisation_figure)
 
 
         ################################################################################################################
@@ -215,12 +228,184 @@ class MainWindow(QMainWindow):
         # spinbox for selecting dicom slice index
         self.ui.SpinBox_SliceSelect.valueChanged.connect(self.spinBox_sliceSelect_changed)
 
+        # multi-class visualisation button
+        self.ui.Button_multiclassVisualisation.clicked.connect(self.button_multiclassVisualisation_clicked)
+
+        # spinbox for selecting multi-class visualisation slice
+        self.ui.spinBox_sliceSelection_multiclassVisualisation.valueChanged.connect(self.spinBox_sliceSelection_multiclassVisualisation_changed)
+
+
         ################################################################################################################
 
-        # colormap for visualization of classification results
+
+        ################################################################################################################
+        ### colormaps for visualisation
+        ################################################################################################################
         colors = [(0, 1, 0), (1, 1, 0), (1, 0, 0)]  # green -> yellow -> red
         cmap_name = 'artifact_map_colors'
         self.artifact_colormap = LinearSegmentedColormap.from_list(cmap_name, colors, N=100)
+
+        # colormap for visualization of multi-class classification results
+        one_colors = [(1, 0, 0), (1, 0, 0)]
+        one_color_colormap = LinearSegmentedColormap.from_list('one_color', one_colors, N=100)
+        one_color_colormap = one_color_colormap(np.arange(one_color_colormap.N))
+        one_color_colormap[:, -1] = np.linspace(0, 0.25, 100)
+
+        # red colormap
+        red_colormap = ListedColormap(one_color_colormap)
+
+        # blue colormap
+        blue_colormap = copy.deepcopy(red_colormap)
+        blue_colormap.colors[:, 0] = 0
+        blue_colormap.colors[:, 2] = 1
+
+        # green colormap
+        green_colormap = copy.deepcopy(red_colormap)
+        green_colormap.colors[:, 0] = 0
+        green_colormap.colors[:, 1] = 1
+
+        # yellow colormap
+        yellow_colormap = copy.deepcopy(red_colormap)
+        yellow_colormap.colors[:, 1] = 1
+
+        # pink groundtruth colormap
+        pinkcolors = [(1, 0, 1), (1, 0, 1)]
+        pinkcolormap = LinearSegmentedColormap.from_list('ground_truth_colormap', pinkcolors, N=100)
+        pinkcolormap = pinkcolormap(np.arange(pinkcolormap.N))
+        pinkcolormap[:, -1] = np.linspace(0, 0.4, 100)
+        self.ground_truth_colormap = ListedColormap(pinkcolormap)
+
+        # cyan
+        cyan_colormap = copy.deepcopy(red_colormap)
+        cyan_colormap.colors[:,0] = 0
+        cyan_colormap.colors[:,1] = 1
+        cyan_colormap.colors[:,2] = 1
+
+        # pink
+        pink_colormap = copy.deepcopy(red_colormap)
+        pink_colormap.colors[:, 2] = 1
+
+        # orange
+        orange_colormap = copy.deepcopy(red_colormap)
+        orange_colormap.colors[:, 1] = 0.6
+
+        # dark green
+        dark_green_colormap = copy.deepcopy(red_colormap)
+        dark_green_colormap.colors[:, 0] = 0
+        dark_green_colormap.colors[:, 1] = 0.42
+
+        # lila
+        lila_colormap = copy.deepcopy(red_colormap)
+        lila_colormap.colors[:, 0] = 0.4
+        lila_colormap.colors[:, 2] = 0.4
+
+        # strange blue
+        strange_blue_colormap = copy.deepcopy(red_colormap)
+        strange_blue_colormap.colors[:, 0] = 0.2
+        strange_blue_colormap.colors[:, 1] = 0.4
+        strange_blue_colormap.colors[:, 2] = 0.8
+
+        # old green
+        old_green_colormap = copy.deepcopy(red_colormap)
+        old_green_colormap.colors[:, 0] = 0.4
+        old_green_colormap.colors[:, 1] = 0.6
+
+        #
+        self.multiclass_colormaps = []
+        self.multiclass_colormaps.append(green_colormap)
+        self.multiclass_colormaps.append(red_colormap)
+        self.multiclass_colormaps.append(blue_colormap)
+        self.multiclass_colormaps.append(yellow_colormap)
+        self.multiclass_colormaps.append(pink_colormap)
+        self.multiclass_colormaps.append(cyan_colormap)
+        self.multiclass_colormaps.append(orange_colormap)
+        self.multiclass_colormaps.append(dark_green_colormap)
+        self.multiclass_colormaps.append(lila_colormap)
+        self.multiclass_colormaps.append(strange_blue_colormap)
+        self.multiclass_colormaps.append(old_green_colormap)
+
+
+
+        ################################################################################################################
+
+
+    def button_multiclassVisualisation_clicked(self):
+        unpatches_slices = self.deepLearningArtApp.getUnpatchedSlices()
+
+        # plot artifact map for dataset class
+        if unpatches_slices is not None:
+            multiclass_probability_masks = unpatches_slices['multiclass_probability_masks']
+            dicom_slices = unpatches_slices['dicom_slices']
+            numClasses = multiclass_probability_masks.shape[2]
+
+            index = int(self.ui.spinBox_sliceSelection_multiclassVisualisation.value())
+            self.ui.spinBox_sliceSelection_multiclassVisualisation.setMaximum(int(dicom_slices.shape[-1]))
+
+            if index >= 0 and index < dicom_slices.shape[-1]:
+                classMappings = self.deepLearningArtApp.getClassMappingsForPrediction()
+
+                if len(self.multiclassCheckboxes) != 0:
+                    for i in self.multiclassCheckboxes:
+                        self.ui.verticalLayout_multiclassSelection.removeWidget(i)
+
+                self.multiclassCheckboxes = []
+
+                for i in range(numClasses):
+
+                    strName = ''
+                    for labelKey in classMappings:
+                        valPos = np.where(classMappings[labelKey]==1)
+                        if valPos[0] == i:
+                            strName = str(Label.LABEL_STRINGS[labelKey])
+
+                    cb = QCheckBox(strName)
+                    c = self.multiclass_colormaps[i].colors[0, 0:3]
+                    c = np.multiply(c, 255)
+                    c = tuple(c)
+                    cb.setStyleSheet("color: rgb" + str(c))
+                    cb.stateChanged.connect(self.update_multiclass_visualisation)
+                    self.ui.verticalLayout_multiclassSelection.addWidget(cb)
+                    self.multiclassCheckboxes.append(cb)
+
+                self.update_multiclass_visualisation()
+
+
+
+
+    def update_multiclass_visualisation(self):
+        unpatches_slices = self.deepLearningArtApp.getUnpatchedSlices()
+
+        # plot artifact map for dataset class
+        if unpatches_slices is not None:
+            multiclass_probability_masks = unpatches_slices['multiclass_probability_masks']
+            dicom_slices = unpatches_slices['dicom_slices']
+            dicom_masks = unpatches_slices['dicom_masks']
+
+
+            index = int(self.ui.spinBox_sliceSelection_multiclassVisualisation.value())
+            self.ui.spinBox_sliceSelection_multiclassVisualisation.setMaximum(int(dicom_slices.shape[-1]))
+
+            if index >= 0 and index < dicom_slices.shape[-1]:
+                dicom_slice = np.squeeze(dicom_slices[:, :, index])
+                slice_prob_predictions = np.squeeze(multiclass_probability_masks[:, :, :, index])
+
+                self.multiclassVisualisation_figure.clear()
+                ax1 = self.multiclassVisualisation_figure.add_subplot(111)
+                ax1.clear()
+                ax1.imshow(dicom_slice, cmap='gray')
+
+                for i in range(len(self.multiclassCheckboxes)):
+                    if bool(self.multiclassCheckboxes[i].isChecked()):
+                        prediction_slice = np.squeeze(multiclass_probability_masks[:, :, :, index])
+                        prediction_slice = np.squeeze(prediction_slice[:, :, i])
+
+                        map = ax1.imshow(prediction_slice, cmap=self.multiclass_colormaps[i], interpolation='nearest', vmin=0, vmax=1)
+                        #cbaxes = self.multiclassVisualisation_figure.add_axes([0.8, 0.1, 0.1, 0.8])
+                        self.multiclassVisualisation_figure.colorbar(mappable=map, ax=ax1)
+
+                self.multiclassVisualisation_figure.tight_layout()
+                self.canvas_multiclassVisualisation_figure.draw()
+
 
 
     def button_predict_clicked(self):
@@ -253,6 +438,7 @@ class MainWindow(QMainWindow):
                 # check for unpatching
                 if self.deepLearningArtApp.getDoUnpatching():
                     self.plotArtifactMaps()
+
             else:
 
                 acc_training = self.deepLearningArtApp.get_acc_training()
@@ -266,6 +452,8 @@ class MainWindow(QMainWindow):
                 if self.deepLearningArtApp.getDoUnpatching():
                     self.plotSegmentationArtifactMaps()
                     self.plotSegmentationPredictions()
+
+
 
     def plotSegmentationPredictions(self):
         unpatched_slices = self.deepLearningArtApp.getUnpatchedSlices()
@@ -288,7 +476,7 @@ class MainWindow(QMainWindow):
                 ax1 = self.segmentation_masks_figure.add_subplot(121)
                 ax1.clear()
                 ax1.imshow(dicom_slice, cmap='gray')
-                ax1.imshow(dicom_mask_slice, cmap='Reds', interpolation='nearest', alpha=.3)
+                ax1.imshow(dicom_mask_slice, cmap=self.ground_truth_colormap, interpolation='nearest', alpha=1.)
                 ax1.set_title('Ground Truth')
 
                 ax2 = self.segmentation_masks_figure.add_subplot(122)
@@ -300,6 +488,7 @@ class MainWindow(QMainWindow):
                 self.segmentation_masks_figure.tight_layout()
 
                 self.canvas_segmentation_masks_figure.draw()
+
 
 
     def plotSegmentationArtifactMaps(self):
@@ -325,19 +514,19 @@ class MainWindow(QMainWindow):
                 ax1 = self.artifact_map_figure.add_subplot(131)
                 ax1.clear()
                 ax1.imshow(dicom_slice, cmap='gray')
-                ax1.imshow(dicom_mask_slice, cmap = 'Reds', interpolation = 'nearest', alpha = .3)
+                ax1.imshow(dicom_mask_slice, cmap = self.ground_truth_colormap, interpolation = 'nearest', alpha = 1.)
                 ax1.set_title('Ground Truth')
 
                 ax2 = self.artifact_map_figure.add_subplot(132)
                 ax2.clear()
                 ax2.imshow(dicom_slice, cmap='gray')
-                ax2.imshow(prob_mask_fore_slice, cmap=self.artifact_colormap, interpolation='nearest', alpha=.4)
+                ax2.imshow(prob_mask_fore_slice, cmap=self.artifact_colormap, interpolation='nearest', alpha=.4, vmin=0, vmax=1)
                 ax2.set_title('Predicted Foreground')
 
                 ax3 = self.artifact_map_figure.add_subplot(133)
                 ax3.clear()
                 ax3.imshow(dicom_slice, cmap='gray')
-                map = ax3.imshow(prob_mask_back_slice, cmap=self.artifact_colormap, interpolation='nearest', alpha=.4)
+                map = ax3.imshow(prob_mask_back_slice, cmap=self.artifact_colormap, interpolation='nearest', alpha=.4, vmin=0, vmax=1)
                 ax3.set_title('Predicted Background')
 
                 self.artifact_map_figure.colorbar(mappable=map, ax=ax3)
@@ -349,8 +538,9 @@ class MainWindow(QMainWindow):
     def plotArtifactMaps(self):
         unpatches_slices = self.deepLearningArtApp.getUnpatchedSlices()
 
+        # plot artifact map for dataset class
         if unpatches_slices is not None:
-            probability_mask = unpatches_slices['probability_mask']
+            multiclass_probability_masks = unpatches_slices['multiclass_probability_masks']
             dicom_slices = unpatches_slices['dicom_slices']
             dicom_masks = unpatches_slices['dicom_masks']
 
@@ -360,7 +550,8 @@ class MainWindow(QMainWindow):
             if index >= 0 and index < dicom_slices.shape[-1]:
 
                 slice = np.squeeze(dicom_slices[:, :, index])
-                prob_mask = np.squeeze(probability_mask[:, :, index])
+                probability_mask = multiclass_probability_masks[:, :, unpatches_slices['index_class'], index]
+                prob_mask = np.squeeze(probability_mask)
                 label_mask = np.squeeze(dicom_masks[:, :, index])
 
                 self.artifact_map_figure.clear()
@@ -368,20 +559,19 @@ class MainWindow(QMainWindow):
                 ax1 = self.artifact_map_figure.add_subplot(121)
                 ax1.clear()
                 ax1.imshow(slice, cmap='gray')
-                ax1.imshow(label_mask, cmap = 'Reds', interpolation = 'nearest', alpha = .3)
+                ax1.imshow(label_mask, cmap = self.ground_truth_colormap, interpolation = 'nearest')
                 ax1.set_title('Ground Truth')
 
                 ax2 = self.artifact_map_figure.add_subplot(122)
                 ax2.clear()
                 ax2.imshow(slice, cmap='gray')
-                map = ax2.imshow(prob_mask, cmap=self.artifact_colormap, interpolation='nearest', alpha=.4)
+                map = ax2.imshow(prob_mask, cmap=self.artifact_colormap, interpolation='nearest', alpha=.4, vmin=0, vmax=1)
                 ax2.set_title('Artifact Map')
 
                 self.artifact_map_figure.colorbar(mappable=map, ax=ax2)
                 self.artifact_map_figure.tight_layout()
 
                 self.canvas_artifact_map_figure.draw()
-
 
 
 
@@ -623,6 +813,10 @@ class MainWindow(QMainWindow):
             self.plotSegmentationPredictions()
         else:
             self.plotArtifactMaps()
+
+
+    def spinBox_sliceSelection_multiclassVisualisation_changed(self):
+        self.update_multiclass_visualisation()
 
 
     def getSelectedPatients(self):

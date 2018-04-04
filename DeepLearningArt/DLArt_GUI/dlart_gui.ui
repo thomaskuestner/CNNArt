@@ -30,7 +30,7 @@
      <enum>QTabWidget::Rounded</enum>
     </property>
     <property name="currentIndex">
-     <number>4</number>
+     <number>5</number>
     </property>
     <widget class="QWidget" name="Tab_Multiclass">
      <attribute name="title">
@@ -1818,14 +1818,14 @@
        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:7.8pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
      </widget>
     </widget>
     <widget class="QWidget" name="tab">
      <attribute name="title">
-      <string>Artefict Map</string>
+      <string>Artefact Map</string>
      </attribute>
      <widget class="QWidget" name="verticalLayoutWidget_5">
       <property name="geometry">
@@ -1875,6 +1875,78 @@ p, li { white-space: pre-wrap; }
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_SegmentationMasks"/>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_3">
+     <attribute name="title">
+      <string>Multi-class Visualisation</string>
+     </attribute>
+     <widget class="QWidget" name="verticalLayoutWidget_7">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>1321</width>
+        <height>691</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_multiclassVisualisation"/>
+     </widget>
+     <widget class="QWidget" name="verticalLayoutWidget_8">
+      <property name="geometry">
+       <rect>
+        <x>1380</x>
+        <y>70</y>
+        <width>271</width>
+        <height>641</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_multiclassSelection"/>
+     </widget>
+     <widget class="QPushButton" name="Button_multiclassVisualisation">
+      <property name="geometry">
+       <rect>
+        <x>1440</x>
+        <y>20</y>
+        <width>211</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Multi-class Visualisation</string>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="spinBox_sliceSelection_multiclassVisualisation">
+      <property name="geometry">
+       <rect>
+        <x>1380</x>
+        <y>30</y>
+        <width>51</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="maximum">
+       <number>40</number>
+      </property>
+      <property name="value">
+       <number>10</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_17">
+      <property name="geometry">
+       <rect>
+        <x>1340</x>
+        <y>30</y>
+        <width>41</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Slice:</string>
+      </property>
      </widget>
     </widget>
    </widget>

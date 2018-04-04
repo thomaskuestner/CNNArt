@@ -651,6 +651,35 @@ class Ui_DLArt_GUI(object):
         self.verticalLayout_SegmentationMasks.setSpacing(6)
         self.verticalLayout_SegmentationMasks.setObjectName("verticalLayout_SegmentationMasks")
         self.tabWidget.addTab(self.tab_2, "")
+        self.tab_3 = QtWidgets.QWidget()
+        self.tab_3.setObjectName("tab_3")
+        self.verticalLayoutWidget_7 = QtWidgets.QWidget(self.tab_3)
+        self.verticalLayoutWidget_7.setGeometry(QtCore.QRect(10, 20, 1321, 691))
+        self.verticalLayoutWidget_7.setObjectName("verticalLayoutWidget_7")
+        self.verticalLayout_multiclassVisualisation = QtWidgets.QVBoxLayout(self.verticalLayoutWidget_7)
+        self.verticalLayout_multiclassVisualisation.setContentsMargins(11, 11, 11, 11)
+        self.verticalLayout_multiclassVisualisation.setSpacing(6)
+        self.verticalLayout_multiclassVisualisation.setObjectName("verticalLayout_multiclassVisualisation")
+        self.verticalLayoutWidget_8 = QtWidgets.QWidget(self.tab_3)
+        self.verticalLayoutWidget_8.setGeometry(QtCore.QRect(1380, 70, 271, 641))
+        self.verticalLayoutWidget_8.setObjectName("verticalLayoutWidget_8")
+        self.verticalLayout_multiclassSelection = QtWidgets.QVBoxLayout(self.verticalLayoutWidget_8)
+        self.verticalLayout_multiclassSelection.setContentsMargins(11, 11, 11, 11)
+        self.verticalLayout_multiclassSelection.setSpacing(6)
+        self.verticalLayout_multiclassSelection.setObjectName("verticalLayout_multiclassSelection")
+        self.Button_multiclassVisualisation = QtWidgets.QPushButton(self.tab_3)
+        self.Button_multiclassVisualisation.setGeometry(QtCore.QRect(1440, 20, 211, 31))
+        self.Button_multiclassVisualisation.setObjectName("Button_multiclassVisualisation")
+        self.spinBox_sliceSelection_multiclassVisualisation = QtWidgets.QSpinBox(self.tab_3)
+        self.spinBox_sliceSelection_multiclassVisualisation.setGeometry(QtCore.QRect(1380, 30, 51, 21))
+        self.spinBox_sliceSelection_multiclassVisualisation.setMinimum(1)
+        self.spinBox_sliceSelection_multiclassVisualisation.setMaximum(40)
+        self.spinBox_sliceSelection_multiclassVisualisation.setProperty("value", 10)
+        self.spinBox_sliceSelection_multiclassVisualisation.setObjectName("spinBox_sliceSelection_multiclassVisualisation")
+        self.label_17 = QtWidgets.QLabel(self.tab_3)
+        self.label_17.setGeometry(QtCore.QRect(1340, 30, 41, 21))
+        self.label_17.setObjectName("label_17")
+        self.tabWidget.addTab(self.tab_3, "")
         DLArt_GUI.setCentralWidget(self.centralWidget)
         self.menuBar = QtWidgets.QMenuBar(DLArt_GUI)
         self.menuBar.setGeometry(QtCore.QRect(0, 0, 1689, 21))
@@ -664,7 +693,7 @@ class Ui_DLArt_GUI(object):
         DLArt_GUI.setStatusBar(self.statusBar)
 
         self.retranslateUi(DLArt_GUI)
-        self.tabWidget.setCurrentIndex(4)
+        self.tabWidget.setCurrentIndex(5)
         QtCore.QMetaObject.connectSlotsByName(DLArt_GUI)
 
     def retranslateUi(self, DLArt_GUI):
@@ -778,11 +807,14 @@ class Ui_DLArt_GUI(object):
         self.textEdit_summary.setHtml(_translate("DLArt_GUI", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:7.8pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>"))
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:7.8pt;\"><br /></p></body></html>"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.Tab_Prediction), _translate("DLArt_GUI", "Prediction"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("DLArt_GUI", "Artefict Map"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("DLArt_GUI", "Artefact Map"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("DLArt_GUI", "Segmentation Masks"))
+        self.Button_multiclassVisualisation.setText(_translate("DLArt_GUI", "Multi-class Visualisation"))
+        self.label_17.setText(_translate("DLArt_GUI", "Slice:"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), _translate("DLArt_GUI", "Multi-class Visualisation"))
 
 
 if __name__ == "__main__":

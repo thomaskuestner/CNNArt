@@ -1239,6 +1239,13 @@ class DeepLearningArtApp():
         # preprocess y
         if 'ClassMappings' in cnn_info:
             self.classMappingsForPrediction = cnn_info['ClassMappings']
+
+            #convert string keys to int keys
+            intKeysDict = {}
+            for stringKey in self.classMappingsForPrediction:
+                intKeysDict[int(stringKey)] = self.classMappingsForPrediction[stringKey]
+            self.classMappingsForPrediction = intKeysDict
+
         else:
             # in old code version no class mappings were stored in cnn_info. so we have to recreate the class mappings
             # out of the original training dataset
@@ -1281,14 +1288,17 @@ class DeepLearningArtApp():
 
         if self.usingSegmentationMasksForPrediction:
 
-             predictions = predict_segmentation_model(X_test,
+            usingClassification = True
+
+            predictions = predict_segmentation_model(X_test,
                                                       Y_test,
                                                       Y_segMasks_test,
                                                       sModelPath=self.modelForPrediction,
-                                                      batch_size=batchSize)
+                                                      batch_size=batchSize,
+                                                      usingClassification=usingClassification)
 
-             # do unpatching if is enabled
-             if self.doUnpatching:
+            # do unpatching if is enabled
+            if self.doUnpatching:
 
                  patchSize = [X_test.shape[1], X_test.shape[2], X_test.shape[3]]
 
@@ -1327,13 +1337,14 @@ class DeepLearningArtApp():
 
                  dicom_size = [voxel_ndarray.shape[0], voxel_ndarray.shape[1], voxel_ndarray.shape[2]]
 
+                 allPreds = predictions['prob_pre']
 
-                 unpatched_img_foreground = fUnpatchSegmentation(predictions['prob_pre'],
+                 unpatched_img_foreground = fUnpatchSegmentation(allPreds[0],
                                                                  patchSize=patchSize,
                                                                  patchOverlap=patchOverlap,
                                                                  actualSize=dicom_size,
                                                                  iClass=1)
-                 unpatched_img_background = fUnpatchSegmentation(predictions['prob_pre'],
+                 unpatched_img_background = fUnpatchSegmentation(allPreds[0],
                                                                  patchSize=patchSize,
                                                                  patchOverlap=patchOverlap,
                                                                  actualSize=dicom_size,
@@ -1362,30 +1373,66 @@ class DeepLearningArtApp():
 
                  }
 
-             # save prediction into .mat file
-             modelSave = self.modelForPrediction + os.sep + 'model_predictions.mat'
-             print('saving Model:{}'.format(modelSave))
-             if not self.doUnpatching:
-                 sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
-                                         'score_test': predictions['score_test'],
-                                         'acc_test': predictions['acc_test'],
-                                         })
-             else:
-                 sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
-                                         'score_test': predictions['score_test'],
-                                         'acc_test': predictions['acc_test'],
-                                         'unpatched_slices': self.unpatched_slices
-                                         })
+            if usingClassification:
+                # save prediction into .mat file
+                modelSave = self.modelForPrediction + os.sep + 'model_predictions.mat'
+                print('saving Model:{}'.format(modelSave))
 
-             # load training results
-             _, sPath = os.path.splitdrive(self.modelForPrediction)
-             sPath, sFilename = os.path.split(sPath)
-             sFilename, sExt = os.path.splitext(sFilename)
+                if not self.doUnpatching:
+                    sio.savemat(modelSave, {'prob_pre': allPreds[0],
+                                            'classification_prob_pre': allPreds[1],
+                                            'loss_test': predictions['loss_test'],
+                                            'segmentation_output_loss_test': predictions['segmentation_output_loss_test'],
+                                            'classification_output_loss_test': predictions['classification_output_loss_test'],
+                                            'segmentation_output_dice_coef': predictions['segmentation_output_dice_coef_test'],
+                                            'classification_output_acc_test': predictions['classification_output_acc_test']
+                                            })
+                else:
+                    sio.savemat(modelSave, {'prob_pre': allPreds[0],
+                                            'classification_prob_pre': allPreds[1],
+                                            'loss_test': predictions['loss_test'],
+                                            'segmentation_output_loss_test': predictions['segmentation_output_loss_test'],
+                                            'classification_output_loss_test': predictions['classification_output_loss_test'],
+                                            'segmentation_output_dice_coef_test': predictions['segmentation_output_dice_coef_test'],
+                                            'classification_output_acc_test': predictions['classification_output_acc_test'],
+                                            'unpatched_slices': self.unpatched_slices
+                                            })
 
-             training_results = sio.loadmat(self.modelForPrediction + os.sep + sFilename + ".mat")
-             self.acc_training = training_results['dice_coef']
-             self.acc_validation = training_results['val_dice_coef']
-             self.acc_test = training_results['acc_test']
+                # load training results
+                _, sPath = os.path.splitdrive(self.modelForPrediction)
+                sPath, sFilename = os.path.split(sPath)
+                sFilename, sExt = os.path.splitext(sFilename)
+
+                training_results = sio.loadmat(self.modelForPrediction + os.sep + sFilename + ".mat")
+                self.acc_training = training_results['segmentation_output_dice_coef_training']
+                self.acc_validation = training_results['segmentation_output_dice_coef_val']
+                self.acc_test = training_results['segmentation_output_dice_coef_test']
+
+            else:
+                # save prediction into .mat file
+                modelSave = self.modelForPrediction + os.sep + 'model_predictions.mat'
+                print('saving Model:{}'.format(modelSave))
+                if not self.doUnpatching:
+                     sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
+                                             'score_test': predictions['score_test'],
+                                             'acc_test': predictions['acc_test'],
+                                             })
+                else:
+                     sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
+                                             'score_test': predictions['score_test'],
+                                             'acc_test': predictions['acc_test'],
+                                             'unpatched_slices': self.unpatched_slices
+                                             })
+
+                # load training results
+                _, sPath = os.path.splitdrive(self.modelForPrediction)
+                sPath, sFilename = os.path.split(sPath)
+                sFilename, sExt = os.path.splitext(sFilename)
+
+                training_results = sio.loadmat(self.modelForPrediction + os.sep + sFilename + ".mat")
+                self.acc_training = training_results['dice_coef']
+                self.acc_validation = training_results['val_dice_coef']
+                self.acc_test = training_results['acc_test']
 
 
         else:
@@ -1458,17 +1505,23 @@ class DeepLearningArtApp():
 
                 dicom_size = [voxel_ndarray.shape[0], voxel_ndarray.shape[1], voxel_ndarray.shape[2]]
 
-                probability_mask = fUnpatch2D(self.predictions,
-                                              patchSize,
-                                              patchOverlap,
-                                              dicom_size,
-                                              iClass=iClass)
+                # probability_mask = fUnpatch2D(self.predictions,
+                #                               patchSize,
+                #                               patchOverlap,
+                #                               dicom_size,
+                #                               iClass=iClass)
+
+                multiclass_probability_masks = fMulticlassUnpatch2D(self.predictions,
+                                                                    patchSize,
+                                                                    patchOverlap,
+                                                                    dicom_size)
 
 
                 self.unpatched_slices = {
-                    'probability_mask': probability_mask,
+                    'multiclass_probability_masks': multiclass_probability_masks,
                     'dicom_slices': voxel_ndarray,
-                    'dicom_masks': labelMask_ndarray
+                    'dicom_masks': labelMask_ndarray,
+                    'index_class': iClass
                 }
 
             # save prediction into .mat file

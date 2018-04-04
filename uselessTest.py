@@ -3,9 +3,8 @@ from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.pyplot as plt
 
 
-x = 40
-y = 1
+x = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]
 
-if x == 20 or x == 40 or x == 60:
-    print("down")
+x = np.asarray(x)
 
+print()

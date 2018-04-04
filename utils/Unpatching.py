@@ -37,8 +37,8 @@ def fUnpatch2D(prob_list, patchSize, patchOverlap, actualSize, iClass):
     numVal = np.zeros((paddedSize[0], paddedSize[1], paddedSize[2]))
 
     for iIndex in range(0, prob_list.shape[0], 1):
-        print(iIndex)
-        print(iCorner)
+        #print(iIndex)
+        #print(iCorner)
         lMask = np.zeros((paddedSize[0], paddedSize[1], paddedSize[2]))
 
         lMask[iCorner[0]:iCorner[0] + int(patchSize[0]), iCorner[1]:iCorner[1] + int(patchSize[1]), iCorner[2]] = 1
@@ -62,6 +62,7 @@ def fUnpatch2D(prob_list, patchSize, patchOverlap, actualSize, iClass):
             iCorner[0] = 0
             iCorner[1] = 0
             iCorner[2] = int(iCorner[2] + 1)
+            print(str(iCorner[2] / actualSize[2] * 100) + "%")
 
 
     unpatchImg = np.divide(unpatchImg, numVal)
@@ -145,7 +146,6 @@ def fUnpatchSegmentation(prob_list, patchSize, patchOverlap, actualSize, iClass)
     :param iClass: 0 -> background, 1-> foreground
     :return: 
     '''
-
     iCorner = [0, 0, 0]
     dOverlap = np.round(np.multiply(patchSize, patchOverlap))
     dNotOverlap = [patchSize[0] - dOverlap[0], patchSize[1] - dOverlap[1], patchSize[2] - dOverlap[2]]
@@ -159,8 +159,8 @@ def fUnpatchSegmentation(prob_list, patchSize, patchOverlap, actualSize, iClass)
     numVal = np.zeros((paddedSize[0], paddedSize[1], paddedSize[2]))
 
     for iIndex in range(0, prob_list.shape[0], 1):
-        print(iIndex)
-        print(iCorner)
+        #print(iIndex)
+        #print(iCorner)
         lMask = np.zeros((paddedSize[0], paddedSize[1], paddedSize[2]))
         lMask[iCorner[0]:(iCorner[0]+patchSize[0]), iCorner[1]:(iCorner[1]+patchSize[1]), iCorner[2]:(iCorner[2]+patchSize[2])] = 1
 
@@ -172,8 +172,7 @@ def fUnpatchSegmentation(prob_list, patchSize, patchOverlap, actualSize, iClass)
             unpatchImg[iCorner[0]:(iCorner[0]+patchSize[0]), iCorner[1]:(iCorner[1]+patchSize[1]), iCorner[2]:(iCorner[2]+patchSize[2])] = \
                 np.add(vox, prob_list[iIndex, :, :, :])
         else:
-            unpatchImg[iCorner[0]:(iCorner[0] + patchSize[0]), iCorner[1]:(iCorner[1] + patchSize[1]),
-            iCorner[2]:(iCorner[2] + patchSize[2])] = \
+            unpatchImg[iCorner[0]:(iCorner[0] + patchSize[0]), iCorner[1]:(iCorner[1] + patchSize[1]), iCorner[2]:(iCorner[2] + patchSize[2])] = \
                 np.add(vox, prob_list[iIndex, :, :, :, iClass])
 
 
@@ -191,6 +190,7 @@ def fUnpatchSegmentation(prob_list, patchSize, patchOverlap, actualSize, iClass)
             iCorner[0] = 0
             iCorner[1] = 0
             iCorner[2] = int(iCorner[2] + dNotOverlap[2])
+            print(str(iCorner[2]/actualSize[2]*100)+"%")
 
     unpatchImg = np.divide(unpatchImg, numVal)
 
@@ -206,5 +206,61 @@ def fUnpatchSegmentation(prob_list, patchSize, patchOverlap, actualSize, iClass)
         pad_z_max = int(paddedSize[2] - (paddedSize[2] - actualSize[2] - pad_z))
 
         unpatchImg = unpatchImg[pad_y:pad_y_max, pad_x:pad_x_max, pad_z:pad_z_max]
+
+    return unpatchImg
+
+
+
+
+def fMulticlassUnpatch2D(prob_list, patchSize, patchOverlap, actualSize):
+    iCorner = [0, 0, 0]
+    dOverlap = np.round(np.multiply(patchSize, patchOverlap))
+    dNotOverlap = [patchSize[0] - dOverlap[0], patchSize[1] - dOverlap[1]]
+
+    paddedSize = [int(math.ceil((actualSize[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0]),
+                  int(math.ceil((actualSize[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1]),
+                  actualSize[2]]
+
+    unpatchedPredictions = np.zeros((paddedSize[0], paddedSize[1], prob_list.shape[1], paddedSize[2]))
+    numVal = np.zeros((paddedSize[0], paddedSize[1], prob_list.shape[1], paddedSize[2]))
+
+    for iIndex in range(0, prob_list.shape[0], 1):
+        #print(iIndex)
+        #print(iCorner)
+        lMask = np.zeros((paddedSize[0], paddedSize[1], prob_list.shape[1], paddedSize[2]))
+
+        lMask[iCorner[0]:iCorner[0] + int(patchSize[0]), iCorner[1]:iCorner[1] + int(patchSize[1]), :, iCorner[2]] = 1
+
+        unpatchedPredictions[iCorner[0]:iCorner[0] + int(patchSize[0]), iCorner[1]:iCorner[1] + int(patchSize[1]), :, iCorner[2]] \
+            = np.add(unpatchedPredictions[iCorner[0]:iCorner[0] + int(patchSize[0]), iCorner[1]:iCorner[1] + int(patchSize[1]), :, iCorner[2]], prob_list[iIndex, :])
+
+        lMask = lMask == 1
+        numVal[lMask] = numVal[lMask] + 1
+
+        iCorner[1] =int(iCorner[1]+dNotOverlap[1])
+
+        if iCorner[1] + patchSize[1] - 1 > paddedSize[1]:
+            iCorner[1] = 0
+            iCorner[0] = int(iCorner[0] + dNotOverlap[0])
+
+        if iCorner[0] + patchSize[0] - 1 > paddedSize[0]:
+            iCorner[0] = 0
+            iCorner[1] = 0
+            iCorner[2] = int(iCorner[2] + 1)
+            print(str(iCorner[2] / actualSize[2] * 100) + "%")
+
+
+    unpatchImg = np.divide(unpatchedPredictions, numVal)
+
+    if paddedSize == actualSize:
+        pass
+    else:
+        pad_y = int((paddedSize[0]-actualSize[0])/2)
+        pad_x = int((paddedSize[1]-actualSize[1])/2)
+
+        pad_y_max = int(paddedSize[0]-(paddedSize[0]-actualSize[0]-pad_y))
+        pad_x_max = int(paddedSize[1]-(paddedSize[1]-actualSize[1]-pad_x))
+
+        unpatchImg = unpatchImg[pad_y:pad_y_max, pad_x:pad_x_max, :]
 
     return unpatchImg
