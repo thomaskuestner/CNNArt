@@ -9,7 +9,7 @@ from keras.layers.core import Dense, Activation, Flatten,   Dropout, Lambda, Res
 from keras.activations import relu, elu, softmax
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.initializers import Constant
-from keras.layers import  concatenate, add
+from keras.layers import  concatenate, add, average
 from keras.layers.convolutional import Conv3D, UpSampling3D, MaxPooling3D, Cropping3D, ZeroPadding3D
 from keras.regularizers import l1_l2,l2
 from keras.models import model_from_json
@@ -61,23 +61,21 @@ def fTrain(X_train, Y_train, X_test, Y_test, sOutPath, patchSize, batchSizes=Non
 
     for iBatch in batchSizes:
         for iLearn in learningRates:
-            cnn = fCreateModel(patchSize, patchSize_down=patchSize_down, ScaleFactor=ScaleFactor, learningRate=iLearn, optimizer='Adam')
-            fTrainInner(sOutPath, cnn, learningRate=iLearn, X_train=X_train, y_train=Y_train, X_test=X_test, y_test=Y_test,batchSize=iBatch, iEpochs=iEpochs, CV_Patient=CV_Patient,
+            fTrainInner(sOutPath, learningRate=iLearn, X_train=X_train, y_train=Y_train, X_test=X_test, y_test=Y_test, patchSize=patchSize,batchSize=iBatch, iEpochs=iEpochs, CV_Patient=CV_Patient,
                         X_train_p2=X_train_p2, y_train_p2=y_train_p2, X_test_p2=X_test_p2, y_test_p2=y_test_p2, patchSize_down=patchSize_down,ScaleFactor=ScaleFactor)
 
-def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=None, sInPaths_valid=None, X_train=None, y_train=None, X_test=None, y_test=None,  batchSize=64, iEpochs=299, CV_Patient=0
+def fTrainInner(sOutPath, learningRate=0.001, patchSize=None, sInPaths=None, sInPaths_valid=None, X_train=None, y_train=None, X_test=None, y_test=None,  batchSize=64, iEpochs=299, CV_Patient=0
                 , X_train_p2=None, y_train_p2=None, X_test_p2=None, y_test_p2=None, patchSize_down=None, ScaleFactor=None):
     '''train a model with training data X_train with labels Y_train. Validation Data should get the keywords Y_test and X_test'''
 
     print('Training VNet multiscale')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
-    model.summary()
 
     # save names
     _, sPath = os.path.splitdrive(sOutPath)
     sPath,sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
-    model_name = sPath + '/' + sFilename  + '/' + sFilename + '_VNet' +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
+    model_name = sPath + '/' + sFilename  + '/' + sFilename + '_VNet_MS' +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     if CV_Patient != 0: model_name = model_name +'_'+ 'CV' + str(CV_Patient)# determine if crossValPatient is used...
     weight_name = model_name + '_weights.h5'
     model_json = model_name + '_json'
@@ -88,21 +86,26 @@ def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=No
         print('----------already trained->go to next----------')
         return
 
+    model = fCreateModel(patchSize, patchSize_down=patchSize_down, ScaleFactor=ScaleFactor, learningRate=learningRate, optimizer='Adam')
+    opti, loss = fGetOptimizerAndLoss(optimizer='Adam', learningRate=learningRate)  # loss cat_crosent default
+    model.compile(optimizer=opti, loss=loss, metrics=['accuracy'])
+    model.summary()
+
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
-    callbacks.append(ModelCheckpoint('/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
+    callbacks.append(ModelCheckpoint('/no_backup/s1241/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
        period=5, save_best_only=True))# overrides the last checkpoint, its just for security
     callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
     result =model.fit(x = [X_train, X_train_p2],
-                      y = [y_train, y_train_p2],
-                      validation_data=([X_test, X_test_p2], [y_test, y_test_p2]),
+                      y = y_train,
+                      validation_data=([X_test, X_test_p2], y_test),
                       epochs=iEpochs,
                       batch_size=batchSize,
                       callbacks=callbacks,
                       verbose=1)
 
     print('\nscore and acc on test set:')
-    test_loss, p1_loss, p2_loss, p1_acc, p2_acc = model.evaluate([X_test, X_test_p2], [y_test, y_test_p2], batch_size=batchSize, verbose=1)
+    score_test, acc_test = model.evaluate([X_test, X_test_p2], y_test, batch_size=batchSize, verbose=1)
     print('\npredict class probabillities:')
     prob_test = model.predict([X_test,X_test_p2], batch_size=batchSize, verbose=1)
 
@@ -116,11 +119,9 @@ def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=No
     sio.savemat(model_name, {'model_settings': model_json,
                              'model': model_all,
                              'weights': weight_name,
-                             'training_result':result.history,
-                             'p1_loss': p1_loss,
-                             'p2_loss': p2_loss,
-                             'p1_acc': p1_acc,
-                             'p2_acc': p2_acc,
+                             'training_result': result.history,
+                             'val_loss': score_test,
+                             'val_acc': acc_test,
                              'prob_test': prob_test})
 
 def fPredict(X_test,y_test, model_name, sOutPath, batchSize=64, X_test_p2=[], y_test_p2=[], patchSize=[]):
@@ -155,11 +156,7 @@ def fPredict(X_test,y_test, model_name, sOutPath, batchSize=64, X_test_p2=[], y_
 
 def fCreateModel(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-3, optimizer='SGD',
                      dr_rate=0.0, input_dr_rate=0.0, max_norm=5, iPReLU=0, l2_reg=1e-6):
-    # using SGD lr 0.001
-    # motion_head:unkorrigierte Version 3steps with only type(1,1,1)(149K params)--> val_loss: 0.2157 - val_acc: 0.9230
-    # motion_head:korrigierte Version type(1,2,2)(266K params) --> val_loss: 0.2336 - val_acc: 0.9149 nach abbruch...
-    # double_#channels(type 122) (870,882 params)>
-    # functional api...
+    # Total params: 2,503,010
 
     input_orig = Input(shape=(1, int(patchSize[0]), int(patchSize[1]), int(patchSize[2])))
     path_orig_output = fpathway(input_orig)
@@ -175,15 +172,8 @@ def fCreateModel(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-
                           kernel_initializer='normal',
                           kernel_regularizer=l2(l2_reg))(dropout_out)
 
-    output_fc1 = Activation('softmax')(dense_out)
-    output_fc2 = Activation('softmax')(dense_out)
-    output_p1 = Lambda(sliceP1, name='path1_output',output_shape=(None,2))(output_fc1)
-    output_p2 = Lambda(sliceP2, name='path2_output',output_shape=(None,2))(output_fc2)
-    cnn_ms = Model(inputs=[input_orig, input_down], outputs=[output_p1,output_p2])
-
-    opti, loss = fGetOptimizerAndLoss(optimizer, learningRate=learningRate)  # loss cat_crosent default
-    cnn_ms.compile(optimizer=opti, loss=loss, metrics=['accuracy'])
-    sArchiSpecs = '_t222_l2{}_dr{}'.format(l2_reg, dr_rate)
+    output_fc = Activation('softmax')(dense_out)
+    cnn_ms = Model(inputs=[input_orig, input_down], outputs=output_fc)
     return cnn_ms
 
 def sliceP1(input):
@@ -203,7 +193,7 @@ def fconcatenate(path_orig, path_down):
         crop_z_1 = int(np.ceil((path_down._keras_shape[4] - path_orig._keras_shape[4]) / 2))
         crop_z_0 = path_down._keras_shape[4] - path_orig._keras_shape[4] - crop_z_1
         path_down_cropped = Cropping3D(cropping=((crop_x_0, crop_x_1), (crop_y_0, crop_y_1), (crop_z_0, crop_z_1)))(path_down)
-    connected = concatenate([path_orig, path_down_cropped], axis=0)
+    connected = average([path_orig, path_down_cropped])
     return connected
 
 def fUpSample(up_in, factor, method='repeat'):
