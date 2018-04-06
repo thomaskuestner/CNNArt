@@ -12,6 +12,8 @@ import cnn_main
 import utils.scaling as scaling
 import correction.main_correction as correction
 from utils.calculateInputOfPath2 import fcalculateInputOfPath2
+from networks.multiscale.runMS import frunCNN_MS
+
 
 with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
@@ -101,7 +103,7 @@ elif lTrain:
             lScaleFactor = [1]
         if sTrainingMethod == "MultiScaleSeparated" :
             lScaleFactor = lScaleFactor[:-1]
-        # Else perform scaling:
+
         #   images will be split into pathces with size scpatchSize and then scaled to patchSize        
         for iscalefactor in lScaleFactor:
             # Calculate the patchsize according to scale factor and training method
@@ -111,8 +113,8 @@ elif lTrain:
                     scpatchSize = fcalculateInputOfPath2(patchSize, iscalefactor, cfg['network'])
                 elif sTrainingMethod == "MultiScaleTogether":
                     scpatchSize = [int(psi/iscalefactor) for psi in patchSize]
-                                
-            if len(patchSize) == 3:
+            
+            if len(scpatchSize)==3:                 
                 dAllPatches = np.zeros((0, scpatchSize[0], scpatchSize[1], scpatchSize[2]))
             else:
                 dAllPatches = np.zeros((0, scpatchSize[0], scpatchSize[1]))
@@ -186,8 +188,13 @@ elif lTrain:
             CV_Patient = iFold + 1
         else:
             CV_Patient = 0
-        if sTrainingMethod == "MultiScaleSeparated":
-            cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'X_train_p2': X_train_p2[iFold], 'y_train_p2': y_train_p2[iFold], 'X_test_p2': X_test_p2[iFold], 'y_test_p2': y_test_p2[iFold], 'patchSize_down':patchSize_down, 'ScaleFactor': lScaleFactor[0]}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+        if 'MultiPath' in cfg['network']:
+            frunCNN_MS({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize
+                        , 'X_train_p2': X_train_p2[iFold], 'y_train_p2': y_train_p2[iFold], 'X_test_p2': X_test_p2[iFold],'y_test_p2': y_test_p2[iFold], 'patchSize_down': patchSize_down, 'ScaleFactor': lScaleFactor[0]}
+                        ,  cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+        elif 'MS' in cfg['network']:
+            frunCNN_MS({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}
+                        ,  cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
         else:
             cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
 
@@ -221,8 +228,11 @@ else:
             CV_Patient = iFold + 1
         else:
             CV_Patient = 0
-        if sTrainingMethod == "MultiScaleSeparated":
-            cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'X_train_p2': [], 'y_train_p2': [], 'X_test_p2': X_test_p2[iFold],
-                                  'y_test_p2': y_test_p2[iFold], 'model_name': sPredictModel }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+            
+        if 'MultiPath' in cfg['network']:
+            frunCNN_MS({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'X_train_p2': X_train_p2[iFold], 'y_train_p2': y_train_p2[iFold], 'X_test_p2': X_test_p2[iFold],
+                                  'y_test_p2': y_test_p2[iFold],},  cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+        elif 'MS' in cfg['network']:
+            frunCNN_MS({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize},  cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
         else:
-            cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'model_name': sPredictModel }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+            cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize'], 'iClass': cfg['iClass'] }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
