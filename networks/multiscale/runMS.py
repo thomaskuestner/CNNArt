@@ -8,12 +8,14 @@ import numpy as np                  # for algebraic operations, matrices
 import scipy.io as sio              # I/O
 import os.path   # operating system           
 from networks.motion.VNetArt.motion_VNetArt import fGetOptimizerAndLoss
+import keras
 from keras.callbacks import EarlyStopping, ModelCheckpoint,ReduceLROnPlateau
 from keras.models import model_from_json
 from keras.utils import plot_model
 import MSnetworks
+from utils.Unpatching import fUnpatch3D, fRigidUnpatching
 
-def frunCNN_MS(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearningRate, iEpochs, CV_Patient=0):
+def frunCNN_MS(dData, sModelIn, lTrain, sOutPath, iBatchSize, iLearningRate, iEpochs, CV_Patient=0):
     if lTrain:
         if 'MultiPath' in sModelIn:
             fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sModelIn, sOutPath, dData['patchSize'], iBatchSize, iLearningRate, iEpochs, CV_Patient=CV_Patient
@@ -77,10 +79,12 @@ def fTrainInner(sModelIn, sOutPath, patchSize, learningRate=0.001, X_train=None,
     fCreateModel = 'fCreateModel_' + sModelIn
     if ScaleFactor==0: # model with single pathway
         model = getattr(MSnetworks, fCreateModel)(patchSize)
-    else: # model with 2 pathways
+    elif 'VNet_MultiPath' in sModelIn: # dual-pathway VNet without other modules
+        model = getattr(MSnetworks, fCreateModel)(patchSize, patchSize_down, ScaleFactor)
+    else: # model with 2 pathways and SPP, FCN or Inception modules
         model = getattr(MSnetworks, fCreateModel)(patchSize, patchSize_down)
         
-#    plot_model(model, to_file='/no_backup/s1241/MultiScale/model'+sModelIn+'.png',show_shapes='True')
+    #plot_model(model, to_file='/no_backup/s1241/MultiScale/model'+sModelIn+'.png',show_shapes='True')
     opti, loss = fGetOptimizerAndLoss(optimizer='Adam', learningRate=learningRate)  # loss cat_crosent default
     model.compile(optimizer=opti, loss=loss, metrics=['accuracy'])
     model.summary()

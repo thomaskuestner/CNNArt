@@ -11,10 +11,7 @@ import numpy as np
 import keras
 from keras.models import Sequential, Model
 from keras.layers import Input
-from keras.layers.core import Dense, Activation, Flatten, Dropout, Lambda, Reshape
-from keras.activations import relu, elu, softmax
-from keras.layers.advanced_activations import LeakyReLU, PReLU
-from keras.initializers import Constant
+from keras.layers.core import Dense, Activation, Flatten, Dropout
 from keras.layers import  concatenate, add, average, GlobalAveragePooling3D
 from keras.layers.convolutional import Conv3D, UpSampling3D, MaxPooling3D, Conv3DTranspose, Cropping3D
 from keras.regularizers import l1_l2,l2
@@ -55,6 +52,8 @@ def fgetLayerNumUnscaled():
     LayerNum = 2
     return LayerNum
 
+
+# Original VNet: Total params: 1,279,631
 
 # Models of dual-pathway VNet
 def fCreateModel_VNet_MultiPath(patchSize, patchSize_down=None, ScaleFactor=1, learningRate=1e-3, optimizer='SGD',
@@ -147,7 +146,7 @@ def fCreateModel_SPP(patchSize,dr_rate=0.0, iPReLU=0, l2_reg=1e-6):
     return cnn_spp
 
 def fCreateModel_SPP_MultiPath(patchSize, patchSize2, dr_rate=0.0, iPReLU=0, l2_reg=1e-6):
-    # Total params: 2,073,710
+    # Total params: 2,057,510
     # There are 2 pathway, whose receptive fields are in multiple relation.
     # Their outputs are averaged as the final prediction
     # The third down sampling convolutional layer in each pathway is replaced by the SPP module
@@ -397,7 +396,7 @@ def fCreateModel_FCN_MultiFM_MultiPath(patchSize, patchSize_down, dr_rate=0.0, i
 
 # models of inception module
 def fCreateModel_Inception_Archi1(patchSize,dr_rate=0.0, iPReLU=0, l2_reg=1e-6):
-    # Total params: 5,483,161
+    # Total params: 5,598,511
     # Each convolution layer before down sampling is replaced by the inception block,
     # all other convolution layers are reserved.
     Strides = fgetStrides()
@@ -427,7 +426,7 @@ def fCreateModel_Inception_Archi1(patchSize,dr_rate=0.0, iPReLU=0, l2_reg=1e-6):
     return cnn_incep
 
 def fCreateModel_Inception_Archi2(patchSize,dr_rate=0.0, iPReLU=0, l2_reg=1e-6):
-    # Total params: 2,802,041
+    # Total params: 2,883,791
     # The three higher convolution layers except down sampling are replaced by the inception block,
     # the three lower convolution layers are reserved.
     # In work of GoogLeNet, it's beneficial for memory efficiency during training

@@ -191,10 +191,10 @@ elif lTrain:
         if 'MultiPath' in cfg['network']:
             frunCNN_MS({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize
                         , 'X_train_p2': X_train_p2[iFold], 'y_train_p2': y_train_p2[iFold], 'X_test_p2': X_test_p2[iFold],'y_test_p2': y_test_p2[iFold], 'patchSize_down': patchSize_down, 'ScaleFactor': lScaleFactor[0]}
-                        ,  cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+                        ,  cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
         elif 'MS' in cfg['network']:
             frunCNN_MS({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}
-                        ,  cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+                        ,  cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
         else:
             cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
 
@@ -230,9 +230,9 @@ else:
             CV_Patient = 0
             
         if 'MultiPath' in cfg['network']:
-            frunCNN_MS({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'X_train_p2': X_train_p2[iFold], 'y_train_p2': y_train_p2[iFold], 'X_test_p2': X_test_p2[iFold],
-                                  'y_test_p2': y_test_p2[iFold],},  cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+            frunCNN_MS({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'X_train_p2': [], 'y_train_p2': [], 'X_test_p2': X_test_p2[iFold],
+                                  'y_test_p2': y_test_p2[iFold], 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize'], 'iClass': cfg['iClass'] },  cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
         elif 'MS' in cfg['network']:
-            frunCNN_MS({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize},  cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+            frunCNN_MS({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize'], 'iClass': cfg['iClass'] },  cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
         else:
             cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize'], 'iClass': cfg['iClass'] }, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
