@@ -1,0 +1,21 @@
+<RCC>
+  <qresource prefix="icons">
+    <file>Icons/blink.png</file>
+    <file>Icons/edit.png</file>
+    <file>Icons/link.png</file>
+    <file>Icons/rotate.png</file>
+    <file>Icons/switch2.png</file>
+    <file>Icons/overlap.png</file>
+    <file>Icons/eye1.png</file>
+    <file>Icons/folder.png</file>
+    <file>Icons/grids1.png</file>
+    <file>Icons/palette.png</file>
+    <file>Icons/switch1.png</file>
+    <file>Icons/Ellipse.png</file>
+    <file>Icons/eye.png</file>
+    <file>Icons/grids.png</file>
+    <file>Icons/Lasso.png</file>
+    <file>Icons/Rectangle.png</file>
+    <file>Icons/switch.png</file>
+  </qresource>
+</RCC>
