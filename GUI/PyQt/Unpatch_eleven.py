@@ -46,7 +46,8 @@ def UnpatchArte(IndexType, patchSize, patchOverlap, actualSize):
     unpatchImg1 = np.zeros((paddedSize[0], paddedSize[1], paddedSize[2]))
     for iIndex in range(0, IndexType.size, 1):
         if (IndexType[iIndex] > 4) & (IndexType[iIndex] < 9):
-            unpatchImg1[iCorner[0]: iCorner[0] + int(patchSize[0]), iCorner[1]: iCorner[1] + int(patchSize[1]), iCorner[2]] = np.add(unpatchImg1[iCorner[0]: iCorner[0] + int(patchSize[0]), iCorner[1]: iCorner[1] + int(patchSize[1]), iCorner[2]], 1.)
+            unpatchImg1[iCorner[0]: iCorner[0] + int(patchSize[0]), iCorner[1]: iCorner[1] + int(patchSize[1]), iCorner[2]] = \
+                np.add(unpatchImg1[iCorner[0]: iCorner[0] + int(patchSize[0]), iCorner[1]: iCorner[1] + int(patchSize[1]), iCorner[2]], 1.)
 
         iCorner[0] =int(iCorner[0]+dNotOverlap[0])
         if iCorner[0] + patchSize[0] - 1 > paddedSize[0]:
@@ -85,6 +86,6 @@ def UnpatchArte(IndexType, patchSize, patchOverlap, actualSize):
     else:
         pad_y = math.ceil((paddedSize[0]-actualSize[0])/2) # add math.ceil for python3
         pad_x = math.ceil((paddedSize[1]-actualSize[1])/2) #
-        unpatchImg = unpatchImg[pad_y:paddedSize[0] - (paddedSize[0]-actualSize[0]-pad_y), pad_x:paddedSize[1] - (paddedSize[1]-actualSize[1]-pad_x), : ] ## zhu zi suo jin
+        unpatchImg = unpatchImg[pad_y:paddedSize[0] - (paddedSize[0]-actualSize[0]-pad_y), pad_x:paddedSize[1] - (paddedSize[1]-actualSize[1]-pad_x), : ]
         unpatchImg = unpatchImg +1 ## for levels
     return unpatchImg

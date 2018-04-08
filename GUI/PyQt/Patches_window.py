@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets
 from cPatches import Ui_Patches
-
+import json
 import matplotlib as mpl
 from collections import Counter
 
@@ -8,6 +8,36 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
+
+        with open('colors0.json', 'r') as json_data:
+            self.dcolors = json.load(json_data)
+
+            self.diylist1d = self.dcolors['class2']['colors']
+            self.diylist3d = self.dcolors['class11']['colors']
+            self.hmap1d = self.dcolors['class8']['hatches']
+            self.hmap2d = self.dcolors['class11']['hatches']
+            self.dev1d = self.dcolors['class2']['trans'][0]
+            self.dev2d = self.dcolors['class11']['trans'][0]
+
+        with open('colors1.json', 'r') as json_data:
+            self.colors = json.load(json_data)
+
+            self.diylist1 = self.colors['class2']['colors']
+            self.diylist3 = self.colors['class11']['colors']
+            self.hmap1 = self.colors['class8']['hatches']
+            self.hmap2 = self.colors['class11']['hatches']
+            self.dev1 = self.colors['class2']['trans'][0]
+            self.dev2 = self.colors['class11']['trans'][0]
+
+        for n, i in enumerate(self.hmap1):
+            if i == '\\\\':
+                self.hmap1[n] = '\\'
+
+        for n, i in enumerate(self.hmap2):
+            if i == '\\\\':
+                self.hmap2[n] = '\\'
+
+        self.hlist = ['//', '\\', 'XX', '--', '**']
 
         self.colormode2 = 1
         self.colormode8 = 1
@@ -35,7 +65,7 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
         self.eigbox.buttonClicked.connect(self.ccmode_eight)
         self.i1.setChecked(True)
 
-        self.elebox = QtWidgets.QButtonGroup(self)  
+        self.elebox = QtWidgets.QButtonGroup(self)
         self.elebox.addButton(self.e1, 11)
         self.elebox.addButton(self.e2, 12)
         self.elebox.buttonClicked.connect(self.ccmode_eleven)
@@ -44,34 +74,20 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
         self.b_21.clicked.connect(self.color21)
         self.b_22.clicked.connect(self.color22)
 
-        self.b_81.clicked.connect(self.color81)
-        self.b_82.clicked.connect(self.color82)
-        self.b_83.clicked.connect(self.color83)
-        
         self.b_111.clicked.connect(self.color111)
         self.b_112.clicked.connect(self.color112)
         self.b_113.clicked.connect(self.color113)
         self.b_114.clicked.connect(self.color114)
         self.b_115.clicked.connect(self.color115)
-        
-        self.b_21.setStyleSheet("background-color: blue")
-        self.b_22.setStyleSheet("background-color: red")
-        
-        self.b_81.setStyleSheet("background-color: blue")
-        self.b_82.setStyleSheet("background-color: red")
-        self.b_83.setStyleSheet("background-color: green")
 
-        self.b_111.setStyleSheet("background-color: blue")
-        self.b_112.setStyleSheet("background-color: purple")
-        self.b_113.setStyleSheet("background-color: yellow")
-        self.b_114.setStyleSheet("background-color: cyan")
-        self.b_115.setStyleSheet("background-color: green")
+        self.b_21.setStyleSheet('background-color:' + self.diylist1[0])
+        self.b_22.setStyleSheet('background-color:' + self.diylist1[1])
 
-        self.diylist1 = ['blue', 'red']
-        self.diylist2 = ['blue', 'red', 'green']
-        self.diylist3 = ['blue', 'purple', 'cyan', 'yellow', 'green']
-        self.hmap1 = [None, '//', '\\', 'XX']
-        self.hmap2 = [None, '//', '\\', 'XX']
+        self.b_111.setStyleSheet('background-color:' + self.diylist3[0])
+        self.b_112.setStyleSheet('background-color:' + self.diylist3[1])
+        self.b_113.setStyleSheet('background-color:' + self.diylist3[2])
+        self.b_114.setStyleSheet('background-color:' + self.diylist3[3])
+        self.b_115.setStyleSheet('background-color:' + self.diylist3[4])
 
         self.cb_81.currentIndexChanged.connect(self.hatch81)
         self.cb_82.currentIndexChanged.connect(self.hatch82)
@@ -80,9 +96,17 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
         self.cb_112.currentIndexChanged.connect(self.hatch112)
         self.cb_113.currentIndexChanged.connect(self.hatch113)
 
-        self.a = 0.3
-        self.b = 0.3
-        self.c = 0.3
+        self.cb_81.setCurrentIndex(self.hlist.index(self.hmap1[1]))
+        self.cb_82.setCurrentIndex(self.hlist.index(self.hmap1[2]))
+        self.cb_83.setCurrentIndex(self.hlist.index(self.hmap1[3]))
+        self.cb_111.setCurrentIndex(self.hlist.index(self.hmap2[1]))
+        self.cb_112.setCurrentIndex(self.hlist.index(self.hmap2[2]))
+        self.cb_113.setCurrentIndex(self.hlist.index(self.hmap2[3]))
+
+        self.vtr1 = self.dev1d
+        self.vtr3 = self.dev2d
+        self.trans1.setText(str(self.dev1d))
+        self.trans3.setText(str(self.dev2d))
 
     def ccmode_two(self):
         if self.twobox.checkedId() == 11:
@@ -106,130 +130,128 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
         col = QtWidgets.QColorDialog.getColor()
         if col.isValid():
             self.diylist1[0] = col.name()
-            self.b_21.setStyleSheet("background-color:" + col.name())
+            self.b_21.setStyleSheet('background-color:' + col.name())
 
     def color22(self):
         col = QtWidgets.QColorDialog.getColor()
         if col.isValid():
             self.diylist1[1] = col.name()
-            self.b_22.setStyleSheet("background-color:" + col.name())
-
-    def color81(self):
-        col = QtWidgets.QColorDialog.getColor()
-        if col.isValid():
-            self.diylist2[0] = col.name()
-            self.b_81.setStyleSheet("background-color:" + col.name())
-
-    def color82(self):
-        col = QtWidgets.QColorDialog.getColor()
-        if col.isValid():
-            self.diylist2[1] = col.name()
-            self.b_82.setStyleSheet("background-color:" + col.name())
-
-    def color83(self):
-        col = QtWidgets.QColorDialog.getColor()
-        if col.isValid():
-            self.diylist2[2] = col.name()
-            self.b_83.setStyleSheet("background-color:" + col.name())
+            self.b_22.setStyleSheet('background-color:' + col.name())
 
     def color111(self):
         col = QtWidgets.QColorDialog.getColor()
         if col.isValid():
             self.diylist3[0] = col.name()
-            self.b_111.setStyleSheet("background-color:" + col.name())
+
+            self.b_111.setStyleSheet('background-color:' + col.name())
 
     def color112(self):
         col = QtWidgets.QColorDialog.getColor()
         if col.isValid():
             self.diylist3[1] = col.name()
-            self.b_112.setStyleSheet("background-color:" + col.name())
+            self.b_112.setStyleSheet('background-color:' + col.name())
 
     def color113(self):
         col = QtWidgets.QColorDialog.getColor()
         if col.isValid():
             self.diylist3[2] = col.name()
-            self.b_113.setStyleSheet("background-color:" + col.name())
+            self.b_113.setStyleSheet('background-color:' + col.name())
 
     def color114(self):
         col = QtWidgets.QColorDialog.getColor()
         if col.isValid():
             self.diylist3[3] = col.name()
-            self.b_114.setStyleSheet("background-color:" + col.name())
+            self.b_114.setStyleSheet('background-color:' + col.name())
 
     def color115(self):
         col = QtWidgets.QColorDialog.getColor()
         if col.isValid():
             self.diylist3[4] = col.name()
-            self.b_115.setStyleSheet("background-color:" + col.name())
+            self.b_115.setStyleSheet('background-color:' + col.name())
 
     def hatch81(self):
-        self.hmap1[0] = self.cb_81.currentText()
+        self.hmap1[1] = self.cb_81.currentText()
 
     def hatch82(self):
-        self.hmap1[1] = self.cb_82.currentText()
+        self.hmap1[2] = self.cb_82.currentText()
 
     def hatch83(self):
-        self.hmap1[2] = self.cb_83.currentText()
+        self.hmap1[3] = self.cb_83.currentText()
 
     def hatch111(self):
-        self.hmap2[0] = self.cb_111.currentText()
+        self.hmap2[1] = self.cb_111.currentText()
 
     def hatch112(self):
-        self.hmap2[1] = self.cb_112.currentText()
+        self.hmap2[2] = self.cb_112.currentText()
 
     def hatch113(self):
-        self.hmap2[2] = self.cb_113.currentText()
+        self.hmap2[3] = self.cb_113.currentText()
 
     def ccsetting(self):
-        if self.colormode2 == 1:
-            self.cmap1 = mpl.colors.ListedColormap(['blue', 'red'])
-        else:
+        if self.colormode2 == 2:
+            if self.trans1.text().isdigit():
+                self.vtr1 = self.trans1.text()
+            else:#self.vtr1 = float(self.trans1.text())
+                try:
+                    self.vtr1 = float(self.trans1.text())
+                except Exception:
+                    QtWidgets.QMessageBox.information(self, 'Error', 'Input can only be a number!')
+                    self.vtr1 = self.dev1d
+
             self.cmap1 = mpl.colors.ListedColormap(self.diylist1)
+        else:
+            self.vtr1 =self.dev1d
+            self.cmap1 = mpl.colors.ListedColormap(self.diylist1d)
+
+        if self.colormode11 == 2:
+            if self.trans3.text().isdigit():
+                self.vtr3 = self.trans3.text()
+            else:#self.vtr3 = float(self.trans3.text())
+                try:
+                    self.vtr3 = float(self.trans3.text())
+                except Exception:
+                    QtWidgets.QMessageBox.information(self, 'Error', 'Input can only be a number!')
+                    self.vtr3 = self.dev2d
+
+            self.cmap3 = mpl.colors.ListedColormap(self.diylist3)
+        else:
+            self.vtr1 =self.dev2d
+            self.cmap3 = mpl.colors.ListedColormap(self.diylist3d)
+            self.hmap2 = self.hmap2d
 
         if self.colormode8 == 1:
-            self.cmap2 = mpl.colors.ListedColormap(['blue', 'red', 'green'])
-        else:
-            self.cmap2 = mpl.colors.ListedColormap(self.diylist2)
+            self.hmap1 = self.hmap1d
 
-        if self.colormode11 == 1:
-            self.cmap3 = mpl.colors.ListedColormap(['blue', 'purple', 'cyan', 'yellow', 'green'])
-        else:
-            self.cmap3 = mpl.colors.ListedColormap(self.diylist3)
+            # try:
+        #     self.vtr1 = float(self.vtr1)
+        #     self.vtr3 = float(self.vtr3)
+        # except Exception:
+        #     QtWidgets.QMessageBox.information(self, 'Error', 'Input can only be a number!')
+        #     self.vtr1 = self.dev1d
+        #     self.vtr3 = self.dev2d
 
-        if self.trans1.text():
-            self.vtr1 = self.trans1.text()
-        else:
-            self.vtr1 = self.a
-        if self.trans2.text():
-            self.vtr2 = self.trans2.text()
-        else:
-            self.vtr2 = self.b
-        if self.trans3.text():
-            self.vtr3 = self.trans3.text()
-        else:
-            self.vtr3 = self.c
-
-        if not (0<=self.vtr1<=1 and 0<=self.vtr1<=1 and 0<=self.vtr1<=1):
+        if not (0<=self.vtr1<=1 and 0<=self.vtr3<=1):
             QtWidgets.QMessageBox.information(self, 'Error', 'Out of range!')
-            self.vtr1 = self.a
-            self.vtr2 = self.b
-            self.vtr3 = self.c
+            self.vtr1 = self.dev1d
+            self.vtr3 = self.dev2d
 
-        try:
-            self.vtr1 = float(self.vtr1)
-            self.vtr2 = float(self.vtr2)
-            self.vtr3 = float(self.vtr3)
-        except Exception:
-            QtWidgets.QMessageBox.information(self, 'Error', 'Input can only be a number!')
-            self.vtr1 = self.a
-            self.vtr2 = self.b
-            self.vtr3 = self.c
+        with open('colors1.json', 'r') as json_data:
+            self.colors = json.load(json_data)
 
-        # self.classnr = self.cnrbox.currentIndex
-        return self.cmap1, self.cmap2, self.cmap3, self.hmap1, self.hmap2, self.vtr1, self.vtr2, self.vtr3
+            self.colors['class2']['colors'] = self.diylist1
+            self.colors['class11']['colors'] = self.diylist3
+            self.colors['class8']['hatches'] = self.hmap1
+            self.colors['class11']['hatches'] = self.hmap2
+            self.colors['class2']['trans'][0] = self.vtr1
+            self.colors['class11']['trans'][0] = self.vtr3
+
+        with open('colors1.json', 'w') as json_data:
+            json_data.write(json.dumps(self.colors))
+
+        return self.cmap1, self.cmap3, self.hmap1, self.hmap2, self.vtr1, self.vtr3
 
     def getData(parent=None):
         dialog = Patches_window(parent)
         ok = dialog.exec_()
-        cmap1, cmap2, cmap3, hmap1, hmap2, vtr1, vtr2, vtr3 = dialog.ccsetting()
-        return cmap1, cmap2, cmap3, hmap1, hmap2, vtr1, vtr2, vtr3, ok
+        cmap1, cmap3, hmap1, hmap2, vtr1, vtr3 = dialog.ccsetting()
+        return cmap1, cmap3, hmap1, hmap2, vtr1, vtr3, ok
