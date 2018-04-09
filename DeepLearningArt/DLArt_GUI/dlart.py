@@ -1274,6 +1274,8 @@ class DeepLearningArtApp():
         Y = []
         for i in range(Y_test.shape[0]):
             Y.append(self.classMappingsForPrediction[Y_test[i]])
+            if Y_test[i] == 232:
+                print()
         Y_test = np.asarray(Y)
 
         # Y = np.zeros((Y_test.shape[0], 11))
@@ -1379,7 +1381,9 @@ class DeepLearningArtApp():
                 print('saving Model:{}'.format(modelSave))
 
                 if not self.doUnpatching:
+                    allPreds = predictions['prob_pre']
                     sio.savemat(modelSave, {'prob_pre': allPreds[0],
+                                            'Y_test': Y_test,
                                             'classification_prob_pre': allPreds[1],
                                             'loss_test': predictions['loss_test'],
                                             'segmentation_output_loss_test': predictions['segmentation_output_loss_test'],

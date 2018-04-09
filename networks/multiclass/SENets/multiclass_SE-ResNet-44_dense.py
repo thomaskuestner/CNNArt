@@ -123,6 +123,7 @@ def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, 
                 iEpochs=iEpochs,
                 dlart_handle=dlart_handle)
 
+    K.clear_session()
 
     # for iBatch in batchSizes:
     #     for iLearn in learningRates:

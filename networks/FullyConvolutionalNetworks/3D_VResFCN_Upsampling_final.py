@@ -258,6 +258,8 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
                 iEpochs=iEpochs,
                 dlart_handle=dlart_handle, usingClassification=usingClassification)
 
+    K.clear_session()
+
     # for iBatch in batchSizes:
     #     for iLearn in learningRates:
     #         fTrainInner(cnn,
@@ -470,7 +472,8 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
                                  'classification_output_loss_test': classification_output_loss_test,
                                  'segmentation_output_dice_coef_test': segmentation_output_dice_coef_test,
                                  'classification_output_acc_test': classification_output_acc_test,
-                                 'prob_test': prob_test})
+                                 'segmentation_predictions': prob_test[0],
+                                 'classification_predictions': prob_test[1]})
 
 
 

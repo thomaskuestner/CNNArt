@@ -11,7 +11,7 @@ from matplotlib.colors import ListedColormap
 import copy
 
 
-path = 'D:/med_data/MRPhysics/MA Results/FCN/FCN 3D-VResFCN-Upsampling final_3D_64x64x32_2018-03-30_10-47/FCN 3D-VResFCN-Upsampling final_3D_64x64x32_2018-03-30_10-47.mat'
+path = 'D:/med_data/MRPhysics/MA Results/FCN/FCN 3D-VResFCN-Upsampling final_3D_64x64x32_2018-04-05_13-24/FCN 3D-VResFCN-Upsampling final_3D_64x64x32_2018-04-05_13-24.mat'
 preds = sio.loadmat(path)
 
 # segmentation output

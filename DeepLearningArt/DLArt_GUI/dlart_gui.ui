@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1689</width>
-    <height>801</height>
+    <width>1694</width>
+    <height>922</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,7 +20,7 @@
       <x>10</x>
       <y>10</y>
       <width>1671</width>
-      <height>851</height>
+      <height>831</height>
      </rect>
     </property>
     <property name="autoFillBackground">
@@ -30,7 +30,7 @@
      <enum>QTabWidget::Rounded</enum>
     </property>
     <property name="currentIndex">
-     <number>5</number>
+     <number>2</number>
     </property>
     <widget class="QWidget" name="Tab_Multiclass">
      <attribute name="title">
@@ -558,9 +558,9 @@
       <widget class="QPushButton" name="Button_train">
        <property name="geometry">
         <rect>
-         <x>280</x>
-         <y>530</y>
-         <width>101</width>
+         <x>390</x>
+         <y>550</y>
+         <width>201</width>
          <height>41</height>
         </rect>
        </property>
@@ -570,25 +570,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Train</string>
-       </property>
-      </widget>
-      <widget class="QProgressBar" name="ProgressBar_training">
-       <property name="geometry">
-        <rect>
-         <x>390</x>
-         <y>540</y>
-         <width>171</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="value">
-        <number>100</number>
+        <string>Perform Training</string>
        </property>
       </widget>
       <widget class="QComboBox" name="ComboBox_DNNs">
@@ -929,9 +911,9 @@
       <widget class="QLineEdit" name="LineEdit_LearningRates">
        <property name="geometry">
         <rect>
-         <x>250</x>
+         <x>220</x>
          <y>121</y>
-         <width>121</width>
+         <width>151</width>
          <height>21</height>
         </rect>
        </property>
@@ -941,7 +923,7 @@
         </font>
        </property>
        <property name="text">
-        <string>0.1,0.01,0.001</string>
+        <string>0.01</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_3">
@@ -959,7 +941,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Learning Rates &quot;0.1,0.01,0.005&quot; :</string>
+        <string>Learning Rate/s:</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_12">
@@ -1099,9 +1081,9 @@
        <property name="geometry">
         <rect>
          <x>70</x>
-         <y>540</y>
+         <y>550</y>
          <width>61</width>
-         <height>31</height>
+         <height>41</height>
         </rect>
        </property>
        <item>
@@ -1133,10 +1115,10 @@
       <widget class="QLabel" name="label_15">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>540</y>
+         <x>20</x>
+         <y>550</y>
          <width>51</width>
-         <height>31</height>
+         <height>41</height>
         </rect>
        </property>
        <property name="font">
@@ -1204,17 +1186,344 @@
        </property>
       </widget>
      </widget>
-     <widget class="QGroupBox" name="groupBox_3">
+    </widget>
+    <widget class="QWidget" name="Tab_Prediction">
+     <attribute name="title">
+      <string>Prediction</string>
+     </attribute>
+     <widget class="QGroupBox" name="groupBox_7">
       <property name="geometry">
        <rect>
-        <x>1159</x>
-        <y>9</y>
-        <width>431</width>
-        <height>621</height>
+        <x>10</x>
+        <y>10</y>
+        <width>1651</width>
+        <height>91</height>
        </rect>
       </property>
       <property name="title">
-       <string>Results and Prediction</string>
+       <string>Dataset for Prediction</string>
+      </property>
+      <widget class="QPushButton" name="Button_selectDataset_prediction">
+       <property name="geometry">
+        <rect>
+         <x>520</x>
+         <y>20</y>
+         <width>151</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Select Dataset</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="Label_currentDataset_prediction">
+       <property name="geometry">
+        <rect>
+         <x>520</x>
+         <y>60</y>
+         <width>491</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>No Dataset is selected for Prediction!</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="Button_selectModel_prediction">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>20</y>
+         <width>151</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Select Model</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="Label_currentModel_prediction">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>60</y>
+         <width>491</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>No model is selected for Prediction!</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="Button_predict">
+       <property name="geometry">
+        <rect>
+         <x>1420</x>
+         <y>20</y>
+         <width>221</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Predict</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="CheckBox_Unpatching">
+       <property name="geometry">
+        <rect>
+         <x>1420</x>
+         <y>60</y>
+         <width>151</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Unpatching</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_16">
+       <property name="geometry">
+        <rect>
+         <x>1530</x>
+         <y>60</y>
+         <width>41</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>GPU:</string>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="ComboBox_GPU_Prediction">
+       <property name="geometry">
+        <rect>
+         <x>1580</x>
+         <y>60</y>
+         <width>61</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <item>
+        <property name="text">
+         <string>0</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>1</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>2</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>3</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>4</string>
+        </property>
+       </item>
+      </widget>
+     </widget>
+     <widget class="QWidget" name="verticalLayoutWidget_3">
+      <property name="geometry">
+       <rect>
+        <x>390</x>
+        <y>110</y>
+        <width>731</width>
+        <height>681</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_conf_matrix"/>
+     </widget>
+     <widget class="QWidget" name="verticalLayoutWidget_4">
+      <property name="geometry">
+       <rect>
+        <x>1130</x>
+        <y>110</y>
+        <width>531</width>
+        <height>681</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_accuracy"/>
+     </widget>
+     <widget class="QTextEdit" name="textEdit_summary">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>110</y>
+        <width>371</width>
+        <height>681</height>
+       </rect>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+      <property name="html">
+       <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab">
+     <attribute name="title">
+      <string>Artefact Map</string>
+     </attribute>
+     <widget class="QWidget" name="verticalLayoutWidget_5">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>1651</width>
+        <height>731</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="VerticalLayout_ArtifactMaps"/>
+     </widget>
+     <widget class="QSpinBox" name="SpinBox_SliceSelect">
+      <property name="geometry">
+       <rect>
+        <x>80</x>
+        <y>760</y>
+        <width>51</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="minimum">
+       <number>0</number>
+      </property>
+      <property name="maximum">
+       <number>40</number>
+      </property>
+      <property name="singleStep">
+       <number>1</number>
+      </property>
+      <property name="value">
+       <number>10</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_18">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>760</y>
+        <width>51</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Slice:</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_2">
+     <attribute name="title">
+      <string>Segmentation Masks</string>
+     </attribute>
+     <widget class="QWidget" name="verticalLayoutWidget_6">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>1641</width>
+        <height>771</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_SegmentationMasks"/>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_3">
+     <attribute name="title">
+      <string>Multi-class Visualisation</string>
+     </attribute>
+     <widget class="QWidget" name="verticalLayoutWidget_7">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>1321</width>
+        <height>771</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_multiclassVisualisation"/>
+     </widget>
+     <widget class="QWidget" name="verticalLayoutWidget_8">
+      <property name="geometry">
+       <rect>
+        <x>1380</x>
+        <y>70</y>
+        <width>271</width>
+        <height>721</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_multiclassSelection"/>
+     </widget>
+     <widget class="QPushButton" name="Button_multiclassVisualisation">
+      <property name="geometry">
+       <rect>
+        <x>1460</x>
+        <y>20</y>
+        <width>191</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Multi-class Visualisation</string>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="spinBox_sliceSelection_multiclassVisualisation">
+      <property name="geometry">
+       <rect>
+        <x>1400</x>
+        <y>20</y>
+        <width>51</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="maximum">
+       <number>40</number>
+      </property>
+      <property name="value">
+       <number>10</number>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_17">
+      <property name="geometry">
+       <rect>
+        <x>1350</x>
+        <y>20</y>
+        <width>41</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Slice:</string>
       </property>
      </widget>
     </widget>
@@ -1226,9 +1535,9 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>20</y>
+        <y>10</y>
         <width>521</width>
-        <height>401</height>
+        <height>411</height>
        </rect>
       </property>
       <property name="title">
@@ -1632,323 +1941,6 @@
       </widget>
      </widget>
     </widget>
-    <widget class="QWidget" name="Tab_Prediction">
-     <attribute name="title">
-      <string>Prediction</string>
-     </attribute>
-     <widget class="QGroupBox" name="groupBox_7">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>10</y>
-        <width>1651</width>
-        <height>91</height>
-       </rect>
-      </property>
-      <property name="title">
-       <string>Dataset for Prediction</string>
-      </property>
-      <widget class="QPushButton" name="Button_selectDataset_prediction">
-       <property name="geometry">
-        <rect>
-         <x>520</x>
-         <y>20</y>
-         <width>151</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Select Dataset</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="Label_currentDataset_prediction">
-       <property name="geometry">
-        <rect>
-         <x>520</x>
-         <y>60</y>
-         <width>491</width>
-         <height>20</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>No Dataset is selected for Prediction!</string>
-       </property>
-      </widget>
-      <widget class="QPushButton" name="Button_selectModel_prediction">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>20</y>
-         <width>151</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Select Model</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="Label_currentModel_prediction">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>60</y>
-         <width>491</width>
-         <height>20</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>No model is selected for Prediction!</string>
-       </property>
-      </widget>
-      <widget class="QPushButton" name="Button_predict">
-       <property name="geometry">
-        <rect>
-         <x>1420</x>
-         <y>20</y>
-         <width>151</width>
-         <height>31</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Predict</string>
-       </property>
-      </widget>
-      <widget class="QCheckBox" name="CheckBox_Unpatching">
-       <property name="geometry">
-        <rect>
-         <x>1420</x>
-         <y>60</y>
-         <width>151</width>
-         <height>20</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Unpatching</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_16">
-       <property name="geometry">
-        <rect>
-         <x>1530</x>
-         <y>60</y>
-         <width>41</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>GPU:</string>
-       </property>
-      </widget>
-      <widget class="QComboBox" name="ComboBox_GPU_Prediction">
-       <property name="geometry">
-        <rect>
-         <x>1580</x>
-         <y>60</y>
-         <width>61</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <item>
-        <property name="text">
-         <string>0</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>1</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>2</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>3</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>4</string>
-        </property>
-       </item>
-      </widget>
-     </widget>
-     <widget class="QWidget" name="verticalLayoutWidget_3">
-      <property name="geometry">
-       <rect>
-        <x>330</x>
-        <y>110</y>
-        <width>751</width>
-        <height>601</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout_conf_matrix"/>
-     </widget>
-     <widget class="QWidget" name="verticalLayoutWidget_4">
-      <property name="geometry">
-       <rect>
-        <x>1090</x>
-        <y>110</y>
-        <width>571</width>
-        <height>601</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout_accuracy"/>
-     </widget>
-     <widget class="QTextEdit" name="textEdit_summary">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>110</y>
-        <width>311</width>
-        <height>601</height>
-       </rect>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-      <property name="html">
-       <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:7.8pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QWidget" name="tab">
-     <attribute name="title">
-      <string>Artefact Map</string>
-     </attribute>
-     <widget class="QWidget" name="verticalLayoutWidget_5">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>10</y>
-        <width>1651</width>
-        <height>651</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="VerticalLayout_ArtifactMaps"/>
-     </widget>
-     <widget class="QSpinBox" name="SpinBox_SliceSelect">
-      <property name="geometry">
-       <rect>
-        <x>90</x>
-        <y>670</y>
-        <width>51</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="minimum">
-       <number>0</number>
-      </property>
-      <property name="maximum">
-       <number>40</number>
-      </property>
-      <property name="singleStep">
-       <number>1</number>
-      </property>
-      <property name="value">
-       <number>10</number>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QWidget" name="tab_2">
-     <attribute name="title">
-      <string>Segmentation Masks</string>
-     </attribute>
-     <widget class="QWidget" name="verticalLayoutWidget_6">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>10</y>
-        <width>1641</width>
-        <height>701</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout_SegmentationMasks"/>
-     </widget>
-    </widget>
-    <widget class="QWidget" name="tab_3">
-     <attribute name="title">
-      <string>Multi-class Visualisation</string>
-     </attribute>
-     <widget class="QWidget" name="verticalLayoutWidget_7">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>20</y>
-        <width>1321</width>
-        <height>691</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout_multiclassVisualisation"/>
-     </widget>
-     <widget class="QWidget" name="verticalLayoutWidget_8">
-      <property name="geometry">
-       <rect>
-        <x>1380</x>
-        <y>70</y>
-        <width>271</width>
-        <height>641</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout_multiclassSelection"/>
-     </widget>
-     <widget class="QPushButton" name="Button_multiclassVisualisation">
-      <property name="geometry">
-       <rect>
-        <x>1440</x>
-        <y>20</y>
-        <width>211</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Multi-class Visualisation</string>
-      </property>
-     </widget>
-     <widget class="QSpinBox" name="spinBox_sliceSelection_multiclassVisualisation">
-      <property name="geometry">
-       <rect>
-        <x>1380</x>
-        <y>30</y>
-        <width>51</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="minimum">
-       <number>1</number>
-      </property>
-      <property name="maximum">
-       <number>40</number>
-      </property>
-      <property name="value">
-       <number>10</number>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_17">
-      <property name="geometry">
-       <rect>
-        <x>1340</x>
-        <y>30</y>
-        <width>41</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Slice:</string>
-      </property>
-     </widget>
-    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
@@ -1956,8 +1948,8 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1689</width>
-     <height>21</height>
+     <width>1694</width>
+     <height>26</height>
     </rect>
    </property>
   </widget>

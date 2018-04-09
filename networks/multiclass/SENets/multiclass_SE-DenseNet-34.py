@@ -25,7 +25,7 @@ from keras.callbacks import ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint
 from keras.models import model_from_json
 from keras.regularizers import l2  # , activity_l2
-
+from keras import backend as K
 from keras.optimizers import SGD
 from networks.multiclass.SENets.deep_residual_learning_blocks import *
 from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
@@ -124,6 +124,7 @@ def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, 
                 iEpochs=iEpochs,
                 dlart_handle=dlart_handle)
 
+    K.clear_session()
 
     # for iBatch in batchSizes:
     #     for iLearn in learningRates:
