@@ -1,6 +1,7 @@
 import os
 from skimage.measure import compare_ssim as ssim
 from sklearn.metrics import mean_squared_error
+from skimage.restoration import denoise_tv_chambolle, denoise_bilateral
 import matplotlib as mpl
 mpl.use('Agg')
 
@@ -36,6 +37,14 @@ class CustomLossLayer(Layer):
         mse_loss_ref2ref, mse_loss_art2ref = compute_mse_loss(self.dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
         self.add_loss(self.dHyper['mse_weight'] * (self.dHyper['loss_ref2ref']*mse_loss_ref2ref + self.dHyper['loss_art2ref']*mse_loss_art2ref))
 
+        # compute gradient entropy
+        ge_ref2ref, ge_art2ref = compute_gradient_entropy(self.dHyper, decoded_ref2ref, decoded_art2ref, self.patchSize)
+        self.add_loss(self.dHyper['ge_weight'] * (self.dHyper['loss_ref2ref']*ge_ref2ref + self.dHyper['loss_art2ref']*ge_art2ref))
+
+        # compute TV loss
+        tv_ref2ref, tv_art2ref = compute_tv_loss(self.dHyper, decoded_ref2ref, decoded_art2ref, self.patchSize)
+        self.add_loss(self.dHyper['tv_weight'] * (self.dHyper['loss_ref2ref']*tv_ref2ref + self.dHyper['loss_art2ref']*tv_art2ref))
+
         # compute perceptual loss
         perceptual_loss_ref2ref, perceptual_loss_art2ref = compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, self.patchSize, self.dHyper['pl_network'],self.dHyper['loss_model'])
         self.add_loss(self.dHyper['perceptual_weight'] * (self.dHyper['loss_ref2ref'] * perceptual_loss_ref2ref + self.dHyper['loss_art2ref'] * perceptual_loss_art2ref))
@@ -49,17 +58,17 @@ def createModel(patchSize, dHyper):
     x_art = Input(shape=(1, patchSize[0], patchSize[1]))
 
     # create respective encoders
-    encoded_ref = encode(x_ref, patchSize, dHyper['architecture'])
-    encoded_art = encode(x_art, patchSize, dHyper['architecture'])
+    encoded_ref = encode(x_ref, patchSize, dHyper['bn'])
+    encoded_art = encode(x_art, patchSize, dHyper['bn'])
 
     # concatenate the encoded features together
     combined = concatenate([encoded_ref, encoded_art], axis=0)
 
     # create the shared encoder
-    z, z_mean, z_log_var = encode_shared(combined, patchSize, dHyper['architecture'])
+    z, z_mean, z_log_var = encode_shared(combined, patchSize, dHyper['bn'])
 
     # create the decoder
-    decoded = decode(z, patchSize, dHyper['dropout'], dHyper['architecture'])
+    decoded = decode(z, patchSize, dHyper['bn'])
 
     # separate the concatenated images
     decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
@@ -98,6 +107,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
 
     vae = createModel(patchSize, dHyper)
     vae.compile(optimizer=Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0), loss=None)
+    # vae.compile(optimizer=RMSprop(lr=lr), loss=None)
     vae.summary()
 
     print('Training with epochs {} batch size {} learning rate {}'.format(epochs, batchSize, lr))
@@ -113,7 +123,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
 
 
     if dHyper['augmentation']:
-        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_augmented.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
+        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_augmentation.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
 
         lossPlot_file = weights_file[:-3] + '.png'
         plotLoss = PlotLosses(lossPlot_file)
@@ -175,12 +185,28 @@ def fPredict(test_ref, test_art, dParam, dHyper):
         test_ref = fRigidUnpatchingCorrection2D(dHyper['actualSize'], test_ref, dParam['patchOverlap'])
         test_art = fRigidUnpatchingCorrection2D(dHyper['actualSize'], test_art, dParam['patchOverlap'])
         predict_art = fRigidUnpatchingCorrection2D(dHyper['actualSize'], predict_art, dParam['patchOverlap'], 'average')
+
+        # post TV processing
+        predict_art_tv_1 = denoise_tv_chambolle(predict_art, weight=1)
+        predict_art_tv_3 = denoise_tv_chambolle(predict_art, weight=3)
+        predict_art_tv_5 = denoise_tv_chambolle(predict_art, weight=5)
+
+        # post TV processing
+        predict_art_channel_last = np.transpose(predict_art, (1, 2, 0))
+        predict_art_bilateral_1 = denoise_bilateral(predict_art_channel_last, sigma_color=0.1)
+        predict_art_bilateral_5 = denoise_bilateral(predict_art_channel_last, sigma_color=0.5)
+        predict_art_bilateral_8 = denoise_bilateral(predict_art_channel_last, sigma_color=0.8)
+        predict_art_bilateral_1 = np.transpose(predict_art_bilateral_1, (2, 0, 1))
+        predict_art_bilateral_5 = np.transpose(predict_art_bilateral_5, (2, 0, 1))
+        predict_art_bilateral_8 = np.transpose(predict_art_bilateral_8, (2, 0, 1))
+
         if dHyper['evaluate']:
-            fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 5), sharex=True, sharey=True)
+            fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(10, 10), sharex=True, sharey=True)
             ax = axes.ravel()
             plt.gray()
             label = 'MSE: {:.2f}, SSIM: {:.2f}'
             for i in range(test_ref.shape[0]):
+                # orignal reconstructed images
                 ax[0].imshow(test_ref[i])
                 ax[0].set_xlabel(label.format(mean_squared_error(test_ref[i], test_ref[i]), ssim(test_ref[i], test_ref[i], data_range=(test_ref[i].max() - test_ref[i].min()))))
                 ax[0].set_title('reference image')
@@ -191,7 +217,33 @@ def fPredict(test_ref, test_art, dParam, dHyper):
 
                 ax[2].imshow(predict_art[i])
                 ax[2].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art[i]), ssim(test_ref[i], predict_art[i], data_range=(predict_art[i].max() - predict_art[i].min()))))
-                ax[2].set_title('corrected image')
+                ax[2].set_title('original reconstructed image')
+
+                # post TV-processing
+                ax[3].imshow(predict_art_tv_1[i])
+                ax[3].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art_tv_1[i]), ssim(test_ref[i], predict_art_tv_1[i], data_range=(predict_art_tv_1[i].max() - predict_art_tv_1[i].min()))))
+                ax[3].set_title('post TV weight 1')
+
+                ax[4].imshow(predict_art_tv_3[i])
+                ax[4].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art_tv_3[i]), ssim(test_ref[i], predict_art_tv_3[i], data_range=(predict_art_tv_3[i].max() - predict_art_tv_3[i].min()))))
+                ax[4].set_title('post TV weight 3')
+
+                ax[5].imshow(predict_art_tv_5[i])
+                ax[5].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art_tv_5[i]), ssim(test_ref[i], predict_art_tv_5[i], data_range=(predict_art_tv_5[i].max() - predict_art_tv_5[i].min()))))
+                ax[5].set_title('post TV weight 5')
+
+                # post TV-processing
+                ax[6].imshow(predict_art_bilateral_1[i])
+                ax[6].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art_bilateral_1[i]), ssim(test_ref[i], predict_art_bilateral_1[i], data_range=(predict_art_bilateral_1[i].max() - predict_art_bilateral_1[i].min()))))
+                ax[6].set_title('post bilateral weight 0.1')
+
+                ax[7].imshow(predict_art_bilateral_5[i])
+                ax[7].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art_bilateral_5[i]), ssim(test_ref[i], predict_art_bilateral_5[i], data_range=(predict_art_bilateral_5[i].max() - predict_art_bilateral_5[i].min()))))
+                ax[7].set_title('post bilateral weight 0.5')
+
+                ax[8].imshow(predict_art_bilateral_8[i])
+                ax[8].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art_bilateral_8[i]), ssim(test_ref[i], predict_art_bilateral_8[i], data_range=(predict_art_bilateral_8[i].max() - predict_art_bilateral_8[i].min()))))
+                ax[8].set_title('post bilateral weight 0.8')
 
                 if dParam['lSave']:
                     plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')

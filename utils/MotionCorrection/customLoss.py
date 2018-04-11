@@ -4,10 +4,11 @@ from keras.metrics import mse
 from keras import backend as K
 from keras.applications.vgg19 import VGG19
 from keras.models import Model, load_model
+import numpy as np
 
 
 def preprocessing(inputs):
-    output = Lambda(lambda x: (x - K.min(x)) * 255 / (K.max(x) - K.min(x)), output_shape=inputs._keras_shape)(inputs)
+    output = Lambda(lambda x: (x - K.min(x)) * 255 / (K.max(x) - K.min(x) + K.epsilon()), output_shape=inputs._keras_shape)(inputs)
     # output = 255 * inputs
     K.update_sub(output[:, 0, :, :], 123.68)
     K.update_sub(output[:, 1, :, :], 116.779)
@@ -30,6 +31,38 @@ def compute_mse_loss(dHyper, x_ref, decoded_ref2ref, decoded_art2ref):
                          Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_art2ref._keras_shape)(decoded_art2ref)])
 
     return loss_ref2ref, loss_art2ref
+
+
+def compute_gradient_entropy(dHyper, decoded_ref2ref, decoded_art2ref, patchSize):
+    decoded_ref2ref = Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_ref2ref._keras_shape)(decoded_ref2ref)
+    a_ref2ref = K.square(decoded_ref2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1] - decoded_ref2ref[:, :, 1:, :patchSize[1] - 1])
+    b_ref2ref = K.square(decoded_ref2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1] - decoded_ref2ref[:, :, :patchSize[0] - 1, 1:])
+    # (128, 1, 47, 47)
+    gradient_ref2ref = K.sqrt(a_ref2ref + b_ref2ref + K.epsilon())
+    # (128,)
+    sum_gradient_ref2ref = K.sum(gradient_ref2ref, [1, 2, 3])
+    # (128, 1, 1, 1)
+    sum_gradient_ref2ref = K.reshape(sum_gradient_ref2ref, shape=(gradient_ref2ref.shape[0], 1, 1, 1))
+    # (128, 1, 47, 47)
+    h_ref2ref = gradient_ref2ref/sum_gradient_ref2ref
+    # (1,)
+    ge_ref2ref = K.mean(K.sum(-h_ref2ref * K.log(K.clip(h_ref2ref, K.epsilon(), None) + 1.), [1, 2, 3]))
+
+    decoded_art2ref = Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_art2ref._keras_shape)(decoded_art2ref)
+    a_art2ref = K.square(decoded_art2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1] - decoded_art2ref[:, :, 1:, :patchSize[1] - 1])
+    b_art2ref = K.square(decoded_art2ref[:, :, :patchSize[0] - 1, :patchSize[1] - 1] - decoded_art2ref[:, :, :patchSize[0] - 1, 1:])
+    # (128, 1, 47, 47)
+    gradient_art2ref = K.sqrt(a_art2ref + b_art2ref + K.epsilon())
+    # (128,)
+    sum_gradient_art2ref = K.sum(gradient_art2ref, [1, 2, 3])
+    # (128, 1, 1, 1)
+    sum_gradient_art2ref = K.reshape(sum_gradient_art2ref, shape=(gradient_art2ref.shape[0], 1, 1, 1))
+    # (128, 1, 47, 47)
+    h_art2ref = gradient_art2ref/sum_gradient_art2ref
+    # (1,)
+    ge_art2ref = K.mean(K.sum(-h_art2ref * K.log(K.clip(h_art2ref, K.epsilon(), None) + 1.), [1, 2, 3]))
+
+    return ge_ref2ref, ge_art2ref
 
 
 def compute_tv_loss(dHyper, decoded_ref2ref, decoded_art2ref, patchSize):

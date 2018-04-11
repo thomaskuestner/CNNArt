@@ -38,6 +38,14 @@ class CustomLossLayer(Layer):
         mse_loss_ref2ref, mse_loss_art2ref = compute_mse_loss(self.dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
         self.add_loss(self.dHyper['mse_weight'] * (self.dHyper['loss_ref2ref']*mse_loss_ref2ref + self.dHyper['loss_art2ref']*mse_loss_art2ref))
 
+        # compute gradient entropy
+        ge_ref2ref, ge_art2ref = compute_gradient_entropy(self.dHyper, decoded_ref2ref, decoded_art2ref, self.patchSize)
+        self.add_loss(self.dHyper['ge_weight'] * (self.dHyper['loss_ref2ref']*ge_ref2ref + self.dHyper['loss_art2ref']*ge_art2ref))
+
+        # compute TV loss
+        tv_ref2ref, tv_art2ref = compute_tv_loss(self.dHyper, decoded_ref2ref, decoded_art2ref, self.patchSize)
+        self.add_loss(self.dHyper['tv_weight'] * (self.dHyper['loss_ref2ref']*tv_ref2ref + self.dHyper['loss_art2ref']*tv_art2ref))
+
         # compute perceptual loss
         perceptual_loss_ref2ref, perceptual_loss_art2ref = compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, self.patchSize, self.dHyper['pl_network'],self.dHyper['loss_model'])
         self.add_loss(self.dHyper['perceptual_weight'] * (self.dHyper['loss_ref2ref'] * perceptual_loss_ref2ref + self.dHyper['loss_art2ref'] * perceptual_loss_art2ref))
@@ -117,6 +125,8 @@ def fTrain(dData, dParam, dHyper):
 
 
 def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
+    TRAINING_RATIO = 1
+
     train_ref = dData['train_ref']
     train_art = dData['train_art']
     test_ref = dData['test_ref']
@@ -127,9 +137,6 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
     test_ref = np.expand_dims(test_ref, axis=1)
     test_art = np.expand_dims(test_art, axis=1)
 
-    # data preprocessing
-    datagen = ImageDataGenerator()
-
     # optimizor
     optimizer_D = Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     optimizer_G = Adam(lr=1e-5, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
@@ -138,7 +145,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
     vae = build_vae(patchSize, dHyper)
     vae.compile(optimizer=optimizer_G, loss=None)
 
-    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
+    weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_BN.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
     vae.load_weights(weights_file)
 
     # create and compile discriminator model
@@ -152,76 +159,43 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
     validity_art = D(fake_art)
     combined = Model(vae.inputs, [validity_ref, validity_art])
     combined.compile(loss=['binary_crossentropy', 'binary_crossentropy'],
-                     loss_weights=[400, 600],
+                     loss_weights=[200, 300],
                      optimizer=optimizer_G)
 
-    start_time = datetime.datetime.now()
+    for epoch in range(epochs):
+        print("Epoch: %d" % epoch)
+        print("Number of batches: %d" % int(train_ref.shape[0] // batchSize))
+        minibatches_size = batchSize * TRAINING_RATIO
 
-    step = 0
+        for i in range(int(train_ref.shape[0] // minibatches_size)):
+            train_ref_minibatches = train_ref[i * minibatches_size:(i + 1) * minibatches_size]
+            train_art_minibatches = train_art[i * minibatches_size:(i + 1) * minibatches_size]
+            for j in range(TRAINING_RATIO):
+                ref_batch = train_ref_minibatches[j * batchSize:(j + 1) * batchSize]
+                art_batch = train_art_minibatches[j * batchSize:(j + 1) * batchSize]
 
-    for train_ref_batch, train_art_batch in datagen.flow(train_ref, train_art, batch_size=batchSize):
-        fake_ref, fake_art = vae.predict([train_ref_batch, train_art_batch])
-        valid = np.ones(shape=(train_ref_batch.shape[0], 1))
-        fake = np.zeros(shape=(train_ref_batch.shape[0], 1))
+                fake_ref, fake_art = vae.predict([ref_batch, art_batch])
+                valid = np.ones(shape=(ref_batch.shape[0], 1))
+                fake = np.zeros(shape=(ref_batch.shape[0], 1))
 
-        d_loss_real = D.train_on_batch(train_ref_batch, valid)
-        d_loss_fake_ref = D.train_on_batch(fake_ref, fake)
-        d_loss_fake_art = D.train_on_batch(fake_art, fake)
-        # d_loss = 0.5 * np.add(d_loss_real, d_loss_fake_ref, d_loss_fake_art)
-        print('==========================')
-        print('Training Discriminator')
-        print('loss real: ' + str(d_loss_real[0]) + '\t\taccuracy: ' + str(d_loss_real[1]))
-        print('loss ref2ref: ' + str(d_loss_fake_ref[0]) + '\taccuracy: ' + str(d_loss_fake_ref[1]))
-        print('loss art2ref: ' + str(d_loss_fake_art[0]) + '\taccuracy: ' + str(d_loss_fake_art[1]))
-        print('==========================')
+                d_loss_real = D.train_on_batch(ref_batch, valid)
+                d_loss_fake_ref = D.train_on_batch(fake_ref, fake)
+                d_loss_fake_art = D.train_on_batch(fake_art, fake)
 
-        if step >= 150:
-            # ------------------
-            #  save images every 50 steps
-            # ------------------
-            if step % 200 == 0:
-                # save images after every epoch
+                # --------------------------------
+                #  Train Discriminator every batch
+                # --------------------------------
                 print('==========================')
-                print('saving testing images...')
+                print('Training Discriminator')
+                print('loss real: ' + str(d_loss_real[0]) + '\t\taccuracy: ' + str(d_loss_real[1]))
+                print('loss ref2ref: ' + str(d_loss_fake_ref[0]) + '\taccuracy: ' + str(d_loss_fake_ref[1]))
+                print('loss art2ref: ' + str(d_loss_fake_art[0]) + '\taccuracy: ' + str(d_loss_fake_art[1]))
                 print('==========================')
-                curDir = sOutPath + os.sep + 'result' + os.sep + str(step)
-                os.mkdir(curDir)
-                predict_ref, predict_art = vae.predict([test_ref, test_art], batchSize, verbose=1)
-                test_ref_sample = np.squeeze(test_ref, axis=1)
-                test_art_sample = np.squeeze(test_art, axis=1)
-                predict_art = np.squeeze(predict_art, axis=1)
-                test_ref_sample = fRigidUnpatchingCorrection2D(dHyper['actualSize'], test_ref_sample, 0.8)
-                test_art_sample = fRigidUnpatchingCorrection2D(dHyper['actualSize'], test_art_sample, 0.8)
-                predict_art = fRigidUnpatchingCorrection2D(dHyper['actualSize'], predict_art, 0.8, 'average')
-                fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 5), sharex=True, sharey=True)
-                ax = axes.ravel()
-                plt.gray()
-                label = 'MSE: {:.2f}, SSIM: {:.2f}'
-                for i in range(test_ref_sample.shape[0]):
-                    ax[0].imshow(test_ref_sample[i])
-                    ax[0].set_xlabel(label.format(mean_squared_error(test_ref_sample[i], test_ref_sample[i]),
-                                                  ssim(test_ref_sample[i], test_ref_sample[i],
-                                                       data_range=(test_ref_sample[i].max() - test_ref_sample[i].min()))))
-                    ax[0].set_title('reference image')
 
-                    ax[1].imshow(test_art_sample[i])
-                    ax[1].set_xlabel(label.format(mean_squared_error(test_ref_sample[i], test_art_sample[i]),
-                                                  ssim(test_ref_sample[i], test_art_sample[i],
-                                                       data_range=(test_art_sample[i].max() - test_art_sample[i].min()))))
-                    ax[1].set_title('motion-affected image')
-
-                    ax[2].imshow(predict_art[i])
-                    ax[2].set_xlabel(label.format(mean_squared_error(test_ref_sample[i], predict_art[i]),
-                                                  ssim(test_ref_sample[i], predict_art[i],
-                                                       data_range=(predict_art[i].max() - predict_art[i].min()))))
-                    ax[2].set_title('corrected image')
-
-                    plt.savefig(curDir + os.sep + str(i) + '.png')
-
-            # ------------------
-            #  Train Generator
-            # ------------------
-            g_loss = combined.train_on_batch([train_ref_batch, train_art_batch], [valid, valid])
+            # --------------------------------
+            #  Train Generator every 5 batches
+            # --------------------------------
+            g_loss = combined.train_on_batch([ref_batch, art_batch], [valid, valid])
             print('==========================')
             print('Training Generator')
             print('loss generator: ' + str(g_loss[0]))
@@ -229,8 +203,46 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
             print('loss art2ref: ' + str(g_loss[2]))
             print('==========================')
 
-        elapsed_time = datetime.datetime.now() - start_time
-        # Plot the progress
-        step += 1
-        print ("%d step: %s" % (step, elapsed_time))
-        print ("progress: %f%%" % ((step*batchSize)*100.0/train_ref.shape[0]))
+            # progress bar
+            print ("progress: %d/%d" % (i * minibatches_size, train_ref.shape[0]))
+
+
+        # -------------------------
+        #  save images every epoch
+        # -------------------------
+        print('==========================')
+        print('saving testing images...')
+        print('==========================')
+        curDir = sOutPath + os.sep + 'result' + os.sep + str(epoch)
+        os.mkdir(curDir)
+        predict_ref, predict_art = vae.predict([test_ref, test_art], batchSize, verbose=1)
+        test_ref_sample = np.squeeze(test_ref, axis=1)
+        test_art_sample = np.squeeze(test_art, axis=1)
+        predict_art = np.squeeze(predict_art, axis=1)
+        test_ref_sample = fRigidUnpatchingCorrection2D(dHyper['actualSize'], test_ref_sample, 0.8)
+        test_art_sample = fRigidUnpatchingCorrection2D(dHyper['actualSize'], test_art_sample, 0.8)
+        predict_art = fRigidUnpatchingCorrection2D(dHyper['actualSize'], predict_art, 0.8, 'average')
+        fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 5), sharex=True, sharey=True)
+        ax = axes.ravel()
+        plt.gray()
+        label = 'MSE: {:.2f}, SSIM: {:.2f}'
+        for i in range(test_ref_sample.shape[0]):
+            ax[0].imshow(test_ref_sample[i])
+            ax[0].set_xlabel(label.format(mean_squared_error(test_ref_sample[i], test_ref_sample[i]),
+                                          ssim(test_ref_sample[i], test_ref_sample[i],
+                                               data_range=(test_ref_sample[i].max() - test_ref_sample[i].min()))))
+            ax[0].set_title('reference image')
+
+            ax[1].imshow(test_art_sample[i])
+            ax[1].set_xlabel(label.format(mean_squared_error(test_ref_sample[i], test_art_sample[i]),
+                                          ssim(test_ref_sample[i], test_art_sample[i],
+                                               data_range=(test_art_sample[i].max() - test_art_sample[i].min()))))
+            ax[1].set_title('motion-affected image')
+
+            ax[2].imshow(predict_art[i])
+            ax[2].set_xlabel(label.format(mean_squared_error(test_ref_sample[i], predict_art[i]),
+                                          ssim(test_ref_sample[i], predict_art[i],
+                                               data_range=(predict_art[i].max() - predict_art[i].min()))))
+            ax[2].set_title('corrected image')
+
+            plt.savefig(curDir + os.sep + str(i) + '.png')
