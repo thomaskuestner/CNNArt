@@ -77,7 +77,7 @@ def fUnpatch3D(prob_list, patchSize, patchOverlap, actualSize, iClass):
     numVal = np.zeros((paddedSize[0], paddedSize[1], paddedSize[2]))
 
     for iIndex in range(0, prob_list.shape[0], 1):
-        #print(iIndex)
+        print(iIndex)
         lMask = np.zeros((paddedSize[0], paddedSize[1], paddedSize[2]))
         lMask[iCorner[0]: iCorner[0] + patchSize[0], iCorner[1]: iCorner[1] + patchSize[1], iCorner[2]: iCorner[2] + patchSize[2]] = 1
         unpatchImg[iCorner[0]: iCorner[0] + patchSize[0], iCorner[1]: iCorner[1] + patchSize[1], iCorner[2]: iCorner[2] + patchSize[2]] = np.add(unpatchImg[iCorner[0]: iCorner[0] + patchSize[0], iCorner[1]: iCorner[1] + patchSize[1], iCorner[2]: iCorner[2] + patchSize[2]], prob_list[iIndex,iClass])
@@ -222,7 +222,6 @@ def fPatchToImage(actual_size, allPatches, patchOverlap):
     unpatchImg = np.zeros((num_4a, width_pad, height_pad, depth_pad))
     dividor_grid = np.zeros((num_4a, width_pad, height_pad, depth_pad))
 
-
     for i4a in range(num_4a):
         for slice in range(num_slices):
             for col in range(num_cols):
@@ -235,3 +234,48 @@ def fPatchToImage(actual_size, allPatches, patchOverlap):
     unpatchImg = np.divide(unpatchImg, dividor_grid)
     unpatchImg_cropped = unpatchImg[:,(width_pad - width) / 2: width_pad - (width_pad - width) / 2, (height_pad - height) / 2: height_pad - (height_pad - height) / 2, (depth_pad - depth) / 2: depth_pad - (depth_pad - depth) / 2]
     return unpatchImg_cropped
+
+
+def fUnpatchLabel(prob_list, patchSize, patchOverlap, actualSize, iClass):
+    iCorner = [iClass, 0, 0, 0]
+    dOverlap = np.multiply(patchSize, patchOverlap).astype(int)
+    dNotOverlap = np.round(np.multiply(patchSize, (1 - patchOverlap))).astype(int)
+    paddedSize = [int(math.ceil((actualSize[0] - dOverlap[0]) * 1.0/ dNotOverlap[0]) * dNotOverlap[0] + dOverlap[0]), int(math.ceil((actualSize[1] - dOverlap[1]) * 1.0/ (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1]), int(math.ceil((actualSize[2] - dOverlap[2]) * 1.0/ (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2])]
+
+    num_rows, num_cols, num_slices = int(math.ceil((paddedSize[1] - patchSize[1]) * 1.0 / dNotOverlap[1]) + 1), int(
+        math.ceil((paddedSize[0] - patchSize[0]) * 1.0 / dNotOverlap[0]) + 1), int(
+        math.ceil((paddedSize[2] - patchSize[2]) * 1.0 / dNotOverlap[2]) + 1)
+    num_4a = prob_list.shape[0] / (num_rows * num_cols * num_slices)
+    prob_list = np.reshape(prob_list, (num_4a, -1, 2))
+    unpatchImg = np.zeros((num_4a, paddedSize[0], paddedSize[1], paddedSize[2]))
+    numVal = np.zeros((num_4a, paddedSize[0], paddedSize[1], paddedSize[2]))
+
+    for i4a in range(num_4a - 1):
+        for iIndex in range(0, prob_list.shape[1]):
+            lMask = np.zeros((num_4a, paddedSize[0], paddedSize[1], paddedSize[2]))
+            lMask[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]] = 1
+            unpatchImg[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]] = np.add(unpatchImg[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]], prob_list[i4a, iIndex,iClass])
+            lMask = lMask == 1
+            numVal[lMask] = numVal[lMask] + 1
+
+            iCorner[1] =int(iCorner[1]+dNotOverlap[0])
+            if iCorner[1] + patchSize[0] - 1 > paddedSize[0]:
+                iCorner[1] = 0
+                iCorner[2] = int(iCorner[2] + dNotOverlap[1])
+
+            if iCorner[2] + patchSize[1] - 1 > paddedSize[1]:
+                iCorner[2] = 0
+                iCorner[1] = 0
+                iCorner[3] = int(iCorner[3] + dNotOverlap[2])
+
+    unpatchImg = np.divide(unpatchImg, numVal)
+
+    if paddedSize == actualSize:
+        pass
+    else:
+        pad_y = (paddedSize[0]-actualSize[0])/2
+        pad_x = (paddedSize[1]-actualSize[1])/2
+        pad_z = (paddedSize[2]-actualSize[2])/2
+        unpatchImg = unpatchImg[:, pad_y:actualSize[0]+pad_y, pad_x:actualSize[1]+pad_x, pad_z:actualSize[2]+pad_z]
+
+    return unpatchImg[0], unpatchImg[1]

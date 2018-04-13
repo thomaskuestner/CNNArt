@@ -13,7 +13,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint,ReduceLROnPlateau
 from keras.models import model_from_json
 from keras.utils import plot_model
 import MSnetworks
-from utils.Unpatching import fUnpatch3D, fRigidUnpatchingCorrection, fPatchToImage
+from utils.Unpatching import fUnpatchLabel, fPatchToImage
 from matplotlib import pyplot as plt
 
 def frunCNN_MS(dData, sModelIn, lTrain, sOutPath, iBatchSize, iLearningRate, iEpochs, CV_Patient=0):
@@ -25,9 +25,9 @@ def frunCNN_MS(dData, sModelIn, lTrain, sOutPath, iBatchSize, iLearningRate, iEp
             fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sModelIn, sOutPath, dData['patchSize'], iBatchSize, iLearningRate, iEpochs, CV_Patient=CV_Patient)
     else:  # predicting
         if 'MultiPath' in sModelIn:
-            fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, patchSize=dData['patchSize'], batchSize=iBatchSize[0], patchOverlap=dData['patchOverlap'], actualSize=dData['actualSize'], iClass=dData['iClass'], X_test_p2=dData['X_test_p2'], y_test_p2=dData['y_test_p2'])
+            fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, patchSize=dData['patchSize'], batchSize=iBatchSize[0], patchOverlap=dData['patchOverlap'], actualSize=dData['actualSize'], X_test_p2=dData['X_test_p2'], y_test_p2=dData['y_test_p2'])
         else:
-            fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, patchSize=dData['patchSize'], batchSize=iBatchSize[0], patchOverlap=dData['patchOverlap'], actualSize=dData['actualSize'], iClass=dData['iClass'])
+            fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, patchSize=dData['patchSize'], batchSize=iBatchSize[0], patchOverlap=dData['patchOverlap'], actualSize=dData['actualSize'])
         
         
 def fTrain(X_train, Y_train, X_test, Y_test, sModelIn, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None, CV_Patient=0, X_train_p2=None, y_train_p2=None, X_test_p2=None, y_test_p2=None, patchSize_down=None, ScaleFactor=0):
@@ -136,7 +136,7 @@ def fTrainInner(sModelIn, sOutPath, patchSize, learningRate=0.001, X_train=None,
                              'val_acc': acc_test,
                              'prob_test': prob_test})
 
-def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSize=64, patchOverlap=0.5, actualSize=[256, 196, 40], iClass=1, X_test_p2=None, y_test_p2=None, patchSize_down=[24,24,6],ScaleFactor=0.5):
+def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSize=64, patchOverlap=0.5, actualSize=[256, 196, 40], X_test_p2=None, y_test_p2=None):
             
     weight_name = sOutPath + '/' + model_name + '_weights.h5'
     model_json = sOutPath + '/' + model_name + '_json.txt'
@@ -169,8 +169,7 @@ def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSiz
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
     model.save(model_all)
 
-    imglayRef = fUnpatch3D(prob_pre, patchSize, patchOverlap, actualSize, iClass=0)
-    imglayArt = fUnpatch3D(prob_pre, patchSize, patchOverlap, actualSize, iClass=1)
+    imglayRef, imglayArt = fUnpatchLabel(prob_pre, patchSize, patchOverlap, actualSize, iClass=1)
     img4D =fPatchToImage(actualSize, X_test, patchOverlap) # [Art/Ref, height, width, depth]
     x_1d = np.arange(actualSize[0])
     y_1d = np.arange(actualSize[1])
@@ -187,13 +186,13 @@ def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSiz
 
 
     plt.subplot(211)
-    plt.pcolormesh(X,Y, np.swapaxes(img4D[0, :, :, 10],0,1), vmin=0, vmax=256, alpha = 2.0) #x_1d, y_1d, np.swapaxes(pixel_array, 0, 1)
-    plt.pcolormesh(x_1d, y_1d, np.swapaxes(imglayRef[:,:,5], 0, 1), cmap = 'viridis', alpha = 0.1, vmin=0, vmax=1, linewidth = 0, rasterized = True) #jet, alpha = 0.2, YlGnBu, x_1d, y_1d, np.swapaxes(imgOverlay, 0, 1)
+    plt.pcolormesh(X,Y, np.swapaxes(img4D[0, :, :, 10],0,1), vmin=0, vmax=1) #x_1d, y_1d, np.swapaxes(pixel_array, 0, 1)
+    plt.pcolormesh(x_1d, y_1d, np.swapaxes(imglayArt[:,:,10], 0, 1), cmap = 'YlGnBu', alpha = 0.2, vmin=0, vmax=1, linewidth = 0, rasterized = True) #jet, alpha = 0.2, YlGnBu, x_1d, y_1d, np.swapaxes(imgOverlay, 0, 1)
     plt.colorbar(pad = 0.5, shrink = 1.0, aspect = 5)
 
     plt.subplot(212)
-    plt.pcolormesh(X,Y, np.swapaxes(img4D[1, :, :, 10], 0, 1), vmin=0, vmax=256)  # x_1d, y_1d, np.swapaxes(pixel_array, 0, 1)
-    plt.pcolormesh(X,Y, np.swapaxes(imglayArt[:, :, 10], 0, 1), cmap='YlGnBu', alpha=0.1, vmin=0, vmax=1,  linewidth=0, rasterized=True)  # jet, alpha = 0.2, YlGnBu, x_1d, y_1d, np.swapaxes(imgOverlay, 0, 1)
+    plt.pcolormesh(X,Y, np.swapaxes(img4D[1, :, :, 10], 0, 1), vmin=0, vmax=1)  # x_1d, y_1d, np.swapaxes(pixel_array, 0, 1)
+    plt.pcolormesh(X,Y, np.swapaxes(imglayArt[:, :, 10], 0, 1), cmap='YlGnBu', alpha=0.2, vmin=0, vmax=1,  linewidth=0, rasterized=True)  # jet, alpha = 0.2, YlGnBu, x_1d, y_1d, np.swapaxes(imgOverlay, 0, 1)
     plt.colorbar(pad=0.5, shrink=1.0, aspect=5)
     plt.show()
     # plt.savefig(sOutPath + '/' + model_name + '_overlay.png')
