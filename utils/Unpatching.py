@@ -77,7 +77,7 @@ def fUnpatch3D(prob_list, patchSize, patchOverlap, actualSize, iClass):
     numVal = np.zeros((paddedSize[0], paddedSize[1], paddedSize[2]))
 
     for iIndex in range(0, prob_list.shape[0], 1):
-        print(iIndex)
+        #print(iIndex)
         lMask = np.zeros((paddedSize[0], paddedSize[1], paddedSize[2]))
         lMask[iCorner[0]: iCorner[0] + patchSize[0], iCorner[1]: iCorner[1] + patchSize[1], iCorner[2]: iCorner[2] + patchSize[2]] = 1
         unpatchImg[iCorner[0]: iCorner[0] + patchSize[0], iCorner[1]: iCorner[1] + patchSize[1], iCorner[2]: iCorner[2] + patchSize[2]] = np.add(unpatchImg[iCorner[0]: iCorner[0] + patchSize[0], iCorner[1]: iCorner[1] + patchSize[1], iCorner[2]: iCorner[2] + patchSize[2]], prob_list[iIndex,iClass])
@@ -202,4 +202,36 @@ def fRigidUnpatchingCorrection(actual_size, allPatches, patchOverlap, mode='over
 
     unpatchImg_cropped = unpatchImg[:, (height_pad - height) / 2: height_pad - (height_pad - height) / 2,
                          (width_pad - width) / 2: width_pad - (width_pad - width) / 2]
+    return unpatchImg_cropped
+
+def fPatchToImage(actual_size, allPatches, patchOverlap):
+    patch_size = [allPatches.shape[-3], allPatches.shape[-2], allPatches.shape[-1]]
+    dOverlap = np.multiply(patch_size, patchOverlap).astype(int)
+    dNotOverlap = np.round(np.multiply(patch_size, (1 - patchOverlap))).astype(int)
+
+    height, width, depth = actual_size[1], actual_size[0], actual_size[2]
+    width_pad = int(math.ceil((width - dOverlap[0]) * 1.0 / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0])
+    height_pad = int(math.ceil((height - dOverlap[1]) * 1.0 / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1])
+    depth_pad = int(math.ceil((depth - dOverlap[2]) * 1.0 / (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2])
+
+    num_rows, num_cols, num_slices = int(math.ceil((height_pad - patch_size[1]) * 1.0 / dNotOverlap[1]) + 1), int(
+        math.ceil((width_pad - patch_size[0]) * 1.0 / dNotOverlap[0]) + 1), int(
+        math.ceil((depth_pad - patch_size[2]) * 1.0 / dNotOverlap[2]) + 1)
+    num_4a = allPatches.shape[0] / (num_rows * num_cols * num_slices)
+    allPatches = np.reshape(allPatches, (num_4a, -1, patch_size[0], patch_size[1], patch_size[2]))
+    unpatchImg = np.zeros((num_4a, width_pad, height_pad, depth_pad))
+    dividor_grid = np.zeros((num_4a, width_pad, height_pad, depth_pad))
+
+
+    for i4a in range(num_4a):
+        for slice in range(num_slices):
+            for col in range(num_cols):
+                for row in range(num_rows):
+                    index = slice * num_cols * num_rows + col * num_rows + row
+                    unpatchImg[i4a, col * dNotOverlap[0]:col * dNotOverlap[0] + patch_size[0], row * dNotOverlap[1]:row * dNotOverlap[1] + patch_size[1], slice * dNotOverlap[2]:slice * dNotOverlap[2] + patch_size[2]] += allPatches[i4a, index]
+                    dividor_grid[i4a, col * dNotOverlap[0]:col * dNotOverlap[0] + patch_size[0], row * dNotOverlap[1]:row * dNotOverlap[1] + patch_size[1], slice * dNotOverlap[2]:slice * dNotOverlap[2] + patch_size[2]] = np.add(
+                    dividor_grid[i4a, col * dNotOverlap[0]:col * dNotOverlap[0] + patch_size[0], row * dNotOverlap[1]:row * dNotOverlap[1] + patch_size[1], slice * dNotOverlap[2]:slice * dNotOverlap[2] + patch_size[2]], 1.0)
+
+    unpatchImg = np.divide(unpatchImg, dividor_grid)
+    unpatchImg_cropped = unpatchImg[:,(width_pad - width) / 2: width_pad - (width_pad - width) / 2, (height_pad - height) / 2: height_pad - (height_pad - height) / 2, (depth_pad - depth) / 2: depth_pad - (depth_pad - depth) / 2]
     return unpatchImg_cropped
