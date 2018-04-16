@@ -246,6 +246,8 @@ else:
     #         else:
     #             cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize']}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
     # else:
+    if sTrainingMethod == "MultiScaleSeparated":
+        patchSize = fcalculateInputOfPath2(cfg['patchSize'], cfg['lScaleFactor'][0], cfg['network'])
     if len(patchSize) == 3:
         X_test = np.zeros((0, patchSize[0], patchSize[1], patchSize[2]))
         y_test = np.zeros((0))
@@ -255,12 +257,16 @@ else:
         y_test = np.zeros(0)
     for iImg in range(0, len(cfg['lPredictImg'])):
         # patches and labels of reference/artifact
-        tmpPatches, tmpLabels  = datapre.fPreprocessData(cfg['lPredictImg'][iImg], cfg['patchSize'], cfg['patchOverlap'], 1, cfg['sLabeling'], sTrainingMethod=sTrainingMethod)
+        tmpPatches, tmpLabels  = datapre.fPreprocessData(cfg['lPredictImg'][iImg], patchSize, cfg['patchOverlap'], 1, cfg['sLabeling'], sTrainingMethod=sTrainingMethod)
         X_test = np.concatenate((X_test, tmpPatches), axis=0)
         y_test = np.concatenate((y_test, cfg['lLabelPredictImg'][iImg]*tmpLabels), axis=0)
         allImg[iImg] = datapre.fReadData(cfg['lPredictImg'][iImg])
 
-    if 'MS' in cfg['network']:
-        frunCNN_MS({'X_train': [], 'y_train': [], 'X_test': X_test, 'y_test': y_test, 'patchSize': patchSize, 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize']},  cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], predictImg=allImg)
+    if sTrainingMethod == "MultiScaleSeparated":
+        X_test_p1 = scaling.fcutMiddelPartOfPatch(X_test, X_test, patchSize, cfg['patchSize'])
+        X_train_p2, X_test_p2, scedpatchSize = scaling.fscaling([X_test], [X_test], patchSize, cfg['lScaleFactor'][0])
+        frunCNN_MS({'X_test': X_test_p1, 'y_test': y_test, 'patchSize': patchSize, 'X_test_p2': X_test_p2[0], 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'],'actualSize': cfg['correction']['actualSize']}, cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], predictImg=allImg)
+    elif 'MS' in cfg['network']:
+        frunCNN_MS({'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize'], 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize']},  cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], predictImg=allImg)
     else:
         cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test, 'y_test': y_test, 'patchSize': patchSize, 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize']}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])

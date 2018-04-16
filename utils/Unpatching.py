@@ -255,11 +255,7 @@ def fUnpatchLabel(prob_list, patchSize, patchOverlap, actualSize, iClass=0):
     for i4a in range(num_4a):
         iCorner = [iClass, 0, 0, 0]
         for iIndex in range(prob_list.shape[1]):
-            # lMask = np.zeros((num_4a, paddedSize[0], paddedSize[1], paddedSize[2]))
-            # lMask[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]] = 1
             unpatchImg[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]] = np.add(unpatchImg[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]], prob_list[i4a, iIndex, iClass])
-            # lMask = lMask == 1
-            # numVal[lMask] = numVal[lMask] + 1
             numVal[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]] = np.add(
             numVal[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]], 1.0)
 

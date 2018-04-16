@@ -25,7 +25,7 @@ def frunCNN_MS(dData, sModelIn, lTrain, sOutPath, iBatchSize, iLearningRate, iEp
             fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sModelIn, sOutPath, dData['patchSize'], iBatchSize, iLearningRate, iEpochs, CV_Patient=CV_Patient)
     else:  # predicting
         if 'MultiPath' in sModelIn:
-            fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, patchSize=dData['patchSize'], batchSize=iBatchSize[0], patchOverlap=dData['patchOverlap'], actualSize=dData['actualSize'], X_test_p2=dData['X_test_p2'], y_test_p2=dData['y_test_p2'], predictImg=predictImg)
+            fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, patchSize=dData['patchSize'], batchSize=iBatchSize[0], patchOverlap=dData['patchOverlap'], actualSize=dData['actualSize'], X_test_p2=dData['X_test_p2'], predictImg=predictImg)
         else:
             fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, patchSize=dData['patchSize'], batchSize=iBatchSize[0], patchOverlap=dData['patchOverlap'], actualSize=dData['actualSize'], predictImg=predictImg)
         
@@ -136,7 +136,7 @@ def fTrainInner(sModelIn, sOutPath, patchSize, learningRate=0.001, X_train=None,
                              'val_acc': acc_test,
                              'prob_test': prob_test})
 
-def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSize=64, patchOverlap=0.5, actualSize=[256, 196, 40], X_test_p2=None, y_test_p2=None, predictImg=[]):
+def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSize=64, patchOverlap=0.5, actualSize=[256, 196, 40], X_test_p2=None, predictImg=[]):
             
     weight_name = sOutPath + '/' + model_name + '_weights.h5'
     model_json = sOutPath + '/' + model_name + '_json.txt'
@@ -155,7 +155,6 @@ def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSiz
     y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
     if 'MS' in model_name:
         X_test_p2 = np.expand_dims(X_test_p2, axis=1)
-        y_test_p2 = np.asarray([y_test_p2[:], np.abs(np.asarray(y_test_p2[:], dtype=np.float32) - 1)]).T
         score_test, acc_test = model.evaluate([X_test, X_test_p2], y_test, batch_size=batchSize, verbose=1)
         print('loss_test:'+str(score_test)+ '   acc_test:'+ str(acc_test))
         prob_pre = model.predict([X_test, X_test_p2], batch_size=batchSize, verbose=1)
@@ -196,4 +195,4 @@ def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSiz
         plt.pcolormesh(X, Y, np.swapaxes(imglayArt[:, :, iSlice], 0, 1), cmap='jet', alpha=0.05, vmin=0, vmax=1, linestyle='None', rasterized=True)
         plt.colorbar(pad=0.5, shrink=1.0, aspect=5)
         plt.show()
-        plt.savefig(sOutPath + '/' + model_name + '_Slice' + iSlice + '.png')
+        plt.savefig(sOutPath + '/' + model_name + '_Slice' + str(iSlice) + '.png')
