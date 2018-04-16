@@ -236,8 +236,10 @@ def fPatchToImage(actual_size, allPatches, patchOverlap):
     return unpatchImg_cropped
 
 
-def fUnpatchLabel(prob_list, patchSize, patchOverlap, actualSize, iClass):
-    iCorner = [iClass, 0, 0, 0]
+def fUnpatchLabel(prob_list, patchSize, patchOverlap, actualSize, iClass=0):
+    # If iClass=0: the value 0 is the label of reference image, and show the possibility of Artifact at the same time
+    # If iClass=1, the first half unpatchImg[0] is label of image with artifact, the rest unpatchImg[1] for reference images
+
     dOverlap = np.multiply(patchSize, patchOverlap).astype(int)
     dNotOverlap = np.round(np.multiply(patchSize, (1 - patchOverlap))).astype(int)
     paddedSize = [int(math.ceil((actualSize[0] - dOverlap[0]) * 1.0/ dNotOverlap[0]) * dNotOverlap[0] + dOverlap[0]), int(math.ceil((actualSize[1] - dOverlap[1]) * 1.0/ (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1]), int(math.ceil((actualSize[2] - dOverlap[2]) * 1.0/ (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2])]
@@ -250,13 +252,16 @@ def fUnpatchLabel(prob_list, patchSize, patchOverlap, actualSize, iClass):
     unpatchImg = np.zeros((num_4a, paddedSize[0], paddedSize[1], paddedSize[2]))
     numVal = np.zeros((num_4a, paddedSize[0], paddedSize[1], paddedSize[2]))
 
-    for i4a in range(num_4a - 1):
-        for iIndex in range(0, prob_list.shape[1]):
-            lMask = np.zeros((num_4a, paddedSize[0], paddedSize[1], paddedSize[2]))
-            lMask[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]] = 1
-            unpatchImg[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]] = np.add(unpatchImg[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]], prob_list[i4a, iIndex,iClass])
-            lMask = lMask == 1
-            numVal[lMask] = numVal[lMask] + 1
+    for i4a in range(num_4a):
+        iCorner = [iClass, 0, 0, 0]
+        for iIndex in range(prob_list.shape[1]):
+            # lMask = np.zeros((num_4a, paddedSize[0], paddedSize[1], paddedSize[2]))
+            # lMask[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]] = 1
+            unpatchImg[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]] = np.add(unpatchImg[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]], prob_list[i4a, iIndex, iClass])
+            # lMask = lMask == 1
+            # numVal[lMask] = numVal[lMask] + 1
+            numVal[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]] = np.add(
+            numVal[i4a, iCorner[1]: iCorner[1] + patchSize[0], iCorner[2]: iCorner[2] + patchSize[1], iCorner[3]: iCorner[3] + patchSize[2]], 1.0)
 
             iCorner[1] =int(iCorner[1]+dNotOverlap[0])
             if iCorner[1] + patchSize[0] - 1 > paddedSize[0]:
