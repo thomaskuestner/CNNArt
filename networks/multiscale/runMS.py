@@ -25,6 +25,8 @@ def frunCNN_MS(dData, sModelIn, lTrain, sOutPath, iBatchSize, iLearningRate, iEp
             fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sModelIn, sOutPath, dData['patchSize'], iBatchSize, iLearningRate, iEpochs, CV_Patient=CV_Patient)
     else:  # predicting
         if 'MultiPath' in sModelIn:
+            if not('X_test_p2' in dir()):
+                dData['X_test_p2'] = []
             fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, patchSize=dData['patchSize'], batchSize=iBatchSize[0], patchOverlap=dData['patchOverlap'], actualSize=dData['actualSize'], X_test_p2=dData['X_test_p2'], predictImg=predictImg)
         else:
             fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, patchSize=dData['patchSize'], batchSize=iBatchSize[0], patchOverlap=dData['patchOverlap'], actualSize=dData['actualSize'], predictImg=predictImg)
@@ -138,9 +140,9 @@ def fTrainInner(sModelIn, sOutPath, patchSize, learningRate=0.001, X_train=None,
 
 def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSize=64, patchOverlap=0.5, actualSize=[256, 196, 40], X_test_p2=None, predictImg=[]):
             
-    weight_name = sOutPath + '/' + model_name + '_weights.h5'
-    model_json = sOutPath + '/' + model_name + '_json.txt'
-    model_all = sOutPath + '/' + model_name + '_model.h5'
+    weight_name = sOutPath + '/bestModel/' + model_name + '_weights.h5'
+    model_json = sOutPath + '/bestModel/' + model_name + '_json.txt'
+    model_all = sOutPath + '/bestModel/' + model_name + '_model.h5'
 
     # load weights and model (new way)
     model_json= open(model_json, 'r')
@@ -163,36 +165,36 @@ def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSiz
         print('loss_test:'+str(score_test)+ '   acc_test:'+ str(acc_test))
         prob_pre = model.predict(X_test, batch_size=batchSize, verbose=1)
 
-    modelSave = sOutPath + '/' + model_name + '_pred.mat'
+    modelSave = sOutPath + '/bestModel/' + model_name + '_pred.mat'
     print('saving Model:{}'.format(modelSave))
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
     model.save(model_all)
 
-    imglayRef, imglayArt = fUnpatchLabel(prob_pre, patchSize, patchOverlap, actualSize)
-    if predictImg==[]:
-        img4D =fPatchToImage(actualSize, X_test, patchOverlap) # [Art/Ref, height, width, depth]
-    else:
-        img4D = predictImg
-
-    x_1d = np.arange(actualSize[0])
-    y_1d = np.arange(actualSize[1])
-    X, Y = np.meshgrid(x_1d, y_1d)
-    fig = plt.figure(dpi=100)
-    ax = plt.gca()
-    plt.cla()
-    plt.gca().set_aspect('equal')  # plt.axes().set_aspect('equal')
-    plt.xlim(0, actualSize[0])
-    plt.ylim(actualSize[1], 0)
-    plt.set_cmap(plt.gray())
-
-    for iSlice in range(0, img4D.shape[3], 5):
-        plt.subplot(211)
-        plt.pcolormesh(X, Y, np.swapaxes(img4D[0, :, :, iSlice], 0, 1), vmin=0, vmax=1)
-        plt.pcolormesh(X, Y, np.swapaxes(imglayRef[:, :, iSlice], 0, 1), cmap='jet', alpha=0.05, vmin=0, vmax=1, linestyle='None', rasterized=True)
-        plt.colorbar(pad=0.5, shrink=1.0, aspect=5)
-        plt.subplot(212)
-        plt.pcolormesh(X, Y, np.swapaxes(img4D[1, :, :, iSlice], 0, 1), vmin=0, vmax=1)
-        plt.pcolormesh(X, Y, np.swapaxes(imglayArt[:, :, iSlice], 0, 1), cmap='jet', alpha=0.05, vmin=0, vmax=1, linestyle='None', rasterized=True)
-        plt.colorbar(pad=0.5, shrink=1.0, aspect=5)
-        plt.show()
-        plt.savefig(sOutPath + '/' + model_name + '_Slice' + str(iSlice) + '.png')
+    # imglayRef, imglayArt = fUnpatchLabel(prob_pre, patchSize, patchOverlap, actualSize)
+    # if predictImg==[]:
+    #     img4D =fPatchToImage(actualSize, X_test, patchOverlap) # [Art/Ref, height, width, depth]
+    # else:
+    #     img4D = predictImg
+    #
+    # x_1d = np.arange(actualSize[0])
+    # y_1d = np.arange(actualSize[1])
+    # X, Y = np.meshgrid(x_1d, y_1d)
+    # fig = plt.figure(dpi=100)
+    # ax = plt.gca()
+    # plt.cla()
+    # plt.gca().set_aspect('equal')  # plt.axes().set_aspect('equal')
+    # plt.xlim(0, actualSize[0])
+    # plt.ylim(actualSize[1], 0)
+    # plt.set_cmap(plt.gray())
+    #
+    # for iSlice in range(0, img4D.shape[3], 5):
+    #     plt.subplot(211)
+    #     plt.pcolormesh(X, Y, np.swapaxes(img4D[0, :, :, iSlice], 0, 1), vmin=0, vmax=1)
+    #     plt.pcolormesh(X, Y, np.swapaxes(imglayRef[:, :, iSlice], 0, 1), cmap='jet', alpha=0.05, vmin=0, vmax=1, linestyle='None', rasterized=True)
+    #     plt.colorbar(pad=0.5, shrink=1.0, aspect=5)
+    #     plt.subplot(212)
+    #     plt.pcolormesh(X, Y, np.swapaxes(img4D[1, :, :, iSlice], 0, 1), vmin=0, vmax=1)
+    #     plt.pcolormesh(X, Y, np.swapaxes(imglayArt[:, :, iSlice], 0, 1), cmap='jet', alpha=0.05, vmin=0, vmax=1, linestyle='None', rasterized=True)
+    #     plt.colorbar(pad=0.5, shrink=1.0, aspect=5)
+    #     plt.show()
+    #     plt.savefig(sOutPath + '/Overlay/' + model_name + '_Slice' + str(iSlice) + '.png')

@@ -89,16 +89,16 @@ elif lTrain:
 
     elif glob.glob(sDatafile):
         with h5py.File(sDatafile, 'r') as hf:
-            X_train = hf['X_train'][:]
-            X_test = hf['X_test'][:]
-            y_train = hf['y_train'][:]
-            y_test = hf['y_test'][:]
-            patchSize = hf['patchSize'][:]
-            # X_train = hf['X_train_p2'][:]
-            # X_test = hf['X_test_p2'][:]
-            # y_train = hf['y_train_p2'][:]
-            # y_test = hf['y_test_p2'][:]
-            # patchSize = hf['patchSize_down'][:]
+            # X_train = hf['X_train'][:]
+            # X_test = hf['X_test'][:]
+            # y_train = hf['y_train'][:]
+            # y_test = hf['y_test'][:]
+            # patchSize = hf['patchSize'][:]
+            X_train = hf['X_train_p2'][:]
+            X_test = hf['X_test_p2'][:]
+            y_train = hf['y_train_p2'][:]
+            y_test = hf['y_test_p2'][:]
+            patchSize = hf['patchSize_down'][:]
             if sTrainingMethod == "MultiScaleSeparated":
                 X_train_p2 = hf['X_train_p2'][:]
                 X_test_p2 = hf['X_test_p2'][:]
@@ -217,37 +217,9 @@ else:
     if len(sPredictModel) == 0:
         sPredictModel = cfg['selectedDatabase']['bestmodel'][sNetworktype[2]]
 
-    # if glob.glob(sDatafile):
-    #     with h5py.File(sDatafile, 'r') as hf:
-    #         X_test = hf['X_test'][:]
-    #         y_test = hf['y_test'][:]
-    #         patchSize = hf['patchSize'][:]
-    #         if sTrainingMethod == "MultiScaleSeparated":
-    #             X_test_p2 = hf['X_test_p2'][:]
-    #             y_test_p2 = hf['y_test_p2'][:]
-    #     for iFold in range(0, len(X_test)):
-    #         if len(X_test) != 1:
-    #             CV_Patient = iFold + 1
-    #         else:
-    #             CV_Patient = 0
-    #         if 'MultiPath' in cfg['network']:
-    #             frunCNN_MS(
-    #                 {'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize,
-    #                  'X_train_p2': [], 'y_train_p2': [], 'X_test_p2': X_test_p2[iFold],
-    #                  'y_test_p2': y_test_p2[iFold], 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'],
-    #                  'actualSize': cfg['correction']['actualSize']}, cfg['network'], lTrain, sOutPath, cfg['batchSize'],
-    #                 cfg['lr'], cfg['epochs'], CV_Patient)
-    #         elif 'MS' in cfg['network']:
-    #             frunCNN_MS(
-    #                 {'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize,
-    #                  'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'],
-    #                  'actualSize': cfg['correction']['actualSize']}, cfg['network'], lTrain, sOutPath, cfg['batchSize'],
-    #                 cfg['lr'], cfg['epochs'], CV_Patient)
-    #         else:
-    #             cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize, 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize']}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
-    # else:
     if sTrainingMethod == "MultiScaleSeparated":
         patchSize = fcalculateInputOfPath2(cfg['patchSize'], cfg['lScaleFactor'][0], cfg['network'])
+
     if len(patchSize) == 3:
         X_test = np.zeros((0, patchSize[0], patchSize[1], patchSize[2]))
         y_test = np.zeros((0))
