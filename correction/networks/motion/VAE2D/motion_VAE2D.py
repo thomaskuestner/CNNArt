@@ -1,7 +1,9 @@
 import os
 from skimage.measure import compare_ssim as ssim
-from sklearn.metrics import mean_squared_error
-from skimage.restoration import denoise_tv_chambolle, denoise_bilateral
+from skimage.measure import compare_nrmse as nrmse
+from skimage.measure import compare_psnr as psnr
+from skimage.restoration import denoise_tv_chambolle
+from sklearn.metrics import normalized_mutual_info_score as nmi
 import matplotlib as mpl
 mpl.use('Agg')
 
@@ -34,16 +36,16 @@ class CustomLossLayer(Layer):
         self.add_loss(self.dHyper['kl_weight']*K.mean(loss_kl))
 
         # compute MSE loss
-        mse_loss_ref2ref, mse_loss_art2ref = compute_mse_loss(self.dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
-        self.add_loss(self.dHyper['mse_weight'] * (self.dHyper['loss_ref2ref']*mse_loss_ref2ref + self.dHyper['loss_art2ref']*mse_loss_art2ref))
+        # mse_loss_ref2ref, mse_loss_art2ref = compute_mse_loss(self.dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
+        # self.add_loss(self.dHyper['mse_weight'] * (self.dHyper['loss_ref2ref']*mse_loss_ref2ref + self.dHyper['loss_art2ref']*mse_loss_art2ref))
 
         # compute gradient entropy
         ge_ref2ref, ge_art2ref = compute_gradient_entropy(self.dHyper, decoded_ref2ref, decoded_art2ref, self.patchSize)
         self.add_loss(self.dHyper['ge_weight'] * (self.dHyper['loss_ref2ref']*ge_ref2ref + self.dHyper['loss_art2ref']*ge_art2ref))
 
         # compute TV loss
-        tv_ref2ref, tv_art2ref = compute_tv_loss(self.dHyper, decoded_ref2ref, decoded_art2ref, self.patchSize)
-        self.add_loss(self.dHyper['tv_weight'] * (self.dHyper['loss_ref2ref']*tv_ref2ref + self.dHyper['loss_art2ref']*tv_art2ref))
+        # tv_ref2ref, tv_art2ref = compute_tv_loss(self.dHyper, decoded_ref2ref, decoded_art2ref, self.patchSize)
+        # self.add_loss(self.dHyper['tv_weight'] * (self.dHyper['loss_ref2ref']*tv_ref2ref + self.dHyper['loss_art2ref']*tv_art2ref))
 
         # compute perceptual loss
         perceptual_loss_ref2ref, perceptual_loss_art2ref = compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, self.patchSize, self.dHyper['pl_network'],self.dHyper['loss_model'])
@@ -123,7 +125,8 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
 
 
     if dHyper['augmentation']:
-        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_augmentation.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
+        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_GE_augmentation_100.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
+        # vae.load_weights(weights_file)
 
         lossPlot_file = weights_file[:-3] + '.png'
         plotLoss = PlotLosses(lossPlot_file)
@@ -191,59 +194,56 @@ def fPredict(test_ref, test_art, dParam, dHyper):
         predict_art_tv_3 = denoise_tv_chambolle(predict_art, weight=3)
         predict_art_tv_5 = denoise_tv_chambolle(predict_art, weight=5)
 
-        # post TV processing
-        predict_art_channel_last = np.transpose(predict_art, (1, 2, 0))
-        predict_art_bilateral_1 = denoise_bilateral(predict_art_channel_last, sigma_color=0.1)
-        predict_art_bilateral_5 = denoise_bilateral(predict_art_channel_last, sigma_color=0.5)
-        predict_art_bilateral_8 = denoise_bilateral(predict_art_channel_last, sigma_color=0.8)
-        predict_art_bilateral_1 = np.transpose(predict_art_bilateral_1, (2, 0, 1))
-        predict_art_bilateral_5 = np.transpose(predict_art_bilateral_5, (2, 0, 1))
-        predict_art_bilateral_8 = np.transpose(predict_art_bilateral_8, (2, 0, 1))
+        # pre TV processing
+        test_art_tv_1 = denoise_tv_chambolle(test_art, weight=1)
+        test_art_tv_3 = denoise_tv_chambolle(test_art, weight=3)
+        test_art_tv_5 = denoise_tv_chambolle(test_art, weight=5)
+
 
         if dHyper['evaluate']:
-            fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(10, 10), sharex=True, sharey=True)
+            fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(15, 15), sharex=True, sharey=True)
             ax = axes.ravel()
             plt.gray()
-            label = 'MSE: {:.2f}, SSIM: {:.2f}'
+            label = 'NRMSE: {:.2f}, SSIM: {:.3f}, NMI: {:.3f}'
             for i in range(test_ref.shape[0]):
                 # orignal reconstructed images
                 ax[0].imshow(test_ref[i])
-                ax[0].set_xlabel(label.format(mean_squared_error(test_ref[i], test_ref[i]), ssim(test_ref[i], test_ref[i], data_range=(test_ref[i].max() - test_ref[i].min()))))
+                ax[0].set_xlabel(label.format(nrmse(test_ref[i], test_ref[i]), ssim(test_ref[i], test_ref[i], data_range=(test_ref[i].max() - test_ref[i].min())), nmi(test_ref[i].flatten(), test_ref[i].flatten())))
                 ax[0].set_title('reference image')
 
                 ax[1].imshow(test_art[i])
-                ax[1].set_xlabel(label.format(mean_squared_error(test_ref[i], test_art[i]), ssim(test_ref[i], test_art[i], data_range=(test_art[i].max() - test_art[i].min()))))
+                ax[1].set_xlabel(label.format(nrmse(test_ref[i], test_art[i]), ssim(test_ref[i], test_art[i], data_range=(test_art[i].max() - test_art[i].min())), nmi(test_ref[i].flatten(), test_art[i].flatten())))
                 ax[1].set_title('motion-affected image')
 
                 ax[2].imshow(predict_art[i])
-                ax[2].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art[i]), ssim(test_ref[i], predict_art[i], data_range=(predict_art[i].max() - predict_art[i].min()))))
+                ax[2].set_xlabel(label.format(nrmse(test_ref[i], predict_art[i]), ssim(test_ref[i], predict_art[i], data_range=(predict_art[i].max() - predict_art[i].min())), nmi(test_ref[1].flatten(), predict_art[i].flatten())))
                 ax[2].set_title('original reconstructed image')
 
                 # post TV-processing
                 ax[3].imshow(predict_art_tv_1[i])
-                ax[3].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art_tv_1[i]), ssim(test_ref[i], predict_art_tv_1[i], data_range=(predict_art_tv_1[i].max() - predict_art_tv_1[i].min()))))
-                ax[3].set_title('post TV weight 1')
+                ax[3].set_xlabel(label.format(nrmse(test_ref[i], predict_art_tv_1[i]), ssim(test_ref[i], predict_art_tv_1[i], data_range=(predict_art_tv_1[i].max() - predict_art_tv_1[i].min())), nmi(test_ref[i].flatten(), predict_art_tv_1[i].flatten())))
+                ax[3].set_title('Post TV weight 1')
 
                 ax[4].imshow(predict_art_tv_3[i])
-                ax[4].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art_tv_3[i]), ssim(test_ref[i], predict_art_tv_3[i], data_range=(predict_art_tv_3[i].max() - predict_art_tv_3[i].min()))))
-                ax[4].set_title('post TV weight 3')
+                ax[4].set_xlabel(label.format(nrmse(test_ref[i], predict_art_tv_3[i]), ssim(test_ref[i], predict_art_tv_3[i], data_range=(predict_art_tv_3[i].max() - predict_art_tv_3[i].min())), nmi(test_ref[i].flatten(), predict_art_tv_3[i].flatten())))
+                ax[4].set_title('Post TV weight 3')
 
                 ax[5].imshow(predict_art_tv_5[i])
-                ax[5].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art_tv_5[i]), ssim(test_ref[i], predict_art_tv_5[i], data_range=(predict_art_tv_5[i].max() - predict_art_tv_5[i].min()))))
-                ax[5].set_title('post TV weight 5')
+                ax[5].set_xlabel(label.format(nrmse(test_ref[i], predict_art_tv_5[i]), ssim(test_ref[i], predict_art_tv_5[i], data_range=(predict_art_tv_5[i].max() - predict_art_tv_5[i].min())), nmi(test_ref[i].flatten(), predict_art_tv_5[i].flatten())))
+                ax[5].set_title('Post TV weight 5')
 
-                # post TV-processing
-                ax[6].imshow(predict_art_bilateral_1[i])
-                ax[6].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art_bilateral_1[i]), ssim(test_ref[i], predict_art_bilateral_1[i], data_range=(predict_art_bilateral_1[i].max() - predict_art_bilateral_1[i].min()))))
-                ax[6].set_title('post bilateral weight 0.1')
+                # pre TV processing
+                ax[6].imshow(test_art_tv_1[i])
+                ax[6].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_1[i]), ssim(test_ref[i], test_art_tv_1[i], data_range=(test_art_tv_1[i].max() - test_art_tv_1[i].min())), nmi(test_ref[i].flatten(), test_art_tv_1[i].flatten())))
+                ax[6].set_title('pre TV weight 1')
 
-                ax[7].imshow(predict_art_bilateral_5[i])
-                ax[7].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art_bilateral_5[i]), ssim(test_ref[i], predict_art_bilateral_5[i], data_range=(predict_art_bilateral_5[i].max() - predict_art_bilateral_5[i].min()))))
-                ax[7].set_title('post bilateral weight 0.5')
+                ax[7].imshow(test_art_tv_3[i])
+                ax[7].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_3[i]), ssim(test_ref[i], test_art_tv_3[i], data_range=(test_art_tv_3[i].max() - test_art_tv_3[i].min())), nmi(test_ref[i].flatten(), test_art_tv_3[i].flatten())))
+                ax[7].set_title('pre TV weight 3')
 
-                ax[8].imshow(predict_art_bilateral_8[i])
-                ax[8].set_xlabel(label.format(mean_squared_error(test_ref[i], predict_art_bilateral_8[i]), ssim(test_ref[i], predict_art_bilateral_8[i], data_range=(predict_art_bilateral_8[i].max() - predict_art_bilateral_8[i].min()))))
-                ax[8].set_title('post bilateral weight 0.8')
+                ax[8].imshow(test_art_tv_5[i])
+                ax[8].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_5[i]), ssim(test_ref[i], test_art_tv_5[i], data_range=(test_art_tv_5[i].max() - test_art_tv_5[i].min())), nmi(test_ref[i].flatten(), test_art_tv_5[i].flatten())))
+                ax[8].set_title('pre TV weight 5')
 
                 if dParam['lSave']:
                     plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')

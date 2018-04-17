@@ -8,11 +8,11 @@ import numpy as np
 
 
 def preprocessing(inputs):
-    output = Lambda(lambda x: (x - K.min(x)) * 255 / (K.max(x) - K.min(x) + K.epsilon()), output_shape=inputs._keras_shape)(inputs)
-    # output = 255 * inputs
-    K.update_sub(output[:, 0, :, :], 123.68)
-    K.update_sub(output[:, 1, :, :], 116.779)
-    K.update_sub(output[:, 2, :, :], 103.939)
+    # output = Lambda(lambda x: (x - K.min(x)) * 255 / (K.max(x) - K.min(x) + K.epsilon()), output_shape=inputs._keras_shape)(inputs)
+    output = 255 * inputs
+    # K.update_sub(output[:, 0, :, :], 123.68)
+    # K.update_sub(output[:, 1, :, :], 116.779)
+    # K.update_sub(output[:, 2, :, :], 103.939)
 
     return output[:, ::-1, :, :]
 

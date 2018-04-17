@@ -104,15 +104,16 @@ correction:
   pl_network: "vgg19"
   loss_model: ""
   kl_weight: 1
-  tv_loss: 0.01
+  mse_weight: 0
   perceptual_weight: 0.00001
-  pixel_weight: 0.01
+  tv_weight: 0
+  ge_weight: 10
   loss_ref2ref: 0.4
   loss_art2ref: 0.6
-  unpatch: false
+  unpatch: true
   nScale: 255
-  dropout: 1
   actualSize: [256, 196]
   evaluate: true
   test_patient: "01_ab"
-  augmentation: false
+  augmentation: true
+  bn: false

@@ -172,7 +172,6 @@ def fRigidUnpatchingCorrection2D(actual_size, allPatches, patchOverlap, mode='ov
     dNotOverlap = np.round(np.multiply(patch_size, (1 - patchOverlap))).astype(int)
 
     height_pad = int(math.ceil((height - dOverlap[0]) * 1.0 / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0])
-
     width_pad = int(math.ceil((width - dOverlap[1]) * 1.0 / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1])
 
     num_rows = int(math.ceil((height_pad-patch_size[0])*1.0/dNotOverlap[0])+1)
@@ -204,7 +203,7 @@ def fRigidUnpatchingCorrection2D(actual_size, allPatches, patchOverlap, mode='ov
     unpatchImg_cropped = unpatchImg[:, (height_pad - height) / 2: height_pad - (height_pad - height) / 2,
                          (width_pad - width) / 2: width_pad - (width_pad - width) / 2]
 
-    unpatchImg_cropped = (unpatchImg_cropped - np.min(unpatchImg_cropped)) * 255 / (np.max(unpatchImg_cropped) - np.min(unpatchImg_cropped))
+    unpatchImg_cropped = (unpatchImg_cropped + 1) * 255 / 2
     return unpatchImg_cropped
 
 
@@ -255,5 +254,5 @@ def fRigidUnpatchingCorrection3D(actual_size, allPatches, patchOverlap, mode='ov
                          (height_pad - height) / 2: height_pad - (height_pad - height) / 2,
                          (width_pad - width) / 2: width_pad - (width_pad - width) / 2]
 
-    unpatchImg_cropped = (unpatchImg_cropped - np.min(unpatchImg_cropped)) * 255 / (np.max(unpatchImg_cropped) - np.min(unpatchImg_cropped))
+    unpatchImg_cropped = (unpatchImg_cropped - np.min(unpatchImg_cropped)) * 2094 / (np.max(unpatchImg_cropped) - np.min(unpatchImg_cropped))
     return unpatchImg_cropped
