@@ -39,8 +39,8 @@ selectedDatabase: *id001
 # artifactType: motion, multiclass
 # bodyRegion: abd, head, all
 # network: CNN2D, CNN3D, MNetArt, VNetArt
-# network with muntiscaleSeparated method: motion_all_CNN2D_multiscale, motion_VNet_multiscale
-# new modification of VNet with inception block: motion_VNet_Inception
+# Single-pathway Multiscale networks are: MS_SPP, MS_FCN_simple, MS_FCN_MultiFM, MS_Inception_Archi1, MS_Inception_Archi2
+# Dual-pathway Multiscale networks are: MS_VNet_MultiPath, MS_SPP_MultiPath, MS_FCN_MultiFM_MultiPath
 network : "motion_all_CNN2D"
 
 # scaling range
@@ -85,6 +85,7 @@ lLabelPredictImg : [ 1 ]
 sPredictModel : ""
 # sTrainingMethod
 # "None": No scaling process
+# "ScaleJittering": Scaling each image randomly before patching
 # "MultiScaleTogether": to train the donw sampled patches with the original patches together
 # "MultiScaleSeparated": to train the donw sampled patches and the original patches in different pathways
 sTrainingMethod : "None"
@@ -111,6 +112,6 @@ correction:
   unpatch: false
   nScale: 255
   dropout: 1
-  actualSize: [256, 196]
+  actualSize: [256, 196] # Head:[256, 196, 40]  Abdomen: [256, 320, 30]
   evaluate: true
   test_patient: "01_ab"

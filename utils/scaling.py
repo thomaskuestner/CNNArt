@@ -4,6 +4,17 @@ from scipy import interpolate
 import math
 import time
 
+def fScaleOnePatch(dPatch, randPatchSize, PatchSize):
+    xaxis = np.linspace(0, PatchSize[0], randPatchSize[0])
+    yaxis = np.linspace(0, PatchSize[1], randPatchSize[1])
+    zaxis = np.linspace(0, PatchSize[2], randPatchSize[2])
+    inter_train0 = np.mgrid[0:PatchSize[0], 0:PatchSize[1], 0:PatchSize[2]]
+    inter_train1 = np.rollaxis(inter_train0, 0, 4)
+    inter_train = np.reshape(inter_train1, [inter_train0.size // 3, 3])
+    scaleddPatch = interpolate.interpn((xaxis, yaxis, zaxis), dPatch, inter_train, method='linear', bounds_error=False, fill_value=0)
+    reshdPatch = np.reshape(scaleddPatch, [PatchSize[0], PatchSize[1], PatchSize[2]])
+    return reshdPatch
+
 def fscaling(X_train, X_test, scpatchSize, iscalefactor) :
     if len(scpatchSize) == 3:
         scX_train, scX_test, afterSize = fscaling3D(X_train, X_test, scpatchSize, iscalefactor)
@@ -39,8 +50,8 @@ def fscaling2D(X_train, X_test, scpatchSize, iscalefactor) :
                 BatchTest = icand
         dx_Train = None
         dx_Test = None
-        stepTrain = int(math.ceil(lenTrain/BatchTrain))
-        stepTest = int(math.ceil(lenTest/BatchTest))
+        stepTrain = -((0 - lenTrain) // BatchTrain)
+        stepTest = -((0 - lenTest) // BatchTest)
 
         for ibatch in range(BatchTrain):
             indTrain = int(stepTrain*ibatch)
@@ -157,10 +168,25 @@ def fscaling3D(X_train, X_test, scpatchSize, iscalefactor):
 
 def fcutMiddelPartOfPatch(X_train_sp, X_test_sp, scpatchSize, patchSize):
     cropStart = [(scpatchSize[idim]-patchSize[idim])//2 for idim in range(len(patchSize))]
-    if len(patchSize) == 2:
-        X_train = np.array(X_train_sp)[:, :, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1]]
-        X_test = np.array(X_test_sp)[:, :, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1]]
+    if np.array(X_train_sp).ndim == 4:
+        if len(patchSize) == 2:
+            X_train = np.array(X_train_sp)[:, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1]]
+        else:
+            X_train = np.array(X_train_sp)[:, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1], cropStart[2]:cropStart[2] + patchSize[2]]
+        return X_train
     else:
-        X_train = np.array(X_train_sp)[:, :, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1], cropStart[2]:cropStart[2] + patchSize[2]]
-        X_test = np.array(X_test_sp)[:, :, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1], cropStart[2]:cropStart[2] + patchSize[2]]
-    return X_train, X_test
+        if len(patchSize) == 2:
+            X_train = np.array(X_train_sp)[:, :, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1]]
+            X_test = np.array(X_test_sp)[:, :, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1]]
+        else:
+            X_train = np.array(X_train_sp)[:, :, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1], cropStart[2]:cropStart[2] + patchSize[2]]
+            X_test = np.array(X_test_sp)[:, :, cropStart[0]:cropStart[0] + patchSize[0], cropStart[1]:cropStart[1] + patchSize[1], cropStart[2]:cropStart[2] + patchSize[2]]
+        return X_train, X_test
+
+def fcutMiddelPartOfOnePatch(Patch, fromPatchSize, toPatchSize):
+    cropStart = [(fromPatchSize[idim]-toPatchSize[idim])//2 for idim in range(len(toPatchSize))]
+    if len(toPatchSize) == 2:
+        toPatch = np.array(Patch)[cropStart[0]:cropStart[0] + toPatchSize[0], cropStart[1]:cropStart[1] + toPatchSize[1]]
+    else:
+        toPatch = np.array(Patch)[cropStart[0]:cropStart[0] + toPatchSize[0], cropStart[1]:cropStart[1] + toPatchSize[1], cropStart[2]:cropStart[2] + toPatchSize[2]]
+    return toPatch
