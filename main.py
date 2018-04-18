@@ -15,7 +15,7 @@ from utils.calculateInputOfPath2 import fcalculateInputOfPath2
 from networks.multiscale.runMS import frunCNN_MS
 
 
-with open('config' + os.sep + 'paraml9.yml', 'r') as ymlfile:
+with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
 
 lTrain = cfg['lTrain'] # training or prediction
@@ -52,12 +52,6 @@ if sTrainingMethod != "None":
 else:
     sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str,patchSize)).replace(" ", "") + '.h5'
 
-#Read 24246 patches from multipath dataset
-# sOutPath = sOutPath + '_sf' + ''.join(map(str, lScaleFactor)).replace(" ", "").replace(".", "")
-# sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + 'sf' + ''.join(
-#         map(str, lScaleFactor)).replace(" ", "").replace(".", "") + '.h5'
-# sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(map(str,patchSize)).replace(" ", "") + os.sep + sOutsubdir + str(patchSize[0]) + str(patchSize[1]) + str(patchSize[2])
-
 if lCorrection:
     #########################
     ## Artifact Correction ##
@@ -89,16 +83,11 @@ elif lTrain:
 
     elif glob.glob(sDatafile):
         with h5py.File(sDatafile, 'r') as hf:
-            # X_train = hf['X_train'][:]
-            # X_test = hf['X_test'][:]
-            # y_train = hf['y_train'][:]
-            # y_test = hf['y_test'][:]
-            # patchSize = hf['patchSize'][:]
-            X_train = hf['X_train_p2'][:]
-            X_test = hf['X_test_p2'][:]
-            y_train = hf['y_train_p2'][:]
-            y_test = hf['y_test_p2'][:]
-            patchSize = hf['patchSize_down'][:]
+            X_train = hf['X_train'][:]
+            X_test = hf['X_test'][:]
+            y_train = hf['y_train'][:]
+            y_test = hf['y_test'][:]
+            patchSize = hf['patchSize'][:]
             if sTrainingMethod == "MultiScaleSeparated":
                 X_train_p2 = hf['X_train_p2'][:]
                 X_test_p2 = hf['X_test_p2'][:]

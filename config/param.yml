@@ -83,8 +83,6 @@ lLabelPredictImg : [ 1 ]
 # sPredictModel: if empty, the best model in the selected database will be chosen.
 # Otherwise, the given trained model will be used in predicting, e.g. "testout4040_lr_0.0005_bs_128"
 sPredictModel : ""
-# iClass: the number of the class, example: ref = 0, artefact = 1
-iClass: 1
 # sTrainingMethod
 # "None": No scaling process
 # "ScaleJittering": Scaling each image randomly before patching
@@ -114,6 +112,6 @@ correction:
   unpatch: false
   nScale: 255
   dropout: 1
-  actualSize: [256, 196]
+  actualSize: [256, 196] # Head:[256, 196, 40]  Abdomen: [256, 320, 30]
   evaluate: true
   test_patient: "01_ab"

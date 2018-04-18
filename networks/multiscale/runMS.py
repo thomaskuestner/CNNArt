@@ -88,13 +88,13 @@ def fTrainInner(sModelIn, sOutPath, patchSize, learningRate=0.001, X_train=None,
     else: # model with 2 pathways and SPP, FCN or Inception modules
         model = getattr(MSnetworks, fCreateModel)(patchSize, patchSize_down)
         
-    #plot_model(model, to_file='/no_backup/s1241/MultiScale/model'+sModelIn+'.png',show_shapes='True')
+    #plot_model(model, to_file='/MultiScale/model'+sModelIn+'.png',show_shapes='True')
     opti, loss = fGetOptimizerAndLoss(optimizer='Adam', learningRate=learningRate)  # loss cat_crosent default
     model.compile(optimizer=opti, loss=loss, metrics=['accuracy'])
     model.summary()
 
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
-    callbacks.append(ModelCheckpoint('/no_backup/s1241/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
+    callbacks.append(ModelCheckpoint('/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
        period=5, save_best_only=True))# overrides the last checkpoint, its just for security
     callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
@@ -169,18 +169,18 @@ def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSiz
     modelSave = sOutPath + '/bestModel/' + model_name + '_pred.mat'
     print('saving Model:{}'.format(modelSave))
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
-    model.save(model_all)
+    #model.save(model_all)
 
     imglayRef, imglayArt = fUnpatchLabel(prob_pre, patchSize, patchOverlap, actualSize)
     if predictImg==[]:
         img4D =fPatchToImage(actualSize, X_test, patchOverlap) # [Art/Ref, height, width, depth]
     else:
         img4D = predictImg
-    
+
     x_1d = np.arange(actualSize[0])
     y_1d = np.arange(actualSize[1])
     X, Y = np.meshgrid(x_1d, y_1d)
-  
+
     for iSlice in range(0, img4D.shape[3], 5):
         fig = plt.figure(dpi=100)
         plt.cla()
@@ -188,7 +188,7 @@ def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSiz
         plt.xlim(0, actualSize[0])
         plt.ylim(actualSize[1], 0)
         plt.set_cmap(plt.gray())
-        
+
         # Head: pcolormesh(X, Y,...)    Abdomen: pcolormesh(Y, X,...)
         plt.subplot(211)
         plt.axis('off')
@@ -198,12 +198,12 @@ def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSiz
         plt.subplot(212)
         plt.axis('off')
         plt.pcolormesh(X, Y, np.swapaxes(img4D[1, :, :, iSlice], 0, 1), vmin=0, vmax=1)
-        plt.pcolormesh(  np.swapaxes(imglayArt[:, :, iSlice], 0, 1), cmap='jet', alpha=0.2, vmin=0, vmax=1, linestyle='None', rasterized=True)
+        plt.pcolormesh(X, Y, np.swapaxes(imglayArt[:, :, iSlice], 0, 1), cmap='jet', alpha=0.2, vmin=0, vmax=1, linestyle='None', rasterized=True)
         plt.title('Slice ' + str(iSlice) + ' with motion artifacts', fontsize = 16)
-        
-        plt.subplots_adjust(left=0.1, bottom=0.1, right=0.8, top=0.9, hspace=0.2)        
+
+        plt.subplots_adjust(left=0.1, bottom=0.1, right=0.8, top=0.9, hspace=0.2)
         cax = plt.axes([0.85, 0.1, 0.08, 0.8])
         plt.colorbar(cax=cax)
-        fig.set_size_inches(8, 12)        
+        fig.set_size_inches(8, 12)
         plt.savefig(sOutPath + '/Overlay/' + model_name + '_Slice' + str(iSlice) + '.png')
         plt.show()
