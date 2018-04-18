@@ -15,6 +15,7 @@ from keras.utils import plot_model
 import MSnetworks
 from utils.Unpatching import fUnpatchLabel, fPatchToImage
 from matplotlib import pyplot as plt
+import matplotlib as mpl
 
 def frunCNN_MS(dData, sModelIn, lTrain, sOutPath, iBatchSize, iLearningRate, iEpochs, CV_Patient=0, predictImg=[]):
     if lTrain:
@@ -170,31 +171,39 @@ def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSiz
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
     model.save(model_all)
 
-    # imglayRef, imglayArt = fUnpatchLabel(prob_pre, patchSize, patchOverlap, actualSize)
-    # if predictImg==[]:
-    #     img4D =fPatchToImage(actualSize, X_test, patchOverlap) # [Art/Ref, height, width, depth]
-    # else:
-    #     img4D = predictImg
-    #
-    # x_1d = np.arange(actualSize[0])
-    # y_1d = np.arange(actualSize[1])
-    # X, Y = np.meshgrid(x_1d, y_1d)
-    # fig = plt.figure(dpi=100)
-    # ax = plt.gca()
-    # plt.cla()
-    # plt.gca().set_aspect('equal')  # plt.axes().set_aspect('equal')
-    # plt.xlim(0, actualSize[0])
-    # plt.ylim(actualSize[1], 0)
-    # plt.set_cmap(plt.gray())
-    #
-    # for iSlice in range(0, img4D.shape[3], 5):
-    #     plt.subplot(211)
-    #     plt.pcolormesh(X, Y, np.swapaxes(img4D[0, :, :, iSlice], 0, 1), vmin=0, vmax=1)
-    #     plt.pcolormesh(X, Y, np.swapaxes(imglayRef[:, :, iSlice], 0, 1), cmap='jet', alpha=0.05, vmin=0, vmax=1, linestyle='None', rasterized=True)
-    #     plt.colorbar(pad=0.5, shrink=1.0, aspect=5)
-    #     plt.subplot(212)
-    #     plt.pcolormesh(X, Y, np.swapaxes(img4D[1, :, :, iSlice], 0, 1), vmin=0, vmax=1)
-    #     plt.pcolormesh(X, Y, np.swapaxes(imglayArt[:, :, iSlice], 0, 1), cmap='jet', alpha=0.05, vmin=0, vmax=1, linestyle='None', rasterized=True)
-    #     plt.colorbar(pad=0.5, shrink=1.0, aspect=5)
-    #     plt.show()
-    #     plt.savefig(sOutPath + '/Overlay/' + model_name + '_Slice' + str(iSlice) + '.png')
+    imglayRef, imglayArt = fUnpatchLabel(prob_pre, patchSize, patchOverlap, actualSize)
+    if predictImg==[]:
+        img4D =fPatchToImage(actualSize, X_test, patchOverlap) # [Art/Ref, height, width, depth]
+    else:
+        img4D = predictImg
+    
+    x_1d = np.arange(actualSize[0])
+    y_1d = np.arange(actualSize[1])
+    X, Y = np.meshgrid(x_1d, y_1d)
+  
+    for iSlice in range(0, img4D.shape[3], 5):
+        fig = plt.figure(dpi=100)
+        plt.cla()
+        plt.gca().set_aspect('equal')
+        plt.xlim(0, actualSize[0])
+        plt.ylim(actualSize[1], 0)
+        plt.set_cmap(plt.gray())
+        
+        # Head: pcolormesh(X, Y,...)    Abdomen: pcolormesh(Y, X,...)
+        plt.subplot(211)
+        plt.axis('off')
+        plt.pcolormesh(X, Y, np.swapaxes(img4D[0, :, :, iSlice], 0, 1), vmin=0, vmax=1)
+        plt.pcolormesh(X, Y, np.swapaxes(imglayRef[:, :, iSlice], 0, 1), cmap='jet', alpha=0.2, vmin=0, vmax=1, linestyle='None', rasterized=True)
+        plt.title('Slice ' + str(iSlice) + ' without artifacts', fontsize = 16)
+        plt.subplot(212)
+        plt.axis('off')
+        plt.pcolormesh(X, Y, np.swapaxes(img4D[1, :, :, iSlice], 0, 1), vmin=0, vmax=1)
+        plt.pcolormesh(  np.swapaxes(imglayArt[:, :, iSlice], 0, 1), cmap='jet', alpha=0.2, vmin=0, vmax=1, linestyle='None', rasterized=True)
+        plt.title('Slice ' + str(iSlice) + ' with motion artifacts', fontsize = 16)
+        
+        plt.subplots_adjust(left=0.1, bottom=0.1, right=0.8, top=0.9, hspace=0.2)        
+        cax = plt.axes([0.85, 0.1, 0.08, 0.8])
+        plt.colorbar(cax=cax)
+        fig.set_size_inches(8, 12)        
+        plt.savefig(sOutPath + '/Overlay/' + model_name + '_Slice' + str(iSlice) + '.png')
+        plt.show()
