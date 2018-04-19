@@ -3,7 +3,9 @@ from skimage.measure import compare_ssim as ssim
 from skimage.measure import compare_nrmse as nrmse
 from skimage.measure import compare_psnr as psnr
 from skimage.restoration import denoise_tv_chambolle
+from skimage.transform import resize
 from sklearn.metrics import normalized_mutual_info_score as nmi
+import cv2
 import matplotlib as mpl
 mpl.use('Agg')
 
@@ -12,7 +14,7 @@ from keras.engine.topology import Layer
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from keras.optimizers import Adam
 
-from utils.MotionCorrection.network_block import encode, encode_shared, decode
+from utils.MotionCorrection.network_block import *
 from utils.MotionCorrection.customLoss import *
 from utils.Unpatching import *
 from utils.MotionCorrection.plot import *
@@ -36,8 +38,8 @@ class CustomLossLayer(Layer):
         self.add_loss(self.dHyper['kl_weight']*K.mean(loss_kl))
 
         # compute MSE loss
-        # mse_loss_ref2ref, mse_loss_art2ref = compute_mse_loss(self.dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
-        # self.add_loss(self.dHyper['mse_weight'] * (self.dHyper['loss_ref2ref']*mse_loss_ref2ref + self.dHyper['loss_art2ref']*mse_loss_art2ref))
+        mse_loss_ref2ref, mse_loss_art2ref = compute_mse_loss(self.dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
+        self.add_loss(self.dHyper['mse_weight'] * (self.dHyper['loss_ref2ref']*mse_loss_ref2ref + self.dHyper['loss_art2ref']*mse_loss_art2ref))
 
         # compute gradient entropy
         ge_ref2ref, ge_art2ref = compute_gradient_entropy(self.dHyper, decoded_ref2ref, decoded_art2ref, self.patchSize)
@@ -59,28 +61,53 @@ def createModel(patchSize, dHyper):
     x_ref = Input(shape=(1, patchSize[0], patchSize[1]))
     x_art = Input(shape=(1, patchSize[0], patchSize[1]))
 
-    # create respective encoders
-    encoded_ref = encode(x_ref, patchSize, dHyper['bn'])
-    encoded_art = encode(x_art, patchSize, dHyper['bn'])
+    if dHyper['architecture'] == 'old':
+        # create respective encoders
+        encoded_ref = encode(x_ref, patchSize)
+        encoded_art = encode(x_art, patchSize)
 
-    # concatenate the encoded features together
-    combined = concatenate([encoded_ref, encoded_art], axis=0)
+        # concatenate the encoded features together
+        combined = concatenate([encoded_ref, encoded_art], axis=0)
 
-    # create the shared encoder
-    z, z_mean, z_log_var = encode_shared(combined, patchSize, dHyper['bn'])
+        # create the shared encoder
+        z, z_mean, z_log_var = encode_shared(combined, patchSize)
 
-    # create the decoder
-    decoded = decode(z, patchSize, dHyper['bn'])
+        # create the decoder
+        decoded = decode(z, patchSize)
 
-    # separate the concatenated images
-    decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
-    decoded_art2ref = Lambda(lambda input: input[input.shape[0]//2:, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
+        # separate the concatenated images
+        decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
+        decoded_art2ref = Lambda(lambda input: input[input.shape[0]//2:, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
 
-    # input to CustomLoss Layer
-    [decoded_ref2ref, decoded_art2ref] = CustomLossLayer(dHyper, patchSize)([x_ref, decoded_ref2ref, decoded_art2ref, z_log_var, z_mean])
+        # input to CustomLoss Layer
+        [decoded_ref2ref, decoded_art2ref] = CustomLossLayer(dHyper, patchSize)([x_ref, decoded_ref2ref, decoded_art2ref, z_log_var, z_mean])
 
-    # generate the VAE and encoder model
-    vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
+        # generate the VAE and encoder model
+        vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
+
+    else:
+        encoded_ref, conv_1_ref = encode_new(x_ref, patchSize)
+        encoded_art, conv_1_art = encode_new(x_art, patchSize)
+
+        # concatenate the encoded features together
+        conv_1 = concatenate([conv_1_ref, conv_1_art], axis=0)
+        conv_2 = concatenate([encoded_ref, encoded_art], axis=0)
+
+        # create the shared encoder
+        z, z_mean, z_log_var, conv_3 = encode_shared_new(conv_2, patchSize)
+
+        # create the decoder
+        decoded = decode_new(z, patchSize, conv_1, conv_2, conv_3)
+
+        # separate the concatenated images
+        decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
+        decoded_art2ref = Lambda(lambda input: input[input.shape[0]//2:, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
+
+        # input to CustomLoss Layer
+        [decoded_ref2ref, decoded_art2ref] = CustomLossLayer(dHyper, patchSize)([x_ref, decoded_ref2ref, decoded_art2ref, z_log_var, z_mean])
+
+        # generate the VAE and encoder model
+        vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
 
     return vae
 
@@ -109,7 +136,6 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
 
     vae = createModel(patchSize, dHyper)
     vae.compile(optimizer=Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0), loss=None)
-    # vae.compile(optimizer=RMSprop(lr=lr), loss=None)
     vae.summary()
 
     print('Training with epochs {} batch size {} learning rate {}'.format(epochs, batchSize, lr))
@@ -125,7 +151,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
 
 
     if dHyper['augmentation']:
-        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_GE_augmentation_100.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
+        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_GE_MSE_augmentation.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
         # vae.load_weights(weights_file)
 
         lossPlot_file = weights_file[:-3] + '.png'
@@ -134,7 +160,10 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
         callback_list.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0, verbose=1))
         callback_list.append(ModelCheckpoint(weights_file, monitor='val_loss', verbose=1, period=1, save_best_only=True, save_weights_only=True))
         callback_list.append(plotLoss)
-        datagen = ImageDataGenerator(rotation_range=10, vertical_flip=True, horizontal_flip=True)
+        datagen = ImageDataGenerator(rotation_range=10,
+                                     vertical_flip=True,
+                                     horizontal_flip=True,
+                                     zoom_range=0.2)
         gen_flow = gen_flow_for_two_inputs(train_ref, train_art)
 
         vae.fit_generator(gen_flow,
@@ -205,7 +234,13 @@ def fPredict(test_ref, test_art, dParam, dHyper):
             ax = axes.ravel()
             plt.gray()
             label = 'NRMSE: {:.2f}, SSIM: {:.3f}, NMI: {:.3f}'
-            for i in range(test_ref.shape[0]):
+
+            # Super Resolution configuration
+            # test_ref = [resize(input, (256*2, 196*2)) for input in test_ref]
+            # test_art = [resize(input, (256*2, 196*2)) for input in test_art]
+            # predict_art = [resize(input, (256*2, 196*2)) for input in predict_art]
+
+            for i in range(len(test_ref)):
                 # orignal reconstructed images
                 ax[0].imshow(test_ref[i])
                 ax[0].set_xlabel(label.format(nrmse(test_ref[i], test_ref[i]), ssim(test_ref[i], test_ref[i], data_range=(test_ref[i].max() - test_ref[i].min())), nmi(test_ref[i].flatten(), test_ref[i].flatten())))
@@ -256,7 +291,7 @@ def fPredict(test_ref, test_art, dParam, dHyper):
             for i in range(predict_art.shape[0]):
                 plt.imshow(predict_art[i])
                 if dParam['lSave']:
-                    plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')
+                    plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png', dpi=300)
                 else:
                     plt.show()
     else:
