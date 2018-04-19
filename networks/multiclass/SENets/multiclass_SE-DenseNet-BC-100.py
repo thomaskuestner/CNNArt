@@ -57,7 +57,7 @@ def createModel(patchSize, numClasses):
     input_tensor = Input(shape=(patchSize[0], patchSize[1], 1))
 
     # first conv layer
-    x = Conv2D(2*growthRate_k, (3,3), strides=(1,1), padding='same', kernel_initializer='he_normal', name='conv1')(input_tensor)
+    x = Conv2D(2*growthRate_k, (7,7), strides=(2,2), padding='same', kernel_initializer='he_normal', name='conv1')(input_tensor)
 
     # 1. Dense Block
     x, numFilters = dense_block(x, numInputFilters=2*growthRate_k, numLayers=16, growthRate_k=growthRate_k, bottleneck_enabled=True)
@@ -397,13 +397,15 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                              'prob_test': prob_test})
 
 
-def step_decay(epoch):
-   initial_lrate = 0.1
+def step_decay(epoch, lr):
    drop = 0.1
-   epochs_drop = 30.0
-   lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
-   print(str(lrate))
-   return lrate
+   epochs_drop = 10.0
+   print("Current Learning Rate: " + str(lr))
+   if epoch == epochs_drop or epoch == 2*epochs_drop or epoch == 3*epochs_drop or epoch == 4*epochs_drop:
+       lr = drop*lr
+       print("Reduce Learningrate by 0.1 to " + str(lr))
+
+   return lr
 
 
 def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):

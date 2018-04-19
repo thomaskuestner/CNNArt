@@ -30,6 +30,8 @@ import h5py
 
 from utils.Prediction import *
 from utils.Unpatching import *
+from utils.Multiclass_Unpatching import *
+from collections import Counter
 
 import cnn_main
 
@@ -132,6 +134,8 @@ class DeepLearningArtApp():
         self.patchOverlapp = 0.6
 
         self.usingSegmentationMasks = False
+
+        self.isRandomShuffle = True
 
         #attributes for labeling
         self.labelingMode = ''
@@ -464,7 +468,8 @@ class DeepLearningArtApp():
                                             patchOverlap=self.patchOverlapp,
                                             testTrainingDatasetRatio=self.trainTestDatasetRatio,
                                             validationTrainRatio=self.trainValidationRatio,
-                                            outPutPath=self.pathOutputPatching, nfolds=0)
+                                            outPutPath=self.pathOutputPatching,
+                                            nfolds=0, isRandomShuffle=self.isRandomShuffle)
                     else:
                         # do segmentation mask split
                         [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
@@ -477,7 +482,8 @@ class DeepLearningArtApp():
                                                         patchOverlap=self.patchOverlapp,
                                                         testTrainingDatasetRatio=self.trainTestDatasetRatio,
                                                         validationTrainRatio=self.trainValidationRatio,
-                                                        outPutPath=self.pathOutputPatching, nfolds=0)
+                                                        outPutPath=self.pathOutputPatching,
+                                                        nfolds=0, isRandomShuffle=self.isRandomShuffle)
 
                     # store datasets with h5py
                     with h5py.File(outputFolderPath + os.sep + 'datasets.hdf5', 'w') as hf:
@@ -502,7 +508,8 @@ class DeepLearningArtApp():
                                             patchOverlap=self.patchOverlapp,
                                             testTrainingDatasetRatio=self.trainTestDatasetRatio,
                                             validationTrainRatio=self.trainValidationRatio,
-                                            outPutPath=self.pathOutputPatching, nfolds=0)
+                                            outPutPath=self.pathOutputPatching,
+                                            nfolds=0, isRandomShuffle=self.isRandomShuffle)
                     else:
                         [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
                         [self.X_validation], [self.Y_validation], [self.Y_segMasks_validation], \
@@ -517,7 +524,7 @@ class DeepLearningArtApp():
                                                         testTrainingDatasetRatio=self.trainTestDatasetRatio,
                                                         validationTrainRatio=self.trainValidationRatio,
                                                         outPutPath=self.pathOutputPatching,
-                                                        nfolds=0)
+                                                        nfolds=0, isRandomShuffle=self.isRandomShuffle)
 
                     # store datasets with h5py
                     with h5py.File(outputFolderPath+os.sep+'datasets.hdf5', 'w') as hf:
@@ -547,7 +554,8 @@ class DeepLearningArtApp():
                                         patchOverlap=self.patchOverlapp,
                                         testTrainingDatasetRatio=self.trainTestDatasetRatio,
                                         validationTrainRatio=self.trainValidationRatio,
-                                        outPutPath=self.pathOutputPatching, nfolds=0)
+                                        outPutPath=self.pathOutputPatching,
+                                        nfolds=0, isRandomShuffle=self.isRandomShuffle)
                 else:
                     # do segmentation mask split
                     [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
@@ -563,7 +571,7 @@ class DeepLearningArtApp():
                                                     testTrainingDatasetRatio=self.trainTestDatasetRatio,
                                                     validationTrainRatio=self.trainValidationRatio,
                                                     outPutPath=self.pathOutputPatching,
-                                                    nfolds=0)
+                                                    nfolds=0, isRandomShuffle=self.isRandomShuffle)
 
             elif self.patchingMode == DeepLearningArtApp.PATCHING_3D:
                 if not self.usingSegmentationMasks:
@@ -575,7 +583,8 @@ class DeepLearningArtApp():
                                         patchOverlap=self.patchOverlapp,
                                         testTrainingDatasetRatio=self.trainTestDatasetRatio,
                                         validationTrainRatio=self.trainValidationRatio,
-                                        outPutPath=self.pathOutputPatching, nfolds=0)
+                                        outPutPath=self.pathOutputPatching,
+                                        nfolds=0, isRandomShuffle=self.isRandomShuffle)
                 else:
                     [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
                     [self.X_validation], [self.Y_validation], [self.Y_segMasks_validation], \
@@ -590,7 +599,7 @@ class DeepLearningArtApp():
                                                     testTrainingDatasetRatio=self.trainTestDatasetRatio,
                                                     validationTrainRatio=self.trainValidationRatio,
                                                     outPutPath=self.pathOutputPatching,
-                                                    nfolds=0)
+                                                    nfolds=0, isRandomShuffle=self.isRandomShuffle)
 
             print()
 
@@ -1040,6 +1049,12 @@ class DeepLearningArtApp():
     def getGUIHandle(self):
         return self.dlart_GUI_handle
 
+    def setIsRandomShuffle(self, b):
+        self.isRandomShuffle = b
+
+    def getIsRandomShuffle(self):
+        return self.isRandomShuffle
+
     def getUsingSegmentationMasks(self):
         return self.usingSegmentationMasks
 
@@ -1048,6 +1063,14 @@ class DeepLearningArtApp():
 
     def getUnpatchedSlices(self):
         return self.unpatched_slices
+
+    def livePlotTrainingPerformance(self, train_acc, val_acc, train_loss, val_loss):
+        curEpoch = len(train_acc)
+        progress = np.around(curEpoch/self.epochs*100, decimals=0)
+        progress = int(progress)
+
+        self.updateProgressBarTraining(progress)
+        self.dlart_GUI_handle.plotTrainingLivePerformance(train_acc=train_acc, val_acc=val_acc, train_loss=train_loss, val_loss=val_loss)
 
     def datasetAvailable(self):
         retbool = False
@@ -1393,6 +1416,7 @@ class DeepLearningArtApp():
                                             })
                 else:
                     sio.savemat(modelSave, {'prob_pre': allPreds[0],
+                                            'Y_test': Y_test,
                                             'classification_prob_pre': allPreds[1],
                                             'loss_test': predictions['loss_test'],
                                             'segmentation_output_loss_test': predictions['segmentation_output_loss_test'],
@@ -1472,6 +1496,7 @@ class DeepLearningArtApp():
 
                 patchSize = [X_test.shape[1], X_test.shape[2]]
                 classVec = self.classMappingsForPrediction[classLabel]
+                classVec = np.asarray(classVec, dtype=np.int32)
                 iClass = np.where(classVec == 1)
                 iClass = iClass[0]
 
@@ -1509,23 +1534,52 @@ class DeepLearningArtApp():
 
                 dicom_size = [voxel_ndarray.shape[0], voxel_ndarray.shape[1], voxel_ndarray.shape[2]]
 
-                # probability_mask = fUnpatch2D(self.predictions,
+                # multiclass_probability_masks = fUnpatch2D(self.predictions,
                 #                               patchSize,
                 #                               patchOverlap,
                 #                               dicom_size,
                 #                               iClass=iClass)
 
                 multiclass_probability_masks = fMulticlassUnpatch2D(self.predictions,
-                                                                    patchSize,
-                                                                    patchOverlap,
-                                                                    dicom_size)
+                                                                     patchSize,
+                                                                     patchOverlap,
+                                                                     dicom_size)
+
+
+                ########################################################################################################
+                # Hatching and colors multicalss unpatching
+                prob_test = self.predictions
+
+                IndexType = np.argmax(prob_test, 1)
+                IndexType[IndexType == 0] = 1
+                IndexType[(IndexType > 1) & (IndexType < 4)] = 2
+                IndexType[(IndexType > 3) & (IndexType < 6)] = 3
+                IndexType[(IndexType > 5) & (IndexType < 8)] = 4
+                IndexType[IndexType > 7] = 5
+
+                a = Counter(IndexType).most_common(1)
+                domain = a[0][0]
+
+                PType = np.delete(prob_test, [1, 3, 5, 7, 9, 10], 1)  # only 5 region left
+                PArte = np.delete(prob_test, [0, 2, 4, 6, 8], 1)
+                PArte[:, [3, 4]] = PArte[:, [4, 3]]
+                #PArte = np.reshape(PArte, (0, 1, 2, 3, 4, 5))
+                PNew = np.concatenate((PType, PArte), axis=1)
+                IndexArte = np.argmax(PNew, 1)
+
+                IType = UnpatchType(IndexType, domain, patchSize, patchOverlap, dicom_size)
+
+                IArte = UnpatchArte(IndexArte, patchSize, patchOverlap, dicom_size)
+                ########################################################################################################
 
 
                 self.unpatched_slices = {
                     'multiclass_probability_masks': multiclass_probability_masks,
                     'dicom_slices': voxel_ndarray,
                     'dicom_masks': labelMask_ndarray,
-                    'index_class': iClass
+                    'index_class': iClass,
+                    'IType': IType,
+                    'IArte': IArte
                 }
 
             # save prediction into .mat file
@@ -1533,6 +1587,7 @@ class DeepLearningArtApp():
             print('saving Model:{}'.format(modelSave))
             if not self.doUnpatching:
                 sio.savemat(modelSave, {'prob_pre': prediction['predictions'],
+                                        'Y_test': Y_test,
                                         'score_test': prediction['score_test'],
                                         'acc_test': prediction['acc_test'],
                                         'classification_report': prediction['classification_report'],
@@ -1540,6 +1595,7 @@ class DeepLearningArtApp():
                                         })
             else:
                 sio.savemat(modelSave, {'prob_pre': prediction['predictions'],
+                                        'Y_test': Y_test,
                                         'score_test': prediction['score_test'],
                                         'acc_test': prediction['acc_test'],
                                         'classification_report': prediction['classification_report'],

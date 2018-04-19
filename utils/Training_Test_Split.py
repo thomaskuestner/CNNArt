@@ -29,7 +29,7 @@ def expecting():
         return 0
     return 1
 
-def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap, testTrainingDatasetRatio=0, validationTrainRatio=0, outPutPath=None, nfolds = 0):
+def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap, testTrainingDatasetRatio=0, validationTrainRatio=0, outPutPath=None, nfolds = 0, isRandomShuffle=True):
     # TODO: adapt path
     iReturn = expecting()
     #iReturn = 1000
@@ -47,7 +47,9 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
     if sSplitting == dlart.DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING:
         # splitting
         indexSlices = range(allPatches.shape[0])
-        indexSlices = np.random.permutation(indexSlices)
+
+        if isRandomShuffle:
+            indexSlices = np.random.permutation(indexSlices)
 
         if len(patchSize)==2:
             #2D patching
@@ -280,7 +282,7 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
 
 
 
-def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, sSplitting, patchSize, patchOverlap, testTrainingDatasetRatio=0, validationTrainRatio=0, outPutPath=None, nfolds = 0):
+def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, sSplitting, patchSize, patchOverlap, testTrainingDatasetRatio=0, validationTrainRatio=0, outPutPath=None, nfolds = 0, isRandomShuffle=True):
     # TODO: adapt path
     iReturn = expecting()
     #iReturn = 1000
@@ -300,7 +302,9 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, s
     if sSplitting == dlart.DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING:
         # splitting
         indexSlices = range(allPatches.shape[0])
-        #indexSlices = np.random.permutation(indexSlices)
+
+        if isRandomShuffle:
+            indexSlices = np.random.permutation(indexSlices)
 
         if len(patchSize)==2:
             #2D patching

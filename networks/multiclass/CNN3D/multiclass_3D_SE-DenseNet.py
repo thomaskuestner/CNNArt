@@ -101,7 +101,7 @@ def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, 
     X_train = np.expand_dims(X_train, axis=-1)
     X_test = np.expand_dims(X_test, axis=-1)
 
-    if X_valid is not None and y_valid is not None:
+    if X_valid.size != 0 and y_valid.size != 0:
         X_valid = np.expand_dims(X_valid, axis=-1)
 
     #y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
@@ -276,7 +276,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                                        use_multiprocessing=False)
 
     else:
-        if not X_valid and not y_valid :
+        if X_valid.size == 0 and y_valid.size == 0 :
             # no validation datasets
             result = cnn.fit(X_train,
                              y_train,
@@ -328,13 +328,15 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                              'prob_test': prob_test})
 
 
-def step_decay(epoch):
-   initial_lrate = 0.1
+def step_decay(epoch, lr):
    drop = 0.1
-   epochs_drop = 10
-   lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
-   print("Reduce Learningrate by 0.1")
-   return lrate
+   epochs_drop = 10.0
+   print("Current Learning Rate: " + str(lr))
+   if epoch == epochs_drop or epoch == 2*epochs_drop or epoch == 3*epochs_drop or epoch == 4*epochs_drop:
+       lr = drop*lr
+       print("Reduce Learningrate by 0.1 to " + str(lr))
+
+   return lr
 
 
 def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):

@@ -3,36 +3,33 @@ from matplotlib import pyplot as plt
 import scipy.io as sio
 import seaborn as sn
 import pandas as pd
+from sklearn import metrics
 
 
-path = 'D:/med_data/MRPhysics/MA Results/Output_Learning-9.3.18/Multiclass SE-ResNet-56_2D_64x64_2018-03-07_11-48/model_predictions.mat'
+
+
+path = 'D:/med_data/MRPhysics/MA Results/2D_64x64/Multiclass SE-ResNet-56_2D_64x64_2018-04-07_13-13/model_predictions.mat'
 
 mat = sio.loadmat(path)
 
-confusion_matrix = mat['confusion_matrix']
-classification_report = mat['classification_report']
-stri = classification_report[0]
-print(stri)
+Y_test = mat['Y_test']
 
-sum_all = np.array(np.sum(confusion_matrix, axis=0))
+prob_pre = mat['prob_pre']
 
-all = np.zeros((len(sum_all), len(sum_all)))
-for i in range(all.shape[0]):
-     all[i,:]=sum_all
+indexes = np.argmax(prob_pre, axis=1)
 
-confusion_matrix = np.divide(confusion_matrix, all)
+onehots = np.zeros((prob_pre.shape[0], prob_pre.shape[1]))
 
-df_cm = pd.DataFrame(confusion_matrix,
-                     index = [i for i in "ABCDEFGHIJK"],
-                     columns = [i for i in "ABCDEFGHIJK"], )
+for i in range(indexes.shape[0]):
+    onehots[i, indexes[i]] = 1
 
-# Set up the matplotlib figure
-f, ax = plt.subplots(figsize=(11, 9))
 
-sn.heatmap(df_cm, annot=True, fmt='.4f')
+acc = metrics.accuracy_score(Y_test, onehots)
+precision = metrics.precision_score(Y_test, onehots, average='weighted', labels=np.unique(onehots))
+#f1score = metrics.f1_score(Y_test, onehots, average='weighted', labels=np.unique(onehots))
 
-plt.show(block=True)
-
-print()
+print(acc)
+print(precision)
+#print(f1score)
 
 

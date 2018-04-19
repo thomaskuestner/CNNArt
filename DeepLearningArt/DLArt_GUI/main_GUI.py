@@ -169,6 +169,12 @@ class MainWindow(QMainWindow):
         self.ui.verticalLayout_multiclassVisualisation.addWidget(self.toolbar_multiclassVisualisation_figure)
 
 
+        # live training performance plot
+        self.training_live_performance_figure = Figure(figsize=(10,10))
+        self.canvas_training_live_performance_figure = FigureCanvas(self.training_live_performance_figure)
+        self.ui.verticalLayout_training_performance.addWidget(self.canvas_training_live_performance_figure)
+
+
         ################################################################################################################
 
         ################################################################################################################
@@ -234,6 +240,9 @@ class MainWindow(QMainWindow):
         # spinbox for selecting multi-class visualisation slice
         self.ui.spinBox_sliceSelection_multiclassVisualisation.valueChanged.connect(self.spinBox_sliceSelection_multiclassVisualisation_changed)
 
+        # radio button multiclass visualisation
+        self.ui.radioButton_probabilites.toggled.connect(self.button_multiclassVisualisation_clicked)
+        self.ui.radioButton_classes.toggled.connect(self.button_multiclassVisualisation_clicked)
 
         ################################################################################################################
 
@@ -249,7 +258,7 @@ class MainWindow(QMainWindow):
         one_colors = [(1, 0, 0), (1, 0, 0)]
         one_color_colormap = LinearSegmentedColormap.from_list('one_color', one_colors, N=100)
         one_color_colormap = one_color_colormap(np.arange(one_color_colormap.N))
-        one_color_colormap[:, -1] = np.linspace(0, 0.25, 100)
+        one_color_colormap[:, -1] = np.linspace(0, 0.4, 100)
 
         # red colormap
         red_colormap = ListedColormap(one_color_colormap)
@@ -342,32 +351,47 @@ class MainWindow(QMainWindow):
             self.ui.spinBox_sliceSelection_multiclassVisualisation.setMaximum(int(dicom_slices.shape[-1]))
 
             if index >= 0 and index < dicom_slices.shape[-1]:
-                classMappings = self.deepLearningArtApp.getClassMappingsForPrediction()
+                if self.ui.radioButton_probabilites.isChecked():
 
-                if len(self.multiclassCheckboxes) != 0:
-                    for i in self.multiclassCheckboxes:
-                        self.ui.verticalLayout_multiclassSelection.removeWidget(i)
+                    classMappings = self.deepLearningArtApp.getClassMappingsForPrediction()
 
-                self.multiclassCheckboxes = []
+                    if len(self.multiclassCheckboxes) != 0:
+                        for i in self.multiclassCheckboxes:
+                            self.ui.verticalLayout_multiclassSelection.removeWidget(i)
+                            i.deleteLater()
+                            i = None
 
-                for i in range(numClasses):
+                    self.multiclassCheckboxes = []
 
-                    strName = ''
-                    for labelKey in classMappings:
-                        valPos = np.where(classMappings[labelKey]==1)
-                        if valPos[0] == i:
-                            strName = str(Label.LABEL_STRINGS[labelKey])
+                    for i in range(numClasses):
+                        strName = ''
+                        for labelKey in classMappings:
+                            valPos = np.where(np.asarray(classMappings[labelKey], dtype=int)==1)
+                            if valPos[0] == i:
+                                strName = str(Label.LABEL_STRINGS[labelKey])
 
-                    cb = QCheckBox(strName)
-                    c = self.multiclass_colormaps[i].colors[0, 0:3]
-                    c = np.multiply(c, 255)
-                    c = tuple(c)
-                    cb.setStyleSheet("color: rgb" + str(c))
-                    cb.stateChanged.connect(self.update_multiclass_visualisation)
-                    self.ui.verticalLayout_multiclassSelection.addWidget(cb)
-                    self.multiclassCheckboxes.append(cb)
+                        cb = QCheckBox(strName)
+                        c = self.multiclass_colormaps[i].colors[0, 0:3]
+                        c = np.multiply(c, 255)
+                        c = tuple(c)
+                        cb.setStyleSheet("color: rgb" + str(c))
+                        cb.stateChanged.connect(self.update_multiclass_visualisation)
+                        self.ui.verticalLayout_multiclassSelection.addWidget(cb)
+                        self.multiclassCheckboxes.append(cb)
 
-                self.update_multiclass_visualisation()
+                    self.update_multiclass_visualisation()
+
+                elif self.ui.radioButton_classes.isChecked():
+                    if len(self.multiclassCheckboxes) != 0:
+                        for i in self.multiclassCheckboxes:
+                            self.ui.verticalLayout_multiclassSelection.removeWidget(i)
+                            i.deleteLater()
+                            i = None
+
+                    self.multiclassCheckboxes = []
+
+                    self.update_multiclass_visualisation()
+
 
 
 
@@ -381,7 +405,6 @@ class MainWindow(QMainWindow):
             dicom_slices = unpatches_slices['dicom_slices']
             dicom_masks = unpatches_slices['dicom_masks']
 
-
             index = int(self.ui.spinBox_sliceSelection_multiclassVisualisation.value())
             self.ui.spinBox_sliceSelection_multiclassVisualisation.setMaximum(int(dicom_slices.shape[-1]))
 
@@ -394,14 +417,30 @@ class MainWindow(QMainWindow):
                 ax1.clear()
                 ax1.imshow(dicom_slice, cmap='gray')
 
-                for i in range(len(self.multiclassCheckboxes)):
-                    if bool(self.multiclassCheckboxes[i].isChecked()):
-                        prediction_slice = np.squeeze(multiclass_probability_masks[:, :, :, index])
-                        prediction_slice = np.squeeze(prediction_slice[:, :, i])
+                if self.ui.radioButton_probabilites.isChecked():
 
-                        map = ax1.imshow(prediction_slice, cmap=self.multiclass_colormaps[i], interpolation='nearest', vmin=0, vmax=1)
-                        #cbaxes = self.multiclassVisualisation_figure.add_axes([0.8, 0.1, 0.1, 0.8])
-                        self.multiclassVisualisation_figure.colorbar(mappable=map, ax=ax1)
+                    for i in range(len(self.multiclassCheckboxes)):
+                        if bool(self.multiclassCheckboxes[i].isChecked()):
+                            prediction_slice = np.squeeze(multiclass_probability_masks[:, :, :, index])
+                            prediction_slice = np.squeeze(prediction_slice[:, :, i])
+
+                            map = ax1.imshow(prediction_slice, cmap=self.multiclass_colormaps[i], interpolation='nearest', vmin=0, vmax=1)
+                            #cbaxes = self.multiclassVisualisation_figure.add_axes([0.8, 0.1, 0.1, 0.8])
+                            self.multiclassVisualisation_figure.colorbar(mappable=map, ax=ax1)
+
+                elif self.ui.radioButton_classes.isChecked():
+                    IType = unpatches_slices['IType']
+                    IArte = unpatches_slices['IArte']
+
+                    cmap1 = ListedColormap(['blue', 'purple', 'cyan', 'yellow', 'green'])
+                    im2 = ax1.imshow(np.squeeze(IType[:, :, index]), cmap=cmap1, alpha=.2, vmin=1, vmax=6)
+
+                    plt.rcParams['hatch.color'] = 'r'
+                    im3 = ax1.contourf(np.squeeze(IArte[:, :, index]), hatches=[None, '//', '\\\\', 'XX'], colors='none', edges='r', levels=np.arange(5))
+
+                    ax1.set_ylabel('slice %s' % index)
+                    self.multiclassVisualisation_figure.colorbar(mappable=im2, ax=ax1)
+
 
                 self.multiclassVisualisation_figure.tight_layout()
                 self.canvas_multiclassVisualisation_figure.draw()
@@ -422,8 +461,23 @@ class MainWindow(QMainWindow):
                 classificationReport = self.deepLearningArtApp.getClassificationReport()
 
                 target_names = []
-                for i in sorted(self.deepLearningArtApp.getClassMappingsForPrediction()):
-                    target_names.append(Label.LABEL_STRINGS[i])
+
+                classMappings = self.deepLearningArtApp.getClassMappingsForPrediction()
+
+                if len(classMappings[list(classMappings.keys())[0]]) == 3:
+                    for i in sorted(classMappings):
+                        i = i%100
+                        i = i%10
+                        if Label.LABEL_STRINGS[i] not in target_names:
+                            target_names.append(Label.LABEL_STRINGS[i])
+                elif len(classMappings[list(classMappings.keys())[0]]) == 8:
+                    for i in sorted(classMappings):
+                        i = i%100
+                        if Label.LABEL_STRINGS[i] not in target_names:
+                            target_names.append(Label.LABEL_STRINGS[i])
+                else:
+                    for i in sorted(self.deepLearningArtApp.getClassMappingsForPrediction()):
+                        target_names.append(Label.LABEL_STRINGS[i])
 
                 acc_training = self.deepLearningArtApp.get_acc_training()
                 acc_validation = self.deepLearningArtApp.get_acc_validation()
@@ -621,6 +675,40 @@ class MainWindow(QMainWindow):
         self.ui.Label_currentDataset_prediction.setText(pathToDataset)
 
 
+    def updateProgressBarTraining(self, val):
+        if val >= 0 and val <= 100:
+            self.ui.progressBar_Training.setValue(val)
+
+
+    def plotTrainingLivePerformance(self, train_acc, val_acc, train_loss, val_loss):
+        epochs = np.arange(1, len(train_acc)+1)
+
+        self.training_live_performance_figure.clear()
+        ax1 = self.training_live_performance_figure.add_subplot(211)
+        ax1.clear()
+        ax1.plot(epochs, train_acc, 'r')
+        ax1.plot(epochs, val_acc, 'b')
+        ax1.set_xlabel('Epochs')
+        ax1.set_ylabel('Accuracy')
+        ax1.grid(b=True, which='both')
+        ax1.legend(['training accuracy', 'validation accuracy'])
+        ax1.set_xlim(1, self.deepLearningArtApp.getEpochs())
+
+        ax2 = self.training_live_performance_figure.add_subplot(212)
+        ax2.clear()
+        ax2.plot(epochs, train_loss, 'r')
+        ax2.plot(epochs, val_loss, 'b')
+        ax2.set_xlabel('Epochs')
+        ax2.set_ylabel('Loss')
+        ax2.grid(b=True, which='both')
+        ax2.legend(['training loss', 'validation loss'])
+        ax2.set_xlim(1, self.deepLearningArtApp.getEpochs())
+
+        self.canvas_training_live_performance_figure.draw()
+
+        QApplication.processEvents()
+        #QTimer.singleShot(0, lambda: self.update)
+
 
     def button_train_clicked(self):
         # set gpu
@@ -749,6 +837,12 @@ class MainWindow(QMainWindow):
 
         self.getSelectedDatasets()
         self.getSelectedPatients()
+
+        # random shuffle
+        if self.ui.CheckBox_randomShuffle.isChecked():
+            self.deepLearningArtApp.setIsRandomShuffle(True)
+        else:
+            self.deepLearningArtApp.setIsRandomShuffle(False)
 
         # get patching parameters
         self.deepLearningArtApp.setPatchSizeX(self.ui.SpinBox_PatchX.value())
@@ -924,11 +1018,6 @@ class MainWindow(QMainWindow):
         path = self.openFileNamesDialog(self.deepLearningArtApp.getLearningOutputPath())
         self.deepLearningArtApp.setLearningOutputPath(path)
         self.ui.Label_LearningOutputPath.setText(path)
-
-
-
-    def updateProgressBarTraining(self, val):
-        self.ui.ProgressBar_training.setValue(val)
 
 
 
@@ -1190,10 +1279,6 @@ class MainWindow(QMainWindow):
 
     def performTraining_ArtGAN(self):
         self.deepLearningArtApp.performTraining_ArtGAN()
-
-
-
-
 
 
 

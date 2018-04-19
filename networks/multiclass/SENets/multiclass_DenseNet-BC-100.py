@@ -50,7 +50,7 @@ def createModel(patchSize, numClasses):
     input_tensor = Input(shape=(patchSize[0], patchSize[1], 1))
 
     # first conv layer
-    x = Conv2D(2*growthRate_k, (3,3), strides=(1,1), padding='same', kernel_initializer='he_normal', name='conv1')(input_tensor)
+    x = Conv2D(2*growthRate_k, (7,7), strides=(2,2), padding='same', kernel_initializer='he_normal', name='conv1')(input_tensor)
 
     # 1. Dense Block
     x, numFilters = dense_block(x, numInputFilters=2*growthRate_k, numLayers=16, growthRate_k=growthRate_k, bottleneck_enabled=True)

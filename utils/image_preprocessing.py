@@ -671,17 +671,17 @@ class ImageDataGenerator(object):
                 x = flip_axis(x, img_row_axis)
 
         if self.histogram_equalization:
-            #if np.random.random() < 0.5:
-            x = exposure.equalize_hist(x)
+            if np.random.random() < 0.5:
+                x = exposure.equalize_hist(x)
 
         if self.contrast_stretching:
-            #if np.random.random() < 0.5:
-            p2, p98 = np.percentile(x, (2, 98))
-            x = exposure.rescale_intensity(x, in_range=(p2, p98))
+            if np.random.random() < 0.5:
+                p2, p98 = np.percentile(x, (2, 98))
+                x = exposure.rescale_intensity(x, in_range=(p2, p98))
 
         if self.adaptive_equalization:
-            #if np.random.random() < 0.5:
-            x = exposure.equalize_adapthist(x, clip_limit=0.03)
+            if np.random.random() < 0.5:
+                x = exposure.equalize_adapthist(x, clip_limit=0.03)
 
         return x
 

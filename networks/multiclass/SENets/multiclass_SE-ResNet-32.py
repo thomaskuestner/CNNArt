@@ -1,6 +1,6 @@
 import os
 #os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from tensorflow.python.client import device_lib
 print(device_lib.list_local_devices)
@@ -30,6 +30,7 @@ from keras.optimizers import SGD
 from networks.multiclass.SENets.deep_residual_learning_blocks import *
 from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
 from utils.image_preprocessing import ImageDataGenerator
+from utils.LivePlotCallback import LivePlotCallback
 from matplotlib import pyplot as plt
 
 from networks.multiclass.SENets.deep_residual_learning_blocks import *
@@ -209,6 +210,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
     callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints/checker.hdf5', monitor='val_acc', verbose=0, period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
     #callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
     callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
+    callbacks.append(LivePlotCallback(dlart_handle))
 
 
     # data augmentation
@@ -391,13 +393,15 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                              'prob_test': prob_test})
 
 
-def step_decay(epoch):
-   initial_lrate = 0.1
+def step_decay(epoch, lr):
    drop = 0.1
-   epochs_drop = 30.0
-   lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
-   print(str(lrate))
-   return lrate
+   epochs_drop = 10.0
+   print("Current Learning Rate: " + str(lr))
+   if epoch == epochs_drop or epoch == 2*epochs_drop or epoch == 3*epochs_drop or epoch == 4*epochs_drop:
+       lr = drop*lr
+       print("Reduce Learningrate by 0.1 to " + str(lr))
+
+   return lr
 
 
 def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):

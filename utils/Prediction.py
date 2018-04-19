@@ -68,8 +68,20 @@ def predict_model(X_test, Y_test, sModelPath, batch_size=32, classMappings=None)
 
     #classification report
     target_names = []
-    for i in sorted(classMappings):
-        target_names.append(Label.LABEL_STRINGS[i])
+    if len(classMappings[list(classMappings.keys())[0]]) == 3:
+        for i in sorted(classMappings):
+            i = i % 100
+            i = i % 10
+            if Label.LABEL_STRINGS[i] not in target_names:
+                target_names.append(Label.LABEL_STRINGS[i])
+    elif len(classMappings[list(classMappings.keys())[0]]) == 8:
+        for i in sorted(classMappings):
+            i = i % 100
+            if Label.LABEL_STRINGS[i] not in target_names:
+                target_names.append(Label.LABEL_STRINGS[i])
+    else:
+        for i in sorted(classMappings):
+            target_names.append(Label.LABEL_STRINGS[i])
 
     classification_summary = classification_report(np.argmax(Y_test, axis=1),
                                                    np.argmax(probability_predictions, axis=1),

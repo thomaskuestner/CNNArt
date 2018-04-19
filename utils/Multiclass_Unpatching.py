@@ -66,15 +66,27 @@ def UnpatchArte(IndexType, patchSize, patchOverlap, actualSize):
         if (IndexType[iIndex] > 4) & (IndexType[iIndex] < 9):
             unpatchImg1[iCorner[0]: iCorner[0] + int(patchSize[0]), iCorner[1]: iCorner[1] + int(patchSize[1]), iCorner[2]] = np.add(unpatchImg1[iCorner[0]: iCorner[0] + int(patchSize[0]), iCorner[1]: iCorner[1] + int(patchSize[1]), iCorner[2]], 1.)
 
-        iCorner[0] =int(iCorner[0]+dNotOverlap[0])
-        if iCorner[0] + patchSize[0] - 1 > paddedSize[0]:
-            iCorner[0] = 0
-            iCorner[1] = int(iCorner[1] + dNotOverlap[1])
+        # iCorner[0] =int(iCorner[0]+dNotOverlap[0])
+        # if iCorner[0] + patchSize[0] - 1 > paddedSize[0]:
+        #     iCorner[0] = 0
+        #     iCorner[1] = int(iCorner[1] + dNotOverlap[1])
+        #
+        # if iCorner[1] + patchSize[1] - 1 > paddedSize[1]:
+        #     iCorner[1] = 0
+        #     iCorner[0] = 0
+        #     iCorner[2] = iCorner[2] + 1
+
+        iCorner[1] = int(iCorner[1] + dNotOverlap[1])
 
         if iCorner[1] + patchSize[1] - 1 > paddedSize[1]:
             iCorner[1] = 0
+            iCorner[0] = int(iCorner[0] + dNotOverlap[0])
+
+        if iCorner[0] + patchSize[0] - 1 > paddedSize[0]:
             iCorner[0] = 0
-            iCorner[2] = iCorner[2] + 1
+            iCorner[1] = 0
+            iCorner[2] = int(iCorner[2] + 1)
+
     unpatchImg1[unpatchImg1 > 0] = 1
 
     iCorner = [0, 0, 0]
@@ -86,15 +98,27 @@ def UnpatchArte(IndexType, patchSize, patchOverlap, actualSize):
                 unpatchImg2[iCorner[0]: iCorner[0] + int(patchSize[0]), iCorner[1]: iCorner[1] + int(patchSize[1]),
                 iCorner[2]], 2.)
 
-        iCorner[0] =int(iCorner[0]+dNotOverlap[0])
-        if iCorner[0] + patchSize[0] - 1 > paddedSize[0]:
-            iCorner[0] = 0
-            iCorner[1] = int(iCorner[1] + dNotOverlap[1])
+        # iCorner[0] =int(iCorner[0]+dNotOverlap[0])
+        # if iCorner[0] + patchSize[0] - 1 > paddedSize[0]:
+        #     iCorner[0] = 0
+        #     iCorner[1] = int(iCorner[1] + dNotOverlap[1])
+        #
+        # if iCorner[1] + patchSize[1] - 1 > paddedSize[1]:
+        #     iCorner[1] = 0
+        #     iCorner[0] = 0
+        #     iCorner[2] = iCorner[2] + 1
+
+        iCorner[1] = int(iCorner[1] + dNotOverlap[1])
 
         if iCorner[1] + patchSize[1] - 1 > paddedSize[1]:
             iCorner[1] = 0
+            iCorner[0] = int(iCorner[0] + dNotOverlap[0])
+
+        if iCorner[0] + patchSize[0] - 1 > paddedSize[0]:
             iCorner[0] = 0
-            iCorner[2] = iCorner[2] + 1
+            iCorner[1] = 0
+            iCorner[2] = int(iCorner[2] + 1)
+
     unpatchImg2[unpatchImg2 > 0] = 2
 
     unpatchImg = unpatchImg1 + unpatchImg2

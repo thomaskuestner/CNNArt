@@ -17,7 +17,7 @@ class IndexTracker(object):
 
         self.X = X
         self.slices = X.shape[2]
-        self.ind = self.slices//2
+        self.ind = 5
         self.Y = Y
         self.Z = Z
         self.fig.canvas.mpl_connect('scroll_event', self.onscroll)
@@ -59,9 +59,9 @@ except dicom_numpy.DicomImportException:
 dx, dy, dz = 1.0, 1.0, pixel_space[2][2]
 
 PatchSize = np.array((64.0, 64.0))     # only 2 elements
-PatchOverlay = 0.5
+PatchOverlay = 0.6
 #Path = 'C:/Users/Yannick/Google Drive/Masterarbeit/30_Content/Pred_result'
-Path = 'D:/med_data/MRPhysics/MA Results/2D_64x64/Multiclass SE-ResNet-56_2D_64x64_2018-03-07_11-48/model_predictions.mat'
+Path = 'D:/med_data/MRPhysics/MA Results/2D_64x64/Multiclass SE-ResNet-56_2D_64x64_2018-04-07_13-13/model_predictions.mat'
 conten = sio.loadmat(Path)
 prob_test = conten['prob_pre']
 

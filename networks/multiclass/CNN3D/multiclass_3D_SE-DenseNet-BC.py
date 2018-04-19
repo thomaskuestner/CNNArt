@@ -328,13 +328,15 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                              'prob_test': prob_test})
 
 
-def step_decay(epoch):
-   initial_lrate = 0.1
+def step_decay(epoch, lr):
    drop = 0.1
-   epochs_drop = 30
-   lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
-   print("Reduce Learningrate by 0.1")
-   return lrate
+   epochs_drop = 10.0
+   print("Current Learning Rate: " + str(lr))
+   if epoch == epochs_drop or epoch == 2*epochs_drop or epoch == 3*epochs_drop or epoch == 4*epochs_drop:
+       lr = drop*lr
+       print("Reduce Learningrate by 0.1 to " + str(lr))
+
+   return lr
 
 
 def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
