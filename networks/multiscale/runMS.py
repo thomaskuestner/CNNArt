@@ -94,7 +94,7 @@ def fTrainInner(sModelIn, sOutPath, patchSize, learningRate=0.001, X_train=None,
     model.summary()
 
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
-    callbacks.append(ModelCheckpoint('/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
+    callbacks.append(ModelCheckpoint('/no_backup/s1241/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
        period=5, save_best_only=True))# overrides the last checkpoint, its just for security
     callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
@@ -189,16 +189,16 @@ def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSiz
         plt.ylim(actualSize[1], 0)
         plt.set_cmap(plt.gray())
 
-        # Head: pcolormesh(X, Y,...)    Abdomen: pcolormesh(Y, X,...)
+        # Head: pcolormesh(X, Y,..., vmax=1)    Abdomen: pcolormesh(Y, X,..., vmax=0.5)
         plt.subplot(211)
         plt.axis('off')
-        plt.pcolormesh(X, Y, np.swapaxes(img4D[0, :, :, iSlice], 0, 1), vmin=0, vmax=1)
-        plt.pcolormesh(X, Y, np.swapaxes(imglayRef[:, :, iSlice], 0, 1), cmap='jet', alpha=0.2, vmin=0, vmax=1, linestyle='None', rasterized=True)
+        plt.pcolormesh(Y, X, np.swapaxes(img4D[0, :, :, iSlice], 0, 1), vmin=0, vmax=0.5)
+        plt.pcolormesh(Y, X, np.swapaxes(imglayRef[:, :, iSlice], 0, 1), cmap='jet', alpha=0.2, vmin=0, vmax=1, linestyle='None', rasterized=True)
         plt.title('Slice ' + str(iSlice) + ' without artifacts', fontsize = 16)
         plt.subplot(212)
         plt.axis('off')
-        plt.pcolormesh(X, Y, np.swapaxes(img4D[1, :, :, iSlice], 0, 1), vmin=0, vmax=1)
-        plt.pcolormesh(X, Y, np.swapaxes(imglayArt[:, :, iSlice], 0, 1), cmap='jet', alpha=0.2, vmin=0, vmax=1, linestyle='None', rasterized=True)
+        plt.pcolormesh(Y, X, np.swapaxes(img4D[1, :, :, iSlice], 0, 1), vmin=0, vmax=0.5)
+        plt.pcolormesh(Y, X, np.swapaxes(imglayArt[:, :, iSlice], 0, 1), cmap='jet', alpha=0.2, vmin=0, vmax=1, linestyle='None', rasterized=True)
         plt.title('Slice ' + str(iSlice) + ' with motion artifacts', fontsize = 16)
 
         plt.subplots_adjust(left=0.1, bottom=0.1, right=0.8, top=0.9, hspace=0.2)
