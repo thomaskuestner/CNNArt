@@ -15,6 +15,8 @@ from matplotlib.patches import Ellipse
 from framework1 import Ui_MainWindow
 from Patches_window import*
 from cPre_window import*
+from label_window import*
+
 from activeview import Activeview
 from activescene import Activescene
 from canvas import Canvas
@@ -64,6 +66,12 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.i = -1
         self.linked = False
 
+        with open('editlabel.json', 'r') as json_data:
+            self.infos = json.load(json_data)
+            self.labelnames = self.infos['names']
+            self.labelcolor = self.infos['colors']
+            self.pathROI = self.infos['path'][0]
+
         global pathlist, list1, shapelist, pnamelist, empty1, cmap1, cmap3, hmap1, hmap2, vtr1,  \
             vtr3, problist, hatchlist, correslist, cnrlist
         pathlist = []
@@ -71,12 +79,6 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         shapelist = []
         pnamelist = []
         empty1 = []
-        # cmap1 = mpl.colors.ListedColormap(['blue', 'red'])
-        # cmap3 = mpl.colors.ListedColormap(['blue', 'purple', 'cyan', 'yellow', 'green'])
-        # hmap1 = [None, '//', '\\', 'XX']
-        # hmap2 = [None, '//', '\\', 'XX']
-        # vtr1 = 0.3
-        # vtr3 = 0.3
 
         with open('colors0.json', 'r') as json_data:
             self.dcolors = json.load(json_data)
@@ -95,171 +97,21 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         correslist = []
         cnrlist = []
 
-        self.openfile.clicked.connect(self.loadMR)
-        self.bdswitch.clicked.connect(self.switchview)
-        self.bgrids.clicked.connect(self.setlayout)
-        self.bpatch.clicked.connect(self.loadpatch)
-        self.bsetcolor.clicked.connect(self.setColor)
-
-        self.bselectoron.clicked.connect(self.selectormode)
-        self.bchoosemark.clicked.connect(self.chooseMark)
-        self.artifactbox.setDisabled(True)
-        self.brectangle.setDisabled(True)
-        self.bellipse.setDisabled(True)
-        self.blasso.setDisabled(True)
-        self.brectangle.toggled.connect(lambda:formsclick(1))
-        self.bellipse.toggled.connect(lambda:formsclick(2))
-        self.blasso.toggled.connect(lambda: formsclick(3))
-        self.selectoron = False
-        self.x_clicked = None
-        self.y_clicked = None
-        self.mouse_second_clicked = False
-
         self.newfig = plt.figure(50) # 3
         self.newfig.set_facecolor("black")
         self.newax = self.newfig.add_subplot(111)
-        # self.newax = plt.gca()  # for cooperation with pltc
         self.newax.axis('off')
         self.pltc = None
         self.newcanvas = FigureCanvas(self.newfig)  # must be defined because of selector next
-
-        self.actionOpen_file.triggered.connect(self.loadMR)
-        self.actionSave.triggered.connect(self.saveCurrent)
-        self.actionLoad.triggered.connect(self.loadOld)
-        self.actionColor.triggered.connect(self.defaultColor)
-
-        ####################################################################### second tab
-        # # initialize DeepLearningArt Application
-        # self.deepLearningArtApp = DeepLearningArtApp()
-        # self.deepLearningArtApp.setGUIHandle(self)
-        #
-        # # initialize TreeView Database
-        # self.manageTreeView()
-        #
-        # # intialize TreeView Datasets
-        # self.manageTreeViewDatasets()
-        #
-        # # initiliaze patch output path
-        # self.Label_OutputPathPatching.setText(self.deepLearningArtApp.getOutputPathForPatching())
-        #
-        # # initialize markings path
-        # self.Label_MarkingsPath.setText(self.deepLearningArtApp.getMarkingsPath())
-        #
-        # # initialize learning output path
-        # self.Label_LearningOutputPath.setText(self.deepLearningArtApp.getLearningOutputPath())
-        #
-        # # initialize patching mode
-        # self.ComboBox_Patching.setCurrentIndex(1)
-        #
-        # # initialize store mode
-        # self.ComboBox_StoreOptions.setCurrentIndex(0)
-        #
-        # # initialize splitting mode
-        # self.ComboBox_splittingMode.setCurrentIndex(DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING)
-        # self.Label_SplittingParams.setText("using Test/Train="
-        #                                    + str(self.deepLearningArtApp.getTrainTestDatasetRatio())
-        #                                    + " and Valid/Train=" + str(
-        #     self.deepLearningArtApp.getTrainValidationRatio()))
-        #
-        # # initialize combox box for DNN selection
-        # self.ComboBox_DNNs.addItem("Select Deep Neural Network Model...")
-        # self.ComboBox_DNNs.addItems(DeepLearningArtApp.deepNeuralNetworks.keys())
-        # self.ComboBox_DNNs.setCurrentIndex(1)
-        # self.deepLearningArtApp.setNeuralNetworkModel(self.ComboBox_DNNs.currentText())
-        #
-        # # initialize check boxes for used classes
-        # self.CheckBox_Artifacts.setChecked(self.deepLearningArtApp.getUsingArtifacts())
-        # self.CheckBox_BodyRegion.setChecked(self.deepLearningArtApp.getUsingBodyRegions())
-        # self.CheckBox_TWeighting.setChecked(self.deepLearningArtApp.getUsingTWeighting())
-        #
-        # # initilize training parameters
-        # self.DoubleSpinBox_WeightDecay.setValue(self.deepLearningArtApp.getWeightDecay())
-        # self.DoubleSpinBox_Momentum.setValue(self.deepLearningArtApp.getMomentum())
-        # self.CheckBox_Nesterov.setChecked(self.deepLearningArtApp.getNesterovEnabled())
-        # self.CheckBox_DataAugmentation.setChecked(self.deepLearningArtApp.getDataAugmentationEnabled())
-        # self.CheckBox_DataAug_horizontalFlip.setChecked(self.deepLearningArtApp.getHorizontalFlip())
-        # self.CheckBox_DataAug_verticalFlip.setChecked(self.deepLearningArtApp.getVerticalFlip())
-        # self.CheckBox_DataAug_Rotation.setChecked(False if self.deepLearningArtApp.getRotation() == 0 else True)
-        # self.CheckBox_DataAug_zcaWeighting.setChecked(self.deepLearningArtApp.getZCA_Whitening())
-        # self.CheckBox_DataAug_HeightShift.setChecked(False if self.deepLearningArtApp.getHeightShift() == 0 else True)
-        # self.CheckBox_DataAug_WidthShift.setChecked(False if self.deepLearningArtApp.getWidthShift() == 0 else True)
-        # self.CheckBox_DataAug_Zoom.setChecked(False if self.deepLearningArtApp.getZoom() == 0 else True)
-        # self.check_dataAugmentation_enabled()
-        #
-        # ################################################################################################################
-        #
-        # ################################################################################################################
-        # # Signals and Slots
-        # ################################################################################################################
-        #
-        # # select database button clicked
-        # self.Button_DB.clicked.connect(self.button_DB_clicked)
-        # # self.Button_DB.clicked.connect(self.button_DB_clicked)
-        #
-        # # output path button for patching clicked
-        # self.Button_OutputPathPatching.clicked.connect(self.button_outputPatching_clicked)
-        #
-        # # TreeWidgets
-        # self.TreeWidget_Patients.clicked.connect(self.getSelectedPatients)
-        # self.TreeWidget_Datasets.clicked.connect(self.getSelectedDatasets)
-        #
-        # # Patching button
-        # self.Button_Patching.clicked.connect(self.button_patching_clicked)
-        #
-        # # mask marking path button clicekd
-        # self.Button_MarkingsPath.clicked.connect(self.button_markingsPath_clicked)
-        #
-        # # combo box splitting mode is changed
-        # self.ComboBox_splittingMode.currentIndexChanged.connect(self.splittingMode_changed)
-        #
-        # # "use current data" button clicked
-        # self.Button_useCurrentData.clicked.connect(self.button_useCurrentData_clicked)
-        #
-        # # select dataset is clicked
-        # self.Button_selectDataset.clicked.connect(self.button_selectDataset_clicked)
-        #
-        # # learning output path button clicked
-        # self.Button_LearningOutputPath.clicked.connect(self.button_learningOutputPath_clicked)
-        #
-        # # train button clicked
-        # self.Button_train.clicked.connect(self.button_train_clicked)
-        #
-        # # combobox dnns
-        # self.ComboBox_DNNs.currentIndexChanged.connect(self.selectedDNN_changed)
-        #
-        # # # show Dataset for ArtGAN Button
-        # # self.Button_ShowDataset.clicked.connect(self.button_showDataset_clicked)
-        #
-        # # data augmentation enbaled changed
-        # self.CheckBox_DataAugmentation.stateChanged.connect(self.check_dataAugmentation_enabled)
-###########################################################################################################################
-        # # third tab
-        # self.matplotlibwidget_static.hide()
-        # self.matplotlibwidget_static_2.hide()
-        # self.matplotlibwidget_static_3.hide()
-        #
-        # #in the listView_2 the select name will save in chosenActivationName
-        # self.chosenActivationName = []
-        # # the slider's value is the chosen patch's number
-        # self.chosenPatchNumber = 1
-        # self.openfile_name=''
-        #
-        # self.model={}
-        # self.qList=[]
-        # self.totalPatches=0
-        # self.activations = {}
-        #
-        # # from the .h5 file extract the name of each layer and the total number of patches
-        # # self.wyh5.clicked.connect(self.openfile)
-        # self.listView_2.clicked.connect(self.clickList_1)
-        #
-        # #self.horizontalSlider_3.valueChanged.connect(self.sliderValue)
-        # self.horizontalSlider_3.sliderReleased.connect(self.sliderValue)
-        # self.horizontalSlider_3.valueChanged.connect(self.lcdNumber_3.display)
-###################################################################################################################
+        self.currentlist = []
+        self.keylist = []  # locate the key in combobox
 
         def formsclick(n):
-            if n==1:
+            if n==0:
+                toggle_selector.ES.set_active(False)
+                toggle_selector.RS.set_active(False)
+                toggle_selector.LS.set_active(False)
+            elif n==1:
                 toggle_selector.ES.set_active(False)
                 toggle_selector.RS.set_active(True)
                 toggle_selector.LS.set_active(False)
@@ -271,103 +123,6 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 toggle_selector.ES.set_active(False)
                 toggle_selector.RS.set_active(False)
                 toggle_selector.LS.set_active(True)
-
-        def lasso_onselect(verts):
-            # print(verts)
-            p = path.Path(verts)
-
-            patch = None
-            col_str = None
-            if self.artifactbox.currentIndex() == 0:
-                col_str = "31"
-                patch = patches.PathPatch(p, fill=False, edgecolor='red', lw=2)
-            elif self.artifactbox.currentIndex() == 1:
-                col_str = "32"
-                patch = patches.PathPatch(p, fill=False, edgecolor='green', lw=2)
-            elif self.artifactbox.currentIndex() == 2:
-                col_str = "33"
-                patch = patches.PathPatch(p, fill=False, edgecolor='blue', lw=2)
-            self.newax.add_patch(patch)
-            sepkey = os.path.split(self.selectorPath)
-            sepkey = sepkey[1]
-            layer_name = sepkey # region
-
-            with open(self.markfile) as json_data:  # 'r' read
-                saveFile = json.load(json_data)
-                p = np.ndarray.tolist(p.vertices)  #
-
-                if layer_name in saveFile:
-                    number_str = str(self.ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
-                    saveFile[layer_name][number_str] = {'vertices': p, 'codes': None}
-                else:
-                    number_str = str(self.ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
-                    saveFile[layer_name] = {number_str: {'vertices': p, 'codes': None}}
-
-            # with open(self.markfile, 'w') as json_data:
-            #     json.dump(saveFile, json_data)
-
-            with open(self.markfile, 'w') as json_data:
-                json_data.write(json.dumps(saveFile))
-
-            self.newcanvas.draw()
-
-        def ronselect(eclick, erelease):
-            col_str = None
-            rect = None
-            ell = None
-            x1, y1 = eclick.xdata, eclick.ydata
-            x2, y2 = erelease.xdata, erelease.ydata
-
-            p = np.array(([x1, y1, x2, y2]))
-
-            sepkey = os.path.split(self.selectorPath)
-            sepkey = sepkey[1]
-            layer_name = sepkey
-
-            if toggle_selector.RS.active and not toggle_selector.ES.active:
-                if self.artifactbox.currentIndex() == 0:
-                    col_str = "11"
-                    rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2), fill=False,
-                                         edgecolor="red", lw=2)
-                elif self.artifactbox.currentIndex() == 1:
-                    col_str = "12"
-                    rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2), fill=False,
-                                         edgecolor="green", lw=2)
-                elif self.artifactbox.currentIndex() == 2:
-                    col_str = "13"
-                    rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2), fill=False,
-                                         edgecolor="blue", lw=2)
-                self.newax.add_patch(rect)
-            elif toggle_selector.ES.active and not toggle_selector.RS.active:
-                if self.artifactbox.currentIndex() == 0:
-                    col_str = "21"
-                    ell = Ellipse(xy=(min(x1, x2) + np.abs(x1 - x2) / 2, min(y1, y2) + np.abs(y1 - y2) / 2),
-                                  width=np.abs(x1 - x2), height=np.abs(y1 - y2), edgecolor="red", fc='None', lw=2)
-                elif self.artifactbox.currentIndex() == 1:
-                    col_str = "22"
-                    ell = Ellipse(xy=(min(x1, x2) + np.abs(x1 - x2) / 2, min(y1, y2) + np.abs(y1 - y2) / 2),
-                                  width=np.abs(x1 - x2), height=np.abs(y1 - y2), edgecolor="green", fc='None', lw=2)
-                elif self.artifactbox.currentIndex() == 2:
-                    col_str = "23"
-                    ell = Ellipse(xy=(min(x1, x2) + np.abs(x1 - x2) / 2, min(y1, y2) + np.abs(y1 - y2) / 2),
-                                  width=np.abs(x1 - x2), height=np.abs(y1 - y2), edgecolor="blue", fc='None', lw=2)
-                self.newax.add_patch(ell)
-
-            with open(self.markfile) as json_data:  # 'r' read
-                saveFile = json.load(json_data)
-                p = np.ndarray.tolist(p)   # format from datapre
-                # print(p)
-                if layer_name in saveFile:
-                    number_str = str(self.ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
-                    # saveFile[layer_name].update({number_str: p})
-                    saveFile[layer_name][number_str] = {'points': p}
-                else:
-                    number_str = str(self.ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
-                    saveFile[layer_name] = {number_str : {'points': p}}
-            # with open(self.markfile, 'w') as json_data:
-            #     json.dump(saveFile, json_data)
-            with open(self.markfile, 'w') as json_data:
-                json_data.write(json.dumps(saveFile))
 
         def toggle_selector(event):
             if self.brectangle.isChecked() and not toggle_selector.RS.active and (
@@ -385,13 +140,96 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 toggle_selector.ES.set_active(False)
                 toggle_selector.RS.set_active(False)
                 toggle_selector.LS.set_active(True)
+            elif self.bnoselect.isChecked() and (toggle_selector.ES.active or toggle_selector.RS.active
+                                                 or toggle_selector.LS.active):
+                toggle_selector.ES.set_active(False)
+                toggle_selector.RS.set_active(False)
+                toggle_selector.LS.set_active(False)
 
-        toggle_selector.RS = RectangleSelector(self.newax, ronselect, button=[1])  # drawtype='box', useblit=False, button=[1], minspanx=5, minspany=5, spancoords='pixels', interactive=True
+        def lasso_onselect(verts):
+            p = path.Path(verts)
+            n = self.labelbox.currentIndex()
+            col_str = '3' + str(n)
+            patch = patches.PathPatch(p, fill=True, alpha=.2, edgecolor= None, facecolor=self.labelcolor[n])
 
-        toggle_selector.ES = EllipseSelector(self.newax, ronselect, drawtype='line', button=[1], minspanx=5,
-                                                  minspany=5,
-                                                  spancoords='pixels',
-                                                  interactive=True)  # drawtype='line', minspanx=5, minspany=5, spancoords='pixels', interactive=True
+            self.newax.add_patch(patch)
+            sepkey = os.path.split(self.selectorPath)
+            sepkey = sepkey[1]
+            layer_name = sepkey  # bodyregion:t1_tse...
+
+            with open(self.markfile) as json_data:
+                saveFile = json.load(json_data)
+                p = np.ndarray.tolist(p.vertices)  #
+                if self.ind < 10:
+                    ind = '0' + str(self.ind)
+                else:
+                    ind = self.ind
+
+                number_str = str(ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
+                if layer_name in saveFile:
+                    saveFile[layer_name][number_str] = {'vertices': p, 'codes': None}
+                else:
+                    saveFile[layer_name] = {number_str: {'vertices': p, 'codes': None}}
+
+            with open(self.markfile, 'w') as json_data:
+                json_data.write(json.dumps(saveFile))
+            item = self.labelnames[int(number_str[4])] + '_' + str(int(number_str[6]) + 1)
+            self.currentlist.append(item)
+            self.keylist.append(number_str)
+            self.labelWidget.addItem(item)
+            self.newcanvas.draw_idle()
+
+        def ronselect(eclick, erelease):
+            col_str = None
+            x1, y1 = eclick.xdata, eclick.ydata
+            x2, y2 = erelease.xdata, erelease.ydata
+
+            p = np.array(([x1, y1, x2, y2]))
+            sepkey = os.path.split(self.selectorPath)
+            sepkey = sepkey[1]
+            layer_name = sepkey
+
+            n = self.labelbox.currentIndex()
+            if toggle_selector.RS.active and not toggle_selector.ES.active:
+                col_str = '1' + str(n)
+                rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2), fill=True,
+                                     alpha=.2, edgecolor= None, facecolor=self.labelcolor[n])
+                self.newax.add_patch(rect)
+            elif toggle_selector.ES.active and not toggle_selector.RS.active:
+                col_str = '2' + str(n)
+                ell = Ellipse(xy=(min(x1, x2) + np.abs(x1 - x2) / 2, min(y1, y2) + np.abs(y1 - y2) / 2),
+                              width=np.abs(x1 - x2), height=np.abs(y1 - y2), alpha=.2, edgecolor= None,
+                              facecolor=self.labelcolor[n])
+                self.newax.add_patch(ell)
+
+            with open(self.markfile) as json_data:
+                saveFile = json.load(json_data)
+                p = np.ndarray.tolist(p)  # format from datapre
+                if self.ind < 10:
+                    ind = '0' + str(self.ind)
+                else:
+                    ind = self.ind
+
+                number_str = str(ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
+                if layer_name in saveFile:
+                    saveFile[layer_name][number_str] = {'points': p}
+                else:
+                    saveFile[layer_name] = {number_str: {'points': p}}
+            with open(self.markfile, 'w') as json_data:
+                json_data.write(json.dumps(saveFile))
+
+            item = self.labelnames[int(number_str[4])] + '_' + str(int(number_str[6]) + 1)
+            self.currentlist.append(item)
+            self.keylist.append(number_str)
+            self.labelWidget.addItem(item)
+            self.newcanvas.draw_idle()  #
+
+        toggle_selector.RS = RectangleSelector(self.newax, ronselect, button=[1], drawtype='box', useblit=True,
+                                       minspanx=5, minspany=5,spancoords='pixels',interactive=False)
+        # useblit: canvas fast update
+
+        toggle_selector.ES = EllipseSelector(self.newax, ronselect, drawtype='box', button=[1], minspanx=5,
+                                             useblit=True, minspany=5, spancoords='pixels',interactive=False)
 
         toggle_selector.LS = LassoSelector(self.newax, lasso_onselect, button=[1])
 
@@ -399,7 +237,46 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         toggle_selector.RS.set_active(False)
         toggle_selector.LS.set_active(False)
 
-        # connect('key_press_event', toggle_selector)
+        self.openfile.clicked.connect(self.loadMR)
+        self.bdswitch.clicked.connect(self.switchview)
+        self.bgrids.clicked.connect(self.setlayout)
+        self.bpatch.clicked.connect(self.loadPatch)
+        self.bsetcolor.clicked.connect(self.setColor)
+
+        self.bselectoron.clicked.connect(self.selectormode)
+        self.bchoosemark.clicked.connect(self.chooseMark)
+        self.bdelete.clicked.connect(self.deleteLabel)
+        self.labelbox.setDisabled(True)
+        self.brectangle.setDisabled(True)
+        self.bellipse.setDisabled(True)
+        self.blasso.setDisabled(True)
+        self.bchoosemark.setDisabled(True)
+        self.bnoselect.setDisabled(True)
+        self.labelWidget.setDisabled(True)
+        self.bdelete.setDisabled(True)
+        self.bnoselect.toggled.connect(lambda:formsclick(0))
+        self.brectangle.toggled.connect(lambda:formsclick(1))
+        self.bellipse.toggled.connect(lambda:formsclick(2))
+        self.blasso.toggled.connect(lambda:formsclick(3))
+ #
+        self.bnoselect.setChecked(True)
+        self.brectangle.toggled.connect(lambda:self.stopView(1))
+        self.bellipse.toggled.connect(lambda:self.stopView(1))
+        self.blasso.toggled.connect(lambda: self.stopView(1))
+        self.bnoselect.toggled.connect(lambda: self.stopView(0))
+
+        self.selectoron = False
+        self.x_clicked = None
+        self.y_clicked = None
+        self.mouse_second_clicked = False
+
+        self.actionOpen_file.triggered.connect(self.loadMR)
+        self.actionSave.triggered.connect(self.saveCurrent)
+        self.actionLoad.triggered.connect(self.loadOld)
+        self.actionColor.triggered.connect(self.defaultColor)
+        self.actionLabels.triggered.connect(self.editLabel)
+
+        # plt.connect('key_press_event', toggle_selector)
 
         self.newcanvas.mpl_connect('scroll_event', self.newonscroll)
         self.newcanvas.mpl_connect('button_press_event', self.mouse_clicked)
@@ -636,13 +513,9 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                         self.maingrids.itemAtPosition(i, j).anewcanvas.linkedSlice(data)
 
     def loadMR(self):
-        # if self.gridson == False:
-        #     QtWidgets.QMessageBox.information(self, 'Warning', 'Grids needed!')
-        # else:
         with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
             cfg = yaml.safe_load(ymlfile)
         dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
-
         self.PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "open file", dbinfo.sPathIn)
         # self.PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "open file", "C:/Users/hansw/Videos/artefacts")
         if self.PathDicom:
@@ -678,38 +551,39 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
     def loadEnd(self):
         self.overlay.killTimer(self.overlay.timer)
         self.overlay.hide()
-        # self.openfile.setText("load image")
-        self.openfile.setDisabled(False)
-
-        # self.plot_3d(self.newMR.svoxel, 200)
-
-        pathlist.append(self.PathDicom)
-        list1.append(self.newMR.voxel_ndarray)
-        shapelist.append(self.newMR.new_shape)
-        if self.gridson == True:
-            if self.gridsnr == 2:
-                for i in range(self.layoutlines):
-                    for j in range(self.layoutcolumns):
-                        self.maingrids.itemAtPosition(i, j).addPathd(self.PathDicom)
-                for i in range(self.layoutlines):
-                    for j in range(self.layoutcolumns):
-                        if self.maingrids.itemAtPosition(i, j).mode == 1 and \
-                                self.maingrids.itemAtPosition(i, j).pathbox.currentIndex() == 0:
-                            self.maingrids.itemAtPosition(i, j).pathbox.setCurrentIndex(len(pathlist))
-                            break
-                    else:
-                        continue
-                    break
-            else:
-                for i in range(self.layout3D):
-                    self.maingrids.itemAtPosition(i, 0).addPathim(self.PathDicom)
-                for i in range(self.layout3D):
-                    if self.maingrids.itemAtPosition(i, 0).vmode == 1 and \
-                            self.maingrids.itemAtPosition(i, 0).imagelist.currentIndex() == 0:
-                        self.maingrids.itemAtPosition(i, 0).imagelist.setCurrentIndex(len(pathlist))
+        if self.selectoron == False:
+            self.openfile.setDisabled(False)
+    
+            # self.plot_3d(self.newMR.svoxel, 200)
+            pathlist.append(self.PathDicom)
+            list1.append(self.newMR.voxel_ndarray)
+            shapelist.append(self.newMR.new_shape)
+            if self.gridson == True:
+                if self.gridsnr == 2:
+                    for i in range(self.layoutlines):
+                        for j in range(self.layoutcolumns):
+                            self.maingrids.itemAtPosition(i, j).addPathd(self.PathDicom)
+                    for i in range(self.layoutlines):
+                        for j in range(self.layoutcolumns):
+                            if self.maingrids.itemAtPosition(i, j).mode == 1 and \
+                                    self.maingrids.itemAtPosition(i, j).pathbox.currentIndex() == 0:
+                                self.maingrids.itemAtPosition(i, j).pathbox.setCurrentIndex(len(pathlist))
+                                break
+                        else:
+                            continue
                         break
+                else:
+                    for i in range(self.layout3D):
+                        self.maingrids.itemAtPosition(i, 0).addPathim(self.PathDicom)
+                    for i in range(self.layout3D):
+                        if self.maingrids.itemAtPosition(i, 0).vmode == 1 and \
+                                self.maingrids.itemAtPosition(i, 0).imagelist.currentIndex() == 0:
+                            self.maingrids.itemAtPosition(i, 0).imagelist.setCurrentIndex(len(pathlist))
+                            break
+            else:
+                pass
         else:
-            pass
+            self.loadSelect()
 
     def unpatching2(self, result, orig):
         PatchSize = np.array((40.0, 40.0))
@@ -749,18 +623,15 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         return Type, Arte
 
 
-    def loadpatch(self):
-        # resultfile = QtWidgets.QFileDialog.getOpenFileName(self, "choose the result file",
-        #                                 "C:/Users/hansw/Desktop/Ma_code/PyQt","mat files(*.mat);;h5 files(*.h5)")[0]
+    def loadPatch(self):
         resultfile = QtWidgets.QFileDialog.getOpenFileName(self, 'choose the result file', '',
                 'mat files(*.mat);;h5 files(*.h5)', None, QtWidgets.QFileDialog.DontUseNativeDialog)[0]
-
         if resultfile:
             with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
                 cfg = yaml.safe_load(ymlfile)
             dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
             PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "choose the corresponding image", dbinfo.sPathIn)
-            if PathDicom not in pathlist:
+            if PathDicom in pathlist:
                 n = pathlist.index(PathDicom)
                 correslist.append(n)
                 conten = sio.loadmat(resultfile)
@@ -823,6 +694,17 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             vtr1 = v1
             vtr3 = v3
 
+    def editLabel(self):
+        labelnames, labelcolors, pathROI, ok= Label_window.getData()
+
+        self.labelnames = labelnames
+        self.labelcolor = labelcolors
+        self.pathROI = pathROI
+        self.labelbox.clear()
+        self.labelbox.addItems(self.labelnames)
+
+        self.newslicesview()
+
 ##################################################
     def selectormode(self):
         if self.selectoron == False:
@@ -830,144 +712,124 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             if self.gridson == True:
                 self.clearall()
                 self.gridson = False    ###
+            icon2 = QtGui.QIcon()
+            icon2.addPixmap(QtGui.QPixmap(":/icons/Icons/switchoff.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            self.bselectoron.setIcon(icon2)
 
             self.graylabel = QtWidgets.QLabel()
             self.slicelabel = QtWidgets.QLabel()
+            self.zoomlabel = QtWidgets.QLabel()
+            self.graylabel.setFrameShape(QtWidgets.QFrame.Panel)
+            self.graylabel.setFrameShadow(QtWidgets.QFrame.Raised)
+            self.slicelabel.setFrameShape(QtWidgets.QFrame.Panel)
+            self.slicelabel.setFrameShadow(QtWidgets.QFrame.Raised)
+            self.zoomlabel.setFrameShape(QtWidgets.QFrame.Panel)
+            self.zoomlabel.setFrameShadow(QtWidgets.QFrame.Raised)
+            self.seditgray = QtWidgets.QPushButton()
+            self.sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            self.sizePolicy.setHorizontalStretch(0)
+            self.sizePolicy.setVerticalStretch(0)
+            self.sizePolicy.setHeightForWidth(self.seditgray.sizePolicy().hasHeightForWidth())
+            self.seditgray.setSizePolicy(self.sizePolicy)
+            icon3 = QtGui.QIcon()
+            icon3.addPixmap(QtGui.QPixmap(":/icons/Icons/edit.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            self.seditgray.setText("")
+            self.seditgray.setIcon(icon3)
             self.maingrids.addWidget(self.graylabel, 0, 0, 1, 1)
             self.maingrids.addWidget(self.slicelabel, 0, 1, 1, 1)
-            self.maingrids.addWidget(self.newcanvas, 1, 0, 20, 2)
+            self.maingrids.addWidget(self.zoomlabel, 0, 2, 1, 1)
+            self.maingrids.addWidget(self.seditgray, 0, 3, 1, 1)
+            self.viewLabel = Activeview()
+            self.sceneLabel = Activescene()
+            self.sceneLabel.addWidget(self.newcanvas)
+            self.viewLabel.setScene(self.sceneLabel)
+            self.maingrids.addWidget(self.viewLabel, 1, 0, 1, 4)
 
-            self.artifactbox.setDisabled(False)
+            self.labelbox.setDisabled(False)
             self.brectangle.setDisabled(False)
             self.bellipse.setDisabled(False)
             self.blasso.setDisabled(False)
+            self.bchoosemark.setDisabled(False)
+            self.bnoselect.setDisabled(False)
+            self.labelWidget.setDisabled(False)
+            self.bdelete.setDisabled(False)
+
+            self.bdswitch.setDisabled(True)
+            self.linebox.setDisabled(True)
+            self.columnbox.setDisabled(True)
+            self.bgrids.setDisabled(True)
+            self.openfile.setDisabled(True)
+            self.bpatch.setDisabled(True)
+            self.bsetcolor.setDisabled(True)
         else:
             self.selectoron = False
-            self.artifactbox.setDisabled(True)
+            icon1 = QtGui.QIcon()
+            icon1.addPixmap(QtGui.QPixmap(":/icons/Icons/switchon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            self.bselectoron.setIcon(icon1)
+            self.labelbox.setDisabled(True)
             self.brectangle.setDisabled(True)
             self.bellipse.setDisabled(True)
             self.blasso.setDisabled(True)
-            # self.newax.clear()
+            self.bchoosemark.setDisabled(True)
+            self.bnoselect.setDisabled(True)
+            self.labelWidget.setDisabled(True)
+            self.labelWidget.clear()
+            self.bdelete.setDisabled(True)
+
+            self.bdswitch.setDisabled(False)
+            self.linebox.setDisabled(False)
+            self.bgrids.setDisabled(False)
+            self.openfile.setDisabled(False)
+            self.bpatch.setDisabled(False)
+            self.bsetcolor.setDisabled(False)
+            if self.vision == 2:
+                self.columnbox.setDisabled(False)
             for i in reversed(range(self.maingrids.count())):
                 self.maingrids.itemAt(i).widget().setParent(None)
+
+    def stopView(self, n):
+        self.viewLabel.stopMove(n)
 
     def chooseMark(self):
         with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
             cfg = yaml.safe_load(ymlfile)
         dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
         self.selectorPath = QtWidgets.QFileDialog.getExistingDirectory(self, "choose the image to view", dbinfo.sPathIn)
-        # self.selectorPath = QtWidgets.QFileDialog.getExistingDirectory(self, "choose the image to view",
-        #                                                 "C:/Users/hansw/Videos/artefacts/MRPhysics/newProtocol")
+
         if self.selectorPath:
-            # self.markfile = QtWidgets.QFileDialog.getOpenFileName(self, "choose the marking file",
-            #                                                       "C:/Users/hansw/Desktop/Ma_code/PyQt/Markings", "") [0]
-            self.markfile = QtWidgets.QFileDialog.getOpenFileName(self, 'choose the marking file', '',
-                            'json files(*.json)', None, QtWidgets.QFileDialog.DontUseNativeDialog)[0]
-            if self.markfile:
-                files = sorted([os.path.join(self.selectorPath, file) for file in os.listdir(self.selectorPath)],
-                               key=os.path.getctime)
-                datasets = [dicom.read_file(f) \
-                            for f in files]
-                try:
-                    self.imageforselector, pixel_space = dicom_numpy.combine_slices(datasets)
-                except dicom_numpy.DicomImportException:
-                    raise
-                with open(self.markfile, 'r') as json_data:  ##### first time
-                    self.loadFile = json.load(json_data)
-                # print(self.loadFile)
-            else:
-                pass
+            probandname = os.path.split(os.path.split(os.path.split(self.selectorPath)[0])[0])[1]
+            self.markfile = str(self.pathROI) + '/' + str(probandname) + '.json'
+            
+            self.overlay = Overlay(self.centralWidget()) 
+            self.overlay.setGeometry(QtCore.QRect(950, 400, 171, 141))
+            self.overlay.show()
+            from loadf import loadImage
+            self.newMR = loadImage(self.selectorPath)
+            self.newMR.trigger.connect(self.loadEnd)
+            self.newMR.start()
         else:
             pass
 
+    def loadSelect(self):
+        self.mrinmain = self.newMR.voxel_ndarray
         self.ind = 0
-        self.slices = self.imageforselector.shape[2]
+        self.slices = self.mrinmain.shape[2]
 
-        self.newax.clear()
-        self.pltc = self.newax.imshow(np.swapaxes(self.imageforselector[:, :, self.ind], 0, 1), cmap='gray', vmin=0,
-                               vmax=2094)
-        v_min, v_max = self.pltc.get_clim()
         self.graylist = []
-        self.graylist.append(v_min)
-        self.graylist.append(v_max)
-
+        self.graylist.append(None)
+        self.graylist.append(None)
         self.emitlist = []
         self.emitlist.append(self.ind)
         self.emitlist.append(self.slices)
 
-        number_Patch = 0
-        cur_no = "0"
-        sepkey = os.path.split(self.selectorPath)
-        sepkey = sepkey[1]
-        if sepkey in self.loadFile:
-            layer = self.loadFile[sepkey]
-            while (cur_no + "_11_" + str(number_Patch)) in layer or (
-                    cur_no + "_12_" + str(number_Patch)) in layer or (
-                    cur_no + "_13_" + str(number_Patch)) in layer or (
-                    cur_no + "_21_" + str(number_Patch)) in layer or (
-                    cur_no + "_22_" + str(number_Patch)) in layer or (
-                    cur_no + "_23_" + str(number_Patch)) in layer or (
-                    cur_no + "_31_" + str(number_Patch)) in layer or (
-                    cur_no + "_32_" + str(number_Patch)) in layer or (
-                    cur_no + "_33_" + str(number_Patch)) in layer:
-                patch = None
-                if cur_no + "_11_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_11_" + str(number_Patch)]
-                    p = np.asarray(p['points'])
-                    patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
-                                          np.abs(p[1] - p[3]), fill=False,
-                                          edgecolor="red", lw=2)
-                elif cur_no + "_12_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_12_" + str(number_Patch)]
-                    p = np.asarray(p['points'])
-                    patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
-                                          np.abs(p[1] - p[3]), fill=False,
-                                          edgecolor="green", lw=2)
-                elif cur_no + "_13_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_13_" + str(number_Patch)]
-                    p = np.asarray(p['points'])
-                    patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
-                                          np.abs(p[1] - p[3]), fill=False,
-                                          edgecolor="blue", lw=2)
-                elif cur_no + "_21_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_21_" + str(number_Patch)]
-                    p = np.asarray(p['points'])
-                    patch = Ellipse(
-                        xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
-                        width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="red", fc='None', lw=2)
-                elif cur_no + "_22_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_22_" + str(number_Patch)]
-                    p = np.asarray(p['points'])
-                    patch = Ellipse(
-                        xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
-                        width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="green", fc='None', lw=2)
-                elif cur_no + "_23_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_23_" + str(number_Patch)]
-                    p = np.asarray(p['points'])
-                    patch = Ellipse(
-                        xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
-                        width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="blue", fc='None', lw=2)
-                elif cur_no + "_31_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_31_" + str(number_Patch)]
-                    p = path.Path(np.asarray(p['vertices']), p['codes'])
-                    patch = patches.PathPatch(p, fill=False, edgecolor='red', lw=2)
-                elif cur_no + "_32_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_32_" + str(number_Patch)]
-                    p = path.Path(np.asarray(p['vertices']), p['codes'])
-                    patch = patches.PathPatch(p, fill=False, edgecolor='green', lw=2)
-                elif cur_no + "_33" \
-                              "_" + str(number_Patch) in layer:
-                    p = layer[cur_no + "_33_" + str(number_Patch)]
-                    p = path.Path(np.asarray(p['vertices']), p['codes'])
-                    patch = patches.PathPatch(p, fill=False, edgecolor='blue', lw=2)
-                self.newax.add_patch(patch)
-                number_Patch += 1
-
         self.slicelabel.setText('Slice %s' % (self.ind + 1) + '/ %s' % (self.slices))
-        self.graylabel.setText('Grayscale Range %s' % (self.graylist))
+        # self.graylabel.setText('Grayscale Range %s' % (self.graylist))
+        self.zoomlabel.setText('Current Zooming %s' % (1))
         self.update_data.connect(self.updateSlices)
         self.gray_data.connect(self.updateGray)
         self.new_page.connect(self.newSliceview)
+        self.viewLabel.zooming_data.connect(self.updateZoom)
+        self.seditgray.clicked.connect(self.setGreymain)
 
         self.newslicesview()
 
@@ -986,76 +848,40 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.newslicesview()
 
     def newslicesview(self):
-        # plt.cla() # 1
         self.newax.clear()
-        self.pltc = self.newax.imshow(np.swapaxes(self.imageforselector[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
+        self.pltc = self.newax.imshow(np.swapaxes(self.mrinmain[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
 
-        with open(self.markfile) as json_data:
-            loadFile2 = json.load(json_data)
-            number_Patch = 0
-            sepkey = os.path.split(self.selectorPath)
-            sepkey = sepkey[1]
-            if sepkey in loadFile2:
-                layer = loadFile2[sepkey]
-                cur_no = str(self.ind)
+        sepkey = os.path.split(
+            self.selectorPath)  # ('C:/Users/hansw/Videos/artefacts/MRPhysics/newProtocol/01_ab/dicom_sorted', 't1_tse_tra_Kopf_Motion_0003')
+        sepkey = sepkey[1]  # t1_tse_tra_Kopf_Motion_0003
+        self.currentlist.clear()
+        self.keylist.clear()
+        with open(self.markfile, 'r') as json_data:
+            loadFile = json.load(json_data)
 
-                while (cur_no + "_11_" + str(number_Patch)) in layer or (cur_no + "_12_" + str(number_Patch)) in layer or (
-                        cur_no + "_13_" + str(number_Patch)) in layer or (cur_no + "_21_" + str(number_Patch)) in layer or (
-                        cur_no + "_22_" + str(number_Patch)) in layer or (cur_no + "_23_" + str(number_Patch)) in layer or (
-                        cur_no + "_31_" + str(number_Patch)) in layer or (cur_no + "_32_" + str(number_Patch)) in layer or (
-                        cur_no + "_33_" + str(number_Patch)) in layer:
-                    patch = None
-                    if cur_no + "_11_" + str(number_Patch) in layer:
-                        p = layer[cur_no + "_11_" + str(number_Patch)]
-                        p = np.asarray(p['points'])
-                        patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
-                                              np.abs(p[1] - p[3]), fill=False,
-                                              edgecolor="red", lw=2)
-                    elif cur_no + "_12_" + str(number_Patch) in layer:
-                        p = layer[cur_no + "_12_" + str(number_Patch)]
-                        p = np.asarray(p['points'])
-                        patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
-                                              np.abs(p[1] - p[3]), fill=False,
-                                              edgecolor="green", lw=2)
-                    elif cur_no + "_13_" + str(number_Patch) in layer:
-                        p = layer[cur_no + "_13_" + str(number_Patch)]
-                        p = np.asarray(p['points'])
-                        patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
-                                              np.abs(p[1] - p[3]), fill=False,
-                                              edgecolor="blue", lw=2)
-                    elif cur_no + "_21_" + str(number_Patch) in layer:
-                        p = layer[cur_no + "_21_" + str(number_Patch)]
-                        p = np.asarray(p['points'])
-                        patch = Ellipse(
-                            xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
-                            width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="red", fc='None', lw=2)
-                    elif cur_no + "_22_" + str(number_Patch) in layer:
-                        p = layer[cur_no + "_22_" + str(number_Patch)]
-                        p = np.asarray(p['points'])
-                        patch = Ellipse(
-                            xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
-                            width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="green", fc='None', lw=2)
-                    elif cur_no + "_23_" + str(number_Patch) in layer:
-                        p = layer[cur_no + "_23_" + str(number_Patch)]
-                        p = np.asarray(p['points'])
-                        patch = Ellipse(
-                            xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
-                            width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), edgecolor="blue", fc='None', lw=2)
-                    elif cur_no + "_31_" + str(number_Patch) in layer:
-                        p = layer[cur_no + "_31_" + str(number_Patch)]
-                        p = path.Path(np.asarray(p['vertices']), p['codes'])
-                        patch = patches.PathPatch(p, fill=False, edgecolor='red', lw=2)
-                    elif cur_no + "_32_" + str(number_Patch) in layer:
-                        p = layer[cur_no + "_32_" + str(number_Patch)]
-                        p = path.Path(np.asarray(p['vertices']), p['codes'])
-                        patch = patches.PathPatch(p, fill=False, edgecolor='green', lw=2)
-                    elif cur_no + "_33" \
-                                  "_" + str(number_Patch) in layer:
-                        p = layer[cur_no + "_33_" + str(number_Patch)]
-                        p = path.Path(np.asarray(p['vertices']), p['codes'])
-                        patch = patches.PathPatch(p, fill=False, edgecolor='blue', lw=2)
-                    self.newax.add_patch(patch)
-                    number_Patch += 1
+            if sepkey in loadFile:
+                layer = loadFile[sepkey]
+                for key in layer.keys():
+                    if key[0]+key[1]== str(self.ind):
+                        p = layer[key]
+                        if key[3] == '1':
+                            p = np.asarray(p['points'])
+                            patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
+                                                  np.abs(p[1] - p[3]), fill=True,
+                                                  alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[4])])
+                        elif key[3] == '2':
+                            p = np.asarray(p['points'])
+                            patch = Ellipse(
+                                xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
+                                width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]),
+                                alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[4])])
+                        else:
+                            p = path.Path(np.asarray(p['vertices']), p['codes'])
+                            patch = patches.PathPatch(p, fill=True, alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[4])])
+                        item = self.labelnames[int(key[4])] + '_' + str(int(key[6])+1)
+                        self.currentlist.append(item)
+                        self.keylist.append(key)
+                        self.newax.add_patch(patch)
 
         self.newcanvas.draw()  # not self.newcanvas.show()
 
@@ -1064,44 +890,35 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.graylist[1] = v_max
         self.new_page.emit()
 
+        self.labelWidget.clear()
+        self.labelWidget.addItems(self.currentlist)
+        self.labelWidget.setCurrentRow(0)
+
+    def deleteLabel(self):
+        pos = self.labelWidget.currentRow()
+        print(pos)
+        item = self.labelWidget.takeItem(pos)
+        item = None
+        with open(self.markfile) as json_data:
+            deleteMark = json.load(json_data)
+            sepkey = os.path.split(self.selectorPath)
+            sepkey = sepkey[1]
+            layer = deleteMark[sepkey]
+            if pos != -1:
+                layer.pop(self.keylist[pos], None)
+            # del layer[self.keylist[pos]]
+            if pos != 0:
+                self.labelWidget.setCurrentRow(pos-1)
+        with open(self.markfile, 'w') as json_data:
+            json_data.write(json.dumps(deleteMark))
+
+        self.newslicesview()
+
     def mouse_clicked(self, event):
         if event.button == 2:
             self.x_clicked = event.x
             self.y_clicked = event.y
             self.mouse_second_clicked = True
-        elif event.button == 3:
-            with open(self.markfile) as json_data:
-                deleteMark = json.load(json_data)
-                sepkey = os.path.split(self.selectorPath)
-                sepkey = sepkey[1]
-                layer = deleteMark[sepkey]
-                cur_no = str(self.ind)
-                cur_pa = str(len(self.newax.patches) - 1)
-
-                if cur_no + "_11_" + cur_pa in layer:
-                    layer.pop(cur_no + "_11_" + cur_pa, None)
-                elif cur_no + "_12_" + cur_pa in layer:
-                    layer.pop(cur_no + "_12_" + cur_pa, None)
-                elif cur_no + "_13_" + cur_pa in layer:
-                    layer.pop(cur_no + "_13_" + cur_pa, None)
-                elif cur_no + "_21_" + cur_pa in layer:
-                    layer.pop(cur_no + "_21_" + cur_pa, None)
-                elif cur_no + "_22_" + cur_pa in layer:
-                    layer.pop(cur_no + "_22_" + cur_pa, None)
-                elif cur_no + "_23_" + cur_pa in layer:
-                    layer.pop(cur_no + "_23_" + cur_pa, None)
-                elif cur_no + "_31_" + cur_pa in layer:
-                    layer.pop(cur_no + "_31_" + cur_pa, None)
-                elif cur_no + "_32_" + cur_pa in layer:
-                    layer.pop(cur_no + "_32_" + cur_pa, None)
-                elif cur_no + "_33_" + cur_pa in layer:
-                    layer.pop(cur_no + "_33_" + cur_pa, None)
-            # with open(self.markfile, 'w') as json_data:
-            #     json.dump(deleteMark, json_data)
-            with open(self.markfile, 'w') as json_data:
-                json_data.write(json.dumps(deleteMark))
-
-            self.newslicesview()
 
     def mouse_move(self, event):
         if self.mouse_second_clicked:
@@ -1134,7 +951,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.graylist[1] = v_max.round(2)
             self.gray_data.emit(self.graylist)
 
-            self.newcanvas.draw()
+            self.newcanvas.draw_idle()
 
     def mouse_release(self, event):
         if event.button == 2:
@@ -1149,6 +966,18 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
     def updateGray(self, elist):
         self.graylabel.setText('Grayscale Range %s' % (elist))
 
+    def updateZoom(self, factor):
+        self.zoomlabel.setText('Current Zooming %s' % (factor))
+
+    def setGreymain(self):
+        maxv, minv, ok = grey_window.getData()
+        if ok:
+            self.pltc.set_clim(vmin=minv, vmax=maxv)
+            self.graylist[0] = minv
+            self.graylist[1] = maxv
+            self.gray_data.emit(self.graylist)
+            self.newcanvas.draw_idle()
+
     def closeEvent(self, QCloseEvent):
         reply = QMessageBox.question(self, 'Warning', 'Are you sure to exit?', QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
@@ -1156,780 +985,6 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             QCloseEvent.accept()
         else:
             QCloseEvent.ignore()
-
-############################################################################################  the second tab
-    # def button_train_clicked(self):
-    #     # set epochs
-    #     self.deepLearningArtApp.setEpochs(self.SpinBox_Epochs.value())
-    #
-    #     # handle check states of check boxes for used classes
-    #     self.deepLearningArtApp.setUsingArtifacts(self.CheckBox_Artifacts.isChecked())
-    #     self.deepLearningArtApp.setUsingBodyRegions(self.CheckBox_BodyRegion.isChecked())
-    #     self.deepLearningArtApp.setUsingTWeighting(self.CheckBox_TWeighting.isChecked())
-    #
-    #     # set learning rates and batch sizes
-    #     try:
-    #         batchSizes = np.fromstring(self.LineEdit_BatchSizes.text(), dtype=np.int, sep=',')
-    #         self.deepLearningArtApp.setBatchSizes(batchSizes)
-    #         learningRates = np.fromstring(self.LineEdit_LearningRates.text(), dtype=np.float32, sep=',')
-    #         self.deepLearningArtApp.setLearningRates(learningRates)
-    #     except:
-    #         raise ValueError("Wrong input format of learning rates! Enter values seperated by ','. For example: 0.1,0.01,0.001")
-    #
-    #     # set optimizer
-    #     selectedOptimizer = self.ComboBox_Optimizers.currentText()
-    #     if selectedOptimizer == "SGD":
-    #         self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.SGD_OPTIMIZER)
-    #     elif selectedOptimizer == "RMSprop":
-    #         self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.RMS_PROP_OPTIMIZER)
-    #     elif selectedOptimizer == "Adagrad":
-    #         self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.ADAGRAD_OPTIMIZER)
-    #     elif selectedOptimizer == "Adadelta":
-    #         self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.ADADELTA_OPTIMIZER)
-    #     elif selectedOptimizer == "Adam":
-    #         self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.ADAM_OPTIMIZER)
-    #     else:
-    #         raise ValueError("Unknown Optimizer!")
-    #
-    #     # set weigth decay
-    #     self.deepLearningArtApp.setWeightDecay(float(self.DoubleSpinBox_WeightDecay.value()))
-    #     # set momentum
-    #     self.deepLearningArtApp.setMomentum(float(self.DoubleSpinBox_Momentum.value()))
-    #     # set nesterov enabled
-    #     if self.CheckBox_Nesterov.checkState() == Qt.Checked:
-    #         self.deepLearningArtApp.setNesterovEnabled(True)
-    #     else:
-    #         self.deepLearningArtApp.setNesterovEnabled(False)
-    #
-    #     # handle data augmentation
-    #     if self.CheckBox_DataAugmentation.checkState() == Qt.Checked:
-    #         self.deepLearningArtApp.setDataAugmentationEnabled(True)
-    #         # get all checked data augmentation options
-    #         if self.CheckBox_DataAug_horizontalFlip.checkState() == Qt.Checked:
-    #             self.deepLearningArtApp.setHorizontalFlip(True)
-    #         else:
-    #             self.deepLearningArtApp.setHorizontalFlip(False)
-    #
-    #         if self.CheckBox_DataAug_verticalFlip.checkState() == Qt.Checked:
-    #             self.deepLearningArtApp.setVerticalFlip(True)
-    #         else:
-    #             self.deepLearningArtApp.setVerticalFlip(False)
-    #
-    #         if self.CheckBox_DataAug_Rotation.checkState() == Qt.Checked:
-    #             self.deepLearningArtApp.setRotation(True)
-    #         else:
-    #             self.deepLearningArtApp.setRotation(False)
-    #
-    #         if self.CheckBox_DataAug_zcaWeighting.checkState() == Qt.Checked:
-    #             self.deepLearningArtApp.setZCA_Whitening(True)
-    #         else:
-    #             self.deepLearningArtApp.setZCA_Whitening(False)
-    #
-    #         if self.CheckBox_DataAug_HeightShift.checkState() == Qt.Checked:
-    #             self.deepLearningArtApp.setHeightShift(True)
-    #         else:
-    #             self.deepLearningArtApp.setHeightShift(False)
-    #
-    #         if self.CheckBox_DataAug_WidthShift.checkState() == Qt.Checked:
-    #             self.deepLearningArtApp.setWidthShift(True)
-    #         else:
-    #             self.deepLearningArtApp.setWidthShift(False)
-    #
-    #         if self.CheckBox_DataAug_Zoom.checkState() == Qt.Checked:
-    #             self.deepLearningArtApp.setZoom(True)
-    #         else:
-    #             self.deepLearningArtApp.setZoom(False)
-    #
-    #
-    #         # contrast improvement (contrast stretching, adaptive equalization, histogram equalization)
-    #         # it is not recommended to set more than one of them to true
-    #         if self.RadioButton_DataAug_contrastStretching.isChecked():
-    #             self.deepLearningArtApp.setContrastStretching(True)
-    #         else:
-    #             self.deepLearningArtApp.setContrastStretching(False)
-    #
-    #         if self.RadioButton_DataAug_histogramEq.isChecked():
-    #             self.deepLearningArtApp.setHistogramEqualization(True)
-    #         else:
-    #             self.deepLearningArtApp.setHistogramEqualization(False)
-    #
-    #         if self.RadioButton_DataAug_adaptiveEq.isChecked():
-    #             self.deepLearningArtApp.setAdaptiveEqualization(True)
-    #         else:
-    #             self.deepLearningArtApp.setAdaptiveEqualization(False)
-    #     else:
-    #         # disable data augmentation
-    #         self.deepLearningArtApp.setDataAugmentationEnabled(False)
-    #
-    #
-    #     # start training process
-    #     self.deepLearningArtApp.performTraining()
-    #
-    #
-    #
-    # def button_markingsPath_clicked(self):
-    #     dir = self.openFileNamesDialog(self.deepLearningArtApp.getMarkingsPath())
-    #     self.Label_MarkingsPath.setText(dir)
-    #     self.deepLearningArtApp.setMarkingsPath(dir)
-    #
-    #
-    #
-    # def button_patching_clicked(self):
-    #     if self.deepLearningArtApp.getSplittingMode() == DeepLearningArtApp.NONE_SPLITTING:
-    #         QMessageBox.about(self, "My message box", "Select Splitting Mode!")
-    #         return 0
-    #
-    #     self.getSelectedDatasets()
-    #     self.getSelectedPatients()
-    #
-    #     # get patching parameters
-    #     self.deepLearningArtApp.setPatchSizeX(self.SpinBox_PatchX.value())
-    #     self.deepLearningArtApp.setPatchSizeY(self.SpinBox_PatchY.value())
-    #     self.deepLearningArtApp.setPatchSizeZ(self.SpinBox_PatchZ.value())
-    #     self.deepLearningArtApp.setPatchOverlapp(self.SpinBox_PatchOverlapp.value())
-    #
-    #     # get labling parameters
-    #     if self.RadioButton_MaskLabeling.isChecked():
-    #         self.deepLearningArtApp.setLabelingMode(DeepLearningArtApp.MASK_LABELING)
-    #     elif self.RadioButton_PatchLabeling.isChecked():
-    #         self.deepLearningArtApp.setLabelingMode(DeepLearningArtApp.PATCH_LABELING)
-    #
-    #     # get patching parameters
-    #     if self.ComboBox_Patching.currentIndex() == 1:
-    #         # 2D patching selected
-    #         self.deepLearningArtApp.setPatchingMode(DeepLearningArtApp.PATCHING_2D)
-    #     elif self.ComboBox_Patching.currentIndex() == 2:
-    #         # 3D patching selected
-    #         self.deepLearningArtApp.setPatchingMode(DeepLearningArtApp.PATCHING_3D)
-    #     else:
-    #         self.ComboBox_Patching.setCurrentIndex(1)
-    #         self.deepLearningArtApp.setPatchingMode(DeepLearningArtApp.PATCHING_2D)
-    #
-    #     #using segmentation mask
-    #     self.deepLearningArtApp.setUsingSegmentationMasks(self.CheckBox_SegmentationMask.isChecked())
-    #
-    #     # handle store mode
-    #     self.deepLearningArtApp.setStoreMode(self.ComboBox_StoreOptions.currentIndex())
-    #
-    #     print("Start Patching for ")
-    #     print("the Patients:")
-    #     for x in self.deepLearningArtApp.getSelectedPatients():
-    #         print(x)
-    #     print("and the Datasets:")
-    #     for x in self.deepLearningArtApp.getSelectedDatasets():
-    #         print(x)
-    #     print("with the following Patch Parameters:")
-    #     print("Patch Size X: " + str(self.deepLearningArtApp.getPatchSizeX()))
-    #     print("Patch Size Y: " + str(self.deepLearningArtApp.getPatchSizeY()))
-    #     print("Patch Overlapp: " + str(self.deepLearningArtApp.getPatchOverlapp()))
-    #
-    #     #generate dataset
-    #     self.deepLearningArtApp.generateDataset()
-    #
-    #     #check if attributes in DeepLearningArtApp class contains dataset
-    #     if self.deepLearningArtApp.datasetAvailable() == True:
-    #         # if yes, make the use current data button available
-    #         self.Button_useCurrentData.setEnabled(True)
-    #
-    #
-    #
-    # def button_outputPatching_clicked(self):
-    #     dir = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
-    #     self.Label_OutputPathPatching.setText(dir)
-    #     self.deepLearningArtApp.setOutputPathForPatching(dir)
-    #
-    #
-    #
-    # def getSelectedPatients(self):
-    #     selectedPatients = []
-    #     for i in range(self.TreeWidget_Patients.topLevelItemCount()):
-    #         if self.TreeWidget_Patients.topLevelItem(i).checkState(0) == Qt.Checked:
-    #             selectedPatients.append(self.TreeWidget_Patients.topLevelItem(i).text(0))
-    #
-    #     self.deepLearningArtApp.setSelectedPatients(selectedPatients)
-    #
-    #
-    #
-    # def button_DB_clicked(self):
-    #     dir = self.openFileNamesDialog(self.deepLearningArtApp.getPathToDatabase())
-    #     self.deepLearningArtApp.setPathToDatabase(dir)
-    #     self.manageTreeView()
-    #
-    #
-    #
-    # def openFileNamesDialog(self, dir=None):
-    #     if dir==None:
-    #         # dir = "D:" + os.sep + "med_data" + os.sep + "MRPhysics"
-    #         dir = 'C:' + os.sep + 'Users' + os.sep + 'hansw' + os.sep + 'Videos' + os.sep + 'artefacts'\
-    #               + os.sep + 'MRPhysics'  + os.sep + 'newProtocol'
-    #     options = QFileDialog.Options()
-    #     options |=QFileDialog.DontUseNativeDialog
-    #
-    #     ret = QFileDialog.getExistingDirectory(self, "Select Directory", dir)
-    #     # path to database
-    #     dir = str(ret)
-    #     return dir
-    #
-    #
-    #
-    # def manageTreeView(self):
-    #     # all patients in database
-    #     if os.path.exists(self.deepLearningArtApp.getPathToDatabase()):
-    #         subdirs = os.listdir(self.deepLearningArtApp.getPathToDatabase())
-    #         self.TreeWidget_Patients.setHeaderLabel("Patients:")
-    #
-    #         for x in subdirs:
-    #             item = QTreeWidgetItem()
-    #             item.setText(0, str(x))
-    #             item.setCheckState(0, Qt.Unchecked)
-    #             self.TreeWidget_Patients.addTopLevelItem(item)
-    #
-    #         self.Label_DB.setText(self.deepLearningArtApp.getPathToDatabase())
-    #
-    #
-    #
-    # def manageTreeViewDatasets(self):
-    #     print(os.path.dirname(self.deepLearningArtApp.getPathToDatabase()))
-    #     # manage datasets
-    #     self.TreeWidget_Datasets.setHeaderLabel("Datasets:")
-    #     for ds in DeepLearningArtApp.datasets.keys():
-    #         dataset = DeepLearningArtApp.datasets[ds].getPathdata()
-    #         item = QTreeWidgetItem()
-    #         item.setText(0, dataset)
-    #         item.setCheckState(0, Qt.Unchecked)
-    #         self.TreeWidget_Datasets.addTopLevelItem(item)
-    #
-    #
-    #
-    # def getSelectedDatasets(self):
-    #     selectedDatasets = []
-    #     for i in range(self.TreeWidget_Datasets.topLevelItemCount()):
-    #         if self.TreeWidget_Datasets.topLevelItem(i).checkState(0) == Qt.Checked:
-    #             selectedDatasets.append(self.TreeWidget_Datasets.topLevelItem(i).text(0))
-    #
-    #     self.deepLearningArtApp.setSelectedDatasets(selectedDatasets)
-    #
-    #
-    #
-    # def selectedDNN_changed(self):
-    #     self.deepLearningArtApp.setNeuralNetworkModel(self.ComboBox_DNNs.currentText())
-    #
-    #
-    #
-    # def button_useCurrentData_clicked(self):
-    #     if self.deepLearningArtApp.datasetAvailable() == True:
-    #         self.Label_currentDataset.setText("Current Dataset is used...")
-    #         self.GroupBox_TrainNN.setEnabled(True)
-    #     else:
-    #         self.Button_useCurrentData.setEnabled(False)
-    #         self.Label_currentDataset.setText("No Dataset selected!")
-    #         self.GroupBox_TrainNN.setEnabled(False)
-    #
-    #
-    #
-    # def button_selectDataset_clicked(self):
-    #     pathToDataset = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
-    #     retbool, datasetName = self.deepLearningArtApp.loadDataset(pathToDataset)
-    #     if retbool == True:
-    #         self.Label_currentDataset.setText(datasetName + " is used as dataset...")
-    #     else:
-    #         self.Label_currentDataset.setText("No Dataset selected!")
-    #
-    #     if self.deepLearningArtApp.datasetAvailable() == True:
-    #         self.GroupBox_TrainNN.setEnabled(True)
-    #     else:
-    #         self.GroupBox_TrainNN.setEnabled(False)
-    #
-    #
-    #
-    # def button_learningOutputPath_clicked(self):
-    #     path = self.openFileNamesDialog(self.deepLearningArtApp.getLearningOutputPath())
-    #     self.deepLearningArtApp.setLearningOutputPath(path)
-    #     self.Label_LearningOutputPath.setText(path)
-    #
-    #
-    #
-    # def updateProgressBarTraining(self, val):
-    #     self.ProgressBar_training.setValue(val)
-    #
-    #
-    #
-    # def splittingMode_changed(self):
-    #
-    #     if self.ComboBox_splittingMode.currentIndex() == 0:
-    #         self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
-    #         self.Label_SplittingParams.setText("Select splitting mode!")
-    #     elif self.ComboBox_splittingMode.currentIndex() == 1:
-    #         # call input dialog for editting ratios
-    #         testTrainingRatio, retBool = QInputDialog.getDouble(self, "Enter Test/Training Ratio:",
-    #                                                          "Ratio Test/Training Set:", 0.2, 0, 1, decimals=2)
-    #         if retBool == True:
-    #             validationTrainingRatio, retBool = QInputDialog.getDouble(self, "Enter Validation/Training Ratio",
-    #                                                                   "Ratio Validation/Training Set: ", 0.2, 0, 1, decimals=2)
-    #             if retBool == True:
-    #                 self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING)
-    #                 self.deepLearningArtApp.setTrainTestDatasetRatio(testTrainingRatio)
-    #                 self.deepLearningArtApp.setTrainValidationRatio(validationTrainingRatio)
-    #                 txtStr = "using Test/Train=" + str(testTrainingRatio) + " and Valid/Train=" + str(validationTrainingRatio)
-    #                 self.Label_SplittingParams.setText(txtStr)
-    #             else:
-    #                 self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
-    #                 self.ComboBox_splittingMode.setCurrentIndex(0)
-    #                 self.Label_SplittingParams.setText("Select Splitting Mode!")
-    #         else:
-    #             self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
-    #             self.ComboBox_splittingMode.setCurrentIndex(0)
-    #             self.Label_SplittingParams.setText("Select Splitting Mode!")
-    #     elif self.ComboBox_splittingMode.currentIndex() == 2:
-    #         # cross validation splitting
-    #         testTrainingRatio, retBool = QInputDialog.getDouble(self, "Enter Test/Training Ratio:",
-    #                                                          "Ratio Test/Training Set:", 0.2, 0, 1, decimals=2)
-    #
-    #         if retBool == True:
-    #             numFolds, retBool = QInputDialog.getInt(self, "Enter Number of Folds for Cross Validation",
-    #                                                 "Number of Folds: ", 15, 0, 100000)
-    #             if retBool == True:
-    #                 self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.CROSS_VALIDATION_SPLITTING)
-    #                 self.deepLearningArtApp.setTrainTestDatasetRatio(testTrainingRatio)
-    #                 self.deepLearningArtApp.setNumFolds(numFolds)
-    #                 self.Label_SplittingParams.setText("Test/Train Ratio: " + str(testTrainingRatio) + \
-    #                                                       ", and " + str(numFolds) + " Folds")
-    #             else:
-    #                 self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
-    #                 self.ComboBox_splittingMode.setCurrentIndex(0)
-    #                 self.Label_SplittingParams.setText("Select Splitting Mode!")
-    #         else:
-    #             self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
-    #             self.ComboBox_splittingMode.setCurrentIndex(0)
-    #             self.Label_SplittingParams.setText("Select Splitting Mode!")
-    #
-    #     elif self.ComboBox_splittingMode.currentIndex() == 3:
-    #         self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.PATIENT_CROSS_VALIDATION_SPLITTING)
-    #
-    #
-    #
-    # def check_dataAugmentation_enabled(self):
-    #     if self.CheckBox_DataAugmentation.checkState() == Qt.Checked:
-    #         self.CheckBox_DataAug_horizontalFlip.setEnabled(True)
-    #         self.CheckBox_DataAug_verticalFlip.setEnabled(True)
-    #         self.CheckBox_DataAug_Rotation.setEnabled(True)
-    #         self.CheckBox_DataAug_zcaWeighting.setEnabled(True)
-    #         self.CheckBox_DataAug_HeightShift.setEnabled(True)
-    #         self.CheckBox_DataAug_WidthShift.setEnabled(True)
-    #         self.CheckBox_DataAug_Zoom.setEnabled(True)
-    #         self.RadioButton_DataAug_contrastStretching.setEnabled(True)
-    #         self.RadioButton_DataAug_histogramEq.setEnabled(True)
-    #         self.RadioButton_DataAug_adaptiveEq.setEnabled(True)
-    #     else:
-    #         self.CheckBox_DataAug_horizontalFlip.setEnabled(False)
-    #         self.CheckBox_DataAug_verticalFlip.setEnabled(False)
-    #         self.CheckBox_DataAug_Rotation.setEnabled(False)
-    #         self.CheckBox_DataAug_zcaWeighting.setEnabled(False)
-    #         self.CheckBox_DataAug_HeightShift.setEnabled(False)
-    #         self.CheckBox_DataAug_WidthShift.setEnabled(False)
-    #         self.CheckBox_DataAug_Zoom.setEnabled(False)
-    #
-    #         self.RadioButton_DataAug_contrastStretching.setEnabled(False)
-    #         self.RadioButton_DataAug_contrastStretching.setAutoExclusive(False)
-    #         self.RadioButton_DataAug_contrastStretching.setChecked(False)
-    #         self.RadioButton_DataAug_contrastStretching.setAutoExclusive(True)
-    #
-    #         self.RadioButton_DataAug_histogramEq.setEnabled(False)
-    #         self.RadioButton_DataAug_histogramEq.setAutoExclusive(False)
-    #         self.RadioButton_DataAug_histogramEq.setChecked(False)
-    #         self.RadioButton_DataAug_histogramEq.setAutoExclusive(True)
-    #
-    #
-    #         self.RadioButton_DataAug_adaptiveEq.setEnabled(False)
-    #         self.RadioButton_DataAug_adaptiveEq.setAutoExclusive(False)
-    #         self.RadioButton_DataAug_adaptiveEq.setChecked(False)
-    #         self.RadioButton_DataAug_adaptiveEq.setAutoExclusive(True)
-##################################################################################################################################
-#
-#     def sliderValue(self):
-#         self.chosenPatchNumber=self.horizontalSlider_3.value()
-#         self.matplotlibwidget_static_2.mpl.feature_plot(self.chosenActivationName, self.chosenPatchNumber,self.activations)
-#
-#     @pyqtSlot()
-#     def on_wyh5_clicked(self):
-#         self.openfile_name = QFileDialog.getOpenFileName(self, 'Choose the file', '.', 'H5 files(*.h5)')[0]
-#         self.model = h5py.File(self.openfile_name, 'r')
-#
-#         self.qList, self.totalPatches = self.show_activation_names()
-#         self.horizontalSlider_3.setMinimum(1)
-#         self.horizontalSlider_3.setMaximum(self.totalPatches)
-#         self.textEdit_2.setPlainText(self.openfile_name)
-#
-#     @pyqtSlot()
-#     def on_wy2_clicked(self):
-#         # Show the structure of the model and plot the weights
-#         if len(self.openfile_name) != 0:
-#             # show the weights
-#             self.matplotlibwidget_static_2.hide()
-#             self.matplotlibwidget_static_3.hide()
-#             self.matplotlibwidget_static.show()
-#             self.matplotlibwidget_static.mpl.weights_plot(self.model)
-#         else:
-#             self.showChooseFileDialog()
-#
-#     @pyqtSlot()
-#     def on_wy3_clicked(self):
-#         # Show the layers' names of the model
-#         if len(self.openfile_name)!=0:
-#             self.matplotlibwidget_static.hide()
-#             self.matplotlibwidget_static_3.hide()
-#             # show the activations' name in the List
-#             slm = QStringListModel();
-#             slm.setStringList(self.qList)
-#             self.listView_2.setModel(slm)
-#         else:
-#             self.showChooseFileDialog()
-#
-#     @pyqtSlot()
-#     def on_wy4_clicked(self):
-#         # Show the feature maps of the model
-#         if len(self.openfile_name) != 0 :
-#             if len(self.chosenActivationName)!=0:
-#                 # choose which layer's feature maps to be plotted
-#                 self.matplotlibwidget_static.hide()
-#                 self.matplotlibwidget_static_3.hide()
-#                 self.matplotlibwidget_static_2.show()
-#                 self.matplotlibwidget_static_2.mpl.feature_plot(self.chosenActivationName, self.chosenPatchNumber,self.activations)
-#             else:
-#                 self.showChooseLayerDialog()
-#         else:
-#             self.showChooseFileDialog()
-#
-#     @pyqtSlot()
-#     def on_wy5_clicked(self):
-#         # Show the Subset Selection
-#         if len(self.openfile_name) != 0:
-#             # show the weights
-#             self.matplotlibwidget_static.hide()
-#             self.matplotlibwidget_static_2.hide()
-#             self.matplotlibwidget_static_3.show()
-#             self.matplotlibwidget_static_3.mpl.subset_selection_plot(self.model)
-#         else:
-#             self.showChooseFileDialog()
-#
-#     def clickList_1(self, qModelIndex):
-#         self.chosenActivationName = self.qList[qModelIndex.row()]
-#
-#     def show_activation_names(self):
-#         qList = []
-#         totalPatches = 0
-#         activations = self.model['activations']
-#
-#         for i in activations:
-#             qList.append(i)
-#             layerPath = 'activations' + '/' + i
-#             self.activations[i] = self.model[layerPath]
-#             if totalPatches < len(self.activations[i]):
-#                 totalPatches =len(self.activations[i])
-#
-#         return qList, totalPatches
-#
-#     def showChooseFileDialog(self):
-#         reply = QMessageBox.information(self,
-#                                         "Warning",
-#                                         "Please select one H5 File at first",
-#                                         QMessageBox.Ok )
-#
-#     def showChooseLayerDialog(self):
-#         reply = QMessageBox.information(self,
-#                                         "Warning",
-#                                         "Please select one Layer at first",
-#                                         QMessageBox.Ok)
-#
-# class MyMplCanvas(FigureCanvas):
-#
-#     def __init__(self, parent=None, width=15, height=15):
-#
-#         plt.rcParams['font.family'] = ['SimHei']
-#         plt.rcParams['axes.unicode_minus'] = False
-#
-#         self.fig = plt.figure(figsize=(width, height))
-#         #self.openfile_name=''
-#         self.model = {}
-#         self.layerWeights = {}  # {layer name: weights value}
-#         self.edgesInLayerName = [] #(input layer name, output layer name)
-#         self.allLayerNames = []
-#         self.axesDict = {}
-#         self.activations = {}
-#
-#         FigureCanvas.__init__(self, self.fig)
-#         self.setParent(parent)
-#
-#         FigureCanvas.setSizePolicy(self,QSizePolicy.Expanding,QSizePolicy.Expanding)
-#         FigureCanvas.updateGeometry(self)
-#
-#     def weights_plot(self,model):
-#
-#         self.model = model
-#         self.getLayersWeights()
-#         edgesInLayerName = self.model['edgesInLayerName']
-#         layer_by_depth = self.model['layer_by_depth']
-#         maxCol = self.model['maxCol'].value + 1
-#         maxRow = self.model['maxRow'].value
-#
-#         # plot all the layers
-#         bbox_props = dict(boxstyle="round", fc="w", ec="0.5", alpha=0.9)
-#
-#         for i in layer_by_depth:
-#             layerPath = 'layer_by_depth' + '/' + i  # the i'th layer of the model
-#             for j in self.model[layerPath]:
-#                 layerPath2 = layerPath + '/' + j  # the j'th layer in layer i
-#                 for ind in self.model[layerPath2]:
-#                     layerPath3 = layerPath2 + '/' + ind
-#                     #aaa=self.model[layerPath3].value
-#                     layerName =self.model[layerPath3].value
-#                     #layerName = str(self.model[layerPath3].value)[2:-1]
-#                     #layerName = aaa
-#                     self.allLayerNames.append(layerName)
-#
-#                     subplotNumber = (maxRow - 1 - int(i)) * maxCol + int(j) + 1
-#                     self.ax = self.fig.add_subplot(maxRow, maxCol, subplotNumber)
-#                     self.ax.text(0.5, 0.5, layerName, ha="center", va="center",
-#                             bbox=bbox_props)
-#                     self.ax.name = layerName
-#                     self.axesDict[self.ax.name] = self.ax
-#                     self.ax.set_axis_off()
-#
-#         edges = []
-#         bbox_args = dict(boxstyle="round", fc="0.8")
-#         arrow_args = dict(arrowstyle="->")
-#
-#         for i in edgesInLayerName:
-#             inputLayer = str(i[0])[2:-1]
-#             inputLayer = inputLayer.split(':')[0]
-#             outputLayer = str(i[1])[2:-1]
-#             outputLayer = outputLayer.split(':')[0]
-#             edges.append((inputLayer, outputLayer))
-#
-#             self.ax_input = self.axesDict[inputLayer]
-#             self.ax_output = self.axesDict[outputLayer]
-#             an_o = self.ax_output.annotate('', xy=(.5, 0.9), xycoords='data',
-#                                       # xytext=(.5, 1), textcoords='axes fraction',
-#                                       ha="center", va="top",
-#                                       bbox=bbox_args,
-#                                       )
-#             an_i = self.ax_input.annotate('', xy=(.5, 0.4), xycoords=an_o,
-#                                      xytext=(.5, 0.2), textcoords='axes fraction',
-#                                      ha="center", va="top",
-#                                      bbox=bbox_args,
-#                                      arrowprops=arrow_args)
-#
-#         self.fig.tight_layout()
-#         self.draw()
-#         self.fig.canvas.mpl_connect('button_press_event', self.on_click_axes)
-#
-#     def feature_plot(self,feature_map,ind,activations):
-#
-#         ind = ind-1
-#         self.activations=activations
-#         if activations[feature_map].ndim == 4:
-#             featMap=activations[feature_map][ind]
-#
-#             # Compute nrows and ncols for images
-#             n_mosaic = len(featMap)
-#             nrows = int(np.round(np.sqrt(n_mosaic)))
-#             ncols = int(nrows)
-#             if (nrows ** 2) < n_mosaic:
-#                 ncols += 1
-#
-#             self.fig.clear()
-#             # self.draw()
-#             # self.show()
-#             self.plot_feature_mosaic(featMap, nrows, ncols)
-#             self.fig.suptitle("Feature Maps of Patch #{} in Layer '{}'".format(ind+1, feature_map))
-#             self.draw()
-#         else:
-#             pass
-#
-#     def subset_selection_plot(self,model):
-#         self.model=model
-#         subset_selection=self.getSubsetSelections()
-#         nimgs = len(subset_selection)
-#         nrows = int(np.round(np.sqrt(nimgs)))
-#         ncols = int(nrows)
-#         if (nrows ** 2) < nimgs:
-#             ncols += 1
-#
-#         self.fig=self.plot_subset_mosaic(subset_selection, nrows, ncols, self.fig)
-#
-#     def on_click_axes(self,event):
-#         ax = event.inaxes
-#
-#         if ax is None:
-#             return
-#
-#         if event.button is 1:
-#             f = plt.figure()
-#
-#             w = self.layerWeights[ax.name]
-#             if w.ndim == 4:
-#                 w = np.transpose(w, (3, 2, 0, 1))
-#                 mosaic_number = w.shape[0]
-#                 nrows = int(np.round(np.sqrt(mosaic_number)))
-#                 ncols = int(nrows)
-#
-#                 if nrows ** 2 < mosaic_number:
-#                     ncols += 1
-#
-#                 f = self.plot_weight_mosaic(w[:mosaic_number, 0], nrows, ncols, f)
-#                 plt.suptitle("Weights of Layer '{}'".format(ax.name))
-#                 f.show()
-#             else:
-#                 pass
-#         else:
-#             # No need to re-draw the canvas if it's not a left or right click
-#             return
-#         event.canvas.draw()
-#
-#     def getLayersWeights(self):
-#         weights = self.model['weights']
-#         for i in weights:
-#             p = 'weights' + '/' + i
-#             self.layerWeights[i] = self.model[p]
-#
-#     def getLayersFeatures(self):
-#         model = h5py.File(self.openfile_name, 'r')
-#         layersName = []
-#         layersFeatures = {}
-#
-#         for i in model['layers']:
-#             layerIndex = 'layers' + '/' + i
-#
-#             for n in model[layerIndex]:
-#                 layerName = layerIndex + '/' + n
-#                 layersName.append(n)
-#
-#                 featurePath = layerName + '/' + 'activation'
-#                 layersFeatures[n] = model[featurePath]
-#         # model.close()
-#         return layersName, layersFeatures
-#
-#     def getSubsetSelections(self):
-#
-#         subset_selection=self.model['subset_selection']
-#         return subset_selection
-#
-#     def plot_weight_mosaic(self,im, nrows, ncols, fig,**kwargs):
-#
-#         # Set default matplotlib parameters
-#         if not 'interpolation' in kwargs.keys():
-#             kwargs['interpolation'] = "none"
-#
-#         if not 'cmap' in kwargs.keys():
-#             kwargs['cmap'] = "gray"
-#
-#         nimgs = len(im)
-#         imshape = im[0].shape
-#
-#         mosaic = np.zeros(imshape)
-#
-#         for i in range(nimgs):
-#             row = int(np.floor(i / ncols))
-#             col = i % ncols
-#
-#             ax = fig.add_subplot(nrows, ncols,i+1)
-#             ax.set_xlim(0,imshape[0]-1)
-#             ax.set_ylim(0,imshape[1]-1)
-#
-#             mosaic = im[i]
-#
-#             ax.imshow(mosaic, **kwargs)
-#             ax.set_axis_off()
-#
-#         fig.canvas.mpl_connect('button_press_event', self.on_click)
-#         return fig
-#
-#     def plot_feature_mosaic(self,im, nrows, ncols, **kwargs):
-#
-#         # Set default matplotlib parameters
-#         if not 'interpolation' in kwargs.keys():
-#             kwargs['interpolation'] = "none"
-#
-#         if not 'cmap' in kwargs.keys():
-#             kwargs['cmap'] = "gray"
-#
-#         nimgs = len(im)
-#         imshape = im[0].shape
-#
-#         mosaic = np.zeros(imshape)
-#         #fig.clear()
-#
-#         for i in range(nimgs):
-#             row = int(np.floor(i / ncols))
-#             col = i % ncols
-#
-#             ax = self.fig.add_subplot(nrows, ncols,i+1)
-#             ax.set_xlim(0,imshape[0]-1)
-#             ax.set_ylim(0,imshape[1]-1)
-#
-#             mosaic = im[i]
-#
-#             ax.imshow(mosaic, **kwargs)
-#             ax.set_axis_off()
-#         self.draw()
-#         self.fig.canvas.mpl_connect('button_press_event', self.on_click)
-#
-#     def plot_subset_mosaic(self,im,nrows, ncols, fig,**kwargs):
-#         if not 'interpolation' in kwargs.keys():
-#             kwargs['interpolation'] = "none"
-#
-#         if not 'cmap' in kwargs.keys():
-#             kwargs['cmap'] = "gray"
-#         im = np.squeeze(im, axis=1)
-#         nimgs = len(im)
-#         imshape = im[0].shape
-#
-#         mosaic = np.zeros(imshape)
-#
-#         for i in range(nimgs):
-#             row = int(np.floor(i / ncols))
-#             col = i % ncols
-#
-#             ax = fig.add_subplot(nrows, ncols, i + 1)
-#             ax.set_xlim(0, imshape[0] - 1)
-#             ax.set_ylim(0, imshape[1] - 1)
-#
-#             mosaic = im[i]
-#
-#             ax.imshow(mosaic, **kwargs)
-#             ax.set_axis_off()
-#         # fig.suptitle("Subset Selection of Patch #{} in Layer '{}'".format(ind, feature_map))
-#         fig.canvas.mpl_connect('button_press_event', self.on_click)
-#         return fig
-#
-#     def on_click(self,event):
-#         """Enlarge or restore the selected axis."""
-#         ax = event.inaxes
-#         if ax is None:
-#             # Occurs when a region not in an axis is clicked...
-#             return
-#         if event.button is 1:
-#             # On left click, zoom the selected axes
-#             ax._orig_position = ax.get_position()
-#             ax.set_position([0.1, 0.1, 0.85, 0.85])
-#             for axis in event.canvas.figure.axes:
-#                 # Hide all the other axes...
-#                 if axis is not ax:
-#                     axis.set_visible(False)
-#         elif event.button is 3:
-#             # On right click, restore the axes
-#             try:
-#                 ax.set_position(ax._orig_position)
-#                 for axis in event.canvas.figure.axes:
-#                     axis.set_visible(True)
-#             except AttributeError:
-#                 # If we haven't zoomed, ignore...
-#                 pass
-#         else:
-#             # No need to re-draw the canvas if it's not a left or right click
-#             return
-#         event.canvas.draw()
-
 
  ############################################################ class of grids
 class Viewgroup(QtWidgets.QGridLayout):
@@ -2177,7 +1232,6 @@ class Viewgroup(QtWidgets.QGridLayout):
             greylist.append(minv)
             greylist.append(maxv)
             self.anewcanvas.setGreyscale(greylist)
-
 
 class Viewline(QtWidgets.QGridLayout):
     in_link = QtCore.pyqtSignal()

@@ -46,7 +46,7 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="1,15">
           <item>
-           <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,1">
+           <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1">
             <property name="sizeConstraint">
              <enum>QLayout::SetMinimumSize</enum>
             </property>
@@ -74,10 +74,23 @@
                 </item>
                </widget>
               </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="linelabel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>line</string>
+                </property>
+               </widget>
+              </item>
               <item row="4" column="1">
                <widget class="QPushButton" name="openfile">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -100,7 +113,7 @@
               <item row="6" column="0">
                <widget class="QPushButton" name="bpatch">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -120,31 +133,14 @@
                 </property>
                </widget>
               </item>
-              <item row="10" column="0">
-               <widget class="QRadioButton" name="brectangle">
+              <item row="5" column="0" colspan="2">
+               <widget class="QLabel" name="label_6">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="resrc.qrc">
-                  <normaloff>:/icons/Icons/Rectangle.png</normaloff>:/icons/Icons/Rectangle.png</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>35</width>
-                  <height>35</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="0" colspan="2">
-               <widget class="QLabel" name="label_6">
                 <property name="font">
                  <font>
                   <weight>75</weight>
@@ -162,10 +158,140 @@
                 </property>
                </widget>
               </item>
+              <item row="8" column="0">
+               <widget class="QPushButton" name="bselectoron">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="resrc.qrc">
+                  <normaloff>:/icons/Icons/switchon.png</normaloff>:/icons/Icons/switchon.png</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>35</width>
+                  <height>35</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QPushButton" name="bdswitch">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="resrc.qrc">
+                  <normaloff>:/icons/Icons/switch.png</normaloff>:/icons/Icons/switch.png</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>35</width>
+                  <height>35</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="0" colspan="2">
+               <widget class="QComboBox" name="labelbox">
+                <item>
+                 <property name="text">
+                  <string>label_1</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>label_2</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>label_3</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>label_4</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>label_5</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>label_6</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>label_7</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>label_8</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="8" column="1">
+               <widget class="QPushButton" name="bchoosemark">
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="resrc.qrc">
+                  <normaloff>:/icons/Icons/overlap.png</normaloff>:/icons/Icons/overlap.png</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>35</width>
+                  <height>35</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="1">
+               <widget class="QRadioButton" name="blasso">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="resrc.qrc">
+                  <normaloff>:/icons/Icons/Lasso.png</normaloff>:/icons/Icons/Lasso.png</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>35</width>
+                  <height>35</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
               <item row="0" column="0" colspan="2">
                <widget class="QLabel" name="label_5">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -187,139 +313,10 @@
                 </property>
                </widget>
               </item>
-              <item row="7" column="0" colspan="2">
-               <widget class="QLabel" name="label_4">
-                <property name="font">
-                 <font>
-                  <weight>75</weight>
-                  <bold>true</bold>
-                 </font>
-                </property>
-                <property name="frameShape">
-                 <enum>QFrame::Panel</enum>
-                </property>
-                <property name="frameShadow">
-                 <enum>QFrame::Raised</enum>
-                </property>
-                <property name="text">
-                 <string>label</string>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="1">
-               <widget class="QPushButton" name="bsetcolor">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="resrc.qrc">
-                  <normaloff>:/icons/Icons/palette.png</normaloff>:/icons/Icons/palette.png</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>35</width>
-                  <height>35</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="11" column="0">
-               <widget class="QRadioButton" name="blasso">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="resrc.qrc">
-                  <normaloff>:/icons/Icons/Lasso.png</normaloff>:/icons/Icons/Lasso.png</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>35</width>
-                  <height>35</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="8" column="0">
-               <widget class="QPushButton" name="bselectoron">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="resrc.qrc">
-                  <normaloff>:/icons/Icons/switch1.png</normaloff>:/icons/Icons/switch1.png</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>35</width>
-                  <height>35</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="visionlabel">
-                <property name="font">
-                 <font>
-                  <pointsize>16</pointsize>
-                  <weight>75</weight>
-                  <italic>false</italic>
-                  <bold>true</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>2D</string>
-                </property>
-                <property name="textFormat">
-                 <enum>Qt::RichText</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QPushButton" name="bdswitch">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="resrc.qrc">
-                  <normaloff>:/icons/Icons/switch.png</normaloff>:/icons/Icons/switch.png</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>35</width>
-                  <height>35</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
               <item row="4" column="0">
                <widget class="QPushButton" name="bgrids">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -339,46 +336,26 @@
                 </property>
                </widget>
               </item>
-              <item row="8" column="1">
-               <widget class="QPushButton" name="bchoosemark">
+              <item row="11" column="1">
+               <widget class="QRadioButton" name="brectangle">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="text">
                  <string/>
                 </property>
                 <property name="icon">
                  <iconset resource="resrc.qrc">
-                  <normaloff>:/icons/Icons/overlap.png</normaloff>:/icons/Icons/overlap.png</iconset>
+                  <normaloff>:/icons/Icons/Rectangle.png</normaloff>:/icons/Icons/Rectangle.png</iconset>
                 </property>
                 <property name="iconSize">
                  <size>
                   <width>35</width>
                   <height>35</height>
                  </size>
-                </property>
-               </widget>
-              </item>
-              <item row="9" column="0" colspan="2">
-               <widget class="QComboBox" name="artifactbox">
-                <item>
-                 <property name="text">
-                  <string>move</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>shim</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>noise</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="linelabel">
-                <property name="text">
-                 <string>line</string>
                 </property>
                </widget>
               </item>
@@ -401,17 +378,35 @@
                 </item>
                </widget>
               </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="columnlabel">
+              <item row="7" column="0" colspan="2">
+               <widget class="QLabel" name="label_4">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="frameShape">
+                 <enum>QFrame::Panel</enum>
+                </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Raised</enum>
+                </property>
                 <property name="text">
-                 <string>column</string>
+                 <string>label</string>
                 </property>
                </widget>
               </item>
-              <item row="10" column="1">
+              <item row="12" column="0">
                <widget class="QRadioButton" name="bellipse">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -431,17 +426,92 @@
                 </property>
                </widget>
               </item>
+              <item row="6" column="1">
+               <widget class="QPushButton" name="bsetcolor">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="resrc.qrc">
+                  <normaloff>:/icons/Icons/palette.png</normaloff>:/icons/Icons/palette.png</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>35</width>
+                  <height>35</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="0">
+               <widget class="QRadioButton" name="bnoselect">
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="resrc.qrc">
+                  <normaloff>:/icons/Icons/cursor.png</normaloff>:/icons/Icons/cursor.png</iconset>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="columnlabel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>column</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="visionlabel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>16</pointsize>
+                  <weight>75</weight>
+                  <italic>false</italic>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>2D</string>
+                </property>
+                <property name="textFormat">
+                 <enum>Qt::RichText</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="14" column="0" colspan="2">
+               <widget class="QPushButton" name="bdelete">
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="resrc.qrc">
+                  <normaloff>:/icons/Icons/delete.png</normaloff>:/icons/Icons/delete.png</iconset>
+                </property>
+               </widget>
+              </item>
+              <item row="13" column="0" colspan="2">
+               <widget class="QListWidget" name="labelWidget"/>
+              </item>
              </layout>
-            </item>
-            <item>
-             <widget class="QWidget" name="widget" native="true">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-             </widget>
             </item>
            </layout>
           </item>
@@ -470,1364 +540,13 @@
        <attribute name="title">
         <string>Network Training</string>
        </attribute>
-       <layout class="QHBoxLayout" name="horizontalLayout_8">
-        <item>
-         <widget class="QGroupBox" name="groupBox">
-          <property name="title">
-           <string>Database and Patching</string>
-          </property>
-          <widget class="QSpinBox" name="SpinBox_PatchX">
-           <property name="geometry">
-            <rect>
-             <x>90</x>
-             <y>241</y>
-             <width>60</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="maximum">
-            <number>500</number>
-           </property>
-           <property name="value">
-            <number>40</number>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_7">
-           <property name="geometry">
-            <rect>
-             <x>160</x>
-             <y>240</y>
-             <width>16</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>14</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>x</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_9">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>240</y>
-             <width>71</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Patch Size:</string>
-           </property>
-          </widget>
-          <widget class="QSpinBox" name="SpinBox_PatchY">
-           <property name="geometry">
-            <rect>
-             <x>180</x>
-             <y>240</y>
-             <width>60</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="maximum">
-            <number>500</number>
-           </property>
-           <property name="value">
-            <number>40</number>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_10">
-           <property name="geometry">
-            <rect>
-             <x>340</x>
-             <y>240</y>
-             <width>61</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Overlap:</string>
-           </property>
-          </widget>
-          <widget class="QDoubleSpinBox" name="SpinBox_PatchOverlapp">
-           <property name="geometry">
-            <rect>
-             <x>400</x>
-             <y>240</y>
-             <width>71</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="maximum">
-            <double>1.000000000000000</double>
-           </property>
-           <property name="singleStep">
-            <double>0.050000000000000</double>
-           </property>
-           <property name="value">
-            <double>0.500000000000000</double>
-           </property>
-          </widget>
-          <widget class="QPushButton" name="Button_Patching">
-           <property name="geometry">
-            <rect>
-             <x>390</x>
-             <y>460</y>
-             <width>111</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Perform Patching</string>
-           </property>
-          </widget>
-          <widget class="QTreeWidget" name="TreeWidget_Patients">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>78</y>
-             <width>151</width>
-             <height>151</height>
-            </rect>
-           </property>
-           <column>
-            <property name="text">
-             <string notr="true">1</string>
-            </property>
-           </column>
-          </widget>
-          <widget class="QTreeWidget" name="TreeWidget_Datasets">
-           <property name="geometry">
-            <rect>
-             <x>180</x>
-             <y>78</y>
-             <width>321</width>
-             <height>151</height>
-            </rect>
-           </property>
-           <column>
-            <property name="text">
-             <string notr="true">1</string>
-            </property>
-           </column>
-          </widget>
-          <widget class="QPushButton" name="Button_DB">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>30</y>
-             <width>111</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Select Database</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="Label_DB">
-           <property name="geometry">
-            <rect>
-             <x>130</x>
-             <y>35</y>
-             <width>361</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>No Database selected</string>
-           </property>
-          </widget>
-          <widget class="QPushButton" name="Button_OutputPathPatching">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>360</y>
-             <width>101</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Output Path</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="Label_OutputPathPatching">
-           <property name="geometry">
-            <rect>
-             <x>130</x>
-             <y>360</y>
-             <width>361</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Output Path</string>
-           </property>
-          </widget>
-          <widget class="QPushButton" name="Button_MarkingsPath">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>320</y>
-             <width>101</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Markings Path</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="Label_MarkingsPath">
-           <property name="geometry">
-            <rect>
-             <x>130</x>
-             <y>320</y>
-             <width>361</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Markings Path</string>
-           </property>
-          </widget>
-          <widget class="QRadioButton" name="RadioButton_MaskLabeling">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>290</y>
-             <width>121</width>
-             <height>17</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Mask Labeling</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QRadioButton" name="RadioButton_PatchLabeling">
-           <property name="geometry">
-            <rect>
-             <x>160</x>
-             <y>290</y>
-             <width>121</width>
-             <height>17</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Patch Labeling</string>
-           </property>
-          </widget>
-          <widget class="QComboBox" name="ComboBox_Patching">
-           <property name="geometry">
-            <rect>
-             <x>330</x>
-             <y>282</y>
-             <width>171</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <item>
-            <property name="text">
-             <string>Select Patching Mode ...</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>2D</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>3D</string>
-            </property>
-           </item>
-          </widget>
-          <widget class="QSpinBox" name="SpinBox_PatchZ">
-           <property name="geometry">
-            <rect>
-             <x>270</x>
-             <y>240</y>
-             <width>51</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="value">
-            <number>5</number>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_11">
-           <property name="geometry">
-            <rect>
-             <x>250</x>
-             <y>240</y>
-             <width>16</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>14</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>x</string>
-           </property>
-          </widget>
-          <widget class="QComboBox" name="ComboBox_StoreOptions">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>460</y>
-             <width>151</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <item>
-            <property name="text">
-             <string>Do not store on HD</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>H5PY</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Patch based</string>
-            </property>
-           </item>
-          </widget>
-          <widget class="QComboBox" name="ComboBox_splittingMode">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>400</y>
-             <width>171</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <item>
-            <property name="text">
-             <string>Select Data Spliting ...</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Simple Random Samples</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Crossvalidation</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Patient Crossvalidation</string>
-            </property>
-           </item>
-          </widget>
-          <widget class="QLabel" name="Label_SplittingParams">
-           <property name="geometry">
-            <rect>
-             <x>210</x>
-             <y>405</y>
-             <width>271</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Splitting Params</string>
-           </property>
-          </widget>
-          <widget class="QCheckBox" name="CheckBox_SegmentationMask">
-           <property name="geometry">
-            <rect>
-             <x>190</x>
-             <y>460</y>
-             <width>181</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>8</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Using Segmentation Masks</string>
-           </property>
-          </widget>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="groupBox_4">
-          <property name="title">
-           <string>Dataset for Deep Learning</string>
-          </property>
-          <widget class="QPushButton" name="Button_useCurrentData">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>30</y>
-             <width>121</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Use current data</string>
-           </property>
-          </widget>
-          <widget class="QPushButton" name="Button_selectDataset">
-           <property name="geometry">
-            <rect>
-             <x>140</x>
-             <y>30</y>
-             <width>361</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Select Dataset</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="Label_currentDataset">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>70</y>
-             <width>491</width>
-             <height>20</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>No Dataset is selected for Deep Learning!</string>
-           </property>
-          </widget>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="GroupBox_TrainNN">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="title">
-           <string>Train Deep Neural Network</string>
-          </property>
-          <widget class="QPushButton" name="Button_LearningOutputPath">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>70</y>
-             <width>131</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Learning Output Path</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="Label_LearningOutputPath">
-           <property name="geometry">
-            <rect>
-             <x>150</x>
-             <y>75</y>
-             <width>311</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Select Network Output Path!</string>
-           </property>
-          </widget>
-          <widget class="QPushButton" name="Button_train">
-           <property name="geometry">
-            <rect>
-             <x>280</x>
-             <y>530</y>
-             <width>101</width>
-             <height>41</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Train</string>
-           </property>
-          </widget>
-          <widget class="QProgressBar" name="ProgressBar_training">
-           <property name="geometry">
-            <rect>
-             <x>390</x>
-             <y>540</y>
-             <width>171</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="value">
-            <number>100</number>
-           </property>
-          </widget>
-          <widget class="QComboBox" name="ComboBox_DNNs">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>20</y>
-             <width>501</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-          </widget>
-          <widget class="QWidget" name="formLayoutWidget_3">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>200</y>
-             <width>281</width>
-             <height>106</height>
-            </rect>
-           </property>
-           <layout class="QFormLayout" name="formLayout_3">
-            <item row="1" column="1">
-             <widget class="QDoubleSpinBox" name="DoubleSpinBox_WeightDecay">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
-              <property name="decimals">
-               <number>5</number>
-              </property>
-              <property name="maximum">
-               <double>1.000000000000000</double>
-              </property>
-              <property name="singleStep">
-               <double>0.000100000000000</double>
-              </property>
-              <property name="value">
-               <double>0.000100000000000</double>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="label_13">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>Momentum:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QDoubleSpinBox" name="DoubleSpinBox_Momentum">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
-              <property name="maximum">
-               <double>1.000000000000000</double>
-              </property>
-              <property name="singleStep">
-               <double>0.050000000000000</double>
-              </property>
-              <property name="value">
-               <double>0.900000000000000</double>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0">
-             <widget class="QCheckBox" name="CheckBox_Nesterov">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>Nesterov</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_14">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>Weight Decay:</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="horizontalLayoutWidget">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>470</y>
-             <width>515</width>
-             <height>41</height>
-            </rect>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout">
-            <item>
-             <widget class="QLabel" name="label">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>Select Multiclasses:</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="horizontalSpacer">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="CheckBox_Artifacts">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>Artifacts</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="horizontalSpacer_2">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="CheckBox_BodyRegion">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>Body Region</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="horizontalSpacer_3">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="CheckBox_TWeighting">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>T Weighting</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="verticalLayoutWidget_2">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>310</y>
-             <width>594</width>
-             <height>141</height>
-            </rect>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout">
-            <item>
-             <widget class="QCheckBox" name="CheckBox_DataAugmentation">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-                <weight>75</weight>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string>Data Augmentation</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_2">
-              <item>
-               <widget class="QCheckBox" name="CheckBox_DataAug_horizontalFlip">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Horizontal Flip</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="CheckBox_DataAug_verticalFlip">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Vertical Flip</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="CheckBox_DataAug_Rotation">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Rotation</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="CheckBox_DataAug_Zoom">
-                <property name="text">
-                 <string>Zoom</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="CheckBox_DataAug_zcaWeighting">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>ZCA Whitening</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_3">
-              <item>
-               <widget class="QCheckBox" name="CheckBox_DataAug_HeightShift">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Height Shift</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="CheckBox_DataAug_WidthShift">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Width Shift</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QRadioButton" name="RadioButton_DataAug_contrastStretching">
-                <property name="text">
-                 <string>Contrast Stretching</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QRadioButton" name="RadioButton_DataAug_histogramEq">
-                <property name="text">
-                 <string>Histogram Eq</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QRadioButton" name="RadioButton_DataAug_adaptiveEq">
-                <property name="text">
-                 <string>Adaptive Eq</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QLineEdit" name="LineEdit_LearningRates">
-           <property name="geometry">
-            <rect>
-             <x>250</x>
-             <y>121</y>
-             <width>121</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>0.1,0.01,0.001</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_3">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>120</y>
-             <width>211</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Learning Rates &quot;0.1,0.01,0.005&quot; :</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_12">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>150</y>
-             <width>71</width>
-             <height>22</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Optimizer:</string>
-           </property>
-          </widget>
-          <widget class="QComboBox" name="ComboBox_Optimizers">
-           <property name="geometry">
-            <rect>
-             <x>150</x>
-             <y>150</y>
-             <width>221</width>
-             <height>22</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <item>
-            <property name="text">
-             <string>SGD</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>RMSprop</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Adagrad</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Adadelta</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Adam</string>
-            </property>
-           </item>
-          </widget>
-          <widget class="QLineEdit" name="LineEdit_BatchSizes">
-           <property name="geometry">
-            <rect>
-             <x>500</x>
-             <y>120</y>
-             <width>61</width>
-             <height>22</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>128</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_2">
-           <property name="geometry">
-            <rect>
-             <x>400</x>
-             <y>120</y>
-             <width>101</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Batch Size/s:</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_8">
-           <property name="geometry">
-            <rect>
-             <x>400</x>
-             <y>150</y>
-             <width>61</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>Epochs:</string>
-           </property>
-          </widget>
-          <widget class="QSpinBox" name="SpinBox_Epochs">
-           <property name="geometry">
-            <rect>
-             <x>500</x>
-             <y>150</y>
-             <width>61</width>
-             <height>22</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="maximum">
-            <number>100000</number>
-           </property>
-           <property name="value">
-            <number>100</number>
-           </property>
-          </widget>
-          <widget class="QComboBox" name="ComboBox_GPU">
-           <property name="geometry">
-            <rect>
-             <x>70</x>
-             <y>540</y>
-             <width>61</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <item>
-            <property name="text">
-             <string>1</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>2</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>3</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>4</string>
-            </property>
-           </item>
-          </widget>
-          <widget class="QLabel" name="label_15">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>540</y>
-             <width>51</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>10</pointsize>
-            </font>
-           </property>
-           <property name="text">
-            <string>GPU:</string>
-           </property>
-          </widget>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="groupBox_3">
-          <property name="title">
-           <string>Results and Prediction</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
+       <layout class="QHBoxLayout" name="horizontalLayout_8"/>
       </widget>
       <widget class="QWidget" name="tab_5">
        <attribute name="title">
         <string>Network Visualization</string>
        </attribute>
-       <layout class="QHBoxLayout" name="horizontalLayout_9">
-        <item>
-         <widget class="QGroupBox" name="groupBox_5">
-          <property name="title">
-           <string>Choose one H5 file</string>
-          </property>
-          <widget class="QGroupBox" name="groupBox_7">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>60</y>
-             <width>151</width>
-             <height>91</height>
-            </rect>
-           </property>
-           <property name="title">
-            <string>The chosen file</string>
-           </property>
-           <widget class="QTextEdit" name="textEdit_2">
-            <property name="geometry">
-             <rect>
-              <x>0</x>
-              <y>20</y>
-              <width>151</width>
-              <height>71</height>
-             </rect>
-            </property>
-           </widget>
-          </widget>
-          <widget class="QGroupBox" name="groupBox_2">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>170</y>
-             <width>191</width>
-             <height>51</height>
-            </rect>
-           </property>
-           <property name="title">
-            <string>Visualization of Weights</string>
-           </property>
-           <widget class="QPushButton" name="wy2">
-            <property name="geometry">
-             <rect>
-              <x>20</x>
-              <y>20</y>
-              <width>151</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Show the Weights</string>
-            </property>
-           </widget>
-          </widget>
-          <widget class="QGroupBox" name="groupBox_8">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>230</y>
-             <width>191</width>
-             <height>211</height>
-            </rect>
-           </property>
-           <property name="title">
-            <string>Visualization of Architecture</string>
-           </property>
-           <widget class="QPushButton" name="wy3">
-            <property name="geometry">
-             <rect>
-              <x>20</x>
-              <y>20</y>
-              <width>151</width>
-              <height>23</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Show the Layers' Names</string>
-            </property>
-           </widget>
-           <widget class="QListView" name="listView_2">
-            <property name="geometry">
-             <rect>
-              <x>20</x>
-              <y>50</y>
-              <width>151</width>
-              <height>121</height>
-             </rect>
-            </property>
-           </widget>
-           <widget class="QPushButton" name="wy4">
-            <property name="geometry">
-             <rect>
-              <x>20</x>
-              <y>180</y>
-              <width>151</width>
-              <height>23</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Show the Plot</string>
-            </property>
-           </widget>
-          </widget>
-          <widget class="QGroupBox" name="groupBox_9">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>460</y>
-             <width>191</width>
-             <height>51</height>
-            </rect>
-           </property>
-           <property name="title">
-            <string>DeepVisualization</string>
-           </property>
-           <widget class="QPushButton" name="wy5">
-            <property name="geometry">
-             <rect>
-              <x>20</x>
-              <y>20</y>
-              <width>151</width>
-              <height>23</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Show Subset Selection</string>
-            </property>
-           </widget>
-          </widget>
-          <widget class="MatplotlibWidget" name="matplotlibwidget_static" native="true">
-           <property name="geometry">
-            <rect>
-             <x>540</x>
-             <y>20</y>
-             <width>301</width>
-             <height>581</height>
-            </rect>
-           </property>
-           <widget class="MatplotlibWidget" name="matplotlibwidget_static_2" native="true">
-            <property name="geometry">
-             <rect>
-              <x>-270</x>
-              <y>10</y>
-              <width>961</width>
-              <height>591</height>
-             </rect>
-            </property>
-           </widget>
-          </widget>
-          <widget class="QSlider" name="horizontalSlider_3">
-           <property name="geometry">
-            <rect>
-             <x>320</x>
-             <y>540</y>
-             <width>531</width>
-             <height>22</height>
-            </rect>
-           </property>
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-          </widget>
-          <widget class="QLCDNumber" name="lcdNumber_3">
-           <property name="geometry">
-            <rect>
-             <x>890</x>
-             <y>540</y>
-             <width>71</width>
-             <height>23</height>
-            </rect>
-           </property>
-          </widget>
-          <widget class="MatplotlibWidget" name="matplotlibwidget_static_3" native="true">
-           <property name="geometry">
-            <rect>
-             <x>350</x>
-             <y>10</y>
-             <width>741</width>
-             <height>571</height>
-            </rect>
-           </property>
-          </widget>
-          <widget class="QPushButton" name="wyh5">
-           <property name="geometry">
-            <rect>
-             <x>40</x>
-             <y>30</y>
-             <width>101</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>choose the file</string>
-           </property>
-          </widget>
-         </widget>
-        </item>
-       </layout>
+       <layout class="QHBoxLayout" name="horizontalLayout_9"/>
       </widget>
      </widget>
     </item>
@@ -1856,6 +575,7 @@
      <string>Setting</string>
     </property>
     <addaction name="actionColor"/>
+    <addaction name="actionLabels"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuSetting"/>
@@ -1880,15 +600,12 @@
     <string>Load</string>
    </property>
   </action>
+  <action name="actionLabels">
+   <property name="text">
+    <string>Labels</string>
+   </property>
+  </action>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>MatplotlibWidget</class>
-   <extends>QWidget</extends>
-   <header location="global">matplotlibwidget.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources>
   <include location="resrc.qrc"/>
  </resources>

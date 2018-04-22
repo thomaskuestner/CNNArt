@@ -111,22 +111,22 @@ class Canvas(FigureCanvas):
             self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[self.ind, :, :], 0, 1), cmap='gray', vmin=0, vmax=2094,
                                         extent=[0, self.shape[1], self.shape[2], 0], interpolation='sinc')
             self.im2 = self.ax1.imshow(np.swapaxes(self.Y[self.ind, :, :], 0, 1), cmap=self.cmap, alpha=.3,
-                                       extent=[0, self.voxel.shape[1], self.voxel.shape[2], 0])
+                                       extent=[0, self.shape[1], self.shape[2], 0])
             plt.rcParams['hatch.color'] = 'r'
             self.im3 = self.ax1.contourf(np.transpose(self.Z[self.ind, :, :]), hatches=self.hmap,
                                      colors='none', levels=np.arange(5),
-                                        extent=[0, self.voxel.shape[1], self.voxel.shape[2], 0])
+                                        extent=[0, self.shape[1], self.shape[2], 0])
             self.draw_idle()
         elif self.mode == 6:
             self.ax1.axis('off')
             self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, self.ind, :], 0, 1), cmap='gray', vmin=0, vmax=2094,
                                         extent=[0, self.shape[0], self.shape[2], 0], interpolation='sinc')
             self.im2 = self.ax1.imshow(np.swapaxes(self.Y[:, self.ind, :], 0, 1), cmap=self.cmap, alpha=.3,
-                                       extent=[0, self.voxel.shape[0], self.voxel.shape[2], 0])
+                                       extent=[0, self.shape[0], self.shape[2], 0])
             plt.rcParams['hatch.color'] = 'r'
             self.im3 = self.ax1.contourf(np.transpose(self.Z[:, self.ind, :]), hatches=self.hmap,
                                         colors='none', levels=np.arange(5),
-                                        extent=[0, self.voxel.shape[0], self.voxel.shape[2], 0])
+                                        extent=[0, self.shape[0], self.shape[2], 0])
             self.draw_idle()
 
         elif self.mode == 7:
@@ -140,14 +140,14 @@ class Canvas(FigureCanvas):
             self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[self.ind, :, :], 0, 1), cmap='gray', vmin=0, vmax=2094,
                                         extent=[0, self.shape[1], self.shape[2], 0], interpolation='sinc')
             self.im2 = self.ax1.imshow(np.swapaxes(self.Y[self.ind, :, :], 0, 1), cmap=self.cmap, alpha=.3,
-                                       extent=[0, self.voxel.shape[1], self.voxel.shape[2], 0])
+                                       extent=[0, self.shape[1], self.shape[2], 0])
             self.draw_idle()
         elif self.mode == 9:
             self.ax1.axis('off')
             self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, self.ind, :], 0, 1), cmap='gray', vmin=0, vmax=2094,
                                         extent=[0, self.shape[0], self.shape[2], 0], interpolation='sinc')
             self.im2 = self.ax1.imshow(np.swapaxes(self.Y[:, self.ind, :], 0, 1), cmap=self.cmap, alpha=.3,
-                                       extent=[0, self.voxel.shape[0], self.voxel.shape[2], 0])
+                                       extent=[0, self.shape[0], self.shape[2], 0])
             self.draw_idle()
 
         v_min, v_max = self.pltc.get_clim()

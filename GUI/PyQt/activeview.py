@@ -9,7 +9,7 @@ class Activeview(QtWidgets.QGraphicsView):
         super(Activeview, self).__init__(parent)
         # self.setStyleSheet("border: 0px")
         self.selfhandle = False
-
+        self.left = 1
         # self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         # self.setResizeAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         # self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorViewCenter)
@@ -35,10 +35,17 @@ class Activeview(QtWidgets.QGraphicsView):
     # def getCanvas(self):
     #     return self.__dyCanvas
 
+    def stopMove(self, n):
+        if n == 0:
+            self.left = 1
+        else:
+            self.left = 0
+
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:
-            self.__prevMousePos = event.pos()
-            self.selfhandle = True
+            if self.left == 1:
+                self.__prevMousePos = event.pos()
+                self.selfhandle = True
         if event.button() == QtCore.Qt.RightButton:
             self._dragPos = event.pos()
             self.selfhandle = True
@@ -46,13 +53,14 @@ class Activeview(QtWidgets.QGraphicsView):
 
     def mouseMoveEvent(self, event):
         if event.buttons() == QtCore.Qt.LeftButton:
-            offset = self.__prevMousePos - event.pos()
-            self.__prevMousePos = event.pos()
-            self.verticalScrollBar().setValue(self.verticalScrollBar().value() + offset.y())
-            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() + offset.x())
-            self.movelist[0] = offset.y()
-            self.movelist[1] = offset.x()
-            self.move_link.emit(self.movelist)
+            if self.left == 1:
+                offset = self.__prevMousePos - event.pos()
+                self.__prevMousePos = event.pos()
+                self.verticalScrollBar().setValue(self.verticalScrollBar().value() + offset.y())
+                self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() + offset.x())
+                self.movelist[0] = offset.y()
+                self.movelist[1] = offset.x()
+                self.move_link.emit(self.movelist)
         if event.buttons() == QtCore.Qt.RightButton:
             newPos = event.pos()
             diff = newPos - self._dragPos
@@ -68,7 +76,8 @@ class Activeview(QtWidgets.QGraphicsView):
 
     def mouseReleaseEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:
-            self.selfhandle = False
+            if self.left == 1:
+                self.selfhandle = False
         if event.button() == QtCore.Qt.RightButton:
             self.selfhandle = False
         super(Activeview, self).mouseReleaseEvent(event)
