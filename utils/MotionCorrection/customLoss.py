@@ -8,11 +8,11 @@ import numpy as np
 
 
 def preprocessing(inputs):
-    # output = Lambda(lambda x: (x - K.min(x)) * 255 / (K.max(x) - K.min(x) + K.epsilon()), output_shape=inputs._keras_shape)(inputs)
-    output = 255 * inputs
-    # K.update_sub(output[:, 0, :, :], 123.68)
-    # K.update_sub(output[:, 1, :, :], 116.779)
-    # K.update_sub(output[:, 2, :, :], 103.939)
+    output = Lambda(lambda x: (x - K.min(x)) * 255 / (K.max(x) - K.min(x) + K.epsilon()), output_shape=inputs._keras_shape)(inputs)
+    # output = 255 * inputs
+    K.update_sub(output[:, 0, :, :], 123.68)
+    K.update_sub(output[:, 1, :, :], 116.779)
+    K.update_sub(output[:, 2, :, :], 103.939)
 
     return output[:, ::-1, :, :]
 
@@ -27,6 +27,19 @@ def compute_mse_loss(dHyper, x_ref, decoded_ref2ref, decoded_art2ref):
                          Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_ref2ref._keras_shape)(decoded_ref2ref)])
 
     loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.square(x[0] - x[1]), [1, 2, 3])), output_shape=(None,))\
+                       ([Lambda(lambda x: dHyper['nScale'] * x, output_shape=x_ref._keras_shape)(x_ref),
+                         Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_art2ref._keras_shape)(decoded_art2ref)])
+
+    return loss_ref2ref, loss_art2ref
+
+
+def compute_charbonnier_loss(dHyper, x_ref, decoded_ref2ref, decoded_art2ref):
+    epsilon = 0.1
+    loss_ref2ref = Lambda(lambda x: K.mean(K.sum(K.sqrt(K.square(x[0] - x[1]) + epsilon**2), [1, 2, 3])), output_shape=(None,)) \
+                       ([Lambda(lambda x: dHyper['nScale'] * x, output_shape=x_ref._keras_shape)(x_ref),
+                         Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_ref2ref._keras_shape)(decoded_ref2ref)])
+
+    loss_art2ref = Lambda(lambda x: K.mean(K.sum(K.sqrt(K.square(x[0] - x[1]) + epsilon**2), [1, 2, 3])), output_shape=(None,))\
                        ([Lambda(lambda x: dHyper['nScale'] * x, output_shape=x_ref._keras_shape)(x_ref),
                          Lambda(lambda x: dHyper['nScale'] * x, output_shape=decoded_art2ref._keras_shape)(decoded_art2ref)])
 

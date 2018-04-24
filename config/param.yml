@@ -100,14 +100,15 @@ lCorrection: false
 # parameters in artifacts correction
 correction:
   sCorrection: "motion_VAE2D"
-  bestModel: "vae_weight_ps_48_bs_128"
+  bestModel: "vae_weight_ps_48_bs_128_lr_0.0001_10_mar_new_augmentation"
   pl_network: "vgg19"
   loss_model: ""
   kl_weight: 1
   mse_weight: 0
-  perceptual_weight: 0.00001
   tv_weight: 0
   ge_weight: 10
+  charbonnier_weight: 0.1
+  perceptual_weight: 0.00001
   loss_ref2ref: 0.4
   loss_art2ref: 0.6
   unpatch: true
@@ -115,5 +116,5 @@ correction:
   actualSize: [256, 196]
   evaluate: true
   test_patient: "01_ab"
-  augmentation: true
-  bn: false
+  augmentation: false
+  architecture: 'new'

@@ -96,7 +96,8 @@ def decode(input, patchSize):
 def encode_new(input, patchSize):
     if list(patchSize) == [48, 48]:
         # output shape: (64, 48, 48)
-        conv_1 = fCreateLeakyReluConv2D(filters=64, strides=1, kernel_size=7)(input)
+        conv_1 = fCreateConv2D_ResBlock(filters=64, kernel_size=(7, 7), strides=(1, 1))(input)
+
         # output shape: (128, 24, 24)
         output = fCreateConv2D_ResBlock(filters=128)(conv_1)
 
@@ -132,6 +133,9 @@ def decode_new(input, patchSize, conv_1, conv_2, conv_3):
         # output shape: (64, 48, 48)
         output = fCreateConv2DTranspose_ResBlock(filters=64)(output)
         output = add([output, conv_1])
+        # output shape: (64, 48, 48)
+        output = fCreateConv2DTranspose_ResBlock(filters=64, kernel_size=(7, 7), strides=(1, 1))(output)
+
         output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
 
     return output

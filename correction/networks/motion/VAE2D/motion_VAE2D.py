@@ -38,8 +38,12 @@ class CustomLossLayer(Layer):
         self.add_loss(self.dHyper['kl_weight']*K.mean(loss_kl))
 
         # compute MSE loss
-        mse_loss_ref2ref, mse_loss_art2ref = compute_mse_loss(self.dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
-        self.add_loss(self.dHyper['mse_weight'] * (self.dHyper['loss_ref2ref']*mse_loss_ref2ref + self.dHyper['loss_art2ref']*mse_loss_art2ref))
+        # mse_loss_ref2ref, mse_loss_art2ref = compute_mse_loss(self.dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
+        # self.add_loss(self.dHyper['mse_weight'] * (self.dHyper['loss_ref2ref']*mse_loss_ref2ref + self.dHyper['loss_art2ref']*mse_loss_art2ref))
+
+        # compute charbonnier loss
+        charbonnier_loss_ref2ref, charbonnier_loss_art2ref = compute_charbonnier_loss(self.dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
+        self.add_loss(self.dHyper['charbonnier_weight'] * (self.dHyper['loss_ref2ref']*charbonnier_loss_ref2ref + self.dHyper['loss_art2ref']*charbonnier_loss_art2ref))
 
         # compute gradient entropy
         ge_ref2ref, ge_art2ref = compute_gradient_entropy(self.dHyper, decoded_ref2ref, decoded_art2ref, self.patchSize)
@@ -151,8 +155,8 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
 
 
     if dHyper['augmentation']:
-        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_GE_MSE_augmentation.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
-        # vae.load_weights(weights_file)
+        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_new_augmentation.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
+        # vae.load_weights(sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_new_architecture.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient']))
 
         lossPlot_file = weights_file[:-3] + '.png'
         plotLoss = PlotLosses(lossPlot_file)
@@ -174,7 +178,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
                           verbose=1,
                           callbacks=callback_list)
     else:
-        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
+        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_new_architecture2.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
         #vae.load_weights(weights_file)
 
         lossPlot_file = weights_file[:-3] + '.png'
@@ -200,6 +204,7 @@ def fPredict(test_ref, test_art, dParam, dHyper):
     patchSize = dParam['patchSize']
 
     vae = createModel(patchSize, dHyper)
+
     vae.compile(optimizer='adam', loss=None)
 
     vae.load_weights(weights_file)
@@ -218,11 +223,6 @@ def fPredict(test_ref, test_art, dParam, dHyper):
         test_art = fRigidUnpatchingCorrection2D(dHyper['actualSize'], test_art, dParam['patchOverlap'])
         predict_art = fRigidUnpatchingCorrection2D(dHyper['actualSize'], predict_art, dParam['patchOverlap'], 'average')
 
-        # post TV processing
-        predict_art_tv_1 = denoise_tv_chambolle(predict_art, weight=1)
-        predict_art_tv_3 = denoise_tv_chambolle(predict_art, weight=3)
-        predict_art_tv_5 = denoise_tv_chambolle(predict_art, weight=5)
-
         # pre TV processing
         test_art_tv_1 = denoise_tv_chambolle(test_art, weight=1)
         test_art_tv_3 = denoise_tv_chambolle(test_art, weight=3)
@@ -230,15 +230,10 @@ def fPredict(test_ref, test_art, dParam, dHyper):
 
 
         if dHyper['evaluate']:
-            fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(15, 15), sharex=True, sharey=True)
+            fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(10, 10), sharex=True, sharey=True)
             ax = axes.ravel()
             plt.gray()
             label = 'NRMSE: {:.2f}, SSIM: {:.3f}, NMI: {:.3f}'
-
-            # Super Resolution configuration
-            # test_ref = [resize(input, (256*2, 196*2)) for input in test_ref]
-            # test_art = [resize(input, (256*2, 196*2)) for input in test_art]
-            # predict_art = [resize(input, (256*2, 196*2)) for input in predict_art]
 
             for i in range(len(test_ref)):
                 # orignal reconstructed images
@@ -254,31 +249,18 @@ def fPredict(test_ref, test_art, dParam, dHyper):
                 ax[2].set_xlabel(label.format(nrmse(test_ref[i], predict_art[i]), ssim(test_ref[i], predict_art[i], data_range=(predict_art[i].max() - predict_art[i].min())), nmi(test_ref[1].flatten(), predict_art[i].flatten())))
                 ax[2].set_title('original reconstructed image')
 
-                # post TV-processing
-                ax[3].imshow(predict_art_tv_1[i])
-                ax[3].set_xlabel(label.format(nrmse(test_ref[i], predict_art_tv_1[i]), ssim(test_ref[i], predict_art_tv_1[i], data_range=(predict_art_tv_1[i].max() - predict_art_tv_1[i].min())), nmi(test_ref[i].flatten(), predict_art_tv_1[i].flatten())))
-                ax[3].set_title('Post TV weight 1')
+                # TV denoiser
+                ax[3].imshow(test_art_tv_1[i])
+                ax[3].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_1[i]), ssim(test_ref[i], test_art_tv_1[i], data_range=(test_art_tv_1[i].max() - test_art_tv_1[i].min())), nmi(test_ref[i].flatten(), test_art_tv_1[i].flatten())))
+                ax[3].set_title('TV weight 1')
 
-                ax[4].imshow(predict_art_tv_3[i])
-                ax[4].set_xlabel(label.format(nrmse(test_ref[i], predict_art_tv_3[i]), ssim(test_ref[i], predict_art_tv_3[i], data_range=(predict_art_tv_3[i].max() - predict_art_tv_3[i].min())), nmi(test_ref[i].flatten(), predict_art_tv_3[i].flatten())))
-                ax[4].set_title('Post TV weight 3')
+                ax[4].imshow(test_art_tv_3[i])
+                ax[4].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_3[i]), ssim(test_ref[i], test_art_tv_3[i], data_range=(test_art_tv_3[i].max() - test_art_tv_3[i].min())), nmi(test_ref[i].flatten(), test_art_tv_3[i].flatten())))
+                ax[4].set_title('TV weight 3')
 
-                ax[5].imshow(predict_art_tv_5[i])
-                ax[5].set_xlabel(label.format(nrmse(test_ref[i], predict_art_tv_5[i]), ssim(test_ref[i], predict_art_tv_5[i], data_range=(predict_art_tv_5[i].max() - predict_art_tv_5[i].min())), nmi(test_ref[i].flatten(), predict_art_tv_5[i].flatten())))
-                ax[5].set_title('Post TV weight 5')
-
-                # pre TV processing
-                ax[6].imshow(test_art_tv_1[i])
-                ax[6].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_1[i]), ssim(test_ref[i], test_art_tv_1[i], data_range=(test_art_tv_1[i].max() - test_art_tv_1[i].min())), nmi(test_ref[i].flatten(), test_art_tv_1[i].flatten())))
-                ax[6].set_title('pre TV weight 1')
-
-                ax[7].imshow(test_art_tv_3[i])
-                ax[7].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_3[i]), ssim(test_ref[i], test_art_tv_3[i], data_range=(test_art_tv_3[i].max() - test_art_tv_3[i].min())), nmi(test_ref[i].flatten(), test_art_tv_3[i].flatten())))
-                ax[7].set_title('pre TV weight 3')
-
-                ax[8].imshow(test_art_tv_5[i])
-                ax[8].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_5[i]), ssim(test_ref[i], test_art_tv_5[i], data_range=(test_art_tv_5[i].max() - test_art_tv_5[i].min())), nmi(test_ref[i].flatten(), test_art_tv_5[i].flatten())))
-                ax[8].set_title('pre TV weight 5')
+                ax[5].imshow(test_art_tv_5[i])
+                ax[5].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_5[i]), ssim(test_ref[i], test_art_tv_5[i], data_range=(test_art_tv_5[i].max() - test_art_tv_5[i].min())), nmi(test_ref[i].flatten(), test_art_tv_5[i].flatten())))
+                ax[5].set_title('TV weight 5')
 
                 if dParam['lSave']:
                     plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')

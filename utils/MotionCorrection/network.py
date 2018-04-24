@@ -77,14 +77,14 @@ def fCreateLeakyReluBNConv3D(filters, kernel_size, strides, padding='same'):
     return f
 
 
-def fCreateConv2D_ResBlock(filters, kernel_size=(3, 3), padding='same'):
+def fCreateConv2D_ResBlock(filters, kernel_size=(3, 3), strides=(2, 2), padding='same'):
     l1_reg = 0
     l2_reg = 1e-6
 
     def f(inputs):
         output = Conv2D(filters,
                         kernel_size=kernel_size,
-                        strides=(2, 2),
+                        strides=strides,
                         padding=padding,
                         kernel_regularizer=l1_l2(l1_reg, l2_reg),
                         kernel_initializer='he_normal')(inputs)
@@ -111,14 +111,14 @@ def fCreateConv2D_ResBlock(filters, kernel_size=(3, 3), padding='same'):
     return f
 
 
-def fCreateConv2DTranspose_ResBlock(filters, kernel_size=(3, 3), padding='same'):
+def fCreateConv2DTranspose_ResBlock(filters, kernel_size=(3, 3), strides=(2, 2), padding='same'):
     l1_reg = 0
     l2_reg = 1e-6
 
     def f(inputs):
         output = Conv2DTranspose(filters=filters,
                                  kernel_size=kernel_size,
-                                 strides=(2, 2),
+                                 strides=strides,
                                  padding=padding,
                                  kernel_regularizer=l1_l2(l1_reg, l2_reg),
                                  kernel_initializer='he_normal')(inputs)
