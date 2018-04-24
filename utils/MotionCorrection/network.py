@@ -86,24 +86,21 @@ def fCreateConv2D_ResBlock(filters, kernel_size=(3, 3), strides=(2, 2), padding=
                         kernel_size=kernel_size,
                         strides=strides,
                         padding=padding,
-                        kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                        kernel_initializer='he_normal')(inputs)
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
         skip = LeakyReLU()(output)
 
         output = Conv2D(filters,
                         kernel_size=kernel_size,
                         strides=(1, 1),
                         padding=padding,
-                        kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                        kernel_initializer='he_normal')(skip)
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(skip)
         output = LeakyReLU()(output)
 
         output = Conv2D(filters,
                         kernel_size=kernel_size,
                         strides=(1, 1),
                         padding=padding,
-                        kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                        kernel_initializer='he_normal')(output)
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(output)
         output = LeakyReLU()(output)
 
         output = add([skip, output])
@@ -120,24 +117,21 @@ def fCreateConv2DTranspose_ResBlock(filters, kernel_size=(3, 3), strides=(2, 2),
                                  kernel_size=kernel_size,
                                  strides=strides,
                                  padding=padding,
-                                 kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                                 kernel_initializer='he_normal')(inputs)
+                                 kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
         skip = LeakyReLU()(output)
 
         output = Conv2D(filters,
                         kernel_size=kernel_size,
                         strides=(1, 1),
                         padding=padding,
-                        kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                        kernel_initializer='he_normal')(skip)
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(skip)
         output = LeakyReLU()(output)
 
         output = Conv2D(filters,
                         kernel_size=kernel_size,
                         strides=(1, 1),
                         padding=padding,
-                        kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                        kernel_initializer='he_normal')(output)
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(output)
         output = LeakyReLU()(output)
 
         output = add([skip, output])
