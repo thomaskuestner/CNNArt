@@ -241,7 +241,8 @@ def fUnpatchLabel(prob_list, patchSize, patchOverlap, actualSize, iClass=0):
     # If iClass=1, the first half unpatchImg[0] is label of image with artifact, the rest unpatchImg[1] for reference images
 
     dOverlap = np.multiply(patchSize, patchOverlap).astype(int)
-    dNotOverlap = np.round(np.multiply(patchSize, (1 - patchOverlap))).astype(int)
+    # dNotOverlap = np.round(np.multiply(patchSize, (1 - patchOverlap))).astype(int)
+    dNotOverlap = np.subtract(patchSize, dOverlap)
     paddedSize = [int(math.ceil((actualSize[0] - dOverlap[0]) * 1.0/ dNotOverlap[0]) * dNotOverlap[0] + dOverlap[0]), int(math.ceil((actualSize[1] - dOverlap[1]) * 1.0/ (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1]), int(math.ceil((actualSize[2] - dOverlap[2]) * 1.0/ (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2])]
 
     num_rows, num_cols, num_slices = int(math.ceil((paddedSize[1] - patchSize[1]) * 1.0 / dNotOverlap[1]) + 1), int(

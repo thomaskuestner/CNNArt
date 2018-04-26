@@ -25,8 +25,8 @@ def frunCNN_MS(dData, sModelIn, lTrain, sOutPath, iBatchSize, iLearningRate, iEp
         else:
             fTrain(dData['X_train'], dData['y_train'], dData['X_test'], dData['y_test'], sModelIn, sOutPath, dData['patchSize'], iBatchSize, iLearningRate, iEpochs, CV_Patient=CV_Patient)
     else:  # predicting
-        if 'MultiPath' in sModelIn:
-            if not('X_test_p2' in dir()):
+        if 'MS' in sModelIn:
+            if not dData.has_key('X_test_p2'):
                 dData['X_test_p2'] = []
             fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, patchSize=dData['patchSize'], batchSize=iBatchSize[0], patchOverlap=dData['patchOverlap'], actualSize=dData['actualSize'], X_test_p2=dData['X_test_p2'], predictImg=predictImg)
         else:
@@ -189,21 +189,22 @@ def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSiz
         plt.ylim(actualSize[1], 0)
         plt.set_cmap(plt.gray())
 
-        # Head: pcolormesh(X, Y,..., vmax=1)    Abdomen: pcolormesh(Y, X,..., vmax=0.5)
+        # Head: pcolormesh(X, Y,..., vmax=0.5)    Abdomen: pcolormesh(Y, X,..., vmax=0.3)
         plt.subplot(211)
         plt.axis('off')
-        plt.pcolormesh(Y, X, np.swapaxes(img4D[0, :, :, iSlice], 0, 1), vmin=0, vmax=0.5)
-        plt.pcolormesh(Y, X, np.swapaxes(imglayRef[:, :, iSlice], 0, 1), cmap='jet', alpha=0.2, vmin=0, vmax=1, linestyle='None', rasterized=True)
-        plt.title('Slice ' + str(iSlice) + ' without artifacts', fontsize = 16)
+        plt.pcolormesh(X, Y, np.swapaxes(img4D[0, :, :, iSlice], 0, 1), vmin=0, vmax=0.5)
+        plt.pcolormesh(X, Y, np.swapaxes(imglayRef[:, :, iSlice], 0, 1), cmap='jet', alpha=0.2, vmin=0, vmax=1, linestyle='None', rasterized=True)
+        plt.title('Slice ' + str(iSlice) + ' without artifacts', fontsize = 26)
         plt.subplot(212)
         plt.axis('off')
-        plt.pcolormesh(Y, X, np.swapaxes(img4D[1, :, :, iSlice], 0, 1), vmin=0, vmax=0.5)
-        plt.pcolormesh(Y, X, np.swapaxes(imglayArt[:, :, iSlice], 0, 1), cmap='jet', alpha=0.2, vmin=0, vmax=1, linestyle='None', rasterized=True)
-        plt.title('Slice ' + str(iSlice) + ' with motion artifacts', fontsize = 16)
+        plt.pcolormesh(X, Y, np.swapaxes(img4D[1, :, :, iSlice], 0, 1), vmin=0, vmax=0.5)
+        plt.pcolormesh(X, Y, np.swapaxes(imglayArt[:, :, iSlice], 0, 1), cmap='jet', alpha=0.2, vmin=0, vmax=1, linestyle='None', rasterized=True)
+        plt.title('Slice ' + str(iSlice) + ' with motion artifacts', fontsize = 26)
 
-        plt.subplots_adjust(left=0.1, bottom=0.1, right=0.8, top=0.9, hspace=0.2)
-        cax = plt.axes([0.85, 0.1, 0.08, 0.8])
+        plt.subplots_adjust(left=0.1, bottom=0.1, right=0.75, top=0.85, hspace=0.2)
+        cax = plt.axes([0.8, 0.1, 0.08, 0.75])
         plt.colorbar(cax=cax)
+        plt.yticks(fontsize=24)
         fig.set_size_inches(8, 12)
         plt.savefig(sOutPath + '/Overlay/' + model_name + '_Slice' + str(iSlice) + '.png')
         plt.show()

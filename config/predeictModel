@@ -1,7 +1,0 @@
-Headnormal:
-  SingleScale: "testout404010_FCN_simple_lr_0.0005_bs_128"
-  ScaleJittering : "testout404010_sj_FCN_simple_lr_0.0005_bs_64"
-
-Abdnormal:
-  SingleScale: "testout404010_FCN_simple_lr_0.0005_bs_64"
-  ScaleJittering : "testout404010_sj_FCN_simple_lr_0.001_bs_64"
