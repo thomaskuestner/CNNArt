@@ -296,6 +296,72 @@ def fCreateModel_FCN_MultiFM(patchSize, dr_rate=0.0, iPReLU=0,l1_reg=0, l2_reg=1
     cnn_fcl_msfm = Model(inputs=inp, outputs=predict)
     return cnn_fcl_msfm
 
+def fCreateModel_FCN_simple_MultiPath(patchSize, patchSize_down, dr_rate=0.0, iPReLU=0, l1_reg=0, l2_reg=1e-6):
+    # Total params: 2,447,662
+    # The dense layer is repleced by a convolutional layer with filters=2 for the two classes
+    # The 2 predictions from the two pathways are averages as the final result.
+    Strides = fgetStrides()
+    kernelnumber = fgetKernelNumber()
+    sharedConv1 = fCreateVNet_Block
+    sharedDown1 = fCreateVNet_DownConv_Block
+    sharedConv2 = fCreateVNet_Block
+    sharedDown2 = fCreateVNet_DownConv_Block
+    sharedConv3 = fCreateVNet_Block
+    sharedDown3 = fCreateVNet_DownConv_Block
+
+    inp1 = Input(shape=(1, int(patchSize[0]), int(patchSize[1]), int(patchSize[2])))
+    after_1Conv_1 = sharedConv1(inp1, kernelnumber[0], type=fgetLayerNumConv(), l2_reg=l2_reg)
+    after_1DownConv_1 = sharedDown1(after_1Conv_1, after_1Conv_1._keras_shape[1], Strides[0],
+                                                  iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+
+    after_1Conv_2 = sharedConv2(after_1DownConv_1, kernelnumber[1], type=fgetLayerNumConv(), l2_reg=l2_reg)
+    after_1DownConv_2 = sharedDown2(after_1Conv_2, after_1Conv_2._keras_shape[1], Strides[1],
+                                                  iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+
+    after_1Conv_3 = sharedConv3(after_1DownConv_2, kernelnumber[2], type=fgetLayerNumConv(), l2_reg=l2_reg)
+    after_1DownConv_3 = sharedDown3(after_1Conv_3, after_1Conv_3._keras_shape[1], Strides[2],
+                                                  iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+
+    inp2 = Input(shape=(1, int(patchSize_down[0]), int(patchSize_down[1]), int(patchSize_down[2])))
+    after_2Conv_1 = sharedConv1(inp2, kernelnumber[0], type=fgetLayerNumConv(), l2_reg=l2_reg)
+    after_2DownConv_1 = sharedDown1(after_2Conv_1, after_2Conv_1._keras_shape[1], Strides[0],
+                                                  iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+
+    after_2Conv_2 = sharedConv2(after_2DownConv_1, kernelnumber[1], type=fgetLayerNumConv(), l2_reg=l2_reg)
+    after_2DownConv_2 = sharedDown2(after_2Conv_2, after_2Conv_2._keras_shape[1], Strides[1],
+                                                  iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+
+    after_2Conv_3 = sharedConv3(after_2DownConv_2, kernelnumber[2], type=fgetLayerNumConv(), l2_reg=l2_reg)
+    after_2DownConv_3 = sharedDown3(after_2Conv_3, after_2Conv_3._keras_shape[1], Strides[2],
+                                                  iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+    # fully convolution over the FM from the deepest level
+    dropout_out1 = Dropout(dr_rate)(after_1DownConv_3)
+    fclayer1 = Conv3D(2,
+                      kernel_size=(1, 1, 1),
+                      kernel_initializer='he_normal',
+                      weights=None,
+                      padding='valid',
+                      strides=(1, 1, 1),
+                      kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                      )(dropout_out1)
+    fclayer1 = GlobalAveragePooling3D()(fclayer1)
+
+    dropout_out2 = Dropout(dr_rate)(after_2DownConv_3)
+    fclayer2 = Conv3D(2,
+                      kernel_size=(1, 1, 1),
+                      kernel_initializer='he_normal',
+                      weights=None,
+                      padding='valid',
+                      strides=(1, 1, 1),
+                      kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                      )(dropout_out2)
+    fclayer2 = GlobalAveragePooling3D()(fclayer2)
+
+    fcl_aver = average([fclayer1, fclayer2])
+    predict = Activation('softmax')(fcl_aver)
+    cnn_fcl_2p = Model(inputs=[inp1, inp2], outputs=predict)
+    return cnn_fcl_2p
+
 def fCreateModel_FCN_MultiFM_MultiPath(patchSize, patchSize_down, dr_rate=0.0, iPReLU=0, l1_reg=0, l2_reg=1e-6):
     # Total params: 2,841,098
     # The dense layer is repleced by a convolutional layer with filters=2 for the two classes
@@ -412,10 +478,10 @@ def fCreateModel_Inception_Archi1(patchSize,dr_rate=0.0, iPReLU=0, l2_reg=1e-6):
                                                    iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
 
     after_Incep_3 = fConvIncep(after_DownConv_2, KB=kernelnumber[2], layernum=fgetLayerNumIncep(), l2_reg=l2_reg)
-    after_DownConv_2 = fCreateVNet_DownConv_Block(after_Incep_3, after_Incep_3._keras_shape[1], Strides[2],
+    after_DownConv_3 = fCreateVNet_DownConv_Block(after_Incep_3, after_Incep_3._keras_shape[1], Strides[2],
                                                    iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
     # fully connect layer as dense
-    flat_out = Flatten()(after_DownConv_2)
+    flat_out = Flatten()(after_DownConv_3)
     dropout_out = Dropout(dr_rate)(flat_out)
     dense_out = Dense(units=2,
                           kernel_initializer='normal',
@@ -444,10 +510,10 @@ def fCreateModel_Inception_Archi2(patchSize,dr_rate=0.0, iPReLU=0, l2_reg=1e-6):
                                                    iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
 
     after_Incep_3 = fIncepChain(after_DownConv_2, layernum=fgetLayerNumIncep(), l2_reg=l2_reg, iPReLU=iPReLU)
-    after_DownConv_2 = fCreateVNet_DownConv_Block(after_Incep_3, after_Incep_3._keras_shape[1], Strides[2],
+    after_DownConv_3 = fCreateVNet_DownConv_Block(after_Incep_3, after_Incep_3._keras_shape[1], Strides[2],
                                                    iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
     # fully connect layer as dense
-    flat_out = Flatten()(after_DownConv_2)
+    flat_out = Flatten()(after_DownConv_3)
     dropout_out = Dropout(dr_rate)(flat_out)
     dense_out = Dense(units=2,
                           kernel_initializer='normal',

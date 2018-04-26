@@ -94,7 +94,7 @@ def fTrainInner(sModelIn, sOutPath, patchSize, learningRate=0.001, X_train=None,
     model.summary()
 
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
-    callbacks.append(ModelCheckpoint('/no_backup/s1241/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
+    callbacks.append(ModelCheckpoint('/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
        period=5, save_best_only=True))# overrides the last checkpoint, its just for security
     callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
