@@ -63,7 +63,7 @@ sSplitting : "crossvalidation_patient"
 # number of folds
 nFolds : 15
 # splitting in training and test set
-dSplitval : 0.1s
+dSplitval : 0.1
 # optimization type in keras: 'grid', 'hyperas', 'none'
 # v1.1: grid and none are the same -> automatic switching if batchSize|learningRate are arrays, then 'grid', else 'none'
 sOpti : "grid"
