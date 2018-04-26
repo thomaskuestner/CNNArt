@@ -5,7 +5,7 @@ from skimage.measure import compare_psnr as psnr
 from skimage.restoration import denoise_tv_chambolle
 from skimage.transform import resize
 from sklearn.metrics import normalized_mutual_info_score as nmi
-import cv2
+import scipy.io as sio
 import matplotlib as mpl
 mpl.use('Agg')
 
@@ -189,13 +189,20 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
         callback_list.append(plotLoss)
 
         # train original dataset
-        vae.fit([train_ref, train_art],
+        result = vae.fit([train_ref, train_art],
                 shuffle=True,
                 epochs=epochs,
                 batch_size=batchSize,
                 validation_data=([test_ref, test_art], None),
                 verbose=1,
                 callbacks=callback_list)
+
+        # matlab
+        loss = result.history['loss']
+        val_loss = result.history['val_loss']
+
+        print('Saving results...')
+        sio.savemat(weights_file[:-3], {'loss': loss, 'val_loss': val_loss})
 
 
 def fPredict(test_ref, test_art, dParam, dHyper):

@@ -80,12 +80,12 @@ def fPreprocessDataCorrection(cfg, dbinfo):
                     tmpPatches, tmpLabels = fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq),
                                                             scpatchSize, cfg['patchOverlap'], 1, 'volume', range_norm)
 
-                    if iseq == 0:
+                    if iseq < len(lDatasets)/2:
                         dRefPatches = np.concatenate((dRefPatches, tmpPatches), axis=0)
-                        dRefPats = np.concatenate((dRefPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
-                    elif iseq == 1:
+                        dRefPats = np.concatenate((dRefPats, np.zeros((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
+                    else:
                         dArtPatches = np.concatenate((dArtPatches, tmpPatches), axis=0)
-                        dArtPats = np.concatenate((dArtPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
+                        dArtPats = np.concatenate((dArtPats, np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
             else:
                 pass
 
