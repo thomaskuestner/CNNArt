@@ -32,6 +32,12 @@ class cPre_window(QtWidgets.QDialog, Ui_PreColor):
         self.buttonBox.rejected.connect(self.reject)
         self.data = {'ok': 1}
 
+        self.listWidget.insertItem(0, '11 classes')
+        self.listWidget.insertItem(0, '8 classes')
+        self.listWidget.insertItem(0, '2 classes')
+        self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
+        self.listWidget.setCurrentRow(0)
+
         self.b_21.clicked.connect(self.color21)
         self.b_22.clicked.connect(self.color22)
 

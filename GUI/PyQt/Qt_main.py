@@ -43,7 +43,12 @@ from matplotlib.figure import Figure
 # from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 # from skimage import measure
 
-#pyrcc5 C:\Users\hansw\Desktop\Ma_code\PyQt\resrc.qrc -o C:\Users\hansw\Desktop\Ma_code\PyQt\resrc_rc.py
+import pickle
+import numpy as np
+import pandas as pd
+import codecs
+
+#pyrcc5 C:\Users\hansw\Desktop\Ma_code\PyQt_main\resrc.qrc -o C:\Users\hansw\Desktop\Ma_code\PyQt_main\resrc_rc.py
 
 class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
     update_data = QtCore.pyqtSignal(list)
@@ -54,10 +59,13 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         super(MyApp, self).__init__()
         self.setupUi(self)
 
-        self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.maingrids = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        self.scrollAreaWidgetContents1 = QtWidgets.QWidget()
+        self.maingrids1 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents1)
+        self.scrollArea1.setWidget(self.scrollAreaWidgetContents1)
         # self.scrollArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.scrollAreaWidgetContents2 = QtWidgets.QWidget()
+        self.maingrids2 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents2)
+        self.scrollArea2.setWidget(self.scrollAreaWidgetContents2)
 
         self.vision = 2
         self.gridson = False
@@ -82,7 +90,6 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         with open('colors0.json', 'r') as json_data:
             self.dcolors = json.load(json_data)
-
             cmap1 = self.dcolors['class2']['colors']
             cmap1 = mpl.colors.ListedColormap(cmap1)
             cmap3 = self.dcolors['class11']['colors']
@@ -103,8 +110,37 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.newax.axis('off')
         self.pltc = None
         self.newcanvas = FigureCanvas(self.newfig)  # must be defined because of selector next
-        self.currentlist = []
         self.keylist = []  # locate the key in combobox
+        self.mrinmain = None
+
+        self.graylabel = QtWidgets.QLabel()
+        self.slicelabel = QtWidgets.QLabel()
+        self.zoomlabel = QtWidgets.QLabel()
+        self.graylabel.setFrameShape(QtWidgets.QFrame.Panel)
+        self.graylabel.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.slicelabel.setFrameShape(QtWidgets.QFrame.Panel)
+        self.slicelabel.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.zoomlabel.setFrameShape(QtWidgets.QFrame.Panel)
+        self.zoomlabel.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.seditgray = QtWidgets.QPushButton()
+        self.sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        self.sizePolicy.setHorizontalStretch(0)
+        self.sizePolicy.setVerticalStretch(0)
+        self.sizePolicy.setHeightForWidth(self.seditgray.sizePolicy().hasHeightForWidth())
+        self.seditgray.setSizePolicy(self.sizePolicy)
+        icon3 = QtGui.QIcon()
+        icon3.addPixmap(QtGui.QPixmap(":/icons/Icons/edit.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.seditgray.setText("")
+        self.seditgray.setIcon(icon3)
+        self.maingrids2.addWidget(self.graylabel, 0, 0, 1, 1)
+        self.maingrids2.addWidget(self.slicelabel, 0, 1, 1, 1)
+        self.maingrids2.addWidget(self.zoomlabel, 0, 2, 1, 1)
+        self.maingrids2.addWidget(self.seditgray, 0, 3, 1, 1)
+        self.viewLabel = Activeview()
+        self.sceneLabel = Activescene()
+        self.sceneLabel.addWidget(self.newcanvas)
+        self.viewLabel.setScene(self.sceneLabel)
+        self.maingrids2.addWidget(self.viewLabel, 1, 0, 1, 4)
 
         def formsclick(n):
             if n==0:
@@ -151,33 +187,42 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             n = self.labelbox.currentIndex()
             col_str = '3' + str(n)
             patch = patches.PathPatch(p, fill=True, alpha=.2, edgecolor= None, facecolor=self.labelcolor[n])
-
             self.newax.add_patch(patch)
+
             sepkey = os.path.split(self.selectorPath)
             sepkey = sepkey[1]
             layer_name = sepkey  # bodyregion:t1_tse...
 
-            with open(self.markfile) as json_data:
+            with open(self.markfile, 'r') as json_data:
                 saveFile = json.load(json_data)
                 p = np.ndarray.tolist(p.vertices)  #
-                if self.ind < 10:
-                    ind = '0' + str(self.ind)
+                # print(type(p))
+                if self.ind < 9:
+                    ind = '0' + str(self.ind+1) # local ind
                 else:
-                    ind = self.ind
+                    ind = str(self.ind+1)
 
-                number_str = str(ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
-                if layer_name in saveFile:
-                    saveFile[layer_name][number_str] = {'vertices': p, 'codes': None}
+                num = 0  # num of some specific roi
+                if layer_name in saveFile['layer']:
+                    for key in saveFile['layer'][layer_name].keys():
+                        if key[3]==str(n):     # str!！
+                            num+=1
+                    if num<9:
+                        numinkey='0' + str(num + 1)
+                    else:
+                        numinkey=str(num + 1)
+                    number_str = ind + col_str + numinkey
+                    saveFile['layer'][layer_name][number_str] = {'vertices': p, 'codes': None}
                 else:
-                    saveFile[layer_name] = {number_str: {'vertices': p, 'codes': None}}
-
+                    numinkey ='01'
+                    number_str = ind + col_str + numinkey
+                    saveFile['layer'][layer_name] = {number_str: {'vertices': p, 'codes': None}}
+                saveFile['names']['list'] = self.labelnames
+                saveFile['colors']['list'] = self.labelcolor
             with open(self.markfile, 'w') as json_data:
                 json_data.write(json.dumps(saveFile))
-            item = self.labelnames[int(number_str[4])] + '_' + str(int(number_str[6]) + 1)
-            self.currentlist.append(item)
-            self.keylist.append(number_str)
-            self.labelWidget.addItem(item)
-            self.newcanvas.draw_idle()
+
+            self.orderROIs()
 
         def ronselect(eclick, erelease):
             col_str = None
@@ -202,27 +247,35 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                               facecolor=self.labelcolor[n])
                 self.newax.add_patch(ell)
 
-            with open(self.markfile) as json_data:
+            with open(self.markfile, 'r') as json_data:
                 saveFile = json.load(json_data)
                 p = np.ndarray.tolist(p)  # format from datapre
-                if self.ind < 10:
-                    ind = '0' + str(self.ind)
-                else:
-                    ind = self.ind
 
-                number_str = str(ind) + "_" + col_str + "_" + str(len(self.newax.patches) - 1)
-                if layer_name in saveFile:
-                    saveFile[layer_name][number_str] = {'points': p}
+                if self.ind < 9:
+                    ind = '0' + str(self.ind+1)
                 else:
-                    saveFile[layer_name] = {number_str: {'points': p}}
+                    ind = str(self.ind+1)
+                num = 0
+                if layer_name in saveFile['layer']:
+                    for key in saveFile['layer'][layer_name].keys():
+                        if key[3]==str(n):
+                            num+=1
+                    if num<9:
+                        numinkey='0' + str(num + 1)
+                    else:
+                        numinkey=str(num + 1)
+                    number_str = ind +  col_str + numinkey
+                    saveFile['layer'][layer_name][number_str] = {'points': p}
+                else:
+                    numinkey = '01'
+                    number_str = ind + col_str + numinkey
+                    saveFile['layer'][layer_name] = {number_str: {'points': p}}
+                saveFile['names']['list'] = self.labelnames
+                saveFile['colors']['list'] = self.labelcolor
             with open(self.markfile, 'w') as json_data:
                 json_data.write(json.dumps(saveFile))
 
-            item = self.labelnames[int(number_str[4])] + '_' + str(int(number_str[6]) + 1)
-            self.currentlist.append(item)
-            self.keylist.append(number_str)
-            self.labelWidget.addItem(item)
-            self.newcanvas.draw_idle()  #
+            self.orderROIs()
 
         toggle_selector.RS = RectangleSelector(self.newax, ronselect, button=[1], drawtype='box', useblit=True,
                                        minspanx=5, minspany=5,spancoords='pixels',interactive=False)
@@ -311,63 +364,82 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def clearall(self):
         if self.gridsnr == 2:
-            for i in reversed(range(self.maingrids.count())):
-                self.maingrids.itemAt(i).clearWidgets()
-                for j in reversed(range(self.maingrids.itemAt(i).secondline.count())):
-                    self.maingrids.itemAt(i).secondline.itemAt(j).widget().setParent(None)
-                self.maingrids.removeItem(self.maingrids.itemAt(i)) # invisible
+            for i in reversed(range(self.maingrids1.count())):
+                self.maingrids1.itemAt(i).clearWidgets()
+                for j in reversed(range(self.maingrids1.itemAt(i).secondline.count())):
+                    self.maingrids1.itemAt(i).secondline.itemAt(j).widget().setParent(None)
+                self.maingrids1.removeItem(self.maingrids1.itemAt(i)) # invisible
         else:
-            for i in reversed(range(self.maingrids.count())):
-                self.maingrids.itemAt(i).clearWidgets()
-                for j in reversed(range(self.maingrids.itemAt(i).gridLayout_1.count())):
-                    self.maingrids.itemAt(i).gridLayout_1.itemAt(j).widget().setParent(None)
-                for j in reversed(range(self.maingrids.itemAt(i).gridLayout_2.count())):
-                    self.maingrids.itemAt(i).gridLayout_2.itemAt(j).widget().setParent(None)
-                for j in reversed(range(self.maingrids.itemAt(i).gridLayout_3.count())):
-                    self.maingrids.itemAt(i).gridLayout_3.itemAt(j).widget().setParent(None)
-                for j in reversed(range(self.maingrids.itemAt(i).gridLayout_4.count())):
-                    self.maingrids.itemAt(i).gridLayout_4.itemAt(j).widget().setParent(None)
-                self.maingrids.removeItem(self.maingrids.itemAt(i))
+            for i in reversed(range(self.maingrids1.count())):
+                self.maingrids1.itemAt(i).clearWidgets()
+                for j in reversed(range(self.maingrids1.itemAt(i).gridLayout_1.count())):
+                    self.maingrids1.itemAt(i).gridLayout_1.itemAt(j).widget().setParent(None)
+                for j in reversed(range(self.maingrids1.itemAt(i).gridLayout_2.count())):
+                    self.maingrids1.itemAt(i).gridLayout_2.itemAt(j).widget().setParent(None)
+                for j in reversed(range(self.maingrids1.itemAt(i).gridLayout_3.count())):
+                    self.maingrids1.itemAt(i).gridLayout_3.itemAt(j).widget().setParent(None)
+                for j in reversed(range(self.maingrids1.itemAt(i).gridLayout_4.count())):
+                    self.maingrids1.itemAt(i).gridLayout_4.itemAt(j).widget().setParent(None)
+                self.maingrids1.removeItem(self.maingrids1.itemAt(i))
 
     def saveCurrent(self):
-        with open('lastWorkspace.json', 'r') as json_data:
-            lastState = json.load(json_data)
-            lastState['mode'][0] = self.gridsnr
-            if self.gridsnr == 2:
-                lastState['layout'][0] = self.layoutlines
-                lastState['layout'][1] = self.layoutcolumns
-            else:
-                lastState['layout'][0] = self.layout3D
+        if self.gridson:
+            with open('lastWorkspace.json', 'r') as json_data:
+                lastState = json.load(json_data)
+                lastState['mode'] = self.gridsnr ###
+                if self.gridsnr == 2:
+                    lastState['layout'][0] = self.layoutlines
+                    lastState['layout'][1] = self.layoutcolumns
+                else:
+                    lastState['layout'][0] = self.layout3D
 
-            lastState['listA'] = list1
-            lastState['Probs'] = problist
-            lastState['Hatches'] = hatchlist
-            lastState['Pathes'] = pathlist
-            lastState['NResults'] = pnamelist
-            lastState['NrClass'] = cnrlist
-            lastState['Corres'] = correslist
+                global pathlist, list1, pnamelist, problist, hatchlist, correslist, cnrlist, shapelist
+                # shapelist = (list(shapelist)).tolist()
+                # shapelist = pd.Series(shapelist).to_json(orient='values')  # to str?
+                lastState['Shape'] = shapelist
+                lastState['Pathes'] = pathlist
+                lastState['NResults'] = pnamelist
+                lastState['NrClass'] = cnrlist
+                lastState['Corres'] = correslist
 
-        with open('lastWorkspace.json', 'w') as json_data:
-            json_data.write(json.dumps(lastState))
+            with open('lastWorkspace.json', 'w') as json_data:
+                json_data.write(json.dumps(lastState))
+
+            listA = open('dump1.txt', 'wb')
+            pickle.dump(list1, listA)
+            listA.close()
+            listB = open('dump2.txt', 'wb')
+            pickle.dump(problist, listB)
+            listB.close()
+            listC = open('dump3.txt', 'wb')
+            pickle.dump(hatchlist, listC)
+            listC.close()
 
     def loadOld(self):
         self.clearall()
-        global pathlist, list1, pnamelist, problist, hatchlist, correslist, cnrlist
+        global pathlist, list1, pnamelist, problist, hatchlist, correslist, cnrlist, shapelist
 
         with open('lastWorkspace.json', 'r') as json_data:
             lastState = json.load(json_data)
-            list1 = lastState['listA']
-            problist = lastState['Probs']
-            hatchlist = lastState['Hatches']
+            # list1 = lastState['listA']
+            # problist = lastState['Probs']
+            # hatchlist = lastState['Hatches']
+            gridsnr = lastState['mode']  ##
+            shapelist = lastState['Shape']
             pathlist = lastState['Pathes']
             pnamelist = lastState['NResults']
             cnrlist = lastState['NrClass']
             correslist = lastState['Corres']
+            # print(gridsnr)
+            # print(shapelist)
+            # print(pathlist)
+            # print(pnamelist)
+            # print(cnrlist)
+            # print(correslist)
 
-            gridsnr = lastState['mode'][0]
             if gridsnr == 2:
                 if self.vision == 3:
-                    self.switchview()
+                    self.switchview() # back to 2
                 self.layoutlines = lastState['layout'][0]
                 self.layoutcolumns = lastState['layout'][1]
                 self.linebox.setCurrentIndex(self.layoutlines - 1)
@@ -377,6 +449,16 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     self.switchview()
                 self.layout3D = lastState['layout'][0]
                 self.linebox.setCurrentIndex(self.layout3D - 1)
+
+        listA = open('dump1.txt', 'rb')
+        list1 = pickle.load(listA)
+        listA.close()
+        listB = open('dump2.txt', 'rb')
+        problist = pickle.load(listB)
+        listB.close()
+        listC = open('dump3.txt', 'rb')
+        hatchlist = pickle.load(listC)
+        listC.close()
 
         self.setlayout()
 
@@ -396,13 +478,13 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                         blocklayout.addPathre(cpath)
                     blocklayout.in_link.connect(self.linkMode)     # initial connection of in_link
 
-                    self.maingrids.addLayout(blocklayout, i, j)
+                    self.maingrids1.addLayout(blocklayout, i, j)
             if pathlist:
                 n = 0
                 for i in range(self.layoutlines):
                     for j in range(self.layoutcolumns):
                         if n < len(pathlist):
-                            self.maingrids.itemAtPosition(i, j).pathbox.setCurrentIndex(n+1)
+                            self.maingrids1.itemAtPosition(i, j).pathbox.setCurrentIndex(n+1)
                             n+=1
                         else:
                             break
@@ -417,12 +499,12 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 for cpath in pnamelist:
                     blockline.addPathre(cpath)
                 blockline.in_link.connect(self.linkMode) # 3d initial
-                self.maingrids.addLayout(blockline, i, 0)
+                self.maingrids1.addLayout(blockline, i, 0)
             if pathlist:
                 n = 0
                 for i in range(self.layout3D):
                     if n < len(pathlist):
-                        self.maingrids.itemAtPosition(i, 0).imagelist.setCurrentIndex(n+1)
+                        self.maingrids1.itemAtPosition(i, 0).imagelist.setCurrentIndex(n+1)
                         n+=1
                     else:
                         break
@@ -431,86 +513,92 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         if self.gridsnr == 2:
             for i in range(self.layoutlines):
                 for j in range(self.layoutcolumns):
-                    if self.maingrids.itemAtPosition(i, j).islinked and not self.maingrids.itemAtPosition(i, j).skiplink:
-                        self.maingrids.itemAtPosition(i, j).Viewpanel.zoom_link.connect(self.zoomAll)
-                        self.maingrids.itemAtPosition(i, j).Viewpanel.move_link.connect(self.moveAll)
-                        self.maingrids.itemAtPosition(i, j).anewcanvas.grey_link.connect(self.greyAll)
-                        self.maingrids.itemAtPosition(i, j).anewcanvas.slice_link.connect(self.sliceAll)
-                        self.maingrids.itemAtPosition(i, j).skiplink = True # avoid multi link
-                    elif not self.maingrids.itemAtPosition(i, j).islinked and not self.maingrids.itemAtPosition(i, j).skipdis:
-                        self.maingrids.itemAtPosition(i, j).Viewpanel.zoom_link.disconnect()
-                        self.maingrids.itemAtPosition(i, j).Viewpanel.move_link.disconnect()
-                        self.maingrids.itemAtPosition(i, j).anewcanvas.grey_link.disconnect()
-                        self.maingrids.itemAtPosition(i, j).anewcanvas.slice_link.disconnect()
-                        self.maingrids.itemAtPosition(i, j).skipdis = True
+                    if self.maingrids1.itemAtPosition(i, j).islinked and not self.maingrids1.itemAtPosition(i, j).skiplink:
+                        self.maingrids1.itemAtPosition(i, j).Viewpanel.zoom_link.connect(self.zoomAll)
+                        self.maingrids1.itemAtPosition(i, j).Viewpanel.move_link.connect(self.moveAll)
+                        self.maingrids1.itemAtPosition(i, j).anewcanvas.grey_link.connect(self.greyAll)
+                        self.maingrids1.itemAtPosition(i, j).anewcanvas.slice_link.connect(self.sliceAll)
+                        self.maingrids1.itemAtPosition(i, j).skiplink = True # avoid multi link
+                        self.maingrids1.itemAtPosition(i, j).skipdis = False
+                    elif not self.maingrids1.itemAtPosition(i, j).islinked and not self.maingrids1.itemAtPosition(i, j).skipdis:
+                        self.maingrids1.itemAtPosition(i, j).Viewpanel.zoom_link.disconnect()
+                        self.maingrids1.itemAtPosition(i, j).Viewpanel.move_link.disconnect()
+                        self.maingrids1.itemAtPosition(i, j).anewcanvas.grey_link.disconnect()
+                        self.maingrids1.itemAtPosition(i, j).anewcanvas.slice_link.disconnect()
+                        self.maingrids1.itemAtPosition(i, j).skipdis = True
+                        self.maingrids1.itemAtPosition(i, j).skiplink = False
         else:
             for i in range(self.layout3D):
-                if self.maingrids.itemAtPosition(i, 0).islinked and not self.maingrids.itemAtPosition(i, 0).skiplink:
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel1.zoom_link.connect(self.zoomAll)
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel1.move_link.connect(self.moveAll)
-                    self.maingrids.itemAtPosition(i, 0).newcanvas1.grey_link.connect(self.greyAll)
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel2.zoom_link.connect(self.zoomAll)
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel2.move_link.connect(self.moveAll)
-                    self.maingrids.itemAtPosition(i, 0).newcanvas2.grey_link.connect(self.greyAll)
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel3.zoom_link.connect(self.zoomAll)
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel3.move_link.connect(self.moveAll)
-                    self.maingrids.itemAtPosition(i, 0).newcanvas3.grey_link.connect(self.greyAll)
-                elif not self.maingrids.itemAtPosition(i, 0).islinked and not self.maingrids.itemAtPosition(i, 0).skipdis:
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel1.zoom_link.disconnect()
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel1.move_link.disconnect()
-                    self.maingrids.itemAtPosition(i, 0).newcanvas1.grey_link.disconnect()
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel2.zoom_link.disconnect()
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel2.move_link.disconnect()
-                    self.maingrids.itemAtPosition(i, 0).newcanvas2.grey_link.disconnect()
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel3.zoom_link.disconnect()
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel3.move_link.disconnect()
-                    self.maingrids.itemAtPosition(i, 0).newcanvas3.grey_link.disconnect()
+                if self.maingrids1.itemAtPosition(i, 0).islinked and not self.maingrids1.itemAtPosition(i, 0).skiplink:
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel1.zoom_link.connect(self.zoomAll)
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel1.move_link.connect(self.moveAll)
+                    self.maingrids1.itemAtPosition(i, 0).newcanvas1.grey_link.connect(self.greyAll)
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel2.zoom_link.connect(self.zoomAll)
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel2.move_link.connect(self.moveAll)
+                    self.maingrids1.itemAtPosition(i, 0).newcanvas2.grey_link.connect(self.greyAll)
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel3.zoom_link.connect(self.zoomAll)
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel3.move_link.connect(self.moveAll)
+                    self.maingrids1.itemAtPosition(i, 0).newcanvas3.grey_link.connect(self.greyAll)
+                    self.maingrids1.itemAtPosition(i, 0).skiplink = True
+                    self.maingrids1.itemAtPosition(i, 0).skipdis = False
+                elif not self.maingrids1.itemAtPosition(i, 0).islinked and not self.maingrids1.itemAtPosition(i, 0).skipdis:
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel1.zoom_link.disconnect()
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel1.move_link.disconnect()
+                    self.maingrids1.itemAtPosition(i, 0).newcanvas1.grey_link.disconnect()
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel2.zoom_link.disconnect()
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel2.move_link.disconnect()
+                    self.maingrids1.itemAtPosition(i, 0).newcanvas2.grey_link.disconnect()
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel3.zoom_link.disconnect()
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel3.move_link.disconnect()
+                    self.maingrids1.itemAtPosition(i, 0).newcanvas3.grey_link.disconnect()
+                    self.maingrids1.itemAtPosition(i, 0).skipdis = True
+                    self.maingrids1.itemAtPosition(i, 0).skiplink = False
 
     def zoomAll(self, factor):
         if self.gridsnr == 2:
             for i in range(self.layoutlines):
                 for j in range(self.layoutcolumns):
-                    if self.maingrids.itemAtPosition(i, j).islinked:
-                        self.maingrids.itemAtPosition(i, j).Viewpanel.linkedZoom(factor)
+                    if self.maingrids1.itemAtPosition(i, j).islinked:
+                        self.maingrids1.itemAtPosition(i, j).Viewpanel.linkedZoom(factor)
         else:
             for i in range(self.layout3D):
-                if self.maingrids.itemAtPosition(i, 0).islinked:
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel1.linkedZoom(factor)
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel2.linkedZoom(factor)
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel3.linkedZoom(factor)
+                if self.maingrids1.itemAtPosition(i, 0).islinked:
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel1.linkedZoom(factor)
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel2.linkedZoom(factor)
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel3.linkedZoom(factor)
 
     def moveAll(self, movelist):
         if self.gridsnr == 2:
             for i in range(self.layoutlines):
                 for j in range(self.layoutcolumns):
-                    if self.maingrids.itemAtPosition(i, j).islinked:
-                        self.maingrids.itemAtPosition(i, j).Viewpanel.linkedMove(movelist)
+                    if self.maingrids1.itemAtPosition(i, j).islinked:
+                        self.maingrids1.itemAtPosition(i, j).Viewpanel.linkedMove(movelist)
         else:
             for i in range(self.layout3D):
-                if self.maingrids.itemAtPosition(i, 0).islinked:
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel1.linkedMove(movelist)
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel2.linkedMove(movelist)
-                    self.maingrids.itemAtPosition(i, 0).Viewpanel3.linkedMove(movelist)
+                if self.maingrids1.itemAtPosition(i, 0).islinked:
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel1.linkedMove(movelist)
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel2.linkedMove(movelist)
+                    self.maingrids1.itemAtPosition(i, 0).Viewpanel3.linkedMove(movelist)
 
     def greyAll(self, glist):
         if self.gridsnr == 2:
             for i in range(self.layoutlines):
                 for j in range(self.layoutcolumns):
-                    if self.maingrids.itemAtPosition(i, j).islinked:
-                        self.maingrids.itemAtPosition(i, j).anewcanvas.linkedGrey(glist)
+                    if self.maingrids1.itemAtPosition(i, j).islinked:
+                        self.maingrids1.itemAtPosition(i, j).anewcanvas.linkedGrey(glist)
         else:
             for i in range(self.layout3D):
-                if self.maingrids.itemAtPosition(i, 0).islinked:
-                    self.maingrids.itemAtPosition(i, 0).newcanvas1.linkedGrey(glist)
-                    self.maingrids.itemAtPosition(i, 0).newcanvas2.linkedGrey(glist)
-                    self.maingrids.itemAtPosition(i, 0).newcanvas3.linkedGrey(glist)
+                if self.maingrids1.itemAtPosition(i, 0).islinked:
+                    self.maingrids1.itemAtPosition(i, 0).newcanvas1.linkedGrey(glist)
+                    self.maingrids1.itemAtPosition(i, 0).newcanvas2.linkedGrey(glist)
+                    self.maingrids1.itemAtPosition(i, 0).newcanvas3.linkedGrey(glist)
 
     def sliceAll(self, data):
         if self.gridsnr == 2:
             for i in range(self.layoutlines):
                 for j in range(self.layoutcolumns):
-                    if self.maingrids.itemAtPosition(i, j).islinked:
-                        self.maingrids.itemAtPosition(i, j).anewcanvas.linkedSlice(data)
+                    if self.maingrids1.itemAtPosition(i, j).islinked:
+                        self.maingrids1.itemAtPosition(i, j).anewcanvas.linkedSlice(data)
 
     def loadMR(self):
         with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
@@ -553,7 +641,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.overlay.hide()
         if self.selectoron == False:
             self.openfile.setDisabled(False)
-    
+
             # self.plot_3d(self.newMR.svoxel, 200)
             pathlist.append(self.PathDicom)
             list1.append(self.newMR.voxel_ndarray)
@@ -562,23 +650,23 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 if self.gridsnr == 2:
                     for i in range(self.layoutlines):
                         for j in range(self.layoutcolumns):
-                            self.maingrids.itemAtPosition(i, j).addPathd(self.PathDicom)
+                            self.maingrids1.itemAtPosition(i, j).addPathd(self.PathDicom)
                     for i in range(self.layoutlines):
                         for j in range(self.layoutcolumns):
-                            if self.maingrids.itemAtPosition(i, j).mode == 1 and \
-                                    self.maingrids.itemAtPosition(i, j).pathbox.currentIndex() == 0:
-                                self.maingrids.itemAtPosition(i, j).pathbox.setCurrentIndex(len(pathlist))
+                            if self.maingrids1.itemAtPosition(i, j).mode == 1 and \
+                                    self.maingrids1.itemAtPosition(i, j).pathbox.currentIndex() == 0:
+                                self.maingrids1.itemAtPosition(i, j).pathbox.setCurrentIndex(len(pathlist))
                                 break
                         else:
                             continue
                         break
                 else:
                     for i in range(self.layout3D):
-                        self.maingrids.itemAtPosition(i, 0).addPathim(self.PathDicom)
+                        self.maingrids1.itemAtPosition(i, 0).addPathim(self.PathDicom)
                     for i in range(self.layout3D):
-                        if self.maingrids.itemAtPosition(i, 0).vmode == 1 and \
-                                self.maingrids.itemAtPosition(i, 0).imagelist.currentIndex() == 0:
-                            self.maingrids.itemAtPosition(i, 0).imagelist.setCurrentIndex(len(pathlist))
+                        if self.maingrids1.itemAtPosition(i, 0).vmode == 1 and \
+                                self.maingrids1.itemAtPosition(i, 0).imagelist.currentIndex() == 0:
+                            self.maingrids1.itemAtPosition(i, 0).imagelist.setCurrentIndex(len(pathlist))
                             break
             else:
                 pass
@@ -659,13 +747,13 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 nameofCfile = os.path.split(resultfile)[1]
                 nameofCfile = nameofCfile + '   class:' + str(cnum.shape[1])
                 pnamelist.append(nameofCfile)
-                if self.vision == 3:
+                if self.gridsnr == 3:  #############
                     for i in range(self.layout3D):
-                        self.maingrids.itemAtPosition(i, 0).addPathre(nameofCfile)
+                        self.maingrids1.itemAtPosition(i, 0).addPathre(nameofCfile)
                 else:
                     for i in range(self.layoutlines):
                         for j in range(self.layoutcolumns):
-                            self.maingrids.itemAtPosition(i, j).addPathre(nameofCfile)
+                            self.maingrids1.itemAtPosition(i, j).addPathre(nameofCfile)
 
             else:
                 QtWidgets.QMessageBox.information(self, 'Warning', 'Please load the original file first!')
@@ -702,48 +790,17 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.pathROI = pathROI
         self.labelbox.clear()
         self.labelbox.addItems(self.labelnames)
-
-        self.newslicesview()
+        if type(self.mrinmain)== 'numpy.ndarray': #
+            self.updateList()
 
 ##################################################
     def selectormode(self):
         if self.selectoron == False:
             self.selectoron = True
-            if self.gridson == True:
-                self.clearall()
-                self.gridson = False    ###
+            self.stackedWidget.setCurrentIndex(1)
             icon2 = QtGui.QIcon()
             icon2.addPixmap(QtGui.QPixmap(":/icons/Icons/switchoff.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
             self.bselectoron.setIcon(icon2)
-
-            self.graylabel = QtWidgets.QLabel()
-            self.slicelabel = QtWidgets.QLabel()
-            self.zoomlabel = QtWidgets.QLabel()
-            self.graylabel.setFrameShape(QtWidgets.QFrame.Panel)
-            self.graylabel.setFrameShadow(QtWidgets.QFrame.Raised)
-            self.slicelabel.setFrameShape(QtWidgets.QFrame.Panel)
-            self.slicelabel.setFrameShadow(QtWidgets.QFrame.Raised)
-            self.zoomlabel.setFrameShape(QtWidgets.QFrame.Panel)
-            self.zoomlabel.setFrameShadow(QtWidgets.QFrame.Raised)
-            self.seditgray = QtWidgets.QPushButton()
-            self.sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-            self.sizePolicy.setHorizontalStretch(0)
-            self.sizePolicy.setVerticalStretch(0)
-            self.sizePolicy.setHeightForWidth(self.seditgray.sizePolicy().hasHeightForWidth())
-            self.seditgray.setSizePolicy(self.sizePolicy)
-            icon3 = QtGui.QIcon()
-            icon3.addPixmap(QtGui.QPixmap(":/icons/Icons/edit.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-            self.seditgray.setText("")
-            self.seditgray.setIcon(icon3)
-            self.maingrids.addWidget(self.graylabel, 0, 0, 1, 1)
-            self.maingrids.addWidget(self.slicelabel, 0, 1, 1, 1)
-            self.maingrids.addWidget(self.zoomlabel, 0, 2, 1, 1)
-            self.maingrids.addWidget(self.seditgray, 0, 3, 1, 1)
-            self.viewLabel = Activeview()
-            self.sceneLabel = Activescene()
-            self.sceneLabel.addWidget(self.newcanvas)
-            self.viewLabel.setScene(self.sceneLabel)
-            self.maingrids.addWidget(self.viewLabel, 1, 0, 1, 4)
 
             self.labelbox.setDisabled(False)
             self.brectangle.setDisabled(False)
@@ -761,8 +818,13 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.openfile.setDisabled(True)
             self.bpatch.setDisabled(True)
             self.bsetcolor.setDisabled(True)
+
+            self.actionOpen_file.setEnabled(False)
+            self.actionSave.setEnabled(False)
+            self.actionLoad.setEnabled(False)
         else:
             self.selectoron = False
+            self.stackedWidget.setCurrentIndex(0)
             icon1 = QtGui.QIcon()
             icon1.addPixmap(QtGui.QPixmap(":/icons/Icons/switchon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
             self.bselectoron.setIcon(icon1)
@@ -782,10 +844,15 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.openfile.setDisabled(False)
             self.bpatch.setDisabled(False)
             self.bsetcolor.setDisabled(False)
-            if self.vision == 2:
-                self.columnbox.setDisabled(False)
-            for i in reversed(range(self.maingrids.count())):
-                self.maingrids.itemAt(i).widget().setParent(None)
+
+            self.actionOpen_file.setEnabled(True)
+            self.actionSave.setEnabled(True)
+            self.actionLoad.setEnabled(True)
+
+            # if self.vision == 2:
+            #     self.columnbox.setDisabled(False)
+            # for i in reversed(range(self.maingrids1.count())):
+            #     self.maingrids1.itemAt(i).widget().setParent(None)
 
     def stopView(self, n):
         self.viewLabel.stopMove(n)
@@ -810,7 +877,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             pass
 
-    def loadSelect(self):
+    def loadSelect(self): # from loadEnd
         self.mrinmain = self.newMR.voxel_ndarray
         self.ind = 0
         self.slices = self.mrinmain.shape[2]
@@ -831,6 +898,44 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.viewLabel.zooming_data.connect(self.updateZoom)
         self.seditgray.clicked.connect(self.setGreymain)
 
+        # replace reference with old values
+        with open(self.markfile, 'r') as json_data:
+            saveFile = json.load(json_data)
+            self.labelnames=saveFile['names']['list']
+            self.labelcolor = saveFile['colors']['list']
+        with open('editlabel.json', 'r') as json_data:
+            self.infos = json.load(json_data)
+            self.infos['names'] = self.labelnames
+            self.infos['colors'] = self.labelcolor
+        with open('editlabel.json', 'w') as json_data:
+            json_data.write(json.dumps(self.infos))
+
+        self.orderROIs()
+
+    def orderROIs(self):
+        with open(self.markfile, 'r') as json_data:
+            saveFile = json.load(json_data)
+        sepkey = os.path.split(self.selectorPath)[1]
+        self.newkeylist=[]
+        if sepkey in saveFile['layer']:   #### void key?
+            for key in saveFile['layer'][sepkey].keys():
+                newkey = (key[0]+key[1], key[2], key[3], key[4]+key[5])
+                self.newkeylist.append(newkey) # dont cover original json file
+
+            first = sorted(self.newkeylist, key=lambda e: e.__getitem__(2))
+            second = sorted(first, key=lambda e: (e.__getitem__(2), e.__getitem__(3)))
+            self.third = sorted(second, key=lambda e: (e.__getitem__(2), e.__getitem__(3), e.__getitem__(0)))
+            self.updateList()
+
+    def updateList(self):
+        self.keylist = []
+        self.labelWidget.clear()
+        for element in self.third:
+            oldkey =element[0]+element[1]+element[2]+element[3]   # format?
+            self.keylist.append(oldkey)
+            item=self.labelnames[int(oldkey[3])] + '-'+ oldkey[4]+oldkey[5] + '-'+ oldkey[0]+oldkey[1] + '/' + str(self.slices)
+            self.labelWidget.addItem(item)
+
         self.newslicesview()
 
     def newonscroll(self, event):
@@ -847,42 +952,37 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.update_data.emit(self.emitlist)
         self.newslicesview()
 
-    def newslicesview(self):
+    def newslicesview(self): # refreshing
         self.newax.clear()
         self.pltc = self.newax.imshow(np.swapaxes(self.mrinmain[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
 
-        sepkey = os.path.split(
-            self.selectorPath)  # ('C:/Users/hansw/Videos/artefacts/MRPhysics/newProtocol/01_ab/dicom_sorted', 't1_tse_tra_Kopf_Motion_0003')
+        sepkey = os.path.split(self.selectorPath)  # ('C:/Users/hansw/Videos/artefacts/MRPhysics/newProtocol/01_ab/dicom_sorted', 't1_tse_tra_Kopf_Motion_0003')
         sepkey = sepkey[1]  # t1_tse_tra_Kopf_Motion_0003
-        self.currentlist.clear()
-        self.keylist.clear()
+
         with open(self.markfile, 'r') as json_data:
             loadFile = json.load(json_data)
 
-            if sepkey in loadFile:
-                layer = loadFile[sepkey]
+            if sepkey in loadFile['layer']:
+                layer = loadFile['layer'][sepkey]
                 for key in layer.keys():
-                    if key[0]+key[1]== str(self.ind):
+                    if key[0]+key[1]== str(self.ind+1):
                         p = layer[key]
-                        if key[3] == '1':
+                        if key[2] == '1':
                             p = np.asarray(p['points'])
                             patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
                                                   np.abs(p[1] - p[3]), fill=True,
-                                                  alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[4])])
-                        elif key[3] == '2':
+                                                  alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[3])])
+                        elif key[2] == '2':
                             p = np.asarray(p['points'])
                             patch = Ellipse(
                                 xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
                                 width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]),
-                                alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[4])])
+                                alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[3])])
                         else:
                             p = path.Path(np.asarray(p['vertices']), p['codes'])
-                            patch = patches.PathPatch(p, fill=True, alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[4])])
-                        item = self.labelnames[int(key[4])] + '_' + str(int(key[6])+1)
-                        self.currentlist.append(item)
-                        self.keylist.append(key)
-                        self.newax.add_patch(patch)
+                            patch = patches.PathPatch(p, fill=True, alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[3])])
 
+                        self.newax.add_patch(patch)
         self.newcanvas.draw()  # not self.newcanvas.show()
 
         v_min, v_max = self.pltc.get_clim()
@@ -890,23 +990,21 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.graylist[1] = v_max
         self.new_page.emit()
 
-        self.labelWidget.clear()
-        self.labelWidget.addItems(self.currentlist)
-        self.labelWidget.setCurrentRow(0)
-
     def deleteLabel(self):
         pos = self.labelWidget.currentRow()
-        print(pos)
         item = self.labelWidget.takeItem(pos)
         item = None
         with open(self.markfile) as json_data:
             deleteMark = json.load(json_data)
             sepkey = os.path.split(self.selectorPath)
             sepkey = sepkey[1]
-            layer = deleteMark[sepkey]
-            if pos != -1:
+            layer = deleteMark['layer'][sepkey]
+            # if pos != -1: # none left
+            if len(layer.keys())!=0:
                 layer.pop(self.keylist[pos], None)
-            # del layer[self.keylist[pos]]
+                self.keylist.pop(pos)   ### !
+                # for key in layer.keys():
+                #     print(key)
             if pos != 0:
                 self.labelWidget.setCurrentRow(pos-1)
         with open(self.markfile, 'w') as json_data:
@@ -1142,12 +1240,10 @@ class Viewgroup(QtWidgets.QGridLayout):
             if self.islinked == False:
                 self.linkon.setIcon(self.icon5)
                 self.islinked = True
-                self.skipdis = False # cant skip now
                 self.in_link.emit()
             else:
                 self.linkon.setIcon(self.icon2)
                 self.islinked = False
-                self.skiplink = False
                 self.in_link.emit()
 
     def loadImage(self):
@@ -1160,7 +1256,12 @@ class Viewgroup(QtWidgets.QGridLayout):
         self.anewcanvas.update_data.connect(self.updateSlices)
         self.anewcanvas.gray_data.connect(self.updateGray)
         self.anewcanvas.new_page.connect(self.newSliceview)
+
         if self.islinked == True:
+            self.Viewpanel.zoom_link.disconnect()
+            self.Viewpanel.move_link.disconnect()
+            self.skiplink = False
+            self.skipdis = True
             self.in_link.emit()
 
     def addPathd(self, pathDicom):
@@ -1174,7 +1275,7 @@ class Viewgroup(QtWidgets.QGridLayout):
         self.refbox.addItem(pathColor)
 
     def loadScene(self, i):
-        self.spin = i
+        self.spin = i # position in combobox
         self.viewnr1 = 1
         self.viewnr2 = 1
         if i != 0:
@@ -1196,6 +1297,7 @@ class Viewgroup(QtWidgets.QGridLayout):
                 self.graylabel.setText('')
                 self.zoomlabel.setText('')
                 if self.islinked == True:
+                    self.linkon.setIcon(self.icon2)
                     self.islinked = False
                     self.skiplink = False
                     self.skipdis = True
@@ -1406,12 +1508,10 @@ class Viewline(QtWidgets.QGridLayout):
             if self.islinked == False:
                 self.blinkon.setIcon(self.icon4)
                 self.islinked = True
-                self.skipdis = False # cant skip now
                 self.in_link.emit()
             else:
                 self.blinkon.setIcon(self.icon2)
                 self.islinked = False
-                self.skiplink = False
                 self.in_link.emit()
 
     def loadScene(self, i):
@@ -1508,6 +1608,14 @@ class Viewline(QtWidgets.QGridLayout):
         self.newcanvas3.gray_data.connect(self.updateGray3)
         self.newcanvas3.new_page.connect(self.newSliceview3)
         if self.islinked == True:
+            self.Viewpanel1.zoom_link.disconnect()
+            self.Viewpanel1.move_link.disconnect()
+            self.Viewpanel2.zoom_link.disconnect()
+            self.Viewpanel2.move_link.disconnect()
+            self.Viewpanel3.zoom_link.disconnect()
+            self.Viewpanel3.move_link.disconnect()
+            self.skiplink = False
+            self.skipdis = True
             self.in_link.emit()
 
     def newSliceview1(self):

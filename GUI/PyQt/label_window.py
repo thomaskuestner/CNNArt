@@ -126,6 +126,7 @@ class Label_window(QtWidgets.QDialog,Ui_edit_label):
             self.namelist[6] = self.lineEdit_7.text()
             self.namelist[7] = self.lineEdit_8.text()
 
+
             self.infos['names'] = self.namelist
             self.infos['colors'] = self.colorlist
             self.infos['path'][0] = self.pathROI

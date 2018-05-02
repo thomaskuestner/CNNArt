@@ -48,6 +48,7 @@ class Canvas(FigureCanvas):
         self.ax1 = self.figure.add_subplot(111)
         # self.ax1 = plt.gca()
 
+        self.figure.canvas.mpl_connect('key_press_event', self.click)
         self.figure.canvas.mpl_connect('button_press_event', self.mouse_clicked)
         self.figure.canvas.mpl_connect('motion_notify_event', self.mouse_move)
         self.figure.canvas.mpl_connect('button_release_event', self.mouse_release)
@@ -71,6 +72,9 @@ class Canvas(FigureCanvas):
         else:
             self.ind = (self.ind - 1)
             self.slice_link.emit(1)
+        self.afterscroll()
+
+    def afterscroll(self):
         if self.ind >= self.slices:
             self.ind = 0
         if self.ind <= -1:
@@ -81,8 +85,60 @@ class Canvas(FigureCanvas):
         self.update_data.emit(self.emitlist)
         self.View_A()
 
+    def click(self, event):
+        self.v_min, self.v_max = self.pltc.get_clim()
+        if event.key == 'w':
+            self.wheel_roll = True
+            self.ind = (self.ind + 1)
+            self.slice_link.emit(0)
+            self.afterscroll()
+        elif event.key == 'q':
+            self.wheel_roll = True
+            self.ind = (self.ind - 1)
+            self.slice_link.emit(1)
+            self.afterscroll()
+        elif event.key == 'left':
+            self.wheel_clicked = True
+            self.factor1 = -20
+            self.factor2 = -20
+            self.afteradjust()
+        elif event.key == 'right':
+            self.wheel_clicked = True
+            self.factor1 = 20
+            self.factor2 = 20
+            self.afteradjust()
+        elif event.key == 'down':
+            self.wheel_clicked = True
+            self.factor1 = 20
+            self.factor2 = -20
+            self.afteradjust()
+        elif event.key == 'up':
+            self.wheel_clicked = True
+            self.factor1 = -20
+            self.factor2 = 20
+            self.afteradjust()
+
+    def afteradjust(self):
+        if (float(self.factor1 - self.factor2)) / (self.v_max - self.factor1 + 0.001) > 1:
+            nmb = (float(self.factor1 - self.factor2)) / (self.v_max - self.factor1 + 0.001) + 1
+            self.factor1 = (float(self.factor1 - self.factor2)) / nmb * (self.factor1 / (self.factor1 - self.factor2))
+            self.factor2 = (float(self.factor1 - self.factor2)) / nmb * (self.factor2 / (self.factor1 - self.factor2))
+
+        self.v_min += self.factor1
+        self.v_max += self.factor2
+
+        self.gchange[0] = self.factor1
+        self.gchange[1] = self.factor2
+        self.grey_link.emit(self.gchange)  ###
+
+        self.pltc.set_clim(vmin=self.v_min, vmax=self.v_max)
+        self.graylist[0] = self.v_min
+        self.graylist[1] = self.v_max
+        self.gray_data.emit(self.graylist)
+        self.figure.canvas.draw()
+        self.wheel_clicked = False
+
     def View_A(self):
-        self.wheel_roll = False
         if self.mode == 1:
             self.ax1.axis('off')
             self.pltc = self.ax1.imshow(np.swapaxes(self.voxel[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
@@ -149,6 +205,8 @@ class Canvas(FigureCanvas):
             self.im2 = self.ax1.imshow(np.swapaxes(self.Y[:, self.ind, :], 0, 1), cmap=self.cmap, alpha=.3,
                                        extent=[0, self.shape[0], self.shape[2], 0])
             self.draw_idle()
+
+        self.wheel_roll = False ###
 
         v_min, v_max = self.pltc.get_clim()
         self.graylist = []
@@ -264,8 +322,14 @@ class Canvas(FigureCanvas):
             v_min += __vmin
             v_max += __vmax
             self.pltc.set_clim(vmin=v_min, vmax=v_max)
-            self.graylist[0] = v_min.round(2)
-            self.graylist[1] = v_max.round(2)
+            # if type(v_min)=='int':
+            try:
+                # print(type(v_min))
+                self.graylist[0] = v_min.round(2)
+                self.graylist[1] = v_max.round(2)
+            except:
+                self.graylist[0] = v_min
+                self.graylist[1] = v_max
             self.gray_data.emit(self.graylist)
             self.figure.canvas.draw()
         else:

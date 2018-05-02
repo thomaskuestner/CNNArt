@@ -23,6 +23,7 @@ class loadImage(QtCore.QThread):
             new_real_shape = self.simage.shape * resize_factor
             self.new_shape = np.round(new_real_shape)
             self.new_shape[0], self.new_shape[2] = self.new_shape[2], self.new_shape[0]
+            self.new_shape=self.new_shape.tolist()
 
         self.trigger.emit()
 
