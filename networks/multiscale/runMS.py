@@ -156,7 +156,7 @@ def fPredict(X_test,y_test, model_name, sOutPath, patchSize=[40,40,10], batchSiz
 
     X_test = np.expand_dims(X_test, axis=1)
     y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
-    if 'MS' in model_name:
+    if ('MS' or 'MultiPath') in model_name:
         X_test_p2 = np.expand_dims(X_test_p2, axis=1)
         score_test, acc_test = model.evaluate([X_test, X_test_p2], y_test, batch_size=batchSize, verbose=1)
         print('loss_test:'+str(score_test)+ '   acc_test:'+ str(acc_test))
