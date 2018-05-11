@@ -1,1 +1,1 @@
-{"class2": {"colors": ["blue", "red"], "trans": [0.3]}, "class8": {"hatches": [null, "//", "\\\\", "**"]}, "class11": {"hatches": [null, "//", "\\\\", "XX"], "colors": ["#3cff1a", "purple", "#ff0509", "yellow", "#0e26ff"], "trans": [0.3]}}
+{"class11": {"colors": ["#ffee2a", "purple", "#ff0509", "yellow", "#0e26ff"], "trans": [0.3], "hatches": [null, "//", "\\\\", "XX"]}, "class8": {"hatches": [null, "//", "\\\\", "**"]}, "class2": {"colors": ["blue", "red"], "trans": [0.3]}}

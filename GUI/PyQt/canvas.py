@@ -248,17 +248,19 @@ class Canvas(FigureCanvas):
 
             v_min += __vmin
             v_max += __vmax
+            if v_min < v_max:
+                self.gchange[0] = __vmin
+                self.gchange[1] = __vmax
+                self.grey_link.emit(self.gchange)   ###
 
-            self.gchange[0] = __vmin
-            self.gchange[1] = __vmax
-            self.grey_link.emit(self.gchange)   ###
-
-            self.pltc.set_clim(vmin=v_min, vmax=v_max)
-            self.graylist[0] = v_min.round(2)
-            self.graylist[1] = v_max.round(2)
-            self.gray_data.emit(self.graylist)
-            self.figure.canvas.draw()
-
+                self.pltc.set_clim(vmin=v_min, vmax=v_max)
+                self.graylist[0] = v_min.round(2)
+                self.graylist[1] = v_max.round(2)
+                self.gray_data.emit(self.graylist)
+                self.figure.canvas.draw()
+            else:
+                v_min -= __vmin
+                v_max -= __vmax
     def mouse_release(self, event):
         if event.button == 2:
             self.wheel_clicked = False

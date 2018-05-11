@@ -1044,12 +1044,16 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
             v_min += __vmin
             v_max += __vmax
-            self.pltc.set_clim(vmin=v_min, vmax=v_max)
-            self.graylist[0] = v_min.round(2)
-            self.graylist[1] = v_max.round(2)
-            self.gray_data.emit(self.graylist)
+            if v_min < v_max:
+                self.pltc.set_clim(vmin=v_min, vmax=v_max)
+                self.graylist[0] = v_min.round(2)
+                self.graylist[1] = v_max.round(2)
+                self.gray_data.emit(self.graylist)
 
-            self.newcanvas.draw_idle()
+                self.newcanvas.draw_idle()
+            else:
+                v_min -= __vmin
+                v_max -= __vmax
 
     def mouse_release(self, event):
         if event.button == 2:
