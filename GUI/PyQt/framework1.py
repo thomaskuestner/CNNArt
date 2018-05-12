@@ -951,5 +951,5 @@ class Ui_MainWindow(object):
         self.actionLoad.setText(_translate("MainWindow", "Load previous"))
         self.actionLabels.setText(_translate("MainWindow", "Labels"))
 
-import img_rc
+# import img_rc
 import resrc_rc

@@ -1,1 +1,1 @@
-{"Hatches": [], "Corres": [0], "layout": [2, 2], "Shape": [[196.0, 256.0, 132.0], [196.0, 256.0, 132.0]], "Probs": [], "Pathes": ["C:/Users/hansw/Videos/artefacts/MRPhysics/newProtocol/01_ab/dicom_sorted/t1_tse_tra_Kopf_Motion_0003", "C:/Users/hansw/Videos/artefacts/MRPhysics/newProtocol/07_hs/dicom_sorted/t1_tse_tra_Kopf_0002"], "NrClass": [11], "NResults": ["Pred_result_11.mat   class:11"], "mode": 3, "listA": []}
+{"mode": 2, "Hatches": [], "NResults": [], "Probs": [], "Pathes": [], "layout": [1, 1], "Corres": [], "Shape": [], "NrClass": [], "listA": []}

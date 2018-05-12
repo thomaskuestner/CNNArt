@@ -112,6 +112,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.newcanvas = FigureCanvas(self.newfig)  # must be defined because of selector next
         self.keylist = []  # locate the key in combobox
         self.mrinmain = None
+        self.labelimage = False
 
         self.graylabel = QtWidgets.QLabel()
         self.slicelabel = QtWidgets.QLabel()
@@ -790,9 +791,25 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.pathROI = pathROI
         self.labelbox.clear()
         self.labelbox.addItems(self.labelnames)
-        if type(self.mrinmain)== 'numpy.ndarray': #
-            self.updateList()
 
+        with open('editlabel.json', 'r') as json_data:
+            self.infos = json.load(json_data)
+        with open('editlabel.json', 'w') as json_data:
+            self.infos['names'] = self.labelnames
+            self.infos['colors'] = self.labelcolor
+            self.infos['path'][0] = self.pathROI
+            json_data.write(json.dumps(self.infos))
+
+        # if type(self.mrinmain)== 'numpy.ndarray': #
+        if self.labelimage == True:
+            with open(self.markfile, 'r') as json_data:
+                saveFile = json.load(json_data)
+            with open(self.markfile, 'w') as json_data:
+                saveFile['names']['list'] = self.labelnames
+                saveFile['colors']['list'] = self.labelcolor
+                json_data.write(json.dumps(saveFile))
+            self.updateList()
+            # self.orderROIs()
 ##################################################
     def selectormode(self):
         if self.selectoron == False:
@@ -862,7 +879,6 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             cfg = yaml.safe_load(ymlfile)
         dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
         self.selectorPath = QtWidgets.QFileDialog.getExistingDirectory(self, "choose the image to view", dbinfo.sPathIn)
-
         if self.selectorPath:
             probandname = os.path.split(os.path.split(os.path.split(self.selectorPath)[0])[0])[1]
             self.markfile = str(self.pathROI) + '/' + str(probandname) + '.json'
@@ -879,6 +895,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def loadSelect(self): # from loadEnd
         self.mrinmain = self.newMR.voxel_ndarray
+        self.labelimage = True
         self.ind = 0
         self.slices = self.mrinmain.shape[2]
 
@@ -910,6 +927,9 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         with open('editlabel.json', 'w') as json_data:
             json_data.write(json.dumps(self.infos))
 
+        self.labelbox.clear()
+        self.labelbox.addItems(self.labelnames)
+
         self.orderROIs()
 
     def orderROIs(self):
@@ -931,7 +951,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.keylist = []
         self.labelWidget.clear()
         for element in self.third:
-            oldkey =element[0]+element[1]+element[2]+element[3]   # format?
+            oldkey =element[0]+element[1]+element[2]+element[3]
             self.keylist.append(oldkey)
             item=self.labelnames[int(oldkey[3])] + '-'+ oldkey[4]+oldkey[5] + '-'+ oldkey[0]+oldkey[1] + '/' + str(self.slices)
             self.labelWidget.addItem(item)
