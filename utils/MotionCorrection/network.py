@@ -24,8 +24,7 @@ def fCreateLeakyReluConv2D(filters, kernel_size=(3, 3), strides=(1, 1), padding=
                         kernel_size=kernel_size,
                         strides=strides,
                         padding=padding,
-                        kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                        kernel_initializer='he_normal')(inputs)
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
         return LeakyReLU()(conv2d)
     return f
 
@@ -39,8 +38,7 @@ def fCreateLeakyReluBNConv2D(filters, kernel_size=(3, 3), strides=(1, 1), paddin
                         kernel_size=kernel_size,
                         strides=strides,
                         padding=padding,
-                        kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                        kernel_initializer='he_normal')(inputs)
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
         output = BatchNormalization(axis=1)(output)
 
         return LeakyReLU()(output)
@@ -56,8 +54,7 @@ def fCreateLeakyReluConv3D(filters, kernel_size=(3, 3, 3), strides=(1, 1, 1), pa
                         kernel_size=kernel_size,
                         strides=strides,
                         padding=padding,
-                        kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                        kernel_initializer='he_normal')(inputs)
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
         return LeakyReLU()(conv3d)
     return f
 
@@ -71,8 +68,7 @@ def fCreateLeakyReluBNConv3D(filters, kernel_size, strides, padding='same'):
                         kernel_size=kernel_size,
                         strides=strides,
                         padding=padding,
-                        kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                        kernel_initializer='he_normal')(inputs)
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
         return BatchNormalization(axis=1)(LeakyReLU()(conv3d))
     return f
 
@@ -149,8 +145,7 @@ def fCreateConv2DTranspose(filters, strides, kernel_size=(3, 3), padding='same')
                                  kernel_size=kernel_size,
                                  strides=strides,
                                  padding=padding,
-                                 kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                                 kernel_initializer='he_normal')(inputs)
+                                 kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
 
         return LeakyReLU()(conv2d)
     return f
@@ -165,8 +160,7 @@ def fCreateConv2DBNTranspose(filters, strides, kernel_size=(3, 3), padding='same
                                  kernel_size=kernel_size,
                                  strides=strides,
                                  padding=padding,
-                                 kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                                 kernel_initializer='he_normal')(inputs)
+                                 kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
 
         output = BatchNormalization(axis=1)(output)
         return LeakyReLU()(output)
@@ -182,8 +176,7 @@ def fCreateConv3DTranspose(filters, strides, kernel_size=(3, 3, 3), padding='sam
                                  kernel_size=kernel_size,
                                  strides=strides,
                                  padding=padding,
-                                 kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                                 kernel_initializer='he_normal')(inputs)
+                                 kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
 
         return LeakyReLU()(conv2d)
     return f
@@ -199,8 +192,7 @@ def fCreateConv2D_InceptionBlock(filters):
                           kernel_size=(1, 1),
                           strides=(1, 1),
                           padding='same',
-                          kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                          kernel_initializer='he_normal')(inputs)
+                          kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
         branch_1 = LeakyReLU()(branch_1)
 
         # branch 3x3
@@ -208,14 +200,12 @@ def fCreateConv2D_InceptionBlock(filters):
                           kernel_size=(1, 1),
                           strides=(1, 1),
                           padding='same',
-                          kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                          kernel_initializer='he_normal')(inputs)
+                          kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
         branch_3 = Conv2D(filters=filters[2],
                           kernel_size=(3, 3),
                           strides=(1, 1),
                           padding='same',
-                          kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                          kernel_initializer='he_normal')(branch_3)
+                          kernel_regularizer=l1_l2(l1_reg, l2_reg))(branch_3)
         branch_3 = LeakyReLU()(branch_3)
 
         # branch 5x5
@@ -223,14 +213,12 @@ def fCreateConv2D_InceptionBlock(filters):
                           kernel_size=(1, 1),
                           strides=(1, 1),
                           padding='same',
-                          kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                          kernel_initializer='he_normal')(inputs)
+                          kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
         branch_5 = Conv2D(filters=filters[1],
                           kernel_size=(5, 5),
                           strides=(1, 1),
                           padding='same',
-                          kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                          kernel_initializer='he_normal')(branch_5)
+                          kernel_regularizer=l1_l2(l1_reg, l2_reg))(branch_5)
         branch_5 = LeakyReLU()(branch_5)
 
         # branch maxpooling
@@ -239,8 +227,7 @@ def fCreateConv2D_InceptionBlock(filters):
                              kernel_size=(1, 1),
                              strides=(1, 1),
                              padding='same',
-                             kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                             kernel_initializer='he_normal')(branch_pool)
+                             kernel_regularizer=l1_l2(l1_reg, l2_reg))(branch_pool)
         branch_pool = LeakyReLU()(branch_pool)
 
         # concatenate branches together
@@ -258,8 +245,7 @@ def fCreateConv3D_InceptionBlock(filters):
                           kernel_size=(1, 1, 1),
                           strides=(1, 1, 1),
                           padding='same',
-                          kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                          kernel_initializer='he_normal')(inputs)
+                          kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
         branch_1 = LeakyReLU()(branch_1)
 
         # branch 3x3
@@ -267,14 +253,12 @@ def fCreateConv3D_InceptionBlock(filters):
                           kernel_size=(1, 1, 1),
                           strides=(1, 1, 1),
                           padding='same',
-                          kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                          kernel_initializer='he_normal')(inputs)
+                          kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
         branch_3 = Conv3D(filters=filters[2],
                           kernel_size=(3, 3, 3),
                           strides=(1, 1, 1),
                           padding='same',
-                          kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                          kernel_initializer='he_normal')(branch_3)
+                          kernel_regularizer=l1_l2(l1_reg, l2_reg))(branch_3)
         branch_3 = LeakyReLU()(branch_3)
 
         # branch 5x5
@@ -282,14 +266,12 @@ def fCreateConv3D_InceptionBlock(filters):
                           kernel_size=(1, 1, 1),
                           strides=(1, 1, 1),
                           padding='same',
-                          kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                          kernel_initializer='he_normal')(inputs)
+                          kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
         branch_5 = Conv3D(filters=filters[1],
                           kernel_size=(5, 5, 5),
                           strides=(1, 1, 1),
                           padding='same',
-                          kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                          kernel_initializer='he_normal')(branch_5)
+                          kernel_regularizer=l1_l2(l1_reg, l2_reg))(branch_5)
         branch_5 = LeakyReLU()(branch_5)
 
         # branch maxpooling
@@ -298,8 +280,7 @@ def fCreateConv3D_InceptionBlock(filters):
                              kernel_size=(1, 1, 1),
                              strides=(1, 1, 1),
                              padding='same',
-                             kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                             kernel_initializer='he_normal')(branch_pool)
+                             kernel_regularizer=l1_l2(l1_reg, l2_reg))(branch_pool)
         branch_pool = LeakyReLU()(branch_pool)
 
         # concatenate branches together

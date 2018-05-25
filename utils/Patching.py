@@ -46,6 +46,7 @@ def fRigidPatching(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,
                     dPatches[:,:,idxPatch] = dPatch
                     idxPatch += 1
 
+        print(idxPatch)
         dPatches = dPatches[:, :, 0:idxPatch]
         dLabels = np.ones((dPatches.shape[2]))
     elif sLabeling == 'patch':

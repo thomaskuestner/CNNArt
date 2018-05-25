@@ -9,7 +9,7 @@ motion_head: &id001
    bestmodel : {CNN2D: "head_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_abd: &id002
-   name      : "motion_abd"
+   name      : "motion_abd" 
    dataref   : ["t1_tse_tra_fs_mbh_Leber_0004"]
    labelref  : [0]
    dataart   : ["t1_tse_tra_fs_mbh_Leber_Motion_0005"]
@@ -17,7 +17,16 @@ motion_abd: &id002
    pathout   : "/no_backup/d1242/Abdcross"
    bestmodel : {CNN2D: "abdomen_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
-motion_head_abd: &id003
+motion_becken: &id003
+   name      : "motion_becken"
+   dataref   : ["t1_tse_tra_fs_Becken_0008"]
+   labelref  : [0]
+   dataart   : ["t1_tse_tra_fs_Becken_Motion_0010"]
+   labelart  : [1]
+   pathout   : "/no_backup/d1242/Pelvis"
+   bestmodel : {CNN2D: "head_becken_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
+#
+motion_head_abd: &id004
    name      : "motion_head_abd"
    dataref   : ["t1_tse_tra_Kopf_0002", "t1_tse_tra_fs_mbh_Leber_0004"]
    labelref  : [0, 0]
@@ -26,7 +35,7 @@ motion_head_abd: &id003
    pathout   : "/no_backup/d1242/Head-Abdcross"
    bestmodel : {CNN2D: "head_abd_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
-motion_head_becken: &id004
+motion_head_becken: &id005
    name      : "motion_head_becken"
    dataref   : ["t1_tse_tra_Kopf_0002", "t1_tse_tra_fs_Becken_0008"]
    labelref  : [0, 0]
@@ -35,7 +44,7 @@ motion_head_becken: &id004
    pathout   : "/no_backup/d1242/Head-Beckencross"
    bestmodel : {CNN2D: "head_becken_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
-motion_head_becken: &id005
+motion_head_abd_becken: &id006
    name      : "motion_head_abd_becken"
    dataref   : ["t1_tse_tra_Kopf_0002", "t1_tse_tra_fs_mbh_Leber_0004", "t1_tse_tra_fs_Becken_0008"]
    labelref  : [0, 0, 0]
@@ -58,14 +67,13 @@ selectedDatabase: *id001
 # bodyRegion: abd, head, all
 # network: CNN2D, CNN3D, MNetArt, VNetArt
 # network with muntiscaleSeparated method: motion_all_CNN2D_multiscale, motion_VNet_multiscale
-# new modification of VNet with inception block: motion_VNet_Inception
 network : "motion_all_CNN2D"
 
 # scaling range
 range : [0, 1]
 # patches
-patchSize : [40, 40] # [x, y] or [x,y,z], but z should not larger than 10, else too much zero-padding when scaling factor is small
-patchOverlap : 0.5 # 50%
+patchSize : [80, 80] # [x, y] or [x,y,z], but z should not larger than 10, else too much zero-padding when scaling factor is small
+patchOverlap : 0.8 # 50%
 # sLabeling strategy
 # 'volume': volume-wise labeling
 # 'patch': patch-wise labeling
@@ -86,14 +94,14 @@ dSplitval : 0.1
 # v1.1: grid and none are the same -> automatic switching if batchSize|learningRate are arrays, then 'grid', else 'none'
 sOpti : "grid"
 # optimized parameters
-batchSize : [128]
-lr : [0.1, 0.01, 0.05, 0.005, 0.001]
+batchSize : [64]
+lr : [0.0001]
 # amount of epochs
-epochs : 300
+epochs : 80
 # perform training (true) or prediction (false)
 lTrain : true
 # save intermediate results
-lSave : false
+lSave : true
 # (list of) path(s) of to be predicted images
 lPredictImg : ["/med_data/ImageSimilarity/Databases/MRPhysics/..."] 
 # (list with) labels of to be predicted images (either scalar or path to patch-wise label file)
@@ -109,30 +117,29 @@ sTrainingMethod : "None"
 # lScaleFactor: the changing rate of patch size in scaling process
 # factor < 1 means down sampling later, factor > 1 up sampling later
 # in "MultiScaleSeparated" method: only one down sample rate is supported, this corresponds one bypass in CNN
-lScaleFactor : [0.5, 1]
+lScaleFactor : [1, 2]
 
 # lCorrection
 # true: artifact correction
-# false: classification
-lCorrection: false
+# false: classifications
+lCorrection: true
 # parameters in artifacts correction
 correction:
   sCorrection: "motion_VAE2D"
-  bestModel: "vae_weight_ps_48_bs_128_lr_0.0001_10_mar_new_augmentation"
+  bestModel: "vae_weight_ps_80_bs_64_lr_0.0001_06_hr_scaled255"
   pl_network: "vgg19"
   loss_model: ""
   kl_weight: 1
-  mse_weight: 0
   tv_weight: 0
   ge_weight: 10
-  charbonnier_weight: 0.1
   perceptual_weight: 0.00001
+  mse_weight: 0
+  charbonnier_weight: 0.1
   loss_ref2ref: 0.4
   loss_art2ref: 0.6
   unpatch: true
   nScale: 255
-  actualSize: [256, 196]
+  actualSize: [192, 320, 40] # Head:[256, 196, 40]  Abdomen 01_ab: [256, 320, 30] Abdomen 06_hr: [192, 320, 30] Abdomen 17_ks: [260, 320, 30] Becken 10_mar: [240, 320, 40]
   evaluate: true
-  test_patient: "01_ab"
+  test_patient: "10_mar"
   augmentation: false
-  architecture: 'new'

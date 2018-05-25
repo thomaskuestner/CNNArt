@@ -65,53 +65,28 @@ def createModel(patchSize, dHyper):
     x_ref = Input(shape=(1, patchSize[0], patchSize[1]))
     x_art = Input(shape=(1, patchSize[0], patchSize[1]))
 
-    if dHyper['architecture'] == 'old':
-        # create respective encoders
-        encoded_ref = encode(x_ref, patchSize)
-        encoded_art = encode(x_art, patchSize)
+    encoded_ref, conv_1_ref = encode(x_ref, patchSize)
+    encoded_art, conv_1_art = encode(x_art, patchSize)
 
-        # concatenate the encoded features together
-        combined = concatenate([encoded_ref, encoded_art], axis=0)
+    # concatenate the encoded features together
+    conv_1 = concatenate([conv_1_ref, conv_1_art], axis=0)
+    conv_2 = concatenate([encoded_ref, encoded_art], axis=0)
 
-        # create the shared encoder
-        z, z_mean, z_log_var = encode_shared(combined, patchSize)
+    # create the shared encoder
+    z, z_mean, z_log_var, conv_3, conv_4 = encode_shared(conv_2, patchSize)
 
-        # create the decoder
-        decoded = decode(z, patchSize)
+    # create the decoder
+    decoded = decode(z, patchSize, conv_1, conv_2, conv_3, conv_4)
 
-        # separate the concatenated images
-        decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
-        decoded_art2ref = Lambda(lambda input: input[input.shape[0]//2:, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
+    # separate the concatenated images
+    decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
+    decoded_art2ref = Lambda(lambda input: input[input.shape[0]//2:, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
 
-        # input to CustomLoss Layer
-        [decoded_ref2ref, decoded_art2ref] = CustomLossLayer(dHyper, patchSize)([x_ref, decoded_ref2ref, decoded_art2ref, z_log_var, z_mean])
+    # input to CustomLoss Layer
+    [decoded_ref2ref, decoded_art2ref] = CustomLossLayer(dHyper, patchSize)([x_ref, decoded_ref2ref, decoded_art2ref, z_log_var, z_mean])
 
-        # generate the VAE and encoder model
-        vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
-
-    else:
-        encoded_ref, conv_1_ref = encode_new(x_ref, patchSize)
-        encoded_art, conv_1_art = encode_new(x_art, patchSize)
-
-        # concatenate the encoded features together
-        conv_1 = concatenate([conv_1_ref, conv_1_art], axis=0)
-        conv_2 = concatenate([encoded_ref, encoded_art], axis=0)
-
-        # create the shared encoder
-        z, z_mean, z_log_var, conv_3 = encode_shared_new(conv_2, patchSize)
-
-        # create the decoder
-        decoded = decode_new(z, patchSize, conv_1, conv_2, conv_3)
-
-        # separate the concatenated images
-        decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
-        decoded_art2ref = Lambda(lambda input: input[input.shape[0]//2:, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
-
-        # input to CustomLoss Layer
-        [decoded_ref2ref, decoded_art2ref] = CustomLossLayer(dHyper, patchSize)([x_ref, decoded_ref2ref, decoded_art2ref, z_log_var, z_mean])
-
-        # generate the VAE and encoder model
-        vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
+    # generate the VAE and encoder model
+    vae = Model([x_ref, x_art], [decoded_ref2ref, decoded_art2ref])
 
     return vae
 
@@ -132,6 +107,16 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
     train_art = dData['train_art']
     test_ref = dData['test_ref']
     test_art = dData['test_art']
+
+    print(np.max(train_ref))
+    print(np.min(train_ref))
+    print(np.max(train_art))
+    print(np.min(train_art))
+
+    print(np.max(test_ref))
+    print(np.min(test_ref))
+    print(np.max(test_art))
+    print(np.min(test_art))
 
     train_ref = np.expand_dims(train_ref, axis=1)
     train_art = np.expand_dims(train_art, axis=1)
@@ -155,8 +140,7 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
 
 
     if dHyper['augmentation']:
-        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_new_augmentation.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
-        # vae.load_weights(sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_new_architecture.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient']))
+        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_augmentation.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
 
         lossPlot_file = weights_file[:-3] + '.png'
         plotLoss = PlotLosses(lossPlot_file)
@@ -178,8 +162,8 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
                           verbose=1,
                           callbacks=callback_list)
     else:
-        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}_new_architecture2.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
-        #vae.load_weights(weights_file)
+        weights_file = sOutPath + os.sep + 'vae_weight_ps_{}_bs_{}_lr_{}_{}.h5'.format(patchSize[0], batchSize, lr, dHyper['test_patient'])
+        # vae.load_weights(weights_file)
 
         lossPlot_file = weights_file[:-3] + '.png'
         plotLoss = PlotLosses(lossPlot_file)
@@ -216,8 +200,8 @@ def fPredict(test_ref, test_art, dParam, dHyper):
 
     vae.load_weights(weights_file)
 
-    test_ref = np.expand_dims(test_ref, axis=1)
-    test_art = np.expand_dims(test_art, axis=1)
+    test_ref = np.expand_dims(test_ref, axis=1)[:4320]
+    test_art = np.expand_dims(test_art, axis=1)[:4320]
 
     predict_ref, predict_art = vae.predict([test_ref, test_art], dParam['batchSize'][0], verbose=1)
 
@@ -237,7 +221,8 @@ def fPredict(test_ref, test_art, dParam, dHyper):
 
 
         if dHyper['evaluate']:
-            fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(10, 10), sharex=True, sharey=True)
+            fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(15, 10), sharex=True, sharey=True)
+            # fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(15, 15), sharex=True, sharey=True)
             ax = axes.ravel()
             plt.gray()
             label = 'NRMSE: {:.2f}, SSIM: {:.3f}, NMI: {:.3f}'
@@ -254,7 +239,7 @@ def fPredict(test_ref, test_art, dParam, dHyper):
 
                 ax[2].imshow(predict_art[i])
                 ax[2].set_xlabel(label.format(nrmse(test_ref[i], predict_art[i]), ssim(test_ref[i], predict_art[i], data_range=(predict_art[i].max() - predict_art[i].min())), nmi(test_ref[1].flatten(), predict_art[i].flatten())))
-                ax[2].set_title('original reconstructed image')
+                ax[2].set_title('reconstructed image')
 
                 # TV denoiser
                 ax[3].imshow(test_art_tv_1[i])
