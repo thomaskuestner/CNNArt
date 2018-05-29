@@ -1,19 +1,30 @@
 # -*- coding: utf-8 -*-
 import os
 import numpy as np
-import matplotlib.pyplot as plt
+import sys
 import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 matplotlib.use("Qt5Agg")
-from PyQt5 import QtCore
+from PyQt5 import QtCore,QtWidgets
 from PyQt5.QtCore import pyqtSlot,QStringListModel,pyqtSignal
-#from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QSizePolicy, QWidget, QListView,QMessageBox,QFileDialog,QDialog,QPushButton
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QSizePolicy, QWidget, QListView,QMessageBox,QFileDialog,QDialog,QPushButton
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from numpy import arange, sin, pi
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from Ui_matplotlib_pyqt_2ListView3w import Ui_MainWindow
+from Ui_3 import Ui_MainWindow
 import h5py
+from activeview import *
+from keras.utils.vis_utils import plot_model, model_to_dot
+from keras.models import load_model
+from loadf import *
+
+import tensorflow as tf
+import keras.backend as K
+import network_visualization
+from network_visualization import *
+
 #from network_visualization import plot_mosaic,on_click
 
 
@@ -31,111 +42,554 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
 
-        self.matplotlibwidget_static.hide()
-        self.matplotlibwidget_static_2.hide()
-        self.matplotlibwidget_static_3.hide()
+        self.matplotlibwidget_static.show()
+        # self.matplotlibwidget_static_2.hide()
+        self.scrollArea.show()
+        self.horizontalSliderPatch.hide()
+        self.horizontalSliderSlice.hide()
 
-        #in the listView the select name will save in chosenActivationName
-        self.chosenActivationName = []
+        self.labelPatch.hide()
+        self.labelSlice.hide()
+        # self.horizontalSliderSS.hide()
+
+        self.lcdNumberPatch.hide()
+        self.lcdNumberSlice.hide()
+        # self.lcdNumberSS.hide()
+
+        self.radioButton_3.hide()
+        self.radioButton_4.hide()
+
+        self.wyChooseFile.setToolTip('Choose .H5 File')
+        self.wyShowArchitecture.setToolTip('Show the Architecture')
+        self.radioButton.setToolTip('Weights of Filters')
+        self.radioButton_2.setToolTip('Feature Maps')
+        self.wyPlot.setToolTip('Plot Weights or Filters')
+        self.labelPatch.setToolTip('Number of Input Patch')
+        self.labelSlice.setToolTip('Number of Feature Maps')
+        self.wySubsetSelection.setToolTip('Created Input Patches With Subset Selection')
+        self.radioButton_3.setToolTip('Plot the 1st input')
+        self.radioButton_4.setToolTip('Plot the 2nd input')
+
+        self.resetW=False
+        self.resetF = False
+        self.resetS = False
+
+        self.twoInput=False
+        self.chosenLayerName = []
         # the slider's value is the chosen patch's number
-        self.chosenPatchNumber = 0
+        self.chosenWeightNumber =1
+        self.chosenWeightSliceNumber=1
+        self.chosenPatchNumber = 1
+        self.chosenPatchSliceNumber =1
+        self.chosenSSNumber = 1
         self.openfile_name=''
+        self.inputalpha = '0.19'
+        self.inputGamma = '0.0000001'
+
+        self.model={}
         self.qList=[]
+        self.totalWeights=0
+        self.totalWeightsSlices =0
         self.totalPatches=0
+        self.totalPatchesSlices =0
+        self.totalSS=0
 
-        # from the .h5 file extract the name of each layer and the total number of patches
-        self.pushButton_4.clicked.connect(self.openfile)
-        self.listView.clicked.connect(self.clickList_1)
+        self.modelDimension= ''
+        self.modelName=''
+        self.modelInput={}
+        self.modelInput2={}
+        self.ssResult={}
+        self.activations = {}
+        self.act = {}
+        self.weights ={}
+        self.w={}
+        self.LayerWeights = {}
+        self.subset_selection = {}
+        self.subset_selection_2 = {}
+        self.radioButtonValue=[]
+        self.listView.clicked.connect(self.clickList)
 
-        #self.horizontalSlider.valueChanged.connect(self.sliderValue)
-        self.horizontalSlider.sliderReleased.connect(self.sliderValue)
-        self.horizontalSlider.valueChanged.connect(self.lcdNumber.display)
+        self.W_F=''
 
-    def openfile(self):
-        self.openfile_name = QFileDialog.getOpenFileName(self,'Choose the file','.','H5 files(*.h5)')[0]
-        self.qList, self.totalPatches = self.show_activation_names()
-        self.horizontalSlider.setMinimum(0)
-        self.horizontalSlider.setMaximum(self.totalPatches - 1)
-        self.textEdit.setPlainText(self.openfile_name)
+        # slider of the weight and feature
+        self.horizontalSliderPatch.sliderReleased.connect(self.sliderValue)
+        self.horizontalSliderPatch.valueChanged.connect(self.lcdNumberPatch.display)
+
+        self.horizontalSliderSlice.sliderReleased.connect(self.sliderValue)
+        self.horizontalSliderSlice.valueChanged.connect(self.lcdNumberSlice.display)
+
+        # self.matplotlibwidget_static.mpl.wheel_scroll_W_signal.connect(self.wheelScrollW)
+        self.matplotlibwidget_static.mpl.wheel_scroll_signal.connect(self.wheelScroll)
+        # self.matplotlibwidget_static.mpl.wheel_scroll_3D_signal.connect(self.wheelScroll)
+        # self.matplotlibwidget_static.mpl.wheel_scroll_SS_signal.connect(self.wheelScrollSS)
+
+        self.lineEdit.textChanged[str].connect(self.textChangeAlpha)
+        self.lineEdit_2.textChanged[str].connect(self.textChangeGamma)
+
+
+    def textChangeAlpha(self,text):
+        self.inputalpha = text
+        # if text.isdigit():
+        #     self.inputalpha=text
+        # else:
+        #     self.alphaShouldBeNumber()
+
+
+    def textChangeGamma(self,text):
+        self.inputGamma = text
+        # if text.isdigit():
+        #     self.inputGamma=text
+        # else:
+        #     self.GammaShouldBeNumber()
+
+    def wheelScroll(self,ind,oncrollStatus):
+        if oncrollStatus=='onscroll':
+            self.horizontalSliderPatch.setValue(ind)
+            self.horizontalSliderPatch.valueChanged.connect(self.lcdNumberPatch.display)
+        elif oncrollStatus=='onscrollW' or oncrollStatus=='onscroll_3D':
+            self.wheelScrollW(ind)
+        elif oncrollStatus=='onscrollSS':
+            self.wheelScrollSS(ind)
+        else:
+            pass
+
+    def wheelScrollW(self,ind):
+        self.horizontalSliderPatch.setValue(ind)
+        self.horizontalSliderPatch.valueChanged.connect(self.lcdNumberPatch.display)
+
+    def wheelScrollSS(self,indSS):
+        self.horizontalSliderPatch.setValue(indSS)
+        self.horizontalSliderPatch.valueChanged.connect(self.lcdNumberPatch.display)
+
+    def clickList(self,qModelIndex):
+
+        self.chosenLayerName = self.qList[qModelIndex.row()]
+
+    def show_layer_names(self):
+        qList = []
+        activations = self.model['activations']
+
+        for i in activations:
+            qList.append(i)
+            layerPath = 'activations' + '/' + i
+            self.act[i] = self.model[layerPath]
+            if self.act[i].ndim==5 and self.modelDimension=='3D':
+                self.act[i]=np.transpose(self.act[i],(0,4,1,2,3))
+        self.qList = qList
 
     def sliderValue(self):
-        self.chosenPatchNumber=self.horizontalSlider.value()
-        self.matplotlibwidget_static_2.mpl.feature_plot(self.chosenActivationName, self.chosenPatchNumber,self.openfile_name)
+        if self.W_F=='w':
 
-    @pyqtSlot()
-    def on_pushButton_clicked(self):
-        if len(self.openfile_name) != 0:
-            # show the weights
-            self.matplotlibwidget_static_2.hide()
-            self.matplotlibwidget_static_3.hide()
-            self.matplotlibwidget_static.show()
-            self.matplotlibwidget_static.mpl.weights_plot(self.openfile_name)
+            self.chosenWeightNumber=self.horizontalSliderPatch.value()
+            self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+            self.overlay.setGeometry(QtCore.QRect(700, 350, 171, 141))
+            self.overlay.show()
+
+            from loadf import loadImage_weights_plot_3D
+            self.wyPlot.setDisabled(True)
+            self.newW3D = loadImage_weights_plot_3D(self.matplotlibwidget_static, self.w, self.chosenWeightNumber,
+                                                    self.totalWeights, self.totalWeightsSlices)
+            self.newW3D.trigger.connect(self.loadEnd)
+            self.newW3D.start()
+
+            # self.matplotlibwidget_static.mpl.weights_plot_3D(self.w, self.chosenWeightNumber, self.totalWeights,self.totalWeightsSlices)
+        elif self.W_F=='f':
+
+            if self.modelDimension=='2D':
+                self.chosenPatchNumber=self.horizontalSliderPatch.value()
+                self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                self.overlay.setGeometry(QtCore.QRect(700, 350, 171, 141))
+                self.overlay.show()
+
+                from loadf import loadImage_features_plot
+                self.wyPlot.setDisabled(True)
+                self.newf = loadImage_features_plot(self.matplotlibwidget_static, self.chosenPatchNumber)
+                self.newf.trigger.connect(self.loadEnd)
+                self.newf.start()
+                # self.matplotlibwidget_static.mpl.features_plot(self.chosenPatchNumber)
+            elif self.modelDimension == '3D':
+
+                self.chosenPatchNumber = self.horizontalSliderPatch.value()
+                self.chosenPatchSliceNumber =self.horizontalSliderSlice.value()
+                self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                self.overlay.setGeometry(QtCore.QRect(700, 350, 171, 141))
+                self.overlay.show()
+
+                from loadf import loadImage_features_plot_3D
+                self.wyPlot.setDisabled(True)
+                self.newf = loadImage_features_plot_3D(self.matplotlibwidget_static, self.chosenPatchNumber,
+                                                       self.chosenPatchSliceNumber)
+                self.newf.trigger.connect(self.loadEnd)
+                self.newf.start()
+                # self.matplotlibwidget_static.mpl.features_plot_3D(self.chosenPatchNumber,self.chosenPatchSliceNumber)
+        elif self.W_F=='s':
+
+            self.chosenSSNumber = self.horizontalSliderPatch.value()
+            self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+            self.overlay.setGeometry(QtCore.QRect(700, 350, 171, 141))
+            self.overlay.show()
+
+            from loadf import loadImage_subset_selection_plot
+            self.wyPlot.setDisabled(True)
+            self.newf = loadImage_subset_selection_plot(self.matplotlibwidget_static, self.chosenSSNumber)
+            self.newf.trigger.connect(self.loadEnd)
+            self.newf.start()
+            # self.matplotlibwidget_static.mpl.subset_selection_plot(self.chosenSSNumber)
+
         else:
-            self.showChooseFileDialog()
+            pass
+
+    def sliderValueSS(self):
+        self.chosenSSNumber=self.horizontalSliderSS.value()
+        # self.matplotlibwidget_static_2.mpl.subset_selection_plot(self.chosenSSNumber)
+        self.matplotlibwidget_static.mpl.subset_selection_plot(self.chosenSSNumber)
 
     @pyqtSlot()
-    def on_pushButton_2_clicked(self):
+    def on_wyChooseFile_clicked(self):
+        self.openfile_name = QFileDialog.getOpenFileName(self,'Choose the file','.','H5 files(*.h5)')[0]
+        if len(self.openfile_name)==0:
+            pass
+        else:
+            self.horizontalSliderPatch.hide()
+            self.horizontalSliderSlice.hide()
+            self.labelPatch.hide()
+            self.labelSlice.hide()
+            self.lcdNumberSlice.hide()
+            self.lcdNumberPatch.hide()
+            self.matplotlibwidget_static.mpl.fig.clf()
 
-        if len(self.openfile_name)!=0:
-            self.matplotlibwidget_static.hide()
-            self.matplotlibwidget_static_3.hide()
+
+            self.model=h5py.File(self.openfile_name,'r')
+            # self.model['modelDimension'] = str(self.model['modelDimension'].value)[3:5]
+            a=self.model['modelDimension'].value
+            self.modelDimension=a
+            # self.modelDimension=str(a)[3:5]
+
+            self.twoInput = self.model['twoInput'].value
+            if self.twoInput:
+                self.radioButton_3.show()
+                self.radioButton_4.show()
+
+            self.modelName=self.model['modelName'].value
+            temp_model=load_model(self.modelName)
+            plot_model(temp_model, 'model.png')
+            if self.twoInput:
+                self.modelInput=temp_model.input[0]
+                self.modelInput2=temp_model.input[1]
+            else:
+                self.modelInput = temp_model.input
+
+            self.weights =self.model['weights']
+
+            if self.modelDimension =='3D':
+                for i in self.weights:
+                    self.LayerWeights[i] = self.weights[i].value
+                    if self.LayerWeights[i].ndim == 5:
+                        self.LayerWeights[i] = np.transpose(self.LayerWeights[i], (4,3,2,0,1))
+            elif self.modelDimension =='2D':
+                for i in self.weights:
+                    # self.layerWeights[i] = self.weights[i].value
+                    self.LayerWeights[i]=self.weights[i].value
+
+                    if self.LayerWeights[i].ndim == 4:
+                        self.LayerWeights[i] = np.transpose(self.LayerWeights[i], (3,2,0,1))
+            else:
+                print('the dimesnion of the weights should be 2D or 3D')
+
+
+            self.show_layer_names()
+
+            self.subset_selection =np.array(self.model['subset_selection'])
+            if self.twoInput:
+                self.subset_selection_2 = np.array(self.model['subset_selection_2'])
+
+            # if self.modelDimension=='2D':
+            #     self.subset_selection = np.transpose(np.array(self.subset_selection), (1, 0, 2, 3))
+            # elif self.modelDimension=='3D':
+            #     self.subset_selection = np.transpose(np.array(self.subset_selection), (1, 0, 2, 3, 4))
+            # else:
+            #     print('the subset selection data should be 2D or 3D')
+            # self.subset_selection = np.squeeze(self.subset_selection, axis=1)
+            self.totalSS = len(self.subset_selection)
+
             # show the activations' name in the List
             slm = QStringListModel();
             slm.setStringList(self.qList)
             self.listView.setModel(slm)
-        else:
-            self.showChooseFileDialog()
-
 
     @pyqtSlot()
-    def on_pushButton_3_clicked(self):
-        if len(self.openfile_name) != 0 :
-            if len(self.chosenActivationName)!=0:
-                # choose which layer's feature maps to be plotted
-                self.matplotlibwidget_static.hide()
-                self.matplotlibwidget_static_3.hide()
-                self.matplotlibwidget_static_2.show()
-                self.matplotlibwidget_static_2.mpl.feature_plot(self.chosenActivationName, self.chosenPatchNumber,self.openfile_name)
-            else:
-                self.showChooseLayerDialog()
-        else:
-            self.showChooseFileDialog()
-
-    @pyqtSlot()
-    def on_pushButton_5_clicked(self):
+    def on_wyShowArchitecture_clicked(self):
+        # Show the structure of the model and plot the weights
         if len(self.openfile_name) != 0:
             # show the weights
-            self.matplotlibwidget_static.hide()
-            self.matplotlibwidget_static_2.hide()
-            self.matplotlibwidget_static_3.show()
-            self.matplotlibwidget_static_3.mpl.subset_selection_plot(self.openfile_name)
+            # self.matplotlibwidget_static_2.hide()
+            # self.matplotlibwidget_static.hide()
+            # self.matplotlibwidget_static_3.show()
+            # self.scrollArea.show()
+            # structure
+            self.canvasStructure = MyMplCanvas()
+
+            self.canvasStructure.loadImage()
+            self.graphicscene = QtWidgets.QGraphicsScene()
+            self.graphicscene.addWidget(self.canvasStructure)
+            self.graphicview = Activeview()
+            self.scrollAreaWidgetContents = QtWidgets.QWidget()
+            self.maingrids = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
+            self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+            self.maingrids.addWidget(self.graphicview)
+            self.graphicview.setScene(self.graphicscene)
+            # self.graphicsView.setScene(self.graphicscene)
+
+        else:
+            self.showChooseFileDialog()
+
+    @pyqtSlot()
+    def on_wyPlot_clicked(self):
+        # self.matplotlibwidget_static_2.hide()
+
+        # Show the structure of the model and plot the weights
+        if len(self.openfile_name) != 0:
+            if self.radioButton.isChecked()== True :
+                if len(self.chosenLayerName) != 0:
+
+                    self.W_F='w'
+                    # show the weights
+                    if self.modelDimension == '2D':
+                        if self.LayerWeights[self.chosenLayerName].ndim==4:
+                            self.lcdNumberPatch.hide()
+                            self.lcdNumberSlice.hide()
+                            self.horizontalSliderPatch.hide()
+                            self.horizontalSliderSlice.hide()
+                            self.labelPatch.hide()
+                            self.labelSlice.hide()
+
+                            self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                            self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                            self.overlay.show()
+
+                            self.matplotlibwidget_static.mpl.getLayersWeights(self.LayerWeights)
+                            from loadf import loadImage_weights_plot_2D
+                            self.wyPlot.setDisabled(True)
+                            self.newW2D = loadImage_weights_plot_2D(self.matplotlibwidget_static,self.chosenLayerName)
+                            self.newW2D.trigger.connect(self.loadEnd)
+                            self.newW2D.start()
+
+                            # self.matplotlibwidget_static.mpl.weights_plot_2D(self.chosenLayerName)
+                            self.matplotlibwidget_static.show()
+                        elif self.LayerWeights[self.chosenLayerName].ndim==0:
+                            self.showNoWeights()
+                        else:
+                            self.showWeightsDimensionError()
+
+                    elif self.modelDimension == '3D':
+                        if self.LayerWeights[self.chosenLayerName].ndim == 5:
+
+                            self.w=self.LayerWeights[self.chosenLayerName]
+                            self.totalWeights=self.w.shape[0]
+                            # self.totalWeightsSlices=self.w.shape[2]
+                            self.horizontalSliderPatch.setMinimum(1)
+                            self.horizontalSliderPatch.setMaximum(self.totalWeights)
+                            # self.horizontalSliderSlice.setMinimum(1)
+                            # self.horizontalSliderSlice.setMaximum(self.totalWeightsSlices)
+                            self.chosenWeightNumber=1
+                            self.horizontalSliderPatch.setValue(self.chosenWeightNumber)
+
+                            self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                            self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                            self.overlay.show()
+
+                            from loadf import loadImage_weights_plot_3D
+                            self.wyPlot.setDisabled(True)
+                            self.newW3D = loadImage_weights_plot_3D(self.matplotlibwidget_static, self.w,self.chosenWeightNumber,self.totalWeights,self.totalWeightsSlices)
+                            self.newW3D.trigger.connect(self.loadEnd)
+                            self.newW3D.start()
+
+                            # self.matplotlibwidget_static.mpl.weights_plot_3D(self.w,self.chosenWeightNumber,self.totalWeights,self.totalWeightsSlices)
+
+                            self.matplotlibwidget_static.show()
+                            self.horizontalSliderSlice.hide()
+                            self.horizontalSliderPatch.show()
+                            self.labelPatch.show()
+                            self.labelSlice.hide()
+                            self.lcdNumberSlice.hide()
+                            self.lcdNumberPatch.show()
+                        elif self.LayerWeights[self.chosenLayerName].ndim==0:
+                            self.showNoWeights()
+                        else:
+                            self.showWeightsDimensionError3D()
+                    else:
+                        print('the dimesnion should be 2D or 3D')
+
+                else:
+                    self.showChooseLayerDialog()
+
+            elif self.radioButton_2.isChecked()== True :
+                if len(self.chosenLayerName) != 0:
+                    self.W_F = 'f'
+                    if self.modelDimension == '2D':
+                        if self.act[self.chosenLayerName].ndim==4:
+                            self.activations=self.act[self.chosenLayerName]
+                            self.totalPatches=self.activations.shape[0]
+
+                            self.matplotlibwidget_static.mpl.getLayersFeatures(self.activations, self.totalPatches)
+
+                            # show the features
+                            self.chosenPatchNumber=1
+                            self.horizontalSliderPatch.setMinimum(1)
+                            self.horizontalSliderPatch.setMaximum(self.totalPatches)
+                            self.horizontalSliderPatch.setValue(self.chosenPatchNumber)
+
+                            self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                            self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                            self.overlay.show()
+
+                            from loadf import loadImage_features_plot
+                            self.wyPlot.setDisabled(True)
+                            self.newf = loadImage_features_plot(self.matplotlibwidget_static,self.chosenPatchNumber)
+                            self.newf.trigger.connect(self.loadEnd)
+                            self.newf.start()
+
+                            # self.matplotlibwidget_static.mpl.features_plot(self.chosenPatchNumber)
+                            self.matplotlibwidget_static.show()
+                            self.horizontalSliderSlice.hide()
+                            self.horizontalSliderPatch.show()
+                            self.labelPatch.show()
+                            self.labelSlice.hide()
+                            self.lcdNumberPatch.show()
+                            self.lcdNumberSlice.hide()
+                        else:
+                            self.showNoFeatures()
+
+                    elif self.modelDimension =='3D':
+                        a=self.act[self.chosenLayerName]
+                        if self.act[self.chosenLayerName].ndim == 5:
+                            self.activations = self.act[self.chosenLayerName]
+                            self.totalPatches = self.activations.shape[0]
+                            self.totalPatchesSlices=self.activations.shape[1]
+
+                            self.matplotlibwidget_static.mpl.getLayersFeatures_3D(self.activations, self.totalPatches,self.totalPatchesSlices)
+
+                            self.chosenPatchNumber=1
+                            self.chosenPatchSliceNumber=1
+                            self.horizontalSliderPatch.setMinimum(1)
+                            self.horizontalSliderPatch.setMaximum(self.totalPatches)
+                            self.horizontalSliderPatch.setValue(self.chosenPatchNumber)
+                            self.horizontalSliderSlice.setMinimum(1)
+                            self.horizontalSliderSlice.setMaximum(self.totalPatchesSlices)
+                            self.horizontalSliderSlice.setValue(self.chosenPatchSliceNumber)
+
+                            self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                            self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                            self.overlay.show()
+
+                            from loadf import loadImage_features_plot_3D
+                            self.wyPlot.setDisabled(True)
+                            self.newf = loadImage_features_plot_3D(self.matplotlibwidget_static, self.chosenPatchNumber,self.chosenPatchSliceNumber)
+                            self.newf.trigger.connect(self.loadEnd)
+                            self.newf.start()
+
+                            # self.matplotlibwidget_static.mpl.features_plot_3D(self.chosenPatchNumber,self.chosenPatchSliceNumber)
+                            self.horizontalSliderSlice.show()
+                            self.horizontalSliderPatch.show()
+                            self.labelPatch.show()
+                            self.labelSlice.show()
+                            self.lcdNumberPatch.show()
+                            self.lcdNumberSlice.show()
+                            self.matplotlibwidget_static.show()
+                        else:
+                            self.showNoFeatures()
+
+                    else:
+                        print('the dimesnion should be 2D or 3D')
+
+                else:
+                    self.showChooseLayerDialog()
+
+            else:
+                self.showChooseButtonDialog()
+
+        else:
+            self.showChooseFileDialog()
+
+    @pyqtSlot()
+    def on_wySubsetSelection_clicked(self):
+        # Show the Subset Selection
+        if len(self.openfile_name) != 0:
+            # show the weights
+            # self.scrollArea.hide()
+            self.W_F ='s'
+            self.chosenSSNumber = 1
+            self.horizontalSliderPatch.setMinimum(1)
+            self.horizontalSliderPatch.setMaximum(self.totalSS)
+            self.horizontalSliderPatch.setValue(self.chosenSSNumber)
+            self.horizontalSliderPatch.valueChanged.connect(self.lcdNumberPatch.display)
+            self.lcdNumberPatch.show()
+            self.lcdNumberSlice.hide()
+            self.horizontalSliderPatch.show()
+            self.horizontalSliderSlice.hide()
+            self.labelPatch.show()
+            self.labelSlice.hide()
+
+
+            # create input patch
+            if self.twoInput==False:
+                self.matplotlibwidget_static.mpl.getSubsetSelections(self.subset_selection, self.totalSS)
+
+                self.createSubset(self.modelInput,self.subset_selection)
+                self.matplotlibwidget_static.mpl.getSSResult(self.ssResult)
+
+                self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                self.overlay.show()
+
+                from loadf import loadImage_subset_selection_plot
+                self.wyPlot.setDisabled(True)
+                self.newf = loadImage_subset_selection_plot(self.matplotlibwidget_static, self.chosenSSNumber)
+                self.newf.trigger.connect(self.loadEnd)
+                self.newf.start()
+
+                # self.matplotlibwidget_static.mpl.subset_selection_plot(self.chosenSSNumber)
+            elif self.twoInput:
+                if self.radioButton_3.isChecked(): # the 1st input
+                    self.matplotlibwidget_static.mpl.getSubsetSelections(self.subset_selection, self.totalSS)
+                    self.createSubset(self.modelInput,self.subset_selection)
+                    self.matplotlibwidget_static.mpl.getSSResult(self.ssResult)
+
+                    self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                    self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                    self.overlay.show()
+
+                    from loadf import loadImage_subset_selection_plot
+                    self.wyPlot.setDisabled(True)
+                    self.newf = loadImage_subset_selection_plot(self.matplotlibwidget_static, self.chosenSSNumber)
+                    self.newf.trigger.connect(self.loadEnd)
+                    self.newf.start()
+
+                elif self.radioButton_4.isChecked(): # the 2nd input
+                    self.matplotlibwidget_static.mpl.getSubsetSelections(self.subset_selection_2, self.totalSS)
+                    self.createSubset(self.modelInput2,self.subset_selection_2)
+                    self.matplotlibwidget_static.mpl.getSSResult(self.ssResult)
+
+                    self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                    self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                    self.overlay.show()
+
+                    from loadf import loadImage_subset_selection_plot
+                    self.wyPlot.setDisabled(True)
+                    self.newf = loadImage_subset_selection_plot(self.matplotlibwidget_static, self.chosenSSNumber)
+                    self.newf.trigger.connect(self.loadEnd)
+                    self.newf.start()
+
+                else:
+                    self.showChooseInput()
+            else:
+                print('the number of input should be 1 or 2')
+
         else:
             self.showChooseFileDialog()
 
     def clickList_1(self, qModelIndex):
         self.chosenActivationName = self.qList[qModelIndex.row()]
-
-    def show_activation_names(self):
-        qList = []
-        model = h5py.File(self.openfile_name, 'r')
-        layersName = []
-        layersFeatures = {}
-        totalPatches = 0
-
-        for i in model['layers']:
-            layerIndex = 'layers' + '/' + i
-
-            for n in model[layerIndex]:
-                qList.append(n)
-
-                if int(i) == 0:
-                    layerName = layerIndex + '/' + n
-                    layersName.append(n)
-                    featurePath = layerName + '/' + 'activation'
-                    layersFeatures[n] = model[featurePath]
-                    totalPatches = layersFeatures[n].shape[0]
-
-        return qList, totalPatches
 
     def showChooseFileDialog(self):
         reply = QMessageBox.information(self,
@@ -149,276 +603,85 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                         "Please select one Layer at first",
                                         QMessageBox.Ok)
 
-class MyMplCanvas(FigureCanvas):
+    def showChooseButtonDialog(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "Please select to plot the weights or the features",
+                                        QMessageBox.Ok)
 
-    def __init__(self, parent=None, width=15, height=15):
+    def showNoWeights(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "This layer does not have weighst,please select other layers",
+                                        QMessageBox.Ok)
 
-        plt.rcParams['font.family'] = ['SimHei']
-        plt.rcParams['axes.unicode_minus'] = False
+    def showWeightsDimensionError(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "The diemnsion of the weights should be 0 or 4",
+                                        QMessageBox.Ok)
 
-        self.fig = plt.figure(figsize=(width, height))
-        self.openfile_name=''
+    def showWeightsDimensionError3D(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "The diemnsion of the weights should be 0 or 5",
+                                        QMessageBox.Ok)
 
-        FigureCanvas.__init__(self, self.fig)
-        self.setParent(parent)
+    def showNoFeatures(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "This layer does not have feature maps, please select other layers",
+                                        QMessageBox.Ok)
 
-        FigureCanvas.setSizePolicy(self,QSizePolicy.Expanding,QSizePolicy.Expanding)
-        FigureCanvas.updateGeometry(self)
+    def loadEnd(self):
+        self.overlay.killTimer(self.overlay.timer)
+        self.overlay.hide()
+        self.wyPlot.setDisabled(False)
 
-    def weights_plot(self,openfile_name):
+    def alphaShouldBeNumber(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "Alpha should be a number!!!",
+                                        QMessageBox.Ok)
 
-        self.openfile_name=openfile_name
-        layersName, layersWeights = self.getLayersWeights()
-        layerLength = len(layersName)
-        axNumber = layerLength * 2 - 1
+    def GammaShouldBeNumber(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "Gamma should be a number!!!",
+                                        QMessageBox.Ok)
 
-        for i in range(axNumber):
+    def createSubset(self,modelInput,subset_selection):
+        class_idx = 0
+        reg_param = 1 / (2e-4)
 
-            self.axes = self.fig.add_subplot(axNumber, 1, i + 1)
-            if i % 2 == 0:
-                bbox_props = dict(boxstyle="round", fc="w", ec="0.5", alpha=0.9)
-                self.axes.text(0.5, 0.5, layersName[int(i / 2)], ha="center", va="center", size=20,
-                               bbox=bbox_props)
-                self.axes.name = layersName[int(i / 2)]
-            elif i != axNumber - 1:
-                self.axes.annotate('', xy=(0.5, 0), xytext=(0.5, 1),
-                                   arrowprops=dict(facecolor='black', shrink=0.05))
-                self.axes.name = 'arrow'
-            else:
-                pass
+        input = modelInput  # tensor
+        cost = -K.sum(K.log(input[:, class_idx] + 1e-8))  # tensor
+        gradient = K.gradients(cost, input)  # list
 
-            self.axes.set_axis_off()
+        sess = tf.InteractiveSession()
+        calcCost = network_visualization.TensorFlowTheanoFunction([input], cost)
+        calcGrad = network_visualization.TensorFlowTheanoFunction([input], gradient)
 
-        self.fig.canvas.mpl_connect('button_press_event', self.on_click_axes)
+        step_size = float(self.inputalpha)
+        reg_param = float(self.inputGamma)
 
-    def feature_plot(self,feature_map,ind,openfile_name):
+        test = subset_selection
+        data_c = test
+        oss_v = network_visualization.SubsetSelection(calcGrad, calcCost, data_c, alpha=reg_param, gamma=step_size)
+        result = oss_v.optimize(np.random.uniform(0, 1.0, size=data_c.shape))
+        result = result * test
+        result[result>0]=1
+        self.ssResult=result
 
-        self.openfile_name=openfile_name
-        layersName, activations = self.getLayersFeatures()
-
-
-        if activations[feature_map].ndim == 4:
-            featMap=activations[feature_map][ind]
-
-            # Compute nrows and ncols for images
-            n_mosaic = len(featMap)
-            nrows = int(np.round(np.sqrt(n_mosaic)))
-            ncols = int(nrows)
-            if (nrows ** 2) < n_mosaic:
-                ncols += 1
-
-            self.fig.clear()
-            # self.draw()
-            # self.show()
-            self.plot_feature_mosaic(featMap, nrows, ncols)
-            self.fig.suptitle("Feature Maps of Patch #{} in Layer '{}'".format(ind, feature_map))
-            self.draw()
-        else:
-            pass
-
-    def subset_selection_plot(self,openfile_name):
-        self.openfile_name=openfile_name
-        subset_selection=self.getSubsetSelections(self.openfile_name)
-        nimgs = len(subset_selection)
-        nrows = int(np.round(np.sqrt(nimgs)))
-        ncols = int(nrows)
-        if (nrows ** 2) < nimgs:
-            ncols += 1
-
-        self.fig=self.plot_subset_mosaic(subset_selection, nrows, ncols, self.fig)
-    def on_click_axes(self,event):
-        """Enlarge or restore the selected axis."""
-
-        ax = event.inaxes
-        layersName, layersWeights = self.getLayersWeights()
-        if ax is None:
-
-            return
-        if event.button is 1:
-
-            f = plt.figure()
-            if ax.name == 'arrow':
-                return
-
-            w = layersWeights[ax.name].value
-            if w.ndim == 4:
-                w = np.transpose(w, (3, 2, 0, 1))
-                mosaic_number = w.shape[0]
-                nrows = int(np.round(np.sqrt(mosaic_number)))
-                ncols = int(nrows)
-
-                if nrows ** 2 < mosaic_number:
-                    ncols += 1
-
-                f = self.plot_weight_mosaic(w[:mosaic_number, 0], nrows, ncols, f)
-                plt.suptitle("Weights of Layer '{}'".format(ax.name))
-                f.show()
-            else:
-                pass
-        else:
-            # No need to re-draw the canvas if it's not a left or right click
-            return
-        event.canvas.draw()
-
-    def getLayersWeights(self):
-        model = h5py.File(self.openfile_name, 'r')
-        layersName = []
-        layersWeights = {}
-
-        for i in model['layers']:
-            layerIndex = 'layers' + '/' + i
-
-            for n in model[layerIndex]:
-                layerName = layerIndex + '/' + n
-                layersName.append(n)
-
-                weightsPath = layerName + '/' + 'weights'
-                layersWeights[n] = model[weightsPath]
-        # model.close()
-        return layersName, layersWeights
-
-    def getLayersFeatures(self):
-        model = h5py.File(self.openfile_name, 'r')
-        layersName = []
-        layersFeatures = {}
-
-        for i in model['layers']:
-            layerIndex = 'layers' + '/' + i
-
-            for n in model[layerIndex]:
-                layerName = layerIndex + '/' + n
-                layersName.append(n)
-
-                featurePath = layerName + '/' + 'activation'
-                layersFeatures[n] = model[featurePath]
-        # model.close()
-        return layersName, layersFeatures
-
-    def getSubsetSelections(self,openfile_name):
-        model = h5py.File(openfile_name, 'r')
-        subset_selection=model['subset_selection']
-        return subset_selection
-
-    def plot_weight_mosaic(self,im, nrows, ncols, fig,**kwargs):
-
-        # Set default matplotlib parameters
-        if not 'interpolation' in kwargs.keys():
-            kwargs['interpolation'] = "none"
-
-        if not 'cmap' in kwargs.keys():
-            kwargs['cmap'] = "gray"
-
-        nimgs = len(im)
-        imshape = im[0].shape
-
-        mosaic = np.zeros(imshape)
-
-
-        for i in range(nimgs):
-            row = int(np.floor(i / ncols))
-            col = i % ncols
-
-            ax = fig.add_subplot(nrows, ncols,i+1)
-            ax.set_xlim(0,imshape[0]-1)
-            ax.set_ylim(0,imshape[1]-1)
-
-            mosaic = im[i]
-
-            ax.imshow(mosaic, **kwargs)
-            ax.set_axis_off()
-
-        fig.canvas.mpl_connect('button_press_event', self.on_click)
-        return fig
-
-    def plot_feature_mosaic(self,im, nrows, ncols, **kwargs):
-
-        # Set default matplotlib parameters
-        if not 'interpolation' in kwargs.keys():
-            kwargs['interpolation'] = "none"
-
-        if not 'cmap' in kwargs.keys():
-            kwargs['cmap'] = "gray"
-
-        nimgs = len(im)
-        imshape = im[0].shape
-
-        mosaic = np.zeros(imshape)
-        #fig.clear()
-
-        for i in range(nimgs):
-            row = int(np.floor(i / ncols))
-            col = i % ncols
-
-            ax = self.fig.add_subplot(nrows, ncols,i+1)
-            ax.set_xlim(0,imshape[0]-1)
-            ax.set_ylim(0,imshape[1]-1)
-
-            mosaic = im[i]
-
-            ax.imshow(mosaic, **kwargs)
-            ax.set_axis_off()
-        self.draw()
-        self.fig.canvas.mpl_connect('button_press_event', self.on_click)
-
-    def plot_subset_mosaic(self,im,nrows, ncols, fig,**kwargs):
-        if not 'interpolation' in kwargs.keys():
-            kwargs['interpolation'] = "none"
-
-        if not 'cmap' in kwargs.keys():
-            kwargs['cmap'] = "gray"
-        im = np.squeeze(im, axis=1)
-        nimgs = len(im)
-        imshape = im[0].shape
-
-        mosaic = np.zeros(imshape)
-
-        for i in range(nimgs):
-            row = int(np.floor(i / ncols))
-            col = i % ncols
-
-            ax = fig.add_subplot(nrows, ncols, i + 1)
-            ax.set_xlim(0, imshape[0] - 1)
-            ax.set_ylim(0, imshape[1] - 1)
-
-            mosaic = im[i]
-
-            ax.imshow(mosaic, **kwargs)
-            ax.set_axis_off()
-        # fig.suptitle("Subset Selection of Patch #{} in Layer '{}'".format(ind, feature_map))
-        fig.canvas.mpl_connect('button_press_event', self.on_click)
-        return fig
-
-    def on_click(self,event):
-        """Enlarge or restore the selected axis."""
-        ax = event.inaxes
-        if ax is None:
-            # Occurs when a region not in an axis is clicked...
-            return
-        if event.button is 1:
-            # On left click, zoom the selected axes
-            ax._orig_position = ax.get_position()
-            ax.set_position([0.1, 0.1, 0.85, 0.85])
-            for axis in event.canvas.figure.axes:
-                # Hide all the other axes...
-                if axis is not ax:
-                    axis.set_visible(False)
-        elif event.button is 3:
-            # On right click, restore the axes
-            try:
-                ax.set_position(ax._orig_position)
-                for axis in event.canvas.figure.axes:
-                    axis.set_visible(True)
-            except AttributeError:
-                # If we haven't zoomed, ignore...
-                pass
-        else:
-            # No need to re-draw the canvas if it's not a left or right click
-            return
-        event.canvas.draw()
-
+    def showChooseInput(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "Please select to plot the input 1 or 2",
+                                        QMessageBox.Ok)
 
 
 class MatplotlibWidget(QWidget):
+
     def __init__(self, parent=None):
         super(MatplotlibWidget, self).__init__(parent)
         self.initUi()
@@ -428,6 +691,13 @@ class MatplotlibWidget(QWidget):
         self.mpl = MyMplCanvas(self, width=15, height=15)
         self.layout.addWidget(self.mpl)
 
+sys._excepthook = sys.excepthook
+def my_exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+
+sys.excepthook = my_exception_hook
 
 if __name__ == '__main__':
     import sys
