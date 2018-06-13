@@ -13,7 +13,7 @@ import utils.Training_Test_Split as ttsplit
 import utils.scaling as scaling
 
 
-def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabeling, range_norm):
+def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabeling, sTrainingMethod='None'):
     # set variables
     model = os.path.basename(os.path.dirname(pathDicom))
     dir = os.path.dirname(os.path.dirname(pathDicom))
@@ -30,7 +30,7 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabelin
 
     # RigidPatching
     if len(patchSize) == 3: # 3D patches
-        dPatches, dLabel = fRigidPatching3D(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,ratio_labeling, sLabeling)
+        dPatches, dLabel = fRigidPatching3D(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,ratio_labeling, sLabeling, sTrainingMethod)
         dPatches = np.transpose(dPatches, (3, 0, 1, 2))
     else:
         dPatches, dLabel = fRigidPatching(scale_dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,ratio_labeling, sLabeling)
@@ -218,3 +218,18 @@ def create_MASK_Array(proband, model, mrt_height, mrt_width, mrt_depth):
     except:
         return mask
 
+def fReadData(pathDicom):
+    # set variables
+    model = os.path.basename(os.path.dirname(pathDicom))
+    dir = os.path.dirname(os.path.dirname(pathDicom))
+    if os.path.basename(dir) == 'dicom_sorted':
+        proband = os.path.basename(os.path.dirname(dir))
+    else:
+        proband = os.path.basename(dir)
+
+    dicom_numpy_array = create_DICOM_Array(os.path.join(pathDicom, ''))
+    range_norm = [0, 1]
+    scale_dicom_numpy_array = (dicom_numpy_array - np.min(dicom_numpy_array)) * (range_norm[1] - range_norm[0]) / (
+    np.max(dicom_numpy_array) - np.min(dicom_numpy_array))
+
+    return scale_dicom_numpy_array
