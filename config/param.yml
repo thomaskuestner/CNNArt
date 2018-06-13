@@ -5,7 +5,7 @@ motion_head: &id001
    labelref  : [0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003"]
    labelart  : [1]
-   pathout   : "/no_backup/d1242/Headcross"
+   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Headcross"
    bestmodel : {CNN2D: "head_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_abd: &id002
@@ -14,7 +14,7 @@ motion_abd: &id002
    labelref  : [0]
    dataart   : ["t1_tse_tra_fs_mbh_Leber_Motion_0005"]
    labelart  : [1]
-   pathout   : "/no_backup/d1242/Abdcross"
+   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Abdcross"
    bestmodel : {CNN2D: "abdomen_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_becken: &id003
@@ -23,7 +23,7 @@ motion_becken: &id003
    labelref  : [0]
    dataart   : ["t1_tse_tra_fs_Becken_Motion_0010"]
    labelart  : [1]
-   pathout   : "/no_backup/d1242/Pelvis"
+   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Beckencross"
    bestmodel : {CNN2D: "head_becken_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_head_abd: &id004
@@ -32,7 +32,7 @@ motion_head_abd: &id004
    labelref  : [0, 0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_mbh_Leber_Motion_0005"]
    labelart  : [1, 1]
-   pathout   : "/no_backup/d1242/Head-Abdcross"
+   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Head-Abdcross"
    bestmodel : {CNN2D: "head_abd_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_head_becken: &id005
@@ -41,7 +41,7 @@ motion_head_becken: &id005
    labelref  : [0, 0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_Becken_Motion_0010"]
    labelart  : [1, 1]
-   pathout   : "/no_backup/d1242/Head-Beckencross"
+   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Head-Beckencross"
    bestmodel : {CNN2D: "head_becken_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_head_abd_becken: &id006
@@ -50,7 +50,7 @@ motion_head_abd_becken: &id006
    labelref  : [0, 0, 0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_mbh_Leber_Motion_0005", "t1_tse_tra_fs_Becken_Motion_0010"]
    labelart  : [1, 1, 1]
-   pathout   : "/no_backup/d1242/Head-Abd-Beckencross"
+   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Allcross"
    bestmodel : {CNN2D: "head_abd_becken_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 #### set parameters ####
@@ -72,8 +72,8 @@ network : "motion_all_CNN2D"
 # scaling range
 range : [0, 1]
 # patches
-patchSize : [80, 80] # [x, y] or [x,y,z], but z should not larger than 10, else too much zero-padding when scaling factor is small
-patchOverlap : 0.8 # 50%
+patchSize : [40, 40] # [x, y] or [x,y,z], but z should not larger than 10, else too much zero-padding when scaling factor is small
+patchOverlap : 0.5 # 50%
 # sLabeling strategy
 # 'volume': volume-wise labeling
 # 'patch': patch-wise labeling
@@ -94,10 +94,10 @@ dSplitval : 0.1
 # v1.1: grid and none are the same -> automatic switching if batchSize|learningRate are arrays, then 'grid', else 'none'
 sOpti : "grid"
 # optimized parameters
-batchSize : [64]
-lr : [0.0001]
+batchSize : [128]
+lr : [0.1, 0.01, 0.05, 0.005, 0.001]
 # amount of epochs
-epochs : 80
+epochs : 300
 # perform training (true) or prediction (false)
 lTrain : true
 # save intermediate results
@@ -122,24 +122,31 @@ lScaleFactor : [1, 2]
 # lCorrection
 # true: artifact correction
 # false: classifications
-lCorrection: true
+lCorrection: false
 # parameters in artifacts correction
 correction:
+  # training model
   sCorrection: "motion_VAE2D"
-  bestModel: "vae_weight_ps_80_bs_64_lr_0.0001_06_hr_scaled255"
+  # predict model
+  bestModel: "vae_weight_ps_80_bs_64_lr_0.0001_10_mar"
+  # loss network for calculating perceptual loss
   pl_network: "vgg19"
   loss_model: ""
-  kl_weight: 1
-  tv_weight: 0
-  ge_weight: 10
-  perceptual_weight: 0.00001
-  mse_weight: 0
-  charbonnier_weight: 0.1
-  loss_ref2ref: 0.4
-  loss_art2ref: 0.6
+  kl_weight: 1 # KL loss weight
+  tv_weight: 0 # TV loss weight
+  ge_weight: 10 # gradient entropy weight
+  perceptual_weight: 0.00001 # perceptual loss weight
+  mse_weight: 0 # MSE loss weight
+  charbonnier_weight: 0.1 # Charbonnier loss weight
+  loss_ref2ref: 0.4 # ref2ref weight
+  loss_art2ref: 0.6 # art2ref weight
   unpatch: true
   nScale: 255
-  actualSize: [192, 320, 40] # Head:[256, 196, 40]  Abdomen 01_ab: [256, 320, 30] Abdomen 06_hr: [192, 320, 30] Abdomen 17_ks: [260, 320, 30] Becken 10_mar: [240, 320, 40]
+  # specify the actual size of the images when predicting
+  # Head:[256, 196, 40]
+  # Abdomen: sizes differ for different patients. e.g. Abdomen 01_ab: [256, 320, 30], Abdomen 06_hr: [192, 320, 30], Abdomen 17_ks: [260, 320, 30] 
+  # Pelvis: sizes differ for different patients. e.g. Pelvis 10_mar: [240, 320, 40], Pelvis 15_yb: [208, 320, 40]  
+  actualSize: [256, 196, 40]
   evaluate: true
   test_patient: "10_mar"
-  augmentation: false
+  augmentation: false # augmentation flag

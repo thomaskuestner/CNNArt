@@ -38,8 +38,8 @@ class CustomLossLayer(Layer):
         self.add_loss(self.dHyper['kl_weight']*K.mean(loss_kl))
 
         # compute MSE loss
-        # mse_loss_ref2ref, mse_loss_art2ref = compute_mse_loss(self.dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
-        # self.add_loss(self.dHyper['mse_weight'] * (self.dHyper['loss_ref2ref']*mse_loss_ref2ref + self.dHyper['loss_art2ref']*mse_loss_art2ref))
+        mse_loss_ref2ref, mse_loss_art2ref = compute_mse_loss(self.dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
+        self.add_loss(self.dHyper['mse_weight'] * (self.dHyper['loss_ref2ref']*mse_loss_ref2ref + self.dHyper['loss_art2ref']*mse_loss_art2ref))
 
         # compute charbonnier loss
         charbonnier_loss_ref2ref, charbonnier_loss_art2ref = compute_charbonnier_loss(self.dHyper, x_ref, decoded_ref2ref, decoded_art2ref)
@@ -50,8 +50,8 @@ class CustomLossLayer(Layer):
         self.add_loss(self.dHyper['ge_weight'] * (self.dHyper['loss_ref2ref']*ge_ref2ref + self.dHyper['loss_art2ref']*ge_art2ref))
 
         # compute TV loss
-        # tv_ref2ref, tv_art2ref = compute_tv_loss(self.dHyper, decoded_ref2ref, decoded_art2ref, self.patchSize)
-        # self.add_loss(self.dHyper['tv_weight'] * (self.dHyper['loss_ref2ref']*tv_ref2ref + self.dHyper['loss_art2ref']*tv_art2ref))
+        tv_ref2ref, tv_art2ref = compute_tv_loss(self.dHyper, decoded_ref2ref, decoded_art2ref, self.patchSize)
+        self.add_loss(self.dHyper['tv_weight'] * (self.dHyper['loss_ref2ref']*tv_ref2ref + self.dHyper['loss_art2ref']*tv_art2ref))
 
         # compute perceptual loss
         perceptual_loss_ref2ref, perceptual_loss_art2ref = compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, self.patchSize, self.dHyper['pl_network'],self.dHyper['loss_model'])
@@ -107,16 +107,6 @@ def fTrainInner(dData, sOutPath, patchSize, epochs, batchSize, lr, dHyper):
     train_art = dData['train_art']
     test_ref = dData['test_ref']
     test_art = dData['test_art']
-
-    print(np.max(train_ref))
-    print(np.min(train_ref))
-    print(np.max(train_art))
-    print(np.min(train_art))
-
-    print(np.max(test_ref))
-    print(np.min(test_ref))
-    print(np.max(test_art))
-    print(np.min(test_art))
 
     train_ref = np.expand_dims(train_ref, axis=1)
     train_art = np.expand_dims(train_art, axis=1)
@@ -200,8 +190,8 @@ def fPredict(test_ref, test_art, dParam, dHyper):
 
     vae.load_weights(weights_file)
 
-    test_ref = np.expand_dims(test_ref, axis=1)[:4320]
-    test_art = np.expand_dims(test_art, axis=1)[:4320]
+    test_ref = np.expand_dims(test_ref, axis=1)
+    test_art = np.expand_dims(test_art, axis=1)
 
     predict_ref, predict_art = vae.predict([test_ref, test_art], dParam['batchSize'][0], verbose=1)
 
