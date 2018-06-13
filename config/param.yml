@@ -119,11 +119,11 @@ sTrainingMethod : "None"
 # lScaleFactor: the changing rate of patch size in scaling process
 # factor < 1 means down sampling later, factor > 1 up sampling later
 # in "MultiScaleSeparated" method: only one down sample rate is supported, this corresponds one bypass in CNN
-lScaleFactor : [1, 2]
+lScaleFactor : [0.5, 1]
 
 # lCorrection
 # true: artifact correction
-# false: classifications
+# false: classification
 lCorrection: false
 # parameters in artifacts correction
 correction:
