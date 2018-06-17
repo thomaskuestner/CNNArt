@@ -1,127 +1,92 @@
 from keras.layers import Dense, Reshape, Flatten, Dropout
 from utils.MotionCorrection.network import *
 
-
 def encode(input, patchSize):
-    if list(patchSize) == [80, 80]:
-        conv_1 = fCreateLeakyReluConv2D(filters=32)(input)
-        down_1 = fCreateLeakyReluConv2D(filters=64, strides=2, kernel_size=2)(conv_1)
-        output = fCreateLeakyReluConv2D(filters=128)(down_1)
+    if list(patchSize) == [48, 48]:
+        # output shape: (64, 48, 48)
+        conv_1 = fCreateConv2D_ResBlock(filters=64, kernel_size=(7, 7), strides=(1, 1))(input)
 
-    elif list(patchSize) == [48, 48]:
-        conv_1 = fCreateLeakyReluConv2D(filters=32, strides=1, kernel_size=7)(input)
-        down_1 = fCreateLeakyReluConv2D(filters=64, strides=2, kernel_size=7)(conv_1)
-        output = fCreateLeakyReluConv2D(filters=128, strides=1, kernel_size=3)(down_1)
+        # output shape: (128, 24, 24)
+        output = fCreateConv2D_ResBlock(filters=128)(conv_1)
 
-    elif list(patchSize) == [48, 48, 4]:
-        conv_1 = fCreateLeakyReluConv3D(filters=32, strides=1, kernel_size=7)(input)
-        down_1 = fCreateLeakyReluConv3D(filters=64, strides=2, kernel_size=7)(conv_1)
-        output = fCreateLeakyReluConv3D(filters=128, strides=1, kernel_size=3)(down_1)
+    elif list(patchSize) == [80, 80]:
+        # output shape: (64, 80, 80)
+        conv_1 = fCreateConv2D_ResBlock(filters=64, kernel_size=(7, 7), strides=(1, 1))(input)
 
-    return output
+        # output shape: (128, 40, 40)
+        output = fCreateConv2D_ResBlock(filters=128)(conv_1)
 
-
-def encode_shared(input, patchSize, isIncep):
-    if isIncep:
-        if list(patchSize) == [80, 80]:
-            res_1 = fCreateConv2D_InceptionBlock(filters=[32, 64, 128])(input)
-            down_1 = fCreateLeakyReluBNConv2D(filters=256, strides=2, kernel_size=2)(res_1)
-            res_2 = fCreateConv2D_InceptionBlock(filters=[32, 64, 128])(down_1)
-            down_2 = fCreateLeakyReluBNConv2D(filters=256, strides=2, kernel_size=2)(res_2)
-            flat = Flatten()(down_2)
-
-            z_mean = Dense(256)(flat)
-            z_log_var = Dense(256)(flat)
-
-            z = Lambda(samplingDense, output_shape=(256,))([z_mean, z_log_var])
-
-        elif list(patchSize) == [48, 48]:
-            res_1 = fCreateConv2D_InceptionBlock(filters=[32, 64, 128])(input)
-            down_1 = fCreateLeakyReluConv2D(filters=256, strides=2, kernel_size=2)(res_1)
-            flat = Flatten()(down_1)
-
-            z_mean = Dense(128)(flat)
-            z_log_var = Dense(128)(flat)
-
-            z = Lambda(samplingDense, output_shape=(128,))([z_mean, z_log_var])
-
-    else:
-        if list(patchSize) == [80, 80]:
-            conv_shared_1 = fCreateLeakyReluConv2D(filters=256)(input)
-            down_shared_1 = fCreateLeakyReluConv2D(filters=256, strides=2, kernel_size=2)(conv_shared_1)
-            conv_shared_2 = fCreateLeakyReluConv2D(filters=256)(down_shared_1)
-            down_shared_2 = fCreateLeakyReluConv2D(filters=256, strides=2, kernel_size=2)(conv_shared_2)
-
-            flat = Flatten()(down_shared_2)
-
-            z_mean = Dense(512)(flat)
-            z_log_var = Dense(512)(flat)
-
-            z = Lambda(samplingDense, output_shape=(512,))([z_mean, z_log_var])
-
-        elif list(patchSize) == [48, 48]:
-            conv_shared_1 = fCreateLeakyReluConv2D(filters=256, strides=1, kernel_size=3)(input)
-            down_shared_1 = fCreateLeakyReluConv2D(filters=256, strides=2, kernel_size=3)(conv_shared_1)
-            conv_shared_2 = fCreateLeakyReluConv2D(filters=256, strides=1, kernel_size=3)(down_shared_1)
-            down_shared_2 = fCreateLeakyReluConv2D(filters=256, strides=2, kernel_size=3)(conv_shared_2)
-
-            flat = Flatten()(down_shared_2)
-
-            z_mean = Dense(512)(flat)
-
-            z_log_var = Dense(512)(flat)
-
-            z = Lambda(samplingDense, output_shape=(512,))([z_mean, z_log_var])
-
-        elif list(patchSize) == [48, 48, 4]:
-            conv_shared_1 = fCreateLeakyReluConv3D(filters=256, strides=1, kernel_size=3)(input)
-            down_shared_1 = fCreateLeakyReluConv3D(filters=256, strides=(2, 2, 1), kernel_size=3)(conv_shared_1)
-            conv_shared_2 = fCreateLeakyReluConv3D(filters=256, strides=1, kernel_size=3)(down_shared_1)
-            down_shared_2 = fCreateLeakyReluConv3D(filters=256, strides=2, kernel_size=3)(conv_shared_2)
-
-            flat = Flatten()(down_shared_2)
-
-            z_mean = Dense(512)(flat)
-
-            z_log_var = Dense(512)(flat)
-
-            z = Lambda(samplingDense, output_shape=(512,))([z_mean, z_log_var])
-
-    return z, z_mean, z_log_var
+    return output, conv_1
 
 
-def decode(input, patchSize, dropout):
-    if list(patchSize) == [80, 80]:
-        dense = Dense(256 * 10 * 10)(input)
-        dropout = Dropout(dropout)(dense)
-        reshape = Reshape((256, 10, 10))(dropout)
-        output = fCreateConv2DTranspose(filters=256, kernel_size=3, strides=2)(reshape)
-        output = fCreateConv2DTranspose(filters=256, kernel_size=3, strides=1)(output)
-        output = fCreateConv2DTranspose(filters=256, kernel_size=3, strides=2)(output)
-        output = fCreateConv2DTranspose(filters=128, kernel_size=3, strides=1)(output)
-        output = fCreateConv2DTranspose(filters=64, kernel_size=3, strides=2)(output)
+def encode_shared(input, patchSize):
+    if list(patchSize) == [48, 48]:
+        # output shape: (256, 12, 12)
+        conv_shared_1 = fCreateConv2D_ResBlock(filters=256)(input)
+        # output shape: (512, 6, 6)
+        conv_shared_2 = fCreateConv2D_ResBlock(filters=512)(conv_shared_1)
+
+        flat = Flatten()(conv_shared_2)
+        z_mean = Dense(512)(flat)
+        z_log_var = Dense(512)(flat)
+        z = Lambda(samplingDense, output_shape=(512,))([z_mean, z_log_var])
+
+        conv_shared_2 = None
+
+    elif list(patchSize) == [80, 80]:
+        # output shape: (256, 20, 20)
+        conv_shared_1 = fCreateConv2D_ResBlock(filters=256)(input)
+        # output shape: (512, 10, 10)
+        conv_shared_2 = fCreateConv2D_ResBlock(filters=512)(conv_shared_1)
+        # output shape: (512, 5, 5)
+        conv_shared_3 = fCreateConv2D_ResBlock(filters=512)(conv_shared_2)
+
+        flat = Flatten()(conv_shared_3)
+        z_mean = Dense(512)(flat)
+        z_log_var = Dense(512)(flat)
+        z = Lambda(samplingDense, output_shape=(512,))([z_mean, z_log_var])
+
+    return z, z_mean, z_log_var, conv_shared_1, conv_shared_2
+
+
+def decode(input, patchSize, conv_1, conv_2, conv_3, conv_4):
+    if list(patchSize) == [48, 48]:
+        dense = Dense(512 * 6 * 6)(input)
+        # output shape: (512, 6, 6)
+        reshape = Reshape((512, 6, 6))(dense)
+        # output shape: (256, 12, 12)
+        output = fCreateConv2DTranspose_ResBlock(filters=256)(reshape)
+        output = add([output, conv_3])
+        # output shape: (128, 24, 24)
+        output = fCreateConv2DTranspose_ResBlock(filters=128)(output)
+        output = add([output, conv_2])
+        # output shape: (64, 48, 48)
+        output = fCreateConv2DTranspose_ResBlock(filters=64)(output)
+        output = add([output, conv_1])
+        # output shape: (64, 48, 48)
+        output = fCreateConv2DTranspose_ResBlock(filters=64, kernel_size=(7, 7), strides=(1, 1))(output)
+        # output shape: (1, 48, 48)
         output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
 
-    elif list(patchSize) == [48, 48]:
-        dense = Dense(256 * 6 * 6)(input)
-        dropout = Dropout(dropout)(dense)
-        reshape = Reshape((256, 6, 6))(dropout)
-        output = fCreateConv2DTranspose(filters=256, kernel_size=3, strides=2)(reshape)
-        output = fCreateConv2DTranspose(filters=256, kernel_size=3, strides=1)(output)
-        output = fCreateConv2DTranspose(filters=128, kernel_size=3, strides=2)(output)
-        output = fCreateConv2DTranspose(filters=64, kernel_size=3, strides=1)(output)
-        output = fCreateConv2DTranspose(filters=32, kernel_size=3, strides=2)(output)
+    elif list(patchSize) == [80, 80]:
+        dense = Dense(512 * 5 * 5)(input)
+        # output shape: (512, 5, 5)
+        reshape = Reshape((512, 5, 5))(dense)
+        # output shape: (512, 10, 10)
+        output = fCreateConv2DTranspose_ResBlock(filters=512)(reshape)
+        output = add([output, conv_4])
+        # output shape: (256, 20, 20)
+        output = fCreateConv2DTranspose_ResBlock(filters=256)(output)
+        output = add([output, conv_3])
+        # output shape: (128, 40, 40)
+        output = fCreateConv2DTranspose_ResBlock(filters=128)(output)
+        output = add([output, conv_2])
+        # output shape: (64, 80, 80)
+        output = fCreateConv2DTranspose_ResBlock(filters=64)(output)
+        output = add([output, conv_1])
+        # output shape: (64, 80, 80)
+        output = fCreateConv2DTranspose_ResBlock(filters=64, kernel_size=(7, 7), strides=(1, 1))(output)
+        # output shape: (1, 80, 80)
         output = Conv2DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
-
-    elif list(patchSize) == [48, 48, 4]:
-        dense = Dense(256 * 6 * 6)(input)
-        dropout = Dropout(dropout)(dense)
-        reshape = Reshape((256, 6, 6, 1))(dropout)
-        output = fCreateConv3DTranspose(filters=128, strides=2, kernel_size=3)(reshape)
-        output = fCreateConv3DTranspose(filters=128, strides=1, kernel_size=3)(output)
-        output = fCreateConv3DTranspose(filters=64, strides=(2, 2, 1), kernel_size=3)(output)
-        output = fCreateConv3DTranspose(filters=64, strides=1, kernel_size=3)(output)
-        output = fCreateConv3DTranspose(filters=64, strides=2, kernel_size=3)(output)
-        output = Conv3DTranspose(filters=1, kernel_size=1, strides=1, padding='same', activation='tanh')(output)
 
     return output

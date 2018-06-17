@@ -26,8 +26,7 @@ def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabelin
     dicom_numpy_array = create_DICOM_Array(os.path.join(pathDicom, ''))
     mask_numpy_array = create_MASK_Array(proband, model, dicom_numpy_array.shape[0], dicom_numpy_array.shape[1], dicom_numpy_array.shape[2])
     # Normalisation
-    range_norm = [0, 1]
-    scale_dicom_numpy_array = (dicom_numpy_array - np.min(dicom_numpy_array)) * (range_norm[1] - range_norm[0]) / (np.max(dicom_numpy_array) - np.min(dicom_numpy_array))
+    scale_dicom_numpy_array = (dicom_numpy_array - np.min(dicom_numpy_array)) * (range_norm[1] - range_norm[0]) / (np.max(dicom_numpy_array) - np.min(dicom_numpy_array)) + range_norm[0]
 
     # RigidPatching
     if len(patchSize) == 3: # 3D patches
@@ -53,6 +52,7 @@ def fPreprocessDataCorrection(cfg, dbinfo):
 
     sTrainingMethod = cfg['sTrainingMethod']  # options of multiscale
     patchSize = cfg['patchSize']
+    range_norm = cfg['range']
     lScaleFactor = cfg['lScaleFactor']
 
     scpatchSize = patchSize
@@ -77,15 +77,15 @@ def fPreprocessDataCorrection(cfg, dbinfo):
             if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
                 for iseq, seq in enumerate(lDatasets):
                     # patches and labels of reference/artifact
-                    tmpPatches, tmpLabels = fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq),
-                                                            scpatchSize, cfg['patchOverlap'], 1, 'volume')
+                    if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1] + os.sep + seq):
+                        tmpPatches, tmpLabels = fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), scpatchSize, cfg['patchOverlap'], 1, 'volume', range_norm)
 
-                    if iseq == 0:
-                        dRefPatches = np.concatenate((dRefPatches, tmpPatches), axis=0)
-                        dRefPats = np.concatenate((dRefPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
-                    elif iseq == 1:
-                        dArtPatches = np.concatenate((dArtPatches, tmpPatches), axis=0)
-                        dArtPats = np.concatenate((dArtPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
+                        if iseq < len(lDatasets)/2:
+                            dRefPatches = np.concatenate((dRefPatches, tmpPatches), axis=0)
+                            dRefPats = np.concatenate((dRefPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
+                        else:
+                            dArtPatches = np.concatenate((dArtPatches, tmpPatches), axis=0)
+                            dArtPats = np.concatenate((dArtPats, ipat * np.ones((tmpPatches.shape[0], 1), dtype=np.int)), axis=0)
             else:
                 pass
 
@@ -180,6 +180,7 @@ def create_DICOM_Array(PathDicom):
         # invalid DICOM data
         raise
 
+    print(voxel_ndarray.shape)
     return voxel_ndarray
 
 def create_MASK_Array(proband, model, mrt_height, mrt_width, mrt_depth):
