@@ -24,7 +24,9 @@ class DatabaseInfo:
         else:
             self.sSubDirs = sSubDirs
 
-        self.sPathIn = 'C:'+ os.sep + 'Users' + os.sep + 'hansw'+ os.sep + 'Videos'+ os.sep + 'artefacts'+ os.sep + self.sDatabase + os.sep + self.sSubDirs[0]
+        self.sPathIn = 'E:' + os.sep + 'pycharm' + os.sep + 'workspace' + os.sep + 'CNNArt-PyQt_GUI_zIWEI' + os.sep + 'GUI' + os.sep + 'artefacts' + os.sep + self.sDatabase + os.sep + \
+                       self.sSubDirs[0]
+        # self.sPathIn = 'C:'+ os.sep + 'Users' + os.sep + 'hansw'+ os.sep + 'Videos'+ os.sep + 'artefacts'+ os.sep + self.sDatabase + os.sep + self.sSubDirs[0]
         # parse patients   # for labor; /med_data/ImageSimilarity/Databases  C:/Users/hansw/Videos/artefacts
         self.lPats = [name for name in os.listdir(self.sPathIn) if os.path.isdir(os.path.join(self.sPathIn, name))]
 

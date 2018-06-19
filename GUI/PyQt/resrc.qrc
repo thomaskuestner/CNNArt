@@ -1,5 +1,16 @@
 <RCC>
   <qresource prefix="icons">
+    <file>Icons/funnel.png</file>
+    <file>Icons/alpha.png</file>
+    <file>Icons/biology.png</file>
+    <file>Icons/brush.png</file>
+    <file>Icons/gamma.png</file>
+    <file>Icons/input.png</file>
+    <file>Icons/layers.png</file>
+    <file>Icons/microscope.png</file>
+    <file>Icons/one.png</file>
+    <file>Icons/research.png</file>
+    <file>Icons/two.png</file>
     <file>Icons/cursor.png</file>
     <file>Icons/delete.png</file>
     <file>Icons/file2.png</file>

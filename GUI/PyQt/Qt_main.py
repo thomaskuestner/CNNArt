@@ -35,8 +35,8 @@ import scipy.io as sio
 from Grey_window import*
 import sys
 import h5py
-# sys.path.insert(0, 'C:/Users/hansw/Desktop/Ma_code/tabYannick')
-# from tabYannick.dlart import*
+sys.path.insert(0, 'C:/Users/hansw/Desktop/Ma_code/tabYannick')
+from dlart import*
 from matplotlib.figure import Figure
 
 # import matplotlib.pyplot as plt
@@ -49,6 +49,15 @@ import pandas as pd
 import codecs
 
 #pyrcc5 C:\Users\hansw\Desktop\Ma_code\PyQt_main\resrc.qrc -o C:\Users\hansw\Desktop\Ma_code\PyQt_main\resrc_rc.py
+
+from keras.utils.vis_utils import plot_model, model_to_dot
+from keras.models import load_model
+from loadf2 import *
+
+import tensorflow as tf
+import keras.backend as K
+import network_visualization
+from network_visualization import *
 
 class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
     update_data = QtCore.pyqtSignal(list)
@@ -331,11 +340,201 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.actionLabels.triggered.connect(self.editLabel)
 
         # plt.connect('key_press_event', toggle_selector)
-
+        self.ind = 0
+        self.slice = 0
         self.newcanvas.mpl_connect('scroll_event', self.newonscroll)
         self.newcanvas.mpl_connect('button_press_event', self.mouse_clicked)
         self.newcanvas.mpl_connect('motion_notify_event', self.mouse_move)
         self.newcanvas.mpl_connect('button_release_event', self.mouse_release)
+
+        ############ second tab from Yannick
+        # initialize DeepLearningArt Application
+        self.deepLearningArtApp = DeepLearningArtApp()
+        self.deepLearningArtApp.setGUIHandle(self)
+
+        # initialize TreeView Database
+        self.manageTreeView()
+
+        # intialize TreeView Datasets
+        self.manageTreeViewDatasets()
+
+        # initiliaze patch output path
+        self.Label_OutputPathPatching.setText(self.deepLearningArtApp.getOutputPathForPatching())
+
+        # initialize markings path
+        self.Label_MarkingsPath.setText(self.deepLearningArtApp.getMarkingsPath())
+
+        # initialize learning output path
+        self.Label_LearningOutputPath.setText(self.deepLearningArtApp.getLearningOutputPath())
+
+        # initialize patching mode
+        self.ComboBox_Patching.setCurrentIndex(1)
+
+        # initialize store mode
+        self.ComboBox_StoreOptions.setCurrentIndex(0)
+
+        # initialize splitting mode
+        self.ComboBox_splittingMode.setCurrentIndex(DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING)
+        self.Label_SplittingParams.setText("using Test/Train="
+                                           + str(self.deepLearningArtApp.getTrainTestDatasetRatio())
+                                           + " and Valid/Train=" + str(
+            self.deepLearningArtApp.getTrainValidationRatio()))
+
+        # initialize combox box for DNN selection
+        self.ComboBox_DNNs.addItem("Select Deep Neural Network Model...")
+        self.ComboBox_DNNs.addItems(DeepLearningArtApp.deepNeuralNetworks.keys())
+        self.ComboBox_DNNs.setCurrentIndex(1)
+        self.deepLearningArtApp.setNeuralNetworkModel(self.ComboBox_DNNs.currentText())
+
+        # initialize check boxes for used classes
+        self.CheckBox_Artifacts.setChecked(self.deepLearningArtApp.getUsingArtifacts())
+        self.CheckBox_BodyRegion.setChecked(self.deepLearningArtApp.getUsingBodyRegions())
+        self.CheckBox_TWeighting.setChecked(self.deepLearningArtApp.getUsingTWeighting())
+
+        # initilize training parameters
+        self.DoubleSpinBox_WeightDecay.setValue(self.deepLearningArtApp.getWeightDecay())
+        self.DoubleSpinBox_Momentum.setValue(self.deepLearningArtApp.getMomentum())
+        self.CheckBox_Nesterov.setChecked(self.deepLearningArtApp.getNesterovEnabled())
+        self.CheckBox_DataAugmentation.setChecked(self.deepLearningArtApp.getDataAugmentationEnabled())
+        self.CheckBox_DataAug_horizontalFlip.setChecked(self.deepLearningArtApp.getHorizontalFlip())
+        self.CheckBox_DataAug_verticalFlip.setChecked(self.deepLearningArtApp.getVerticalFlip())
+        self.CheckBox_DataAug_Rotation.setChecked(False if self.deepLearningArtApp.getRotation() == 0 else True)
+        self.CheckBox_DataAug_zcaWeighting.setChecked(self.deepLearningArtApp.getZCA_Whitening())
+        self.CheckBox_DataAug_HeightShift.setChecked(False if self.deepLearningArtApp.getHeightShift() == 0 else True)
+        self.CheckBox_DataAug_WidthShift.setChecked(False if self.deepLearningArtApp.getWidthShift() == 0 else True)
+        self.CheckBox_DataAug_Zoom.setChecked(False if self.deepLearningArtApp.getZoom() == 0 else True)
+        self.check_dataAugmentation_enabled()
+
+        ################################################################################################################
+
+        ################################################################################################################
+        # Signals and Slots
+        ################################################################################################################
+
+        # select database button clicked
+        self.Button_DB.clicked.connect(self.button_DB_clicked)
+        # self.Button_DB.clicked.connect(self.button_DB_clicked)
+
+        # output path button for patching clicked
+        self.Button_OutputPathPatching.clicked.connect(self.button_outputPatching_clicked)
+
+        # TreeWidgets
+        self.TreeWidget_Patients.clicked.connect(self.getSelectedPatients)
+        self.TreeWidget_Datasets.clicked.connect(self.getSelectedDatasets)
+
+        # Patching button
+        self.Button_Patching.clicked.connect(self.button_patching_clicked)
+
+        # mask marking path button clicekd
+        self.Button_MarkingsPath.clicked.connect(self.button_markingsPath_clicked)
+
+        # combo box splitting mode is changed
+        self.ComboBox_splittingMode.currentIndexChanged.connect(self.splittingMode_changed)
+
+        # "use current data" button clicked
+        self.Button_useCurrentData.clicked.connect(self.button_useCurrentData_clicked)
+
+        # select dataset is clicked
+        self.Button_selectDataset.clicked.connect(self.button_selectDataset_clicked)
+
+        # learning output path button clicked
+        self.Button_LearningOutputPath.clicked.connect(self.button_learningOutputPath_clicked)
+
+        # train button clicked
+        self.Button_train.clicked.connect(self.button_train_clicked)
+
+        # combobox dnns
+        self.ComboBox_DNNs.currentIndexChanged.connect(self.selectedDNN_changed)
+
+        # data augmentation enbaled changed
+        self.CheckBox_DataAugmentation.stateChanged.connect(self.check_dataAugmentation_enabled)
+
+##################################3
+        self.matplotlibwidget_static.show()
+        # self.matplotlibwidget_static_2.hide()
+        self.scrollArea.show()
+        self.horizontalSliderPatch.hide()
+        self.horizontalSliderSlice.hide()
+
+        self.labelPatch.hide()
+        self.labelSlice.hide()
+        # self.horizontalSliderSS.hide()
+
+        self.lcdNumberPatch.hide()
+        self.lcdNumberSlice.hide()
+        # self.lcdNumberSS.hide()
+
+        self.radioButton_3.hide()
+        self.radioButton_4.hide()
+
+        self.wyChooseFile.setToolTip('Choose .H5 File')
+        self.wyShowArchitecture.setToolTip('Show the Architecture')
+        self.radioButton.setToolTip('Weights of Filters')
+        self.radioButton_2.setToolTip('Feature Maps')
+        self.wyPlot.setToolTip('Plot Weights or Filters')
+        self.labelPatch.setToolTip('Number of Input Patch')
+        self.labelSlice.setToolTip('Number of Feature Maps')
+        self.wySubsetSelection.setToolTip('Created Input Patches With Subset Selection')
+        self.radioButton_3.setToolTip('Plot the 1st input')
+        self.radioButton_4.setToolTip('Plot the 2nd input')
+
+        self.resetW = False
+        self.resetF = False
+        self.resetS = False
+
+        self.twoInput = False
+        self.chosenLayerName = []
+        # the slider's value is the chosen patch's number
+        self.chosenWeightNumber = 1
+        self.chosenWeightSliceNumber = 1
+        self.chosenPatchNumber = 1
+        self.chosenPatchSliceNumber = 1
+        self.chosenSSNumber = 1
+        self.openfile_name = ''
+        self.inputalpha = '0.19'
+        self.inputGamma = '0.0000001'
+
+        self.model = {}
+        self.qList = []
+        self.totalWeights = 0
+        self.totalWeightsSlices = 0
+        self.totalPatches = 0
+        self.totalPatchesSlices = 0
+        self.totalSS = 0
+
+        self.modelDimension = ''
+        self.modelName = ''
+        self.modelInput = {}
+        self.modelInput2 = {}
+        self.ssResult = {}
+        self.activations = {}
+        self.act = {}
+        self.weights = {}
+        self.w = {}
+        self.LayerWeights = {}
+        self.subset_selection = {}
+        self.subset_selection_2 = {}
+        self.radioButtonValue = []
+        self.listView.clicked.connect(self.clickList)
+
+        self.W_F = ''
+
+        # slider of the weight and feature
+        self.horizontalSliderPatch.sliderReleased.connect(self.sliderValue)
+        self.horizontalSliderPatch.valueChanged.connect(self.lcdNumberPatch.display)
+
+        self.horizontalSliderSlice.sliderReleased.connect(self.sliderValue)
+        self.horizontalSliderSlice.valueChanged.connect(self.lcdNumberSlice.display)
+
+        # self.matplotlibwidget_static.mpl.wheel_scroll_W_signal.connect(self.wheelScrollW)
+        self.matplotlibwidget_static.mpl.wheel_scroll_signal.connect(self.wheelScroll)
+        # self.matplotlibwidget_static.mpl.wheel_scroll_3D_signal.connect(self.wheelScroll)
+        # self.matplotlibwidget_static.mpl.wheel_scroll_SS_signal.connect(self.wheelScrollSS)
+
+        self.lineEdit.textChanged[str].connect(self.textChangeAlpha)
+        self.lineEdit_2.textChanged[str].connect(self.textChangeGamma)
+
+
 
     def switchview(self):
         if self.vision == 2:
@@ -615,31 +814,15 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.overlay.show()
             from loadf import loadImage
             self.newMR = loadImage(self.PathDicom)
-            self.newMR.trigger.connect(self.loadEnd)
+            self.newMR.trigger0.connect(self.loadEnd)
             self.newMR.start()
         else:
             pass
 
-    # def plot_3d(self, image, threshold=-300):
-    #     # Position the scan upright,
-    #     # so the head of the patient would be at the top facing the camera
-    #     p = image.transpose(2, 1, 0)
-    #     verts, faces, a, b = measure.marching_cubes(p, threshold)
-    #     fig = plt.figure(figsize=(10, 10))
-    #     ax = fig.add_subplot(111, projection='3d')
-    #     # Fancy indexing: `verts[faces]` to generate a collection of triangles
-    #     mesh = Poly3DCollection(verts[faces], alpha=0.1)
-    #     face_color = [0.5, 0.5, 1]
-    #     mesh.set_facecolor(face_color)
-    #     ax.add_collection3d(mesh)
-    #     ax.set_xlim(0, p.shape[0])
-    #     ax.set_ylim(0, p.shape[1])
-    #     ax.set_zlim(0, p.shape[2])
-    #     plt.show()
-
     def loadEnd(self):
         self.overlay.killTimer(self.overlay.timer)
         self.overlay.hide()
+
         if self.selectoron == False:
             self.openfile.setDisabled(False)
 
@@ -677,7 +860,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
     def unpatching2(self, result, orig):
         PatchSize = np.array((40.0, 40.0))
         PatchOverlay = 0.5
-        imglay = fUnpatch2D(result, PatchSize, PatchOverlay, orig.shape, 0) # 0 for reference
+        imglay = fUnpatch2D(result, PatchSize, PatchOverlay, orig.shape)
         return imglay
 
     def unpatching8(self, result, orig):
@@ -713,8 +896,11 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
     def loadPatch(self):
-        resultfile = QtWidgets.QFileDialog.getOpenFileName(self, 'choose the result file', '',
-                'mat files(*.mat);;h5 files(*.h5)', None, QtWidgets.QFileDialog.DontUseNativeDialog)[0]
+        # resultfile = QtWidgets.QFileDialog.getOpenFileName(self, 'choose the result file', '',
+        #         'mat files(*.mat);;h5 files(*.h5)', None, QtWidgets.QFileDialog.DontUseNativeDialog)[0]
+        resultfile = QtWidgets.QFileDialog.getOpenFileName(self, "choose the result file",
+                "C:/Users/hansw/Desktop/Ma_code/PyQt_main",
+                                            'mat files(*.mat);;h5 files(*.h5)')[0]
         if resultfile:
             with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
                 cfg = yaml.safe_load(ymlfile)
@@ -735,14 +921,15 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                     hatchlist.append(IArte)
                     cnrlist.append(11)
                 else:
-                    cnum = np.array(conten['prob_test'])
+                    pred = conten['prob_test']
+                    pred = pred[0:4320, :]
+                    cnum = np.array(pred)
                     if cnum.shape[1] == 2:
-                        IType = self.unpatching2(conten['prob_test'])
+                        IType = self.unpatching2(pred, list1[n])
 
                         problist.append(IType)
                         hatchlist.append(empty1)
                         cnrlist.append(2)
-
                     # elif cnum.shape[1] == 8: 
 
                 nameofCfile = os.path.split(resultfile)[1]
@@ -888,7 +1075,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.overlay.show()
             from loadf import loadImage
             self.newMR = loadImage(self.selectorPath)
-            self.newMR.trigger.connect(self.loadEnd)
+            self.newMR.trigger0.connect(self.loadEnd)
             self.newMR.start()
         else:
             pass
@@ -1108,7 +1295,939 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             QCloseEvent.ignore()
 
- ############################################################ class of grids
+
+####### second tab
+    def button_train_clicked(self):
+        # set epochs
+        self.deepLearningArtApp.setEpochs(self.SpinBox_Epochs.value())
+
+        # handle check states of check boxes for used classes
+        self.deepLearningArtApp.setUsingArtifacts(self.CheckBox_Artifacts.isChecked())
+        self.deepLearningArtApp.setUsingBodyRegions(self.CheckBox_BodyRegion.isChecked())
+        self.deepLearningArtApp.setUsingTWeighting(self.CheckBox_TWeighting.isChecked())
+
+        # set learning rates and batch sizes
+        try:
+            batchSizes = np.fromstring(self.LineEdit_BatchSizes.text(), dtype=np.int, sep=',')
+            self.deepLearningArtApp.setBatchSizes(batchSizes)
+            learningRates = np.fromstring(self.LineEdit_LearningRates.text(), dtype=np.float32, sep=',')
+            self.deepLearningArtApp.setLearningRates(learningRates)
+        except:
+            raise ValueError("Wrong input format of learning rates! Enter values seperated by ','. For example: 0.1,0.01,0.001")
+
+        # set optimizer
+        selectedOptimizer = self.ComboBox_Optimizers.currentText()
+        if selectedOptimizer == "SGD":
+            self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.SGD_OPTIMIZER)
+        elif selectedOptimizer == "RMSprop":
+            self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.RMS_PROP_OPTIMIZER)
+        elif selectedOptimizer == "Adagrad":
+            self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.ADAGRAD_OPTIMIZER)
+        elif selectedOptimizer == "Adadelta":
+            self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.ADADELTA_OPTIMIZER)
+        elif selectedOptimizer == "Adam":
+            self.deepLearningArtApp.setOptimizer(DeepLearningArtApp.ADAM_OPTIMIZER)
+        else:
+            raise ValueError("Unknown Optimizer!")
+
+        # set weigth decay
+        self.deepLearningArtApp.setWeightDecay(float(self.DoubleSpinBox_WeightDecay.value()))
+        # set momentum
+        self.deepLearningArtApp.setMomentum(float(self.DoubleSpinBox_Momentum.value()))
+        # set nesterov enabled
+        if self.CheckBox_Nesterov.checkState() == Qt.Checked:
+            self.deepLearningArtApp.setNesterovEnabled(True)
+        else:
+            self.deepLearningArtApp.setNesterovEnabled(False)
+
+        # handle data augmentation
+        if self.CheckBox_DataAugmentation.checkState() == Qt.Checked:
+            self.deepLearningArtApp.setDataAugmentationEnabled(True)
+            # get all checked data augmentation options
+            if self.CheckBox_DataAug_horizontalFlip.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setHorizontalFlip(True)
+            else:
+                self.deepLearningArtApp.setHorizontalFlip(False)
+
+            if self.CheckBox_DataAug_verticalFlip.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setVerticalFlip(True)
+            else:
+                self.deepLearningArtApp.setVerticalFlip(False)
+
+            if self.CheckBox_DataAug_Rotation.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setRotation(True)
+            else:
+                self.deepLearningArtApp.setRotation(False)
+
+            if self.CheckBox_DataAug_zcaWeighting.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setZCA_Whitening(True)
+            else:
+                self.deepLearningArtApp.setZCA_Whitening(False)
+
+            if self.CheckBox_DataAug_HeightShift.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setHeightShift(True)
+            else:
+                self.deepLearningArtApp.setHeightShift(False)
+
+            if self.CheckBox_DataAug_WidthShift.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setWidthShift(True)
+            else:
+                self.deepLearningArtApp.setWidthShift(False)
+
+            if self.CheckBox_DataAug_Zoom.checkState() == Qt.Checked:
+                self.deepLearningArtApp.setZoom(True)
+            else:
+                self.deepLearningArtApp.setZoom(False)
+
+
+            # contrast improvement (contrast stretching, adaptive equalization, histogram equalization)
+            # it is not recommended to set more than one of them to true
+            if self.RadioButton_DataAug_contrastStretching.isChecked():
+                self.deepLearningArtApp.setContrastStretching(True)
+            else:
+                self.deepLearningArtApp.setContrastStretching(False)
+
+            if self.RadioButton_DataAug_histogramEq.isChecked():
+                self.deepLearningArtApp.setHistogramEqualization(True)
+            else:
+                self.deepLearningArtApp.setHistogramEqualization(False)
+
+            if self.RadioButton_DataAug_adaptiveEq.isChecked():
+                self.deepLearningArtApp.setAdaptiveEqualization(True)
+            else:
+                self.deepLearningArtApp.setAdaptiveEqualization(False)
+        else:
+            # disable data augmentation
+            self.deepLearningArtApp.setDataAugmentationEnabled(False)
+
+
+        # start training process
+        self.deepLearningArtApp.performTraining()
+
+
+
+    def button_markingsPath_clicked(self):
+        dir = self.openFileNamesDialog(self.deepLearningArtApp.getMarkingsPath())
+        self.Label_MarkingsPath.setText(dir)
+        self.deepLearningArtApp.setMarkingsPath(dir)
+
+
+
+    def button_patching_clicked(self):
+        if self.deepLearningArtApp.getSplittingMode() == DeepLearningArtApp.NONE_SPLITTING:
+            QMessageBox.about(self, "My message box", "Select Splitting Mode!")
+            return 0
+
+        self.getSelectedDatasets()
+        self.getSelectedPatients()
+
+        # get patching parameters
+        self.deepLearningArtApp.setPatchSizeX(self.SpinBox_PatchX.value())
+        self.deepLearningArtApp.setPatchSizeY(self.SpinBox_PatchY.value())
+        self.deepLearningArtApp.setPatchSizeZ(self.SpinBox_PatchZ.value())
+        self.deepLearningArtApp.setPatchOverlapp(self.SpinBox_PatchOverlapp.value())
+
+        # get labling parameters
+        if self.RadioButton_MaskLabeling.isChecked():
+            self.deepLearningArtApp.setLabelingMode(DeepLearningArtApp.MASK_LABELING)
+        elif self.RadioButton_PatchLabeling.isChecked():
+            self.deepLearningArtApp.setLabelingMode(DeepLearningArtApp.PATCH_LABELING)
+
+        # get patching parameters
+        if self.ComboBox_Patching.currentIndex() == 1:
+            # 2D patching selected
+            self.deepLearningArtApp.setPatchingMode(DeepLearningArtApp.PATCHING_2D)
+        elif self.ComboBox_Patching.currentIndex() == 2:
+            # 3D patching selected
+            self.deepLearningArtApp.setPatchingMode(DeepLearningArtApp.PATCHING_3D)
+        else:
+            self.ComboBox_Patching.setCurrentIndex(1)
+            self.deepLearningArtApp.setPatchingMode(DeepLearningArtApp.PATCHING_2D)
+
+        #using segmentation mask
+        self.deepLearningArtApp.setUsingSegmentationMasks(self.CheckBox_SegmentationMask.isChecked())
+
+        # handle store mode
+        self.deepLearningArtApp.setStoreMode(self.ComboBox_StoreOptions.currentIndex())
+
+        print("Start Patching for ")
+        print("the Patients:")
+        for x in self.deepLearningArtApp.getSelectedPatients():
+            print(x)
+        print("and the Datasets:")
+        for x in self.deepLearningArtApp.getSelectedDatasets():
+            print(x)
+        print("with the following Patch Parameters:")
+        print("Patch Size X: " + str(self.deepLearningArtApp.getPatchSizeX()))
+        print("Patch Size Y: " + str(self.deepLearningArtApp.getPatchSizeY()))
+        print("Patch Overlapp: " + str(self.deepLearningArtApp.getPatchOverlapp()))
+
+        #generate dataset
+        self.deepLearningArtApp.generateDataset()
+
+        #check if attributes in DeepLearningArtApp class contains dataset
+        if self.deepLearningArtApp.datasetAvailable() == True:
+            # if yes, make the use current data button available
+            self.Button_useCurrentData.setEnabled(True)
+
+
+
+    def button_outputPatching_clicked(self):
+        dir = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
+        self.Label_OutputPathPatching.setText(dir)
+        self.deepLearningArtApp.setOutputPathForPatching(dir)
+
+    def getSelectedPatients(self):
+        selectedPatients = []
+        for i in range(self.TreeWidget_Patients.topLevelItemCount()):
+            if self.TreeWidget_Patients.topLevelItem(i).checkState(0) == Qt.Checked:
+                selectedPatients.append(self.TreeWidget_Patients.topLevelItem(i).text(0))
+
+        self.deepLearningArtApp.setSelectedPatients(selectedPatients)
+
+    def button_DB_clicked(self):
+        dir = self.openFileNamesDialog(self.deepLearningArtApp.getPathToDatabase())
+        self.deepLearningArtApp.setPathToDatabase(dir)
+        self.manageTreeView()
+
+    def openFileNamesDialog(self, dir=None):
+        if dir==None:
+            # dir = "D:" + os.sep + "med_data" + os.sep + "MRPhysics"
+            with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
+                cfg = yaml.safe_load(ymlfile)
+            dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
+            dir = dbinfo.sPathIn + os.sep + 'MRPhysics'  + os.sep + 'newProtocol'
+            # dir = 'C:' + os.sep + 'Users' + os.sep + 'hansw' + os.sep + 'Videos' + os.sep + 'artefacts'\
+            #       + os.sep + 'MRPhysics'  + os.sep + 'newProtocol'
+        options = QFileDialog.Options()
+        options |=QFileDialog.DontUseNativeDialog
+
+        ret = QFileDialog.getExistingDirectory(self, "Select Directory", dir)
+        # path to database
+        dir = str(ret)
+        return dir
+
+    def manageTreeView(self):
+        # all patients in database
+        if os.path.exists(self.deepLearningArtApp.getPathToDatabase()):
+            subdirs = os.listdir(self.deepLearningArtApp.getPathToDatabase())
+            self.TreeWidget_Patients.setHeaderLabel("Patients:")
+
+            for x in subdirs:
+                item = QTreeWidgetItem()
+                item.setText(0, str(x))
+                item.setCheckState(0, Qt.Unchecked)
+                self.TreeWidget_Patients.addTopLevelItem(item)
+
+            self.Label_DB.setText(self.deepLearningArtApp.getPathToDatabase())
+
+    def manageTreeViewDatasets(self):
+        # print(os.path.dirname(self.deepLearningArtApp.getPathToDatabase()))
+        # manage datasets
+        self.TreeWidget_Datasets.setHeaderLabel("Datasets:")
+        for ds in DeepLearningArtApp.datasets.keys():
+            dataset = DeepLearningArtApp.datasets[ds].getPathdata()
+            item = QTreeWidgetItem()
+            item.setText(0, dataset)
+            item.setCheckState(0, Qt.Unchecked)
+            self.TreeWidget_Datasets.addTopLevelItem(item)
+
+    def getSelectedDatasets(self):
+        selectedDatasets = []
+        for i in range(self.TreeWidget_Datasets.topLevelItemCount()):
+            if self.TreeWidget_Datasets.topLevelItem(i).checkState(0) == Qt.Checked:
+                selectedDatasets.append(self.TreeWidget_Datasets.topLevelItem(i).text(0))
+
+        self.deepLearningArtApp.setSelectedDatasets(selectedDatasets)
+
+    def selectedDNN_changed(self):
+        self.deepLearningArtApp.setNeuralNetworkModel(self.ComboBox_DNNs.currentText())
+
+    def button_useCurrentData_clicked(self):
+        if self.deepLearningArtApp.datasetAvailable() == True:
+            self.Label_currentDataset.setText("Current Dataset is used...")
+            self.GroupBox_TrainNN.setEnabled(True)
+        else:
+            self.Button_useCurrentData.setEnabled(False)
+            self.Label_currentDataset.setText("No Dataset selected!")
+            self.GroupBox_TrainNN.setEnabled(False)
+
+    def button_selectDataset_clicked(self):
+        pathToDataset = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
+        retbool, datasetName = self.deepLearningArtApp.loadDataset(pathToDataset)
+        if retbool == True:
+            self.Label_currentDataset.setText(datasetName + " is used as dataset...")
+        else:
+            self.Label_currentDataset.setText("No Dataset selected!")
+
+        if self.deepLearningArtApp.datasetAvailable() == True:
+            self.GroupBox_TrainNN.setEnabled(True)
+        else:
+            self.GroupBox_TrainNN.setEnabled(False)
+
+    def button_learningOutputPath_clicked(self):
+        path = self.openFileNamesDialog(self.deepLearningArtApp.getLearningOutputPath())
+        self.deepLearningArtApp.setLearningOutputPath(path)
+        self.Label_LearningOutputPath.setText(path)
+
+    def updateProgressBarTraining(self, val):
+        self.ProgressBar_training.setValue(val)
+
+    def splittingMode_changed(self):
+
+        if self.ComboBox_splittingMode.currentIndex() == 0:
+            self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
+            self.Label_SplittingParams.setText("Select splitting mode!")
+        elif self.ComboBox_splittingMode.currentIndex() == 1:
+            # call input dialog for editting ratios
+            testTrainingRatio, retBool = QInputDialog.getDouble(self, "Enter Test/Training Ratio:",
+                                                             "Ratio Test/Training Set:", 0.2, 0, 1, decimals=2)
+            if retBool == True:
+                validationTrainingRatio, retBool = QInputDialog.getDouble(self, "Enter Validation/Training Ratio",
+                                                                      "Ratio Validation/Training Set: ", 0.2, 0, 1, decimals=2)
+                if retBool == True:
+                    self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING)
+                    self.deepLearningArtApp.setTrainTestDatasetRatio(testTrainingRatio)
+                    self.deepLearningArtApp.setTrainValidationRatio(validationTrainingRatio)
+                    txtStr = "using Test/Train=" + str(testTrainingRatio) + " and Valid/Train=" + str(validationTrainingRatio)
+                    self.Label_SplittingParams.setText(txtStr)
+                else:
+                    self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
+                    self.ComboBox_splittingMode.setCurrentIndex(0)
+                    self.Label_SplittingParams.setText("Select Splitting Mode!")
+            else:
+                self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
+                self.ComboBox_splittingMode.setCurrentIndex(0)
+                self.Label_SplittingParams.setText("Select Splitting Mode!")
+        elif self.ComboBox_splittingMode.currentIndex() == 2:
+            # cross validation splitting
+            testTrainingRatio, retBool = QInputDialog.getDouble(self, "Enter Test/Training Ratio:",
+                                                             "Ratio Test/Training Set:", 0.2, 0, 1, decimals=2)
+
+            if retBool == True:
+                numFolds, retBool = QInputDialog.getInt(self, "Enter Number of Folds for Cross Validation",
+                                                    "Number of Folds: ", 15, 0, 100000)
+                if retBool == True:
+                    self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.CROSS_VALIDATION_SPLITTING)
+                    self.deepLearningArtApp.setTrainTestDatasetRatio(testTrainingRatio)
+                    self.deepLearningArtApp.setNumFolds(numFolds)
+                    self.Label_SplittingParams.setText("Test/Train Ratio: " + str(testTrainingRatio) + \
+                                                          ", and " + str(numFolds) + " Folds")
+                else:
+                    self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
+                    self.ComboBox_splittingMode.setCurrentIndex(0)
+                    self.Label_SplittingParams.setText("Select Splitting Mode!")
+            else:
+                self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.NONE_SPLITTING)
+                self.ComboBox_splittingMode.setCurrentIndex(0)
+                self.Label_SplittingParams.setText("Select Splitting Mode!")
+
+        elif self.ComboBox_splittingMode.currentIndex() == 3:
+            self.deepLearningArtApp.setSplittingMode(DeepLearningArtApp.PATIENT_CROSS_VALIDATION_SPLITTING)
+
+    def check_dataAugmentation_enabled(self):
+        if self.CheckBox_DataAugmentation.checkState() == Qt.Checked:
+            self.CheckBox_DataAug_horizontalFlip.setEnabled(True)
+            self.CheckBox_DataAug_verticalFlip.setEnabled(True)
+            self.CheckBox_DataAug_Rotation.setEnabled(True)
+            self.CheckBox_DataAug_zcaWeighting.setEnabled(True)
+            self.CheckBox_DataAug_HeightShift.setEnabled(True)
+            self.CheckBox_DataAug_WidthShift.setEnabled(True)
+            self.CheckBox_DataAug_Zoom.setEnabled(True)
+            self.RadioButton_DataAug_contrastStretching.setEnabled(True)
+            self.RadioButton_DataAug_histogramEq.setEnabled(True)
+            self.RadioButton_DataAug_adaptiveEq.setEnabled(True)
+        else:
+            self.CheckBox_DataAug_horizontalFlip.setEnabled(False)
+            self.CheckBox_DataAug_verticalFlip.setEnabled(False)
+            self.CheckBox_DataAug_Rotation.setEnabled(False)
+            self.CheckBox_DataAug_zcaWeighting.setEnabled(False)
+            self.CheckBox_DataAug_HeightShift.setEnabled(False)
+            self.CheckBox_DataAug_WidthShift.setEnabled(False)
+            self.CheckBox_DataAug_Zoom.setEnabled(False)
+
+            self.RadioButton_DataAug_contrastStretching.setEnabled(False)
+            self.RadioButton_DataAug_contrastStretching.setAutoExclusive(False)
+            self.RadioButton_DataAug_contrastStretching.setChecked(False)
+            self.RadioButton_DataAug_contrastStretching.setAutoExclusive(True)
+
+            self.RadioButton_DataAug_histogramEq.setEnabled(False)
+            self.RadioButton_DataAug_histogramEq.setAutoExclusive(False)
+            self.RadioButton_DataAug_histogramEq.setChecked(False)
+            self.RadioButton_DataAug_histogramEq.setAutoExclusive(True)
+
+            self.RadioButton_DataAug_adaptiveEq.setEnabled(False)
+            self.RadioButton_DataAug_adaptiveEq.setAutoExclusive(False)
+            self.RadioButton_DataAug_adaptiveEq.setChecked(False)
+            self.RadioButton_DataAug_adaptiveEq.setAutoExclusive(True)
+
+
+########## third tab
+    def textChangeAlpha(self,text):
+        self.inputalpha = text
+        # if text.isdigit():
+        #     self.inputalpha=text
+        # else:
+        #     self.alphaShouldBeNumber()
+
+
+    def textChangeGamma(self,text):
+        self.inputGamma = text
+        # if text.isdigit():
+        #     self.inputGamma=text
+        # else:
+        #     self.GammaShouldBeNumber()
+
+    def wheelScroll(self,ind,oncrollStatus):
+        if oncrollStatus=='onscroll':
+            self.horizontalSliderPatch.setValue(ind)
+            self.horizontalSliderPatch.valueChanged.connect(self.lcdNumberPatch.display)
+        elif oncrollStatus=='onscrollW' or oncrollStatus=='onscroll_3D':
+            self.wheelScrollW(ind)
+        elif oncrollStatus=='onscrollSS':
+            self.wheelScrollSS(ind)
+        else:
+            pass
+
+    def wheelScrollW(self,ind):
+        self.horizontalSliderPatch.setValue(ind)
+        self.horizontalSliderPatch.valueChanged.connect(self.lcdNumberPatch.display)
+
+    def wheelScrollSS(self,indSS):
+        self.horizontalSliderPatch.setValue(indSS)
+        self.horizontalSliderPatch.valueChanged.connect(self.lcdNumberPatch.display)
+
+    def clickList(self,qModelIndex):
+
+        self.chosenLayerName = self.qList[qModelIndex.row()]
+
+    def show_layer_names(self):
+        qList = []
+        activations = self.model['activations']
+
+        for i in activations:
+            qList.append(i)
+            layerPath = 'activations' + '/' + i
+            self.act[i] = self.model[layerPath]
+            if self.act[i].ndim==5 and self.modelDimension=='3D':
+                self.act[i]=np.transpose(self.act[i],(0,4,1,2,3))
+        self.qList = qList
+
+    def sliderValue(self):
+        if self.W_F=='w':
+
+            self.chosenWeightNumber=self.horizontalSliderPatch.value()
+            self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+            self.overlay.setGeometry(QtCore.QRect(700, 350, 171, 141))
+            self.overlay.show()
+
+            from loadf2 import loadImage_weights_plot_3D
+            self.wyPlot.setDisabled(True)
+            self.newW3D = loadImage_weights_plot_3D(self.matplotlibwidget_static, self.w, self.chosenWeightNumber,
+                                                    self.totalWeights, self.totalWeightsSlices)
+            self.newW3D.trigger.connect(self.loadEnd2)
+            self.newW3D.start()
+
+            # self.matplotlibwidget_static.mpl.weights_plot_3D(self.w, self.chosenWeightNumber, self.totalWeights,self.totalWeightsSlices)
+        elif self.W_F=='f':
+
+            if self.modelDimension=='2D':
+                self.chosenPatchNumber=self.horizontalSliderPatch.value()
+                self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                self.overlay.setGeometry(QtCore.QRect(700, 350, 171, 141))
+                self.overlay.show()
+
+                from loadf2 import loadImage_features_plot
+                self.wyPlot.setDisabled(True)
+                self.newf = loadImage_features_plot(self.matplotlibwidget_static, self.chosenPatchNumber)
+                self.newf.trigger.connect(self.loadEnd2)
+                self.newf.start()
+                # self.matplotlibwidget_static.mpl.features_plot(self.chosenPatchNumber)
+            elif self.modelDimension == '3D':
+
+                self.chosenPatchNumber = self.horizontalSliderPatch.value()
+                self.chosenPatchSliceNumber =self.horizontalSliderSlice.value()
+                self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                self.overlay.setGeometry(QtCore.QRect(700, 350, 171, 141))
+                self.overlay.show()
+
+                from loadf2 import loadImage_features_plot_3D
+                self.wyPlot.setDisabled(True)
+                self.newf = loadImage_features_plot_3D(self.matplotlibwidget_static, self.chosenPatchNumber,
+                                                       self.chosenPatchSliceNumber)
+                self.newf.trigger.connect(self.loadEnd2)
+                self.newf.start()
+                # self.matplotlibwidget_static.mpl.features_plot_3D(self.chosenPatchNumber,self.chosenPatchSliceNumber)
+        elif self.W_F=='s':
+
+            self.chosenSSNumber = self.horizontalSliderPatch.value()
+            self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+            self.overlay.setGeometry(QtCore.QRect(700, 350, 171, 141))
+            self.overlay.show()
+
+            from loadf2 import loadImage_subset_selection_plot
+            self.wyPlot.setDisabled(True)
+            self.newf = loadImage_subset_selection_plot(self.matplotlibwidget_static, self.chosenSSNumber)
+            self.newf.trigger.connect(self.loadEnd2)
+            self.newf.start()
+            # self.matplotlibwidget_static.mpl.subset_selection_plot(self.chosenSSNumber)
+
+        else:
+            pass
+
+    def sliderValueSS(self):
+        self.chosenSSNumber=self.horizontalSliderSS.value()
+        # self.matplotlibwidget_static_2.mpl.subset_selection_plot(self.chosenSSNumber)
+        self.matplotlibwidget_static.mpl.subset_selection_plot(self.chosenSSNumber)
+
+    @pyqtSlot()
+    def on_wyChooseFile_clicked(self):
+        self.openfile_name = QFileDialog.getOpenFileName(self,'Choose the file','.','H5 files(*.h5)')[0]
+        if len(self.openfile_name)==0:
+            pass
+        else:
+            self.horizontalSliderPatch.hide()
+            self.horizontalSliderSlice.hide()
+            self.labelPatch.hide()
+            self.labelSlice.hide()
+            self.lcdNumberSlice.hide()
+            self.lcdNumberPatch.hide()
+            self.matplotlibwidget_static.mpl.fig.clf()
+
+
+            self.model=h5py.File(self.openfile_name,'r')
+            # self.model['modelDimension'] = str(self.model['modelDimension'].value)[3:5]
+            a=self.model['modelDimension'].value
+            self.modelDimension=a
+            # self.modelDimension=str(a)[3:5]
+
+            self.twoInput = self.model['twoInput'].value
+            if self.twoInput:
+                self.radioButton_3.show()
+                self.radioButton_4.show()
+
+            self.modelName=self.model['modelName'].value
+            temp_model=load_model(self.modelName)
+            plot_model(temp_model, 'model.png')
+            if self.twoInput:
+                self.modelInput=temp_model.input[0]
+                self.modelInput2=temp_model.input[1]
+            else:
+                self.modelInput = temp_model.input
+
+            self.weights =self.model['weights']
+
+            if self.modelDimension =='3D':
+                for i in self.weights:
+                    self.LayerWeights[i] = self.weights[i].value
+                    if self.LayerWeights[i].ndim == 5:
+                        self.LayerWeights[i] = np.transpose(self.LayerWeights[i], (4,3,2,0,1))
+            elif self.modelDimension =='2D':
+                for i in self.weights:
+                    # self.layerWeights[i] = self.weights[i].value
+                    self.LayerWeights[i]=self.weights[i].value
+
+                    if self.LayerWeights[i].ndim == 4:
+                        self.LayerWeights[i] = np.transpose(self.LayerWeights[i], (3,2,0,1))
+            else:
+                print('the dimesnion of the weights should be 2D or 3D')
+
+
+            self.show_layer_names()
+
+            self.subset_selection =np.array(self.model['subset_selection'])
+            if self.twoInput:
+                self.subset_selection_2 = np.array(self.model['subset_selection_2'])
+
+            # if self.modelDimension=='2D':
+            #     self.subset_selection = np.transpose(np.array(self.subset_selection), (1, 0, 2, 3))
+            # elif self.modelDimension=='3D':
+            #     self.subset_selection = np.transpose(np.array(self.subset_selection), (1, 0, 2, 3, 4))
+            # else:
+            #     print('the subset selection data should be 2D or 3D')
+            # self.subset_selection = np.squeeze(self.subset_selection, axis=1)
+            self.totalSS = len(self.subset_selection)
+
+            # show the activations' name in the List
+            slm = QStringListModel();
+            slm.setStringList(self.qList)
+            self.listView.setModel(slm)
+
+    @pyqtSlot()
+    def on_wyShowArchitecture_clicked(self):
+        # Show the structure of the model and plot the weights
+        if len(self.openfile_name) != 0:
+            # show the weights
+            # self.matplotlibwidget_static_2.hide()
+            # self.matplotlibwidget_static.hide()
+            # self.matplotlibwidget_static_3.show()
+            # self.scrollArea.show()
+            # structure
+            self.canvasStructure = MyMplCanvas()
+
+            self.canvasStructure.loadImage()
+            self.graphicscene = QtWidgets.QGraphicsScene()
+            self.graphicscene.addWidget(self.canvasStructure)
+            self.graphicview = Activeview()
+            self.scrollAreaWidgetContents = QtWidgets.QWidget()
+            self.maingrids = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
+            self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+            self.maingrids.addWidget(self.graphicview)
+            self.graphicview.setScene(self.graphicscene)
+            # self.graphicsView.setScene(self.graphicscene)
+
+        else:
+            self.showChooseFileDialog()
+
+    @pyqtSlot()
+    def on_wyPlot_clicked(self):
+        # self.matplotlibwidget_static_2.hide()
+
+        # Show the structure of the model and plot the weights
+        if len(self.openfile_name) != 0:
+            if self.radioButton.isChecked()== True :
+                if len(self.chosenLayerName) != 0:
+
+                    self.W_F='w'
+                    # show the weights
+                    if self.modelDimension == '2D':
+                        if self.LayerWeights[self.chosenLayerName].ndim==4:
+                            self.lcdNumberPatch.hide()
+                            self.lcdNumberSlice.hide()
+                            self.horizontalSliderPatch.hide()
+                            self.horizontalSliderSlice.hide()
+                            self.labelPatch.hide()
+                            self.labelSlice.hide()
+
+                            self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                            self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                            self.overlay.show()
+
+                            self.matplotlibwidget_static.mpl.getLayersWeights(self.LayerWeights)
+                            from loadf2 import loadImage_weights_plot_2D
+                            self.wyPlot.setDisabled(True)
+                            self.newW2D = loadImage_weights_plot_2D(self.matplotlibwidget_static,self.chosenLayerName)
+                            self.newW2D.trigger.connect(self.loadEnd2)
+                            self.newW2D.start()
+
+                            # self.matplotlibwidget_static.mpl.weights_plot_2D(self.chosenLayerName)
+                            self.matplotlibwidget_static.show()
+                        elif self.LayerWeights[self.chosenLayerName].ndim==0:
+                            self.showNoWeights()
+                        else:
+                            self.showWeightsDimensionError()
+
+                    elif self.modelDimension == '3D':
+                        if self.LayerWeights[self.chosenLayerName].ndim == 5:
+
+                            self.w=self.LayerWeights[self.chosenLayerName]
+                            self.totalWeights=self.w.shape[0]
+                            # self.totalWeightsSlices=self.w.shape[2]
+                            self.horizontalSliderPatch.setMinimum(1)
+                            self.horizontalSliderPatch.setMaximum(self.totalWeights)
+                            # self.horizontalSliderSlice.setMinimum(1)
+                            # self.horizontalSliderSlice.setMaximum(self.totalWeightsSlices)
+                            self.chosenWeightNumber=1
+                            self.horizontalSliderPatch.setValue(self.chosenWeightNumber)
+
+                            self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                            self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                            self.overlay.show()
+
+                            from loadf2 import loadImage_weights_plot_3D
+                            self.wyPlot.setDisabled(True)
+                            self.newW3D = loadImage_weights_plot_3D(self.matplotlibwidget_static, self.w,self.chosenWeightNumber,self.totalWeights,self.totalWeightsSlices)
+                            self.newW3D.trigger.connect(self.loadEnd2)
+                            self.newW3D.start()
+
+                            # self.matplotlibwidget_static.mpl.weights_plot_3D(self.w,self.chosenWeightNumber,self.totalWeights,self.totalWeightsSlices)
+
+                            self.matplotlibwidget_static.show()
+                            self.horizontalSliderSlice.hide()
+                            self.horizontalSliderPatch.show()
+                            self.labelPatch.show()
+                            self.labelSlice.hide()
+                            self.lcdNumberSlice.hide()
+                            self.lcdNumberPatch.show()
+                        elif self.LayerWeights[self.chosenLayerName].ndim==0:
+                            self.showNoWeights()
+                        else:
+                            self.showWeightsDimensionError3D()
+                    else:
+                        print('the dimesnion should be 2D or 3D')
+
+                else:
+                    self.showChooseLayerDialog()
+
+            elif self.radioButton_2.isChecked()== True :
+                if len(self.chosenLayerName) != 0:
+                    self.W_F = 'f'
+                    if self.modelDimension == '2D':
+                        if self.act[self.chosenLayerName].ndim==4:
+                            self.activations=self.act[self.chosenLayerName]
+                            self.totalPatches=self.activations.shape[0]
+
+                            self.matplotlibwidget_static.mpl.getLayersFeatures(self.activations, self.totalPatches)
+
+                            # show the features
+                            self.chosenPatchNumber=1
+                            self.horizontalSliderPatch.setMinimum(1)
+                            self.horizontalSliderPatch.setMaximum(self.totalPatches)
+                            self.horizontalSliderPatch.setValue(self.chosenPatchNumber)
+
+                            self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                            self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                            self.overlay.show()
+
+                            from loadf2 import loadImage_features_plot
+                            self.wyPlot.setDisabled(True)
+                            self.newf = loadImage_features_plot(self.matplotlibwidget_static,self.chosenPatchNumber)
+                            self.newf.trigger.connect(self.loadEnd2)
+                            self.newf.start()
+
+                            # self.matplotlibwidget_static.mpl.features_plot(self.chosenPatchNumber)
+                            self.matplotlibwidget_static.show()
+                            self.horizontalSliderSlice.hide()
+                            self.horizontalSliderPatch.show()
+                            self.labelPatch.show()
+                            self.labelSlice.hide()
+                            self.lcdNumberPatch.show()
+                            self.lcdNumberSlice.hide()
+                        else:
+                            self.showNoFeatures()
+
+                    elif self.modelDimension =='3D':
+                        a=self.act[self.chosenLayerName]
+                        if self.act[self.chosenLayerName].ndim == 5:
+                            self.activations = self.act[self.chosenLayerName]
+                            self.totalPatches = self.activations.shape[0]
+                            self.totalPatchesSlices=self.activations.shape[1]
+
+                            self.matplotlibwidget_static.mpl.getLayersFeatures_3D(self.activations, self.totalPatches,self.totalPatchesSlices)
+
+                            self.chosenPatchNumber=1
+                            self.chosenPatchSliceNumber=1
+                            self.horizontalSliderPatch.setMinimum(1)
+                            self.horizontalSliderPatch.setMaximum(self.totalPatches)
+                            self.horizontalSliderPatch.setValue(self.chosenPatchNumber)
+                            self.horizontalSliderSlice.setMinimum(1)
+                            self.horizontalSliderSlice.setMaximum(self.totalPatchesSlices)
+                            self.horizontalSliderSlice.setValue(self.chosenPatchSliceNumber)
+
+                            self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                            self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                            self.overlay.show()
+
+                            from loadf2 import loadImage_features_plot_3D
+                            self.wyPlot.setDisabled(True)
+                            self.newf = loadImage_features_plot_3D(self.matplotlibwidget_static, self.chosenPatchNumber,self.chosenPatchSliceNumber)
+                            self.newf.trigger.connect(self.loadEnd2)
+                            self.newf.start()
+
+                            # self.matplotlibwidget_static.mpl.features_plot_3D(self.chosenPatchNumber,self.chosenPatchSliceNumber)
+                            self.horizontalSliderSlice.show()
+                            self.horizontalSliderPatch.show()
+                            self.labelPatch.show()
+                            self.labelSlice.show()
+                            self.lcdNumberPatch.show()
+                            self.lcdNumberSlice.show()
+                            self.matplotlibwidget_static.show()
+                        else:
+                            self.showNoFeatures()
+
+                    else:
+                        print('the dimesnion should be 2D or 3D')
+
+                else:
+                    self.showChooseLayerDialog()
+
+            else:
+                self.showChooseButtonDialog()
+
+        else:
+            self.showChooseFileDialog()
+
+    @pyqtSlot()
+    def on_wySubsetSelection_clicked(self):
+        # Show the Subset Selection
+        if len(self.openfile_name) != 0:
+            # show the weights
+            # self.scrollArea.hide()
+            self.W_F ='s'
+            self.chosenSSNumber = 1
+            self.horizontalSliderPatch.setMinimum(1)
+            self.horizontalSliderPatch.setMaximum(self.totalSS)
+            self.horizontalSliderPatch.setValue(self.chosenSSNumber)
+            self.horizontalSliderPatch.valueChanged.connect(self.lcdNumberPatch.display)
+            self.lcdNumberPatch.show()
+            self.lcdNumberSlice.hide()
+            self.horizontalSliderPatch.show()
+            self.horizontalSliderSlice.hide()
+            self.labelPatch.show()
+            self.labelSlice.hide()
+
+
+            # create input patch
+            if self.twoInput==False:
+                self.matplotlibwidget_static.mpl.getSubsetSelections(self.subset_selection, self.totalSS)
+
+                self.createSubset(self.modelInput,self.subset_selection)
+                self.matplotlibwidget_static.mpl.getSSResult(self.ssResult)
+
+                self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                self.overlay.show()
+
+                from loadf2 import loadImage_subset_selection_plot
+                self.wyPlot.setDisabled(True)
+                self.newf = loadImage_subset_selection_plot(self.matplotlibwidget_static, self.chosenSSNumber)
+                self.newf.trigger.connect(self.loadEnd2)
+                self.newf.start()
+
+                # self.matplotlibwidget_static.mpl.subset_selection_plot(self.chosenSSNumber)
+            elif self.twoInput:
+                if self.radioButton_3.isChecked(): # the 1st input
+                    self.matplotlibwidget_static.mpl.getSubsetSelections(self.subset_selection, self.totalSS)
+                    self.createSubset(self.modelInput,self.subset_selection)
+                    self.matplotlibwidget_static.mpl.getSSResult(self.ssResult)
+
+                    self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                    self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                    self.overlay.show()
+
+                    from loadf2 import loadImage_subset_selection_plot
+                    self.wyPlot.setDisabled(True)
+                    self.newf = loadImage_subset_selection_plot(self.matplotlibwidget_static, self.chosenSSNumber)
+                    self.newf.trigger.connect(self.loadEnd2)
+                    self.newf.start()
+
+                elif self.radioButton_4.isChecked(): # the 2nd input
+                    self.matplotlibwidget_static.mpl.getSubsetSelections(self.subset_selection_2, self.totalSS)
+                    self.createSubset(self.modelInput2,self.subset_selection_2)
+                    self.matplotlibwidget_static.mpl.getSSResult(self.ssResult)
+
+                    self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                    self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                    self.overlay.show()
+
+                    from loadf2 import loadImage_subset_selection_plot
+                    self.wyPlot.setDisabled(True)
+                    self.newf = loadImage_subset_selection_plot(self.matplotlibwidget_static, self.chosenSSNumber)
+                    self.newf.trigger.connect(self.loadEnd2)
+                    self.newf.start()
+
+                else:
+                    self.showChooseInput()
+            else:
+                print('the number of input should be 1 or 2')
+
+        else:
+            self.showChooseFileDialog()
+
+    def clickList_1(self, qModelIndex):
+        self.chosenActivationName = self.qList[qModelIndex.row()]
+
+    def showChooseFileDialog(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "Please select one H5 File at first",
+                                        QMessageBox.Ok )
+
+    def showChooseLayerDialog(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "Please select one Layer at first",
+                                        QMessageBox.Ok)
+
+    def showChooseButtonDialog(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "Please select to plot the weights or the features",
+                                        QMessageBox.Ok)
+
+    def showNoWeights(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "This layer does not have weighst,please select other layers",
+                                        QMessageBox.Ok)
+
+    def showWeightsDimensionError(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "The diemnsion of the weights should be 0 or 4",
+                                        QMessageBox.Ok)
+
+    def showWeightsDimensionError3D(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "The diemnsion of the weights should be 0 or 5",
+                                        QMessageBox.Ok)
+
+    def showNoFeatures(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "This layer does not have feature maps, please select other layers",
+                                        QMessageBox.Ok)
+
+    def loadEnd2(self):
+        self.overlay.killTimer(self.overlay.timer)
+        self.overlay.hide()
+        self.wyPlot.setDisabled(False)
+
+    def alphaShouldBeNumber(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "Alpha should be a number!!!",
+                                        QMessageBox.Ok)
+
+    def GammaShouldBeNumber(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "Gamma should be a number!!!",
+                                        QMessageBox.Ok)
+
+    def createSubset(self,modelInput,subset_selection):
+        class_idx = 0
+        reg_param = 1 / (2e-4)
+
+        input = modelInput  # tensor
+        cost = -K.sum(K.log(input[:, class_idx] + 1e-8))  # tensor
+        gradient = K.gradients(cost, input)  # list
+
+        sess = tf.InteractiveSession()
+        calcCost = network_visualization.TensorFlowTheanoFunction([input], cost)
+        calcGrad = network_visualization.TensorFlowTheanoFunction([input], gradient)
+
+        step_size = float(self.inputalpha)
+        reg_param = float(self.inputGamma)
+
+        test = subset_selection
+        data_c = test
+        oss_v = network_visualization.SubsetSelection(calcGrad, calcCost, data_c, alpha=reg_param, gamma=step_size)
+        result = oss_v.optimize(np.random.uniform(0, 1.0, size=data_c.shape))
+        result = result * test
+        result[result>0]=1
+        self.ssResult=result
+
+    def showChooseInput(self):
+        reply = QMessageBox.information(self,
+                                        "Warning",
+                                        "Please select to plot the input 1 or 2",
+                                        QMessageBox.Ok)
+
+
+class MatplotlibWidget(QWidget):
+
+    def __init__(self, parent=None):
+        super(MatplotlibWidget, self).__init__(parent)
+        self.initUi()
+
+    def initUi(self):
+        self.layout = QVBoxLayout(self)
+        self.mpl = MyMplCanvas(self, width=15, height=15)
+        self.layout.addWidget(self.mpl)
+
+############################################################ class of grids
 class Viewgroup(QtWidgets.QGridLayout):
     in_link = QtCore.pyqtSignal()
     def __init__(self, parent=None):
@@ -1235,24 +2354,43 @@ class Viewgroup(QtWidgets.QGridLayout):
                 pass
         else:
             if self.refbox.currentIndex()!=0:
-                if self.viewnr2 == 1:
-                    self.viewnr2 = 2
-                    param2 = {'image': list1[correslist[self.spin - 1]], 'mode': 5, 'color': problist[self.spin - 1],
-                              'hatch': hatchlist[self.spin - 1], 'cmap': cmap3, 'hmap': hmap2, 'trans': vtr3,
-                              'shape': shapelist[correslist[self.spin - 1]]}
-                    self.anewcanvas = Canvas(param2)
-                elif self.viewnr2 == 2:
-                    self.viewnr2 = 3
-                    param3 = {'image': list1[correslist[self.spin - 1]], 'mode': 6, 'color': problist[self.spin - 1],
-                              'hatch': hatchlist[self.spin - 1], 'cmap': cmap3, 'hmap': hmap2, 'trans': vtr3,
-                              'shape': shapelist[correslist[self.spin - 1]]}
-                    self.anewcanvas = Canvas(param3)
-                else:
-                    self.viewnr2 = 1
-                    param1 = {'image': list1[correslist[self.spin - 1]], 'mode': 4, 'color': problist[self.spin - 1],
-                              'hatch': hatchlist[self.spin - 1], 'cmap': cmap3, 'hmap': hmap2, 'trans': vtr3,
-                              'shape': shapelist[correslist[self.spin - 1]]}
-                    self.anewcanvas = Canvas(param1)
+                if cnrlist[self.spin - 1] == 11:
+                    if self.viewnr2 == 1:
+                        self.viewnr2 = 2
+                        param2 = {'image': list1[correslist[self.spin - 1]], 'mode': 5, 'color': problist[self.spin - 1],
+                                  'hatch': hatchlist[self.spin - 1], 'cmap': cmap3, 'hmap': hmap2, 'trans': vtr3,
+                                  'shape': shapelist[correslist[self.spin - 1]]}
+                        self.anewcanvas = Canvas(param2)
+                    elif self.viewnr2 == 2:
+                        self.viewnr2 = 3
+                        param3 = {'image': list1[correslist[self.spin - 1]], 'mode': 6, 'color': problist[self.spin - 1],
+                                  'hatch': hatchlist[self.spin - 1], 'cmap': cmap3, 'hmap': hmap2, 'trans': vtr3,
+                                  'shape': shapelist[correslist[self.spin - 1]]}
+                        self.anewcanvas = Canvas(param3)
+                    else:
+                        self.viewnr2 = 1
+                        param1 = {'image': list1[correslist[self.spin - 1]], 'mode': 4, 'color': problist[self.spin - 1],
+                                  'hatch': hatchlist[self.spin - 1], 'cmap': cmap3, 'hmap': hmap2, 'trans': vtr3,
+                                  'shape': shapelist[correslist[self.spin - 1]]}
+                        self.anewcanvas = Canvas(param1)
+
+                elif cnrlist[self.spin - 1] == 2:
+                    if self.viewnr2 == 1:
+                        self.viewnr2 = 2
+                        param2 = {'image': list1[correslist[self.spin - 1]], 'mode': 8, 'color': problist[self.spin - 1],
+                                  'cmap': cmap1, 'trans': vtr1, 'shape': shapelist[correslist[self.spin - 1]]}
+                        self.anewcanvas = Canvas(param2)
+                    elif self.viewnr2 == 2:
+                        self.viewnr2 = 3
+                        param3 = {'image': list1[correslist[self.spin - 1]], 'mode': 9, 'color': problist[self.spin - 1],
+                                  'cmap': cmap1, 'trans': vtr1, 'shape': shapelist[correslist[self.spin - 1]]}
+                        self.anewcanvas = Canvas(param3)
+                    else:
+                        self.viewnr2 = 1
+                        param1 = {'image': list1[correslist[self.spin - 1]], 'mode': 7, 'color': problist[self.spin - 1],
+                                  'cmap': cmap1, 'trans': vtr1, 'shape': shapelist[correslist[self.spin - 1]]}
+                        self.anewcanvas = Canvas(param1)
+
                 self.loadImage()
             else:
                 pass
@@ -1312,7 +2450,11 @@ class Viewgroup(QtWidgets.QGridLayout):
                               'hatch': hatchlist[i - 1], 'cmap': cmap3, 'hmap': hmap2, 'trans': vtr3,
                               'shape': shapelist[correslist[i - 1]]}
                     self.anewcanvas = Canvas(param1)
-            # elif
+                elif cnrlist[i - 1] == 2:
+                    param1 = {'image': list1[correslist[i - 1]], 'mode': 7 , 'color':problist[i - 1],
+                               'cmap':cmap1, 'trans':vtr1, 'shape': shapelist[correslist[i - 1]]}
+                    self.anewcanvas = Canvas(param1)
+
             self.loadImage()
         else:
             if self.oldindex != 0:

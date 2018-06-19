@@ -6,7 +6,7 @@ import scipy.ndimage
 from PyQt5 import QtCore
 
 class loadImage(QtCore.QThread):
-    trigger = QtCore.pyqtSignal()
+    trigger0 = QtCore.pyqtSignal()
     def __init__(self, PathDicom):
         super(loadImage, self).__init__()
         self.PathDicom = PathDicom
@@ -24,8 +24,7 @@ class loadImage(QtCore.QThread):
             self.new_shape = np.round(new_real_shape)
             self.new_shape[0], self.new_shape[2] = self.new_shape[2], self.new_shape[0]
             self.new_shape=self.new_shape.tolist()
-
-        self.trigger.emit()
+        self.trigger0.emit()
 
     def load_scan(self, path):
         if path:
