@@ -1,4 +1,4 @@
-from keras.layers import Conv2D, Conv3D, LeakyReLU, Conv2DTranspose, Conv3DTranspose, concatenate, MaxPooling2D, MaxPooling3D, Lambda, BatchNormalization
+from keras.layers import Conv2D, Conv3D, LeakyReLU, Conv2DTranspose, Conv3DTranspose, concatenate, MaxPooling2D, MaxPooling3D, Lambda, BatchNormalization, add
 from keras.regularizers import l1_l2
 from keras import backend as K
 
@@ -34,12 +34,14 @@ def fCreateLeakyReluBNConv2D(filters, kernel_size=(3, 3), strides=(1, 1), paddin
     l2_reg = 1e-6
 
     def f(inputs):
-        conv2d = Conv2D(filters,
+        output = Conv2D(filters,
                         kernel_size=kernel_size,
                         strides=strides,
                         padding=padding,
                         kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
-        return BatchNormalization(axis=1)(LeakyReLU()(conv2d))
+        output = BatchNormalization(axis=1)(output)
+
+        return LeakyReLU()(output)
     return f
 
 
@@ -71,50 +73,65 @@ def fCreateLeakyReluBNConv3D(filters, kernel_size, strides, padding='same'):
     return f
 
 
-def fCreateConv2D_DenseBlock(filters, kernel_size=(3, 3), strides=(1, 1), padding='same'):
+def fCreateConv2D_ResBlock(filters, kernel_size=(3, 3), strides=(2, 2), padding='same'):
     l1_reg = 0
     l2_reg = 1e-6
 
     def f(inputs):
-        conv_1 = Conv2D(filters,
+        output = Conv2D(filters,
                         kernel_size=kernel_size,
                         strides=strides,
                         padding=padding,
                         kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
-        active_1 =  LeakyReLU()(conv_1)
+        skip = LeakyReLU()(output)
 
-        conv_2 = Conv2D(filters,
+        output = Conv2D(filters,
                         kernel_size=kernel_size,
-                        strides=strides,
+                        strides=(1, 1),
                         padding=padding,
-                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(active_1)
-        active_2 =  LeakyReLU()(conv_2)
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(skip)
+        output = LeakyReLU()(output)
 
-        output = concatenate([inputs, active_2], axis=1)
+        output = Conv2D(filters,
+                        kernel_size=kernel_size,
+                        strides=(1, 1),
+                        padding=padding,
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(output)
+        output = LeakyReLU()(output)
+
+        output = add([skip, output])
         return output
     return f
 
 
-def fCreateConv3D_DenseBlock(filters, kernel_size=(3, 3, 3), strides=(1, 1, 1), padding='same'):
+def fCreateConv2DTranspose_ResBlock(filters, kernel_size=(3, 3), strides=(2, 2), padding='same'):
     l1_reg = 0
     l2_reg = 1e-6
 
     def f(inputs):
-        conv_1 = Conv3D(filters,
-                        kernel_size=kernel_size,
-                        strides=strides,
-                        padding=padding,
-                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
-        active_1 = LeakyReLU()(conv_1)
+        output = Conv2DTranspose(filters=filters,
+                                 kernel_size=kernel_size,
+                                 strides=strides,
+                                 padding=padding,
+                                 kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
+        skip = LeakyReLU()(output)
 
-        conv_2 = Conv3D(filters,
+        output = Conv2D(filters,
                         kernel_size=kernel_size,
-                        strides=strides,
+                        strides=(1, 1),
                         padding=padding,
-                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(active_1)
-        active_2 = LeakyReLU()(conv_2)
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(skip)
+        output = LeakyReLU()(output)
 
-        output = concatenate([inputs, active_2], axis=1)
+        output = Conv2D(filters,
+                        kernel_size=kernel_size,
+                        strides=(1, 1),
+                        padding=padding,
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(output)
+        output = LeakyReLU()(output)
+
+        output = add([skip, output])
+
         return output
     return f
 
@@ -139,14 +156,14 @@ def fCreateConv2DBNTranspose(filters, strides, kernel_size=(3, 3), padding='same
     l2_reg = 1e-6
 
     def f(inputs):
-        conv2d = Conv2DTranspose(filters=filters,
+        output = Conv2DTranspose(filters=filters,
                                  kernel_size=kernel_size,
                                  strides=strides,
                                  padding=padding,
                                  kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
 
-        bn = BatchNormalization(axis=1)(conv2d)
-        return LeakyReLU()(bn)
+        output = BatchNormalization(axis=1)(output)
+        return LeakyReLU()(output)
     return f
 
 
