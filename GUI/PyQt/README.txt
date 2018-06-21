@@ -15,4 +15,4 @@ This GUI contains three tabs:
 
  The third tab: 
 	network structure: the network structure can be loaded from h5 file
-	filter/feature maps viewing
+	feature maps and filters viewing
