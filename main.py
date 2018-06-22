@@ -205,9 +205,7 @@ else:
     if len(sPredictModel) == 0:
         sPredictModel = cfg['selectedDatabase']['bestmodel'][sNetworktype[2]]
 
-    if sTrainingMethod == "MultiScaleSeparated" or cfg['patchSize'][0] == 24:
-        if cfg['patchSize'][0] == 24:
-            cfg['patchSize'] = [40,40,10]
+    if sTrainingMethod == "MultiScaleSeparated":
         patchSize = fcalculateInputOfPath2(cfg['patchSize'], cfg['lScaleFactor'][0], cfg['network'])
 
     if len(patchSize) == 3:
@@ -227,11 +225,8 @@ else:
 
     if sTrainingMethod == "MultiScaleSeparated":
         X_test_p1 = scaling.fcutMiddelPartOfPatch(X_test, X_test, patchSize, cfg['patchSize'])
-        X_train_p2, X_test_p2, scedpatchSize = scaling.fscaling([X_test], [X_test], patchSize, cfg['lScaleFactor'][0])
+        X_train_p2, X_test_p2, scedpatchSize = scaling.fscaling([X_test], [X_test], patchSize, cfg['lScaleFactor'][0])        
         frunCNN_MS({'X_test': X_test_p1, 'y_test': y_test, 'patchSize': patchSize, 'X_test_p2': X_test_p2[0], 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'],'actualSize': cfg['correction']['actualSize']}, cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], predictImg=allImg)
-    elif patchSize[0] == 48:
-        X_train_p2, X_test_p2, scedpatchSize = scaling.fscaling([X_test], [X_test], patchSize, cfg['lScaleFactor'][0])
-        frunCNN_MS({'X_test': X_test_p2[0], 'y_test': y_test, 'patchSize': patchSize, 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize']},  cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], predictImg=allImg)
     elif 'MS' in cfg['network']:
         frunCNN_MS({'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize'], 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize']},  cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], predictImg=allImg)
     else:
