@@ -90,7 +90,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         pnamelist = []
         empty1 = []
 
-        with open('colors0.json', 'r') as json_data:
+        with open(os.path.join('configGUI','colors0.json'), 'r') as json_data:
             self.dcolors = json.load(json_data)
             cmap1 = self.dcolors['class2']['colors']
             cmap1 = mpl.colors.ListedColormap(cmap1)

@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets
 from cPatches import Ui_Patches
 import json
+import os
 import matplotlib as mpl
 from collections import Counter
 
@@ -9,7 +10,7 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
         super().__init__(parent)
         self.setupUi(self)
 
-        with open('colors0.json', 'r') as json_data:
+        with open(os.path.join('configGUI','colors0.json'), 'r') as json_data:
             self.dcolors = json.load(json_data)
 
             self.diylist1d = self.dcolors['class2']['colors']

@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets
 from PreColor import Ui_PreColor
 import json
+import os
 import matplotlib as mpl
 
 class cPre_window(QtWidgets.QDialog, Ui_PreColor):
@@ -8,7 +9,7 @@ class cPre_window(QtWidgets.QDialog, Ui_PreColor):
         super().__init__(parent)
         self.setupUi(self)
 
-        with open('colors0.json', 'r') as json_data:
+        with open(os.path.join('configGUI','colors0.json'), 'r') as json_data:
             self.dcolors = json.load(json_data)
 
             self.diylist1 = self.dcolors['class2']['colors']
@@ -163,7 +164,7 @@ class cPre_window(QtWidgets.QDialog, Ui_PreColor):
             self.vtr1 = self.dev1
             self.vtr3 = self.dev2
 
-        with open('colors0.json', 'r') as json_data:
+        with open(os.path.join('configGUI','colors0.json'), 'r') as json_data:
             self.colors = json.load(json_data)
 
             self.colors['class2']['colors'] = self.diylist1
@@ -173,7 +174,7 @@ class cPre_window(QtWidgets.QDialog, Ui_PreColor):
             self.colors['class2']['trans'][0] = self.vtr1
             self.colors['class11']['trans'][0] = self.vtr3
 
-        with open('colors0.json', 'w') as json_data:
+        with open(os.path.join('configGUI','colors0.json'), 'w') as json_data:
             json_data.write(json.dumps(self.colors))
 
         return self.cmap1, self.cmap3, self.hmap1, self.hmap2, self.vtr1, self.vtr3
