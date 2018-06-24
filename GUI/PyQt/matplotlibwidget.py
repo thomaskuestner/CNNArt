@@ -17,7 +17,7 @@ import h5py
 from keras.utils.vis_utils import plot_model, model_to_dot
 from keras.models import load_model
 
-#from network_visualization import plot_mosaic,on_click
+#from .deepvis.network_visualization import plot_mosaic,on_click
 #
 #
 # class MainWindow(QMainWindow, Ui_MainWindow):

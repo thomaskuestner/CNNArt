@@ -17,9 +17,9 @@ import glob
 import yaml
 import h5py
 from DatabaseInfo import DatabaseInfo
-import utils.DataPreprocessing as datapre
+import ..utilsGUI.DataPreprocessing as datapre
 from keras.models import load_model
-from network_visualization import make_mosaic,plot_feature_map,plot_all_feature_maps,get_weights_mosaic,plot_weights,plot_all_weights,on_click
+from .deepvis.network_visualization import make_mosaic,plot_feature_map,plot_all_feature_maps,get_weights_mosaic,plot_weights,plot_all_weights,on_click
 from keras.utils import plot_model
 import keras.optimizers
 from keras.callbacks import EarlyStopping, ModelCheckpoint,ReduceLROnPlateau

@@ -6,10 +6,9 @@
 
 import sys
 
-#sys.path.append("C:/Users/Yannick/'Google Drive'/30_Content/CNNArt/utils")
-from RigidPatching import *
-from DataPreprocessing import *
-from utils.Training_Test_Split import *
+from .utilsGUI.RigidPatching import *
+from .utilsGUI.DataPreprocessing import *
+from .utilsGUI.Training_Test_Split import *
 import scipy.io as sio
 
 import os

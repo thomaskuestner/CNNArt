@@ -20,9 +20,9 @@ from label_window import*
 from activeview import Activeview
 from activescene import Activescene
 from canvas import Canvas
-from Unpatch import*
-from Unpatch_eight import*
-from Unpatch_two import*
+from .utilsGUI.Unpatch import*
+from .utilsGUI.Unpatch_eight import*
+from .utilsGUI.Unpatch_two import*
 
 from DatabaseInfo import*
 import yaml
@@ -49,8 +49,8 @@ from loadf2 import *
 
 import tensorflow as tf
 import keras.backend as K
-import network_visualization
-from network_visualization import *
+#import network_visualization
+from .deepvis.network_visualization import *
 
 class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
     update_data = QtCore.pyqtSignal(list)

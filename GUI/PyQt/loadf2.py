@@ -20,8 +20,8 @@ import tensorflow as tf
 import keras.backend as K
 from keras.models import load_model
 import h5py
-import network_visualization
-from network_visualization import *
+#import network_visualization
+from .deepvis.network_visualization import *
 
 class loadImage_weights_plot_2D(QtCore.QThread):
     trigger = QtCore.pyqtSignal()

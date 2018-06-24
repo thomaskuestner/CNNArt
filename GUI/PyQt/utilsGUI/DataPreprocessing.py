@@ -3,7 +3,7 @@ import dicom
 import dicom_numpy
 import os
 import shelve
-from RigidPatching import *
+from .utilsGUI.RigidPatching import *
 import cProfile
 import json
 from matplotlib import path

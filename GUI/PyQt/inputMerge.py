@@ -1,7 +1,7 @@
 import keras.backend as K
 from keras.utils.vis_utils import plot_model, model_to_dot
-import network_visualization
-from network_visualization import *
+#import network_visualization
+from .deepvis.network_visualization import *
 # import theano
 # import theano.tensor as T
 # import tensorflow
