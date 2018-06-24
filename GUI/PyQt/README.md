@@ -1,6 +1,10 @@
-This GUI is designed with PyQt5.
+#CNNArtGUI
 
-Run Qt_main.py to open the GUI, this GUI can be run independent from CNNArt.
+This GUI is designed with PyQt5 and works for Python >2.7 and >3.5.
+
+## GUI calling
+Qt_main.py 
+to open the GUI, this GUI can be run independent from CNNArt.
 
 This GUI contains three tabs:
 
