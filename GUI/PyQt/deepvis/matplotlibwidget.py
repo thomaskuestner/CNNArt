@@ -14,7 +14,7 @@ from numpy import arange, sin, pi
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from Ui_matplotlib_pyqt_2ListView3w import Ui_MainWindow
 import h5py
-#from .deepvis.network_visualization import plot_mosaic,on_click
+#from deepvis.network_visualization import plot_mosaic,on_click
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):

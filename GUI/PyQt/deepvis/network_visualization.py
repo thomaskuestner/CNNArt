@@ -1,7 +1,7 @@
 # import theano
 # import theano.tensor as T
 from scipy.optimize import fmin_l_bfgs_b
-import .deepvis.proximal_alg
+import deepvis.proximal_alg
 import numpy as np
 import tensorflow as tf
 

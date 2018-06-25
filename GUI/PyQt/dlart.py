@@ -6,15 +6,15 @@
 
 import sys
 
-from .utilsGUI.RigidPatching import *
-from .utilsGUI.DataPreprocessing import *
-from .utilsGUI.Training_Test_Split import *
+from utilsGUI.RigidPatching import *
+from utilsGUI.DataPreprocessing import *
+from utilsGUI.Training_Test_Split import *
 import scipy.io as sio
 
 import os
 
 from Dataset import Dataset
-from utils.Label import Label
+from utilsGUI.Label import Label
 import tensorflow as tf
 import numpy as np
 import dicom as dicom

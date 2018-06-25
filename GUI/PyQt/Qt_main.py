@@ -20,9 +20,14 @@ from label_window import*
 from activeview import Activeview
 from activescene import Activescene
 from canvas import Canvas
-from .utilsGUI.Unpatch import*
-from .utilsGUI.Unpatch_eight import*
-from .utilsGUI.Unpatch_two import*
+from utilsGUI.Unpatch import*
+from utilsGUI.Unpatch_eight import*
+from utilsGUI.Unpatch_two import*
+
+import sys,inspect
+current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parent_dir = os.path.dirname(os.path.dirname(current_dir))
+sys.path.insert(0, parent_dir)
 
 from DatabaseInfo import*
 import yaml
@@ -30,12 +35,14 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import json
 
+from pathlib import Path
+
 from loadingIcon import Overlay
 import scipy.io as sio
 from Grey_window import*
 import sys
 import h5py
-from dlart import*
+from dlart import* # << resolve dependency from dlart
 from matplotlib.figure import Figure
 
 import pickle
@@ -50,7 +57,7 @@ from loadf2 import *
 import tensorflow as tf
 import keras.backend as K
 #import network_visualization
-from .deepvis.network_visualization import *
+from deepvis.network_visualization import *
 
 class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
     update_data = QtCore.pyqtSignal(list)
@@ -784,10 +791,25 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                         self.maingrids1.itemAtPosition(i, j).anewcanvas.linkedSlice(data)
 
     def loadMR(self):
-        with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
-            cfg = yaml.safe_load(ymlfile)
-        dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
-        self.PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "open file", dbinfo.sPathIn)
+        current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+        parent_dir = os.path.dirname(os.path.dirname(current_dir))
+        cfgFile = Path(parent_dir + os.sep + 'config' + os.sep + 'param.yml')
+
+        if(cfgFile.exists()):
+            with open(parent_dir + os.sep + 'config' + os.sep + 'param.yml', 'r') as ymlfile:
+                cfg = yaml.safe_load(ymlfile)
+                if(Path(cfg['MRdatabase']).exists()):
+                    dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
+                    sDICOMPath = dbinfo.sPathIn
+                else:
+                    sDICOMPath = current_dir
+        else:
+            sDICOMPath = current_dir
+
+        if( not Path(sDICOMPath).exists()): # safety check
+            sDICOMPath = current_dir
+
+        self.PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "open file", sDICOMPath)
         # self.PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "open file", "C:/Users/hansw/Videos/artefacts")
         if self.PathDicom:
             self.i = self.i + 1
@@ -911,7 +933,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                         problist.append(IType)
                         hatchlist.append(empty1)
                         cnrlist.append(2)
-                    # elif cnum.shape[1] == 8: 
+                    # elif cnum.shape[1] == 8:
 
                 nameofCfile = os.path.split(resultfile)[1]
                 nameofCfile = nameofCfile + '   class:' + str(cnum.shape[1])
@@ -1050,8 +1072,8 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         if self.selectorPath:
             probandname = os.path.split(os.path.split(os.path.split(self.selectorPath)[0])[0])[1]
             self.markfile = str(self.pathROI) + '/' + str(probandname) + '.json'
-            
-            self.overlay = Overlay(self.centralWidget()) 
+
+            self.overlay = Overlay(self.centralWidget())
             self.overlay.setGeometry(QtCore.QRect(950, 400, 171, 141))
             self.overlay.show()
             from loadf import loadImage
