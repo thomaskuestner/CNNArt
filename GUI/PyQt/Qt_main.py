@@ -1065,10 +1065,28 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.viewLabel.stopMove(n)
 
     def chooseMark(self):
-        with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
-            cfg = yaml.safe_load(ymlfile)
-        dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
-        self.selectorPath = QtWidgets.QFileDialog.getExistingDirectory(self, "choose the image to view", dbinfo.sPathIn)
+        # with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
+        #     cfg = yaml.safe_load(ymlfile)
+        # dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
+        current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+        parent_dir = os.path.dirname(os.path.dirname(current_dir))
+        cfgFile = Path(parent_dir + os.sep + 'config' + os.sep + 'param.yml')
+
+        if(cfgFile.exists()):
+            with open(parent_dir + os.sep + 'config' + os.sep + 'param.yml', 'r') as ymlfile:
+                cfg = yaml.safe_load(ymlfile)
+                if(Path(cfg['MRdatabase']).exists()):
+                    dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
+                    sDICOMPath = dbinfo.sPathIn
+                else:
+                    sDICOMPath = current_dir
+        else:
+            sDICOMPath = current_dir
+
+        if( not Path(sDICOMPath).exists()): # safety check
+            sDICOMPath = current_dir
+
+        self.selectorPath = QtWidgets.QFileDialog.getExistingDirectory(self, "choose the image to view", sDICOMPath)
         if self.selectorPath:
             probandname = os.path.split(os.path.split(os.path.split(self.selectorPath)[0])[0])[1]
             self.markfile = str(self.pathROI) + '/' + str(probandname) + '.json'
