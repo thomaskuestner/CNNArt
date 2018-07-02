@@ -7,7 +7,7 @@ This GUI is designed with PyQt5 and works for Python >2.7 and >3.5.
 to open the GUI. This GUI can be run independent from CNNArt.
 
 ### Requirements
-`pip3 install matplotlib PyQt5 dicom pyyaml scipy numpy h5py pandas sklearn keras tensorflow`
+`pip3 install matplotlib PyQt5 dicom pyyaml scipy numpy dicom_numpy h5py pandas sklearn keras tensorflow`
 
 ## GUI features
 - data viewing (DICOM, natural scene images)
@@ -23,7 +23,7 @@ to open the GUI. This GUI can be run independent from CNNArt.
 
 ### Network training
 - data preprocessing, parameter setting
-- accuracy\loss curves can be dynamically plotted
+- accuracy/loss curves can be dynamically plotted
 
 ### Network visualization 
 - network structure: the network structure can be loaded from h5 file
