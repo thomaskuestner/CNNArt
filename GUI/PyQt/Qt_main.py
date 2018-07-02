@@ -905,7 +905,9 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 'mat files(*.mat);;h5 files(*.h5)', None, QtWidgets.QFileDialog.DontUseNativeDialog)[0]
 
         if resultfile:
-            with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
+	    current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+	    parent_dir = os.path.dirname(os.path.dirname(current_dir))
+            with open(parent_dir + os.sep + 'config' + os.sep + 'param.yml', 'r') as ymlfile:
                 cfg = yaml.safe_load(ymlfile)
             dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
             PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "choose the corresponding image", dbinfo.sPathIn)
@@ -1193,21 +1195,22 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             if sepkey in loadFile['layer']:
                 layer = loadFile['layer'][sepkey]
                 for key in layer.keys():
-                    if key[0]+key[1]== str(self.ind+1):
+                    if self.ind+1 < 10:
+                        sIndex = "0" + str(self.ind+1)
+	                else:
+                        sIndex = str(self.ind+1)
+                    #print(sIndex)
+
+                    if key[0]+key[1]== sIndex:
                         p = layer[key]
                         if key[2] == '1':
                             p = np.asarray(p['points'])
-                            patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
-                                                  np.abs(p[1] - p[3]), fill=True,
-                                                  alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[3])])
+                            patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]), np.abs(p[1] - p[3]), fill=True, alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[3])])
                         elif key[2] == '2':
                             p = np.asarray(p['points'])
-                            patch = Ellipse(
-                                xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
-                                width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]),
-                                alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[3])])
+		                    patch = Ellipse(xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2), width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[3])])
                         else:
-                            p = path.Path(np.asarray(p['vertices']), p['codes'])
+		                    p = path.Path(np.asarray(p['vertices']), p['codes'])
                             patch = patches.PathPatch(p, fill=True, alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[3])])
 
                         self.newax.add_patch(patch)
@@ -1512,7 +1515,9 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def openFileNamesDialog(self, dir=None):
         if dir==None:
-            with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
+            current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+            parent_dir = os.path.dirname(os.path.dirname(current_dir))
+            with open(parent_dir + os.sep + 'config' + os.sep + 'param.yml', 'r') as ymlfile:
                 cfg = yaml.safe_load(ymlfile)
             dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
             dir = dbinfo.sPathIn + os.sep + 'MRPhysics'  + os.sep + 'newProtocol'
