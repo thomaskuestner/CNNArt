@@ -17,7 +17,7 @@ to open the GUI. This GUI can be run independent from CNNArt.
 - network visualization: architecture, feature maps, kernel weights, deep visualization
 
 ### Data viewing
-- image viewing: flexible layout, 2D\3D mode, images can be loaded from python workspace
+- image viewing: flexible layout, 2D/3D mode, images can be loaded from python workspace
 - prediction overlay: colors and hatches can be modified
 - labeling: 3 selector(rectangle, ellipse, lasso), the name and color of the labels can be modified
 
