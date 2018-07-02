@@ -59,7 +59,7 @@ MRdatabase : MRPhysics
 # subdirectories in database, patient, output directory
 subdirs : ["newProtocol", "dicom_sorted", "testout", "correction"]
 # CNN database to be modeled
-selectedDatabase: *id001
+selectedDatabase: *id002
 # network architecture (if existing for chosen database!)
 # see *.py files in subfolders of "./networks"
 # naming convention: artifactType_bodyRegion_network OR artifactType_network
@@ -68,12 +68,12 @@ selectedDatabase: *id001
 # network: CNN2D, CNN3D, MNetArt, VNetArt
 # Single-pathway Multiscale networks are: MS_SPP, MS_FCN_simple, MS_FCN_MultiFM, MS_Inception_Archi1, MS_Inception_Archi2
 # Dual-pathway Multiscale networks are: MS_VNet_MultiPath, MS_SPP_MultiPath, MS_FCN_MultiFM_MultiPath
-network : "motion_all_CNN2D"
+network : "MS_FCN_simple"
 
 # scaling range
 range : [0, 1]
 # patches
-patchSize : [40, 40] # [x, y] or [x,y,z], but z should not larger than 10, else too much zero-padding when scaling factor is small
+patchSize : [40, 40, 10] # [x, y] or [x,y,z], but z should not larger than 10, else too much zero-padding when scaling factor is small
 patchOverlap : 0.5 # 50%
 # sLabeling strategy
 # 'volume': volume-wise labeling
@@ -95,8 +95,8 @@ dSplitval : 0.1
 # v1.1: grid and none are the same -> automatic switching if batchSize|learningRate are arrays, then 'grid', else 'none'
 sOpti : "grid"
 # optimized parameters
-batchSize : [128]
-lr : [0.1, 0.01, 0.05, 0.005, 0.001]
+batchSize : [64,128]
+lr : [0.001, 0.005]
 # amount of epochs
 epochs : 300
 # perform training (true) or prediction (false)
@@ -104,18 +104,18 @@ lTrain : true
 # save intermediate results
 lSave : true
 # (list of) path(s) of to be predicted images
-lPredictImg : ["/med_data/ImageSimilarity/Databases/MRPhysics/..."] 
+lPredictImg : ["/med_data/ImageSimilarity/Databases/MRPhysics/newProtocol/08_jw/dicom_sorted/t1_tse_tra_fs_mbh_Leber_0004/", "/med_data/ImageSimilarity/Databases/MRPhysics/newProtocol/08_jw/dicom_sorted/t1_tse_tra_fs_mbh_Leber_Motion_0005/"] 
 # (list with) labels of to be predicted images (either scalar or path to patch-wise label file)
-lLabelPredictImg : [ 1 ]
+lLabelPredictImg : [ 0, 1 ]
 # sPredictModel: if empty, the best model in the selected database will be chosen.
 # Otherwise, the given trained model will be used in predicting, e.g. "testout4040_lr_0.0005_bs_128"
-sPredictModel : ""
+sPredictModel : "testout404010_sf051_FCN_simple_MultiPath_lr_0.0005_bs_128"
 # sTrainingMethod
 # "None": No scaling process
 # "ScaleJittering": Scaling each image randomly before patching
 # "MultiScaleTogether": to train the donw sampled patches with the original patches together
 # "MultiScaleSeparated": to train the donw sampled patches and the original patches in different pathways
-sTrainingMethod : "None"
+sTrainingMethod : "MultiScaleTogether"
 # lScaleFactor: the changing rate of patch size in scaling process
 # factor < 1 means down sampling later, factor > 1 up sampling later
 # in "MultiScaleSeparated" method: only one down sample rate is supported, this corresponds one bypass in CNN
@@ -148,7 +148,7 @@ correction:
   # Head:[256, 196, 40]
   # Abdomen: sizes differ for different patients. e.g. Abdomen 01_ab: [256, 320, 30], Abdomen 06_hr: [192, 320, 30], Abdomen 17_ks: [260, 320, 30] 
   # Pelvis: sizes differ for different patients. e.g. Pelvis 10_mar: [240, 320, 40], Pelvis 15_yb: [208, 320, 40]  
-  actualSize: [256, 196]
+  actualSize: [256,320,30] #Head:[256, 196, 40], Abdomen: [256,320,30]
   evaluate: true
   test_patient: "10_mar"
   augmentation: false # augmentation flag
