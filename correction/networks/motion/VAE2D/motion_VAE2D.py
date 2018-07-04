@@ -54,7 +54,7 @@ class CustomLossLayer(Layer):
         self.add_loss(self.dHyper['tv_weight'] * (self.dHyper['loss_ref2ref']*tv_ref2ref + self.dHyper['loss_art2ref']*tv_art2ref))
 
         # compute perceptual loss
-        perceptual_loss_ref2ref, perceptual_loss_art2ref = compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, self.patchSize, self.dHyper['pl_network'],self.dHyper['loss_model'])
+        perceptual_loss_ref2ref, perceptual_loss_art2ref = compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, self.patchSize, self.dHyper['pl_network'])
         self.add_loss(self.dHyper['perceptual_weight'] * (self.dHyper['loss_ref2ref'] * perceptual_loss_ref2ref + self.dHyper['loss_art2ref'] * perceptual_loss_art2ref))
 
         return [decoded_ref2ref, decoded_art2ref]
@@ -76,7 +76,7 @@ def createModel(patchSize, dHyper):
     z, z_mean, z_log_var, conv_3, conv_4 = encode_shared(conv_2, patchSize)
 
     # create the decoder
-    decoded = decode(z, patchSize, conv_1, conv_2, conv_3, conv_4)
+    decoded = decode(z, patchSize, conv_1, conv_2, conv_3, conv_4, dHyper['arch'])
 
     # separate the concatenated images
     decoded_ref2ref = Lambda(lambda input: input[:input.shape[0]//2, :, :, :], output_shape=(1, patchSize[0], patchSize[1]))(decoded)
