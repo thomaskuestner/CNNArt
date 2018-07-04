@@ -104,7 +104,7 @@ def compute_tv_loss(dHyper, decoded_ref2ref, decoded_art2ref, patchSize):
     return tv_loss_ref2ref, tv_loss_art2ref
 
 
-def compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, pl_network, loss_model):
+def compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, pl_network):
     if K.ndim(x_ref) == 5 and K.ndim(decoded_ref2ref) == 5 and K.ndim(decoded_art2ref) == 5:
         x_ref = reshape(x_ref, patchSize)
         decoded_ref2ref = reshape(decoded_ref2ref, patchSize)
@@ -122,10 +122,6 @@ def compute_perceptual_loss(x_ref, decoded_ref2ref, decoded_art2ref, patchSize, 
         input = Input(shape=(3, patchSize[0], patchSize[1]))
 
         model = VGG19(include_top=False, weights='imagenet', input_tensor=input)
-
-    elif pl_network == 'motion_head':
-        model = load_model(loss_model)
-        input = model.input
 
     else:
         sys.exit("loss network is not supported.")

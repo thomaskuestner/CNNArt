@@ -133,7 +133,10 @@ correction:
   bestModel: "vae_weight_ps_80_bs_64_lr_0.0001_10_mar"
   # loss network for calculating perceptual loss
   pl_network: "vgg19"
-  loss_model: ""
+  # select certain architecture:
+  # vae-monounet: with skip connections
+  # vae-mononet: without skip connections
+  arch: "vae-monounet"
   kl_weight: 1 # KL loss weight
   tv_weight: 0 # TV loss weight
   ge_weight: 10 # gradient entropy weight
@@ -145,9 +148,9 @@ correction:
   unpatch: true
   nScale: 255
   # specify the actual size of the images when predicting
-  # Head:[256, 196, 40]
-  # Abdomen: sizes differ for different patients. e.g. Abdomen 01_ab: [256, 320, 30], Abdomen 06_hr: [192, 320, 30], Abdomen 17_ks: [260, 320, 30] 
-  # Pelvis: sizes differ for different patients. e.g. Pelvis 10_mar: [240, 320, 40], Pelvis 15_yb: [208, 320, 40]  
+  # Head:[256, 196]
+  # Abdomen: sizes differ for different patients. e.g. Abdomen 01_ab: [256, 320], Abdomen 06_hr: [192, 320], Abdomen 17_ks: [260, 320] 
+  # Pelvis: sizes differ for different patients. e.g. Pelvis 10_mar: [240, 320], Pelvis 15_yb: [208, 320]  
   actualSize: [256, 196]
   evaluate: true
   test_patient: "10_mar"
