@@ -1,1 +1,0 @@
-__all__ = ['motion_abd_CNN2D', 'motion_all_CNN2D', 'motion_head_CNN2D']

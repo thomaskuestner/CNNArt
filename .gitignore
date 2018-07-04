@@ -210,6 +210,9 @@ pip-log.txt
 .coverage
 .tox
 
+#GUI
+GUI/PyQt/dump*.txt
+
 #Translations
 *.mo
 
@@ -225,3 +228,6 @@ testscale.py
 showpatch.py
 main_batched.py
 DatabaseInfo_saka.py
+config/predeictModel
+config/predeictModel.yml
+config/paraml9.yml

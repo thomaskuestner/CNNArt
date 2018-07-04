@@ -35,7 +35,7 @@ from correction.networks.motion import *
 """functions"""    
 def fLoadData(conten):
     # prepared in matlab
-    print 'Loading data'
+    print('Loading data')
     for sVarname in ['X_train', 'X_test', 'y_train', 'y_test']:
         if sVarname in conten:
             exec(sVarname + '=conten[sVarname]')
