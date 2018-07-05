@@ -2,7 +2,7 @@
 This CNN based motion correction approach is implemented with Variational Autoencoder (VAE) and tested on Head, Pelvis, Abdomen and combined datasets.
 
 ## Motion Correction training
-Make following modifications in config/param.yml and run `python main.py`.
+Make following modifications in config/param.yml (refer to config/param_MC.yml) and run `python main.py`.
 
 - `selectedDatabase`: select the specific dataset for training
 - `range`: [-1, 1]
