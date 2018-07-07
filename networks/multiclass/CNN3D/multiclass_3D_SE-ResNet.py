@@ -27,9 +27,10 @@ from keras.models import model_from_json
 from keras.regularizers import l2  # , activity_l2
 
 from keras.optimizers import SGD
-from networks.multiclass.SENets.deep_residual_learning_blocks import *
-from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
-from utils.image_preprocessing import ImageDataGenerator
+from networks.multiclass.CNN2D.SENets.deep_residual_learning_blocks import *
+from GUI.PyQt.DLArt_GUI.dlart import DeepLearningArtApp
+from GUI.PyQt.utilsGUI.image_preprocessing import ImageDataGenerator
+from GUI.PyQt.utilsGUI.LivePlotCallback import LivePlotCallback
 from matplotlib import pyplot as plt
 
 
@@ -259,6 +260,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
     callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0, period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
     # callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
     callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
+    callbacks.append(LivePlotCallback(dlart_handle))
 
     # data augmentation
     if dlart_handle.getDataAugmentationEnabled() == True:
@@ -323,7 +325,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                                        use_multiprocessing=False)
 
     else:
-        if not X_valid and not y_valid :
+        if X_valid is not None and y_valid is not None:
             # no validation datasets
             result = cnn.fit(X_train,
                              y_train,
@@ -376,13 +378,16 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
 
 
-def step_decay(epoch):
-    initial_lrate = 0.1
-    drop = 0.1
-    epochs_drop = 10.0
-    lrate = initial_lrate * math.pow(drop, math.floor((1 + epoch) / epochs_drop))
-    print("Reduce Learningrate by 0.1")
-    return lrate
+def step_decay(epoch, lr):
+   drop = 0.1
+   epochs_drop = 10.0
+   print("Current Learning Rate: " + str(lr))
+   if epoch == epochs_drop or epoch == 2*epochs_drop or epoch == 3*epochs_drop or epoch == 4*epochs_drop:
+       lr = drop*lr
+       print("Reduce Learningrate by 0.1 to " + str(lr))
+
+   return lr
+
 
 def fPredict(X, y, sModelPath, sOutPath, batchSize=64):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y

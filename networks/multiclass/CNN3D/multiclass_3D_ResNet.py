@@ -27,12 +27,11 @@ from keras.models import model_from_json
 from keras.regularizers import l2  # , activity_l2
 
 from keras.optimizers import SGD
-from networks.multiclass.SENets.deep_residual_learning_blocks import *
-from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
-from utils.image_preprocessing import ImageDataGenerator
+from networks.multiclass.CNN2D.SENets.deep_residual_learning_blocks import *
+from GUI.PyQt.DLArt_GUI.dlart import DeepLearningArtApp
+from GUI.PyQt.utilsGUI.image_preprocessing import ImageDataGenerator
+from GUI.PyQt.utilsGUI.LivePlotCallback import LivePlotCallback
 from matplotlib import pyplot as plt
-
-
 
 
 def createModel(patchSize, numClasses):
@@ -255,6 +254,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
     callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0, period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
     #callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
     callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
+    callbacks.append(LivePlotCallback(dlart_handle))
 
 
     # data augmentation
@@ -320,7 +320,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                                        use_multiprocessing=False)
 
     else:
-        if not X_valid and not y_valid :
+        if X_valid is not None and y_valid is not None:
             # no validation datasets
             result = cnn.fit(X_train,
                              y_train,
