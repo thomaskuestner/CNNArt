@@ -201,6 +201,7 @@ var/
 sdist/
 develop-eggs/
 .installed.cfg
+venv/
 
 # Installer logs
 pip-log.txt
@@ -208,6 +209,9 @@ pip-log.txt
 # Unit test / coverage reports
 .coverage
 .tox
+
+#GUI
+GUI/PyQt/dump*.txt
 
 #Translations
 *.mo
@@ -220,3 +224,10 @@ pip-log.txt
 *.orig
 config/paramnormal.yml
 train_after_resize.py
+testscale.py
+showpatch.py
+main_batched.py
+DatabaseInfo_saka.py
+config/predeictModel
+config/predeictModel.yml
+config/paraml9.yml
