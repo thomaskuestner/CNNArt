@@ -1,7 +1,7 @@
 import numpy as np
 import math
 
-from GUI.PyQt.utilsGUI.Label import Label
+from utilsGUI.Label import Label
 
 #########################################################################################################################################
 #Function: fRigidPatching                                                                                                               #
@@ -36,7 +36,8 @@ def fRigidPatching_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, mask
     dNotOverlap = [patchSize[0]-dOverlap[0], patchSize[1]-dOverlap[1]]
 
     size_zero_pad = np.array(
-        ([math.ceil((dicom_numpy_array.shape[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0],
+    size_zero_pad = np.array(([math.ceil((dicom_numpy_array.shape[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[
+            0],
           math.ceil((dicom_numpy_array.shape[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1]]))
 
     zero_pad = np.array(
@@ -46,14 +47,15 @@ def fRigidPatching_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, mask
 
     Img_zero_pad = np.lib.pad(dicom_numpy_array, (
         (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]),
-        (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (0, 0)), mode='constant')
+    (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (0, 0)),
+
 
     Mask_zero_pad = np.lib.pad(mask_numpy_array,
-                               ((zero_pad_part[0], zero_pad[0] - zero_pad_part[0]),
+    (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (0, 0)),
                                 (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (0, 0)),
                                mode='constant')
-
-    nbPatches = int(((size_zero_pad[0]-patchSize[0])/((1-patchOverlap)*patchSize[0])+1)*((size_zero_pad[1]-patchSize[1])/((1-patchOverlap)*patchSize[1])+1)*dicom_numpy_array.shape[2])
+    nbPatches = int(((size_zero_pad[0] - patchSize[0]) / ((1 - patchOverlap) * patchSize[0]) + 1) * (
+    (size_zero_pad[1] - patchSize[1]) / ((1 - patchOverlap) * patchSize[1]) + 1) * dicom_numpy_array.shape[2])
     nbPatches_in_Y = int((size_zero_pad[0]-dOverlap[0])/dNotOverlap[0])
     nbPatches_in_X = int((size_zero_pad[1]-dOverlap[1])/dNotOverlap[1])
     nbPatches_in_Z = dicom_numpy_array.shape[2]
@@ -70,8 +72,6 @@ def fRigidPatching_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, mask
                 dPatch = Img_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ]
                 dPatches[:, :, idxPatch] = dPatch
 
-                #if idxPatch == 7678:
-                 #   print()
 
                 dPatch_mask = Mask_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ]
                 patch_number_value = patchSize[0] * patchSize[1]
