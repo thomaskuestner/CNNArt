@@ -231,3 +231,6 @@ DatabaseInfo_saka.py
 config/predeictModel
 config/predeictModel.yml
 config/paraml9.yml
+*.py-base
+*.py-ours
+*.py-theirs
