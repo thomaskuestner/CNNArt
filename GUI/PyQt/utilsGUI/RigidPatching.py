@@ -35,19 +35,13 @@ def fRigidPatching_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, mask
     #dNotOverlap = np.round(np.multiply(patchSize, (1 - patchOverlap)))
     dNotOverlap = [patchSize[0]-dOverlap[0], patchSize[1]-dOverlap[1]]
 
-    size_zero_pad = np.array(
-    size_zero_pad = np.array(([math.ceil((dicom_numpy_array.shape[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[
-            0],
-          math.ceil((dicom_numpy_array.shape[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1]]))
+    size_zero_pad = np.array(size_zero_pad = np.array(([math.ceil((dicom_numpy_array.shape[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0], math.ceil((dicom_numpy_array.shape[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1]]))
 
-    zero_pad = np.array(
-        ([int(size_zero_pad[0]) - dicom_numpy_array.shape[0], int(size_zero_pad[1]) - dicom_numpy_array.shape[1]]))
+    zero_pad = np.array(([int(size_zero_pad[0]) - dicom_numpy_array.shape[0], int(size_zero_pad[1]) - dicom_numpy_array.shape[1]]))
 
     zero_pad_part = np.array(([int(math.ceil(zero_pad[0] / 2)), int(math.ceil(zero_pad[1] / 2))]))
 
-    Img_zero_pad = np.lib.pad(dicom_numpy_array, (
-        (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]),
-    (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (0, 0)),
+    Img_zero_pad = np.lib.pad(dicom_numpy_array, ((zero_pad_part[0], zero_pad[0] - zero_pad_part[0]),(zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (0, 0)), mode='constant')
 
 
     Mask_zero_pad = np.lib.pad(mask_numpy_array,
