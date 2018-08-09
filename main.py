@@ -93,27 +93,27 @@ elif lTrain:
                 y_train_p2 = hf['y_train_p2'][:]
                 y_test_p2 = hf['y_test_p2'][:]
                 patchSize_down = hf['patchSize_down'][:]
-            
+
     else: # perform patching
         X_train = []
         scpatchSize = [0 for i in range(len(patchSize))]
-                
+
         if sTrainingMethod == "None" or sTrainingMethod == "ScaleJittering":
             lScaleFactor = [1]
         if sTrainingMethod == "MultiScaleSeparated" :
             lScaleFactor = lScaleFactor[:-1]
 
-        #   images will be split into pathces with size scpatchSize and then scaled to patchSize        
+        #   images will be split into pathces with size scpatchSize and then scaled to patchSize
         for iscalefactor in lScaleFactor:
             # Calculate the patchsize according to scale factor and training method
             scpatchSize = patchSize
             if iscalefactor != 1:
-                if sTrainingMethod == "MultiScaleSeparated":                    
+                if sTrainingMethod == "MultiScaleSeparated":
                     scpatchSize = fcalculateInputOfPath2(patchSize, iscalefactor, cfg['network'])
                 elif sTrainingMethod == "MultiScaleTogether":
                     scpatchSize = [int(psi/iscalefactor) for psi in patchSize]
-            
-            if len(scpatchSize)==3:                 
+
+            if len(scpatchSize)==3:
                 dAllPatches = np.zeros((0, scpatchSize[0], scpatchSize[1], scpatchSize[2]))
             else:
                 dAllPatches = np.zeros((0, scpatchSize[0], scpatchSize[1]))
@@ -125,7 +125,7 @@ elif lTrain:
                 if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
                     for iseq, seq in enumerate(lDatasets):
                         # patches and labels of reference/artifact
-                        tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), scpatchSize, cfg['patchOverlap'], 1, cfg['sLabeling'], sTrainingMethod=sTrainingMethod)
+                        tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), scpatchSize, cfg['patchOverlap'], 1, cfg['sLabeling'], sTrainingMethod=sTrainingMethod, cfg['range'])
                         dAllPatches = np.concatenate((dAllPatches, tmpPatches), axis=0)
                         dAllLabels = np.concatenate((dAllLabels, iLabels[iseq]*tmpLabels), axis=0)
                         dAllPats = np.concatenate((dAllPats, ipat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)
@@ -197,7 +197,7 @@ elif lTrain:
         else:
             cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
 
-else: 
+else:
     ################
     ## prediction ##
     ################
@@ -215,7 +215,7 @@ else:
     else:
         X_test = np.zeros((0, patchSize[0], patchSize[1]))
         y_test = np.zeros(0)
-        
+
     for iImg in range(0, len(cfg['lPredictImg'])):
         # patches and labels of reference/artifact
         tmpPatches, tmpLabels  = datapre.fPreprocessData(cfg['lPredictImg'][iImg], patchSize, cfg['patchOverlap'], 1, cfg['sLabeling'], sTrainingMethod=sTrainingMethod)
@@ -225,7 +225,7 @@ else:
 
     if sTrainingMethod == "MultiScaleSeparated":
         X_test_p1 = scaling.fcutMiddelPartOfPatch(X_test, X_test, patchSize, cfg['patchSize'])
-        X_train_p2, X_test_p2, scedpatchSize = scaling.fscaling([X_test], [X_test], patchSize, cfg['lScaleFactor'][0])        
+        X_train_p2, X_test_p2, scedpatchSize = scaling.fscaling([X_test], [X_test], patchSize, cfg['lScaleFactor'][0])
         frunCNN_MS({'X_test': X_test_p1, 'y_test': y_test, 'patchSize': patchSize, 'X_test_p2': X_test_p2[0], 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'],'actualSize': cfg['correction']['actualSize']}, cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], predictImg=allImg)
     elif 'MS' in cfg['network']:
         frunCNN_MS({'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize'], 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize']},  cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], predictImg=allImg)

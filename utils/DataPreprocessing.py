@@ -13,7 +13,7 @@ import utils.Training_Test_Split as ttsplit
 import utils.scaling as scaling
 
 
-def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabeling, sTrainingMethod='None'):
+def fPreprocessData(pathDicom, patchSize, patchOverlap, ratio_labeling, sLabeling, sTrainingMethod='None', range_norm = [0, 1]):
     # set variables
     model = os.path.basename(os.path.dirname(pathDicom))
     dir = os.path.dirname(os.path.dirname(pathDicom))
