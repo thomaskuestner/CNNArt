@@ -1,4 +1,16 @@
-# demo file
+"""
++---------------------------------------------------------------+
+| Main function/script for calling the CNNs                     |
+| - starting point: raw or DICOM data                           |
++---------------------------------------------------------------+
+This script performs the loading of the data, patching, augmentation and sSplitting
+    main.py ==> mainPatches.py ==> model.fTrain()/fPredict()
+------------------------------------------------------------------
+Copyright: 2016-2018 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) under Apache2 license
+@author: Thomas Kuestner
+"""
+
+# imports
 import os
 import glob
 import yaml
@@ -8,12 +20,13 @@ import h5py
 from DatabaseInfo import DatabaseInfo
 import utils.DataPreprocessing as datapre
 import utils.Training_Test_Split as ttsplit
-import cnn_main
+import mainPatches
 import utils.scaling as scaling
 import correction.main_correction as correction
 from utils.calculateInputOfPath2 import fcalculateInputOfPath2
 from networks.multiscale.runMS import frunCNN_MS
 
+# get config file
 with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
 
@@ -195,7 +208,7 @@ elif lTrain:
             frunCNN_MS({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}
                         ,  cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
         else:
-            cnn_main.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
+            mainPatches.fRunCNN({'X_train': X_train[iFold], 'y_train': y_train[iFold], 'X_test': X_test[iFold], 'y_test': y_test[iFold], 'patchSize': patchSize}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], CV_Patient)
 
 else:
     ################
@@ -230,4 +243,4 @@ else:
     elif 'MS' in cfg['network']:
         frunCNN_MS({'X_test': X_test, 'y_test': y_test, 'patchSize': cfg['patchSize'], 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize']},  cfg['network'], lTrain, sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'], predictImg=allImg)
     else:
-        cnn_main.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test, 'y_test': y_test, 'patchSize': patchSize, 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize']}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])
+        mainPatches.fRunCNN({'X_train': [], 'y_train': [], 'X_test': X_test, 'y_test': y_test, 'patchSize': patchSize, 'model_name': sPredictModel, 'patchOverlap': cfg['patchOverlap'], 'actualSize': cfg['correction']['actualSize']}, cfg['network'], lTrain, cfg['sOpti'], sOutPath, cfg['batchSize'], cfg['lr'], cfg['epochs'])
