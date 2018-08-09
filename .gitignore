@@ -219,6 +219,9 @@ GUI/PyQt/dump*.txt
 #Mr Developer
 .mr.developer.cfg
 
+# checkpoints
+checkpoint/*
+
 #Pychar
 .idea/
 *.orig
