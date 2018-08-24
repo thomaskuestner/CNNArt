@@ -23,7 +23,7 @@ import json
 import datetime
 import h5py
 
-import cnn_main
+from GUI.PyQt.utilsGUI import cnn_main
 
 # ArtGAN
 # from ArtGAN import artGAN_main as artGAN
