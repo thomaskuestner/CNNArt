@@ -20,14 +20,9 @@ from label_window import*
 from activeview import Activeview
 from activescene import Activescene
 from canvas import Canvas
-from utilsGUI.Unpatch import*
-from utilsGUI.Unpatch_eight import*
-from utilsGUI.Unpatch_two import*
-
-import sys,inspect
-current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parent_dir = os.path.dirname(os.path.dirname(current_dir))
-sys.path.insert(0, parent_dir)
+from Unpatch import*
+from Unpatch_eight import*
+from Unpatch_two import*
 
 from DatabaseInfo import*
 import yaml
@@ -35,14 +30,12 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import json
 
-from pathlib import Path
-
 from loadingIcon import Overlay
 import scipy.io as sio
 from Grey_window import*
 import sys
 import h5py
-from dlart import* # << resolve dependency from dlart
+from dlart import*
 from matplotlib.figure import Figure
 
 import pickle
@@ -56,13 +49,19 @@ from loadf2 import *
 
 import tensorflow as tf
 import keras.backend as K
-#import network_visualization
-from deepvis.network_visualization import *
+import network_visualization
+from network_visualization import *
 
 class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
     update_data = QtCore.pyqtSignal(list)
     gray_data = QtCore.pyqtSignal(list)
     new_page = QtCore.pyqtSignal()
+    update_data2 = QtCore.pyqtSignal(list)
+    gray_data2 = QtCore.pyqtSignal(list)
+    new_page2 = QtCore.pyqtSignal()
+    update_data3 = QtCore.pyqtSignal(list)
+    gray_data3 = QtCore.pyqtSignal(list)
+    new_page3 = QtCore.pyqtSignal()
 
     def __init__(self):
         super(MyApp, self).__init__()
@@ -97,7 +96,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         pnamelist = []
         empty1 = []
 
-        with open(os.path.join('configGUI','colors0.json'), 'r') as json_data:
+        with open('colors0.json', 'r') as json_data:
             self.dcolors = json.load(json_data)
             cmap1 = self.dcolors['class2']['colors']
             cmap1 = mpl.colors.ListedColormap(cmap1)
@@ -123,6 +122,26 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.mrinmain = None
         self.labelimage = False
 
+        self.newfig2 = plt.figure(51)
+        self.newfig2.set_facecolor("black")
+        self.newax2 = self.newfig2.add_subplot(111)
+        self.newax2.axis('off')
+        self.pltc2 = None
+        self.newcanvas2 = FigureCanvas(self.newfig2)  # must be defined because of selector next
+        self.shownLabels2 = []
+        self.keylist2 = []  # locate the key in combobox
+        self.limage2 = None
+
+        self.newfig3 = plt.figure(53)
+        self.newfig3.set_facecolor("black")
+        self.newax3 = self.newfig3.add_subplot(111)
+        self.newax3.axis('off')
+        self.pltc3 = None
+        self.newcanvas3 = FigureCanvas(self.newfig3)  # must be defined because of selector next
+        self.shownLabels3 = []
+        self.keylist3 = []  # locate the key in combobox
+        self.limage3 = None
+
         self.graylabel = QtWidgets.QLabel()
         self.slicelabel = QtWidgets.QLabel()
         self.zoomlabel = QtWidgets.QLabel()
@@ -142,9 +161,9 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         icon3.addPixmap(QtGui.QPixmap(":/icons/Icons/edit.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.seditgray.setText("")
         self.seditgray.setIcon(icon3)
-        self.maingrids2.addWidget(self.graylabel, 0, 0, 1, 1)
-        self.maingrids2.addWidget(self.slicelabel, 0, 1, 1, 1)
-        self.maingrids2.addWidget(self.zoomlabel, 0, 2, 1, 1)
+        self.maingrids2.addWidget(self.slicelabel, 0, 0, 1, 1)
+        self.maingrids2.addWidget(self.zoomlabel, 0, 1, 1, 1)
+        self.maingrids2.addWidget(self.graylabel, 0, 2, 1, 1)
         self.maingrids2.addWidget(self.seditgray, 0, 3, 1, 1)
         self.viewLabel = Activeview()
         self.sceneLabel = Activescene()
@@ -152,23 +171,95 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.viewLabel.setScene(self.sceneLabel)
         self.maingrids2.addWidget(self.viewLabel, 1, 0, 1, 4)
 
+        self.graylabel2 = QtWidgets.QLabel()
+        self.slicelabel2 = QtWidgets.QLabel()
+        self.zoomlabel2 = QtWidgets.QLabel()
+        self.graylabel2.setFrameShape(QtWidgets.QFrame.Panel)
+        self.graylabel2.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.slicelabel2.setFrameShape(QtWidgets.QFrame.Panel)
+        self.slicelabel2.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.zoomlabel2.setFrameShape(QtWidgets.QFrame.Panel)
+        self.zoomlabel2.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.seditgray2 = QtWidgets.QPushButton()
+        self.sizePolicy.setHeightForWidth(self.seditgray2.sizePolicy().hasHeightForWidth())
+        self.seditgray2.setSizePolicy(self.sizePolicy)
+        self.seditgray2.setText("")
+        self.seditgray2.setIcon(icon3)
+        self.maingrids2.addWidget(self.slicelabel2, 0, 4, 1, 1)
+        self.maingrids2.addWidget(self.zoomlabel2, 0, 5, 1, 1)
+        self.maingrids2.addWidget(self.graylabel2, 0, 6, 1, 1)
+        self.maingrids2.addWidget(self.seditgray2, 0, 7, 1, 1)
+        self.viewLabel2 = Activeview()
+        self.sceneLabel2 = Activescene()
+        self.sceneLabel2.addWidget(self.newcanvas2)
+        self.viewLabel2.setScene(self.sceneLabel2)
+        self.maingrids2.addWidget(self.viewLabel2, 1, 4, 1, 4)
+
+        self.graylabel3 = QtWidgets.QLabel()
+        self.slicelabel3 = QtWidgets.QLabel()
+        self.zoomlabel3 = QtWidgets.QLabel()
+        self.graylabel3.setFrameShape(QtWidgets.QFrame.Panel)
+        self.graylabel3.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.slicelabel3.setFrameShape(QtWidgets.QFrame.Panel)
+        self.slicelabel3.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.zoomlabel3.setFrameShape(QtWidgets.QFrame.Panel)
+        self.zoomlabel3.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.seditgray3 = QtWidgets.QPushButton()
+        self.sizePolicy.setHeightForWidth(self.seditgray3.sizePolicy().hasHeightForWidth())
+        self.seditgray3.setSizePolicy(self.sizePolicy)
+        self.seditgray3.setText("")
+        self.seditgray3.setIcon(icon3)
+        self.maingrids2.addWidget(self.slicelabel3, 0, 8, 1, 1)
+        self.maingrids2.addWidget(self.zoomlabel3, 0, 9, 1, 1)
+        self.maingrids2.addWidget(self.graylabel3, 0, 10, 1, 1)
+        self.maingrids2.addWidget(self.seditgray3, 0, 11, 1, 1)
+        self.viewLabel3 = Activeview()
+        self.sceneLabel3 = Activescene()
+        self.sceneLabel3.addWidget(self.newcanvas3)
+        self.viewLabel3.setScene(self.sceneLabel3)
+        self.maingrids2.addWidget(self.viewLabel3, 1, 8, 1, 4)
+
         def formsclick(n):
             if n==0:
                 toggle_selector.ES.set_active(False)
                 toggle_selector.RS.set_active(False)
                 toggle_selector.LS.set_active(False)
+                toggle_selector.ES2.set_active(False)
+                toggle_selector.RS2.set_active(False)
+                toggle_selector.LS2.set_active(False)
+                toggle_selector.ES3.set_active(False)
+                toggle_selector.RS3.set_active(False)
+                toggle_selector.LS3.set_active(False)
             elif n==1:
                 toggle_selector.ES.set_active(False)
                 toggle_selector.RS.set_active(True)
                 toggle_selector.LS.set_active(False)
+                toggle_selector.ES2.set_active(False)
+                toggle_selector.RS2.set_active(True)
+                toggle_selector.LS2.set_active(False)
+                toggle_selector.ES3.set_active(False)
+                toggle_selector.RS3.set_active(True)
+                toggle_selector.LS3.set_active(False)
             elif n==2:
                 toggle_selector.ES.set_active(True)
                 toggle_selector.RS.set_active(False)
                 toggle_selector.LS.set_active(False)
+                toggle_selector.ES2.set_active(True)
+                toggle_selector.RS2.set_active(False)
+                toggle_selector.LS2.set_active(False)
+                toggle_selector.ES3.set_active(True)
+                toggle_selector.RS3.set_active(False)
+                toggle_selector.LS3.set_active(False)
             elif n==3:
                 toggle_selector.ES.set_active(False)
                 toggle_selector.RS.set_active(False)
                 toggle_selector.LS.set_active(True)
+                toggle_selector.ES2.set_active(False)
+                toggle_selector.RS2.set_active(False)
+                toggle_selector.LS2.set_active(True)
+                toggle_selector.ES3.set_active(False)
+                toggle_selector.RS3.set_active(False)
+                toggle_selector.LS3.set_active(True)
 
         def toggle_selector(event):
             if self.brectangle.isChecked() and not toggle_selector.RS.active and (
@@ -195,8 +286,15 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         def lasso_onselect(verts):
             p = path.Path(verts)
             n = self.labelbox.currentIndex()
+
+            if n < 9:
+                n = '0' + str(n + 1)
+            else:
+                n = str(n + 1)
+
             col_str = '3' + str(n)
-            patch = patches.PathPatch(p, fill=True, alpha=.2, edgecolor= None, facecolor=self.labelcolor[n])
+            m = int(n) - 1
+            patch = patches.PathPatch(p, fill=True, alpha=.2, edgecolor=None, facecolor=self.labelcolor[m])
             self.newax.add_patch(patch)
 
             sepkey = os.path.split(self.selectorPath)
@@ -205,25 +303,32 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
             with open(self.markfile, 'r') as json_data:
                 saveFile = json.load(json_data)
-                p = np.ndarray.tolist(p.vertices)
-                if self.ind < 9:
-                    ind = '0' + str(self.ind+1)
+                p = np.ndarray.tolist(p.vertices)  #
+                # print(type(p))
+                if 99 <= self.ind < 999:
+                    ind = '0' + str(self.ind + 1)  # local ind
+                elif 9 <= self.ind < 99:
+                    ind = '00' + str(self.ind + 1)
+                elif self.ind < 9:
+                    ind = '000' + str(self.ind + 1)
                 else:
-                    ind = str(self.ind+1)
+                    ind = str(self.ind + 1)
 
                 num = 0  # num of some specific roi
                 if layer_name in saveFile['layer']:
                     for key in saveFile['layer'][layer_name].keys():
-                        if key[3]==str(n):     # str!！
-                            num+=1
-                    if num<9:
-                        numinkey='0' + str(num + 1)
+                        if key[5] + key[6] == n:  # str!！
+                            num += 1
+                    if 9 <= num < 99:
+                        numinkey = '0' + str(num + 1)
+                    elif num < 9:
+                        numinkey = '00' + str(num + 1)
                     else:
-                        numinkey=str(num + 1)
+                        numinkey = str(num + 1)
                     number_str = ind + col_str + numinkey
                     saveFile['layer'][layer_name][number_str] = {'vertices': p, 'codes': None}
                 else:
-                    numinkey ='01'
+                    numinkey = '001'
                     number_str = ind + col_str + numinkey
                     saveFile['layer'][layer_name] = {number_str: {'vertices': p, 'codes': None}}
                 saveFile['names']['list'] = self.labelnames
@@ -244,39 +349,58 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             layer_name = sepkey
 
             n = self.labelbox.currentIndex()
+
             if toggle_selector.RS.active and not toggle_selector.ES.active:
-                col_str = '1' + str(n)
+                if n < 9:
+                    n = '0' + str(n + 1)
+                else:
+                    n = str(n + 1)
+
+                col_str = '1' + n
+
+                m = int(n) - 1
                 rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2), fill=True,
-                                     alpha=.2, edgecolor= None, facecolor=self.labelcolor[n])
+                                     alpha=.2, edgecolor=None, facecolor=self.labelcolor[m])
                 self.newax.add_patch(rect)
             elif toggle_selector.ES.active and not toggle_selector.RS.active:
-                col_str = '2' + str(n)
+                if n < 9:
+                    n = '0' + str(n + 1)
+                else:
+                    n = str(n + 1)
+
+                col_str = '2' + n
+                m = int(n) - 1
                 ell = Ellipse(xy=(min(x1, x2) + np.abs(x1 - x2) / 2, min(y1, y2) + np.abs(y1 - y2) / 2),
-                              width=np.abs(x1 - x2), height=np.abs(y1 - y2), alpha=.2, edgecolor= None,
-                              facecolor=self.labelcolor[n])
+                              width=np.abs(x1 - x2), height=np.abs(y1 - y2), alpha=.2, edgecolor=None,
+                              facecolor=self.labelcolor[m])
                 self.newax.add_patch(ell)
 
             with open(self.markfile, 'r') as json_data:
                 saveFile = json.load(json_data)
                 p = np.ndarray.tolist(p)  # format from datapre
-
-                if self.ind < 9:
-                    ind = '0' + str(self.ind+1)
+                if 99 <= self.ind < 999:
+                    ind = '0' + str(self.ind + 1)  # local ind
+                elif 9 <= self.ind < 99:
+                    ind = '00' + str(self.ind + 1)
+                elif self.ind < 9:
+                    ind = '000' + str(self.ind + 1)
                 else:
-                    ind = str(self.ind+1)
+                    ind = str(self.ind + 1)
                 num = 0
                 if layer_name in saveFile['layer']:
                     for key in saveFile['layer'][layer_name].keys():
-                        if key[3]==str(n):
-                            num+=1
-                    if num<9:
-                        numinkey='0' + str(num + 1)
+                        if key[5] + key[6] == n:
+                            num += 1
+                    if 9 <= num < 99:
+                        numinkey = '0' + str(num + 1)
+                    elif num < 9:
+                        numinkey = '00' + str(num + 1)
                     else:
-                        numinkey=str(num + 1)
-                    number_str = ind +  col_str + numinkey
+                        numinkey = str(num + 1)
+                    number_str = ind + col_str + numinkey
                     saveFile['layer'][layer_name][number_str] = {'points': p}
                 else:
-                    numinkey = '01'
+                    numinkey = '001'
                     number_str = ind + col_str + numinkey
                     saveFile['layer'][layer_name] = {number_str: {'points': p}}
                 saveFile['names']['list'] = self.labelnames
@@ -287,16 +411,341 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.orderROIs()
 
         toggle_selector.RS = RectangleSelector(self.newax, ronselect, button=[1], drawtype='box', useblit=True,
-                                       minspanx=5, minspany=5,spancoords='pixels',interactive=False)
+                                               minspanx=5, minspany=5, spancoords='pixels', interactive=False)
+        # useblit: canvas fast update
 
         toggle_selector.ES = EllipseSelector(self.newax, ronselect, drawtype='box', button=[1], minspanx=5,
-                                             useblit=True, minspany=5, spancoords='pixels',interactive=False)
+                                             useblit=True, minspany=5, spancoords='pixels', interactive=False)
 
         toggle_selector.LS = LassoSelector(self.newax, lasso_onselect, button=[1])
 
         toggle_selector.ES.set_active(False)
         toggle_selector.RS.set_active(False)
         toggle_selector.LS.set_active(False)
+
+        def toggle_selector2(event):
+            if self.brectangle.isChecked() and not toggle_selector.RS2.active and (
+                    toggle_selector.LS2.active or toggle_selector.ES2.active):
+                toggle_selector.ES2.set_active(False)
+                toggle_selector.RS2.set_active(True)
+                toggle_selector.LS2.set_active(False)
+            elif self.bellipse.isChecked() and not toggle_selector.ES2.active and (
+                    toggle_selector.LS2.active or toggle_selector.RS2.active):
+                toggle_selector.ES2.set_active(True)
+                toggle_selector.RS2.set_active(False)
+                toggle_selector.LS2.set_active(False)
+            elif self.blasso.isChecked() and (toggle_selector.ES2.active or toggle_selector.RS2.active
+            ) and not toggle_selector.LS2.active:
+                toggle_selector.ES2.set_active(False)
+                toggle_selector.RS2.set_active(False)
+                toggle_selector.LS2.set_active(True)
+            elif self.bnoselect.isChecked() and (toggle_selector.ES2.active or toggle_selector.RS2.active
+                                                 or toggle_selector.LS2.active):
+                toggle_selector.ES2.set_active(False)
+                toggle_selector.RS2.set_active(False)
+                toggle_selector.LS2.set_active(False)
+
+        def lasso_onselect2(verts):
+            p = path.Path(verts)
+            n = self.labelbox.currentIndex()
+
+            if n < 9:
+                n = '0' + str(n + 1)
+            else:
+                n = str(n + 1)
+
+            col_str = '3' + str(n)
+            m = int(n) - 1
+            patch = patches.PathPatch(p, fill=True, alpha=.2, edgecolor=None, facecolor=self.labelcolor[m])
+            self.newax2.add_patch(patch)
+
+            sepkey = os.path.split(self.selectorPath)
+            sepkey = sepkey[1]
+            layer_name = sepkey  # bodyregion:t1_tse...
+
+            with open(self.markfile, 'r') as json_data:
+                saveFile = json.load(json_data)
+                p = np.ndarray.tolist(p.vertices)  #
+                # print(type(p))
+                if 99 <= self.ind < 999:
+                    ind = '0' + str(self.ind + 1)  # local ind
+                elif 9 <= self.ind < 99:
+                    ind = '00' + str(self.ind + 1)
+                elif self.ind < 9:
+                    ind = '000' + str(self.ind + 1)
+                else:
+                    ind = str(self.ind + 1)
+
+                num = 0  # num of some specific roi
+                if layer_name in saveFile['layer']:
+                    for key in saveFile['layer'][layer_name].keys():
+                        if key[5] + key[6] == n:  # str!！
+                            num += 1
+                    if 9 <= num < 99:
+                        numinkey = '0' + str(num + 1)
+                    elif num < 9:
+                        numinkey = '00' + str(num + 1)
+                    else:
+                        numinkey = str(num + 1)
+                    number_str = ind + col_str + numinkey
+                    saveFile['layer'][layer_name][number_str] = {'vertices': p, 'codes': None}
+                else:
+                    numinkey = '001'
+                    number_str = ind + col_str + numinkey
+                    saveFile['layer'][layer_name] = {number_str: {'vertices': p, 'codes': None}}
+                saveFile['names']['list'] = self.labelnames
+                saveFile['colors']['list'] = self.labelcolor
+            with open(self.markfile, 'w') as json_data:
+                json_data.write(json.dumps(saveFile))
+
+            self.orderROIs()
+
+        def ronselect2(eclick, erelease):
+            col_str = None
+            x1, y1 = eclick.xdata, eclick.ydata
+            x2, y2 = erelease.xdata, erelease.ydata
+
+            p = np.array(([x1, y1, x2, y2]))
+            sepkey = os.path.split(self.selectorPath)
+            sepkey = sepkey[1]
+            layer_name = sepkey
+
+            n = self.labelbox.currentIndex()
+
+            if toggle_selector.RS2.active and not toggle_selector.ES2.active:
+                if n < 9:
+                    n = '0' + str(n + 1)
+                else:
+                    n = str(n + 1)
+
+                col_str = '1' + n
+
+                m = int(n) - 1
+                rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2), fill=True,
+                                     alpha=.2, edgecolor=None, facecolor=self.labelcolor[m])
+                self.newax2.add_patch(rect)
+            elif toggle_selector.ES2.active and not toggle_selector.RS2.active:
+                if n < 9:
+                    n = '0' + str(n + 1)
+                else:
+                    n = str(n + 1)
+
+                col_str = '2' + n
+                m = int(n) - 1
+                ell = Ellipse(xy=(min(x1, x2) + np.abs(x1 - x2) / 2, min(y1, y2) + np.abs(y1 - y2) / 2),
+                              width=np.abs(x1 - x2), height=np.abs(y1 - y2), alpha=.2, edgecolor=None,
+                              facecolor=self.labelcolor[m])
+                self.newax2.add_patch(ell)
+
+            with open(self.markfile, 'r') as json_data:
+                saveFile = json.load(json_data)
+                p = np.ndarray.tolist(p)  # format from datapre
+                if 99 <= self.ind < 999:
+                    ind = '0' + str(self.ind + 1)  # local ind
+                elif 9 <= self.ind < 99:
+                    ind = '00' + str(self.ind + 1)
+                elif self.ind < 9:
+                    ind = '000' + str(self.ind + 1)
+                else:
+                    ind = str(self.ind + 1)
+                num = 0
+                if layer_name in saveFile['layer']:
+                    for key in saveFile['layer'][layer_name].keys():
+                        if key[5] + key[6] == n:
+                            num += 1
+                    if 9 <= num < 99:
+                        numinkey = '0' + str(num + 1)
+                    elif num < 9:
+                        numinkey = '00' + str(num + 1)
+                    else:
+                        numinkey = str(num + 1)
+                    number_str = ind + col_str + numinkey
+                    saveFile['layer'][layer_name][number_str] = {'points': p}
+                else:
+                    numinkey = '001'
+                    number_str = ind + col_str + numinkey
+                    saveFile['layer'][layer_name] = {number_str: {'points': p}}
+                saveFile['names']['list'] = self.labelnames
+                saveFile['colors']['list'] = self.labelcolor
+            with open(self.markfile, 'w') as json_data:
+                json_data.write(json.dumps(saveFile))
+
+            self.orderROIs()
+
+        toggle_selector.RS2 = RectangleSelector(self.newax2, ronselect, button=[1], drawtype='box', useblit=True,
+                                               minspanx=5, minspany=5, spancoords='pixels', interactive=False)
+        # useblit: canvas fast update
+
+        toggle_selector.ES2 = EllipseSelector(self.newax2, ronselect, drawtype='box', button=[1], minspanx=5,
+                                             useblit=True, minspany=5, spancoords='pixels', interactive=False)
+
+        toggle_selector.LS2 = LassoSelector(self.newax2, lasso_onselect, button=[1])
+
+        toggle_selector.ES2.set_active(False)
+        toggle_selector.RS2.set_active(False)
+        toggle_selector.LS2.set_active(False)
+
+        def toggle_selector3(event):
+            if self.brectangle.isChecked() and not toggle_selector.RS3.active and (
+                    toggle_selector.LS3.active or toggle_selector.ES3.active):
+                toggle_selector.ES3.set_active(False)
+                toggle_selector.RS3.set_active(True)
+                toggle_selector.LS3.set_active(False)
+            elif self.bellipse.isChecked() and not toggle_selector.ES3.active and (
+                    toggle_selector.LS3.active or toggle_selector.RS3.active):
+                toggle_selector.ES3.set_active(True)
+                toggle_selector.RS3.set_active(False)
+                toggle_selector.LS3.set_active(False)
+            elif self.blasso.isChecked() and (toggle_selector.ES3.active or toggle_selector.RS3.active
+            ) and not toggle_selector.LS3.active:
+                toggle_selector.ES3.set_active(False)
+                toggle_selector.RS3.set_active(False)
+                toggle_selector.LS3.set_active(True)
+            elif self.bnoselect.isChecked() and (toggle_selector.ES3.active or toggle_selector.RS3.active
+                                                 or toggle_selector.LS3.active):
+                toggle_selector.ES3.set_active(False)
+                toggle_selector.RS3.set_active(False)
+                toggle_selector.LS3.set_active(False)
+
+        def lasso_onselect3(verts):
+            p = path.Path(verts)
+            n = self.labelbox.currentIndex()
+
+            if n < 9:
+                n = '0' + str(n + 1)
+            else:
+                n = str(n + 1)
+
+            col_str = '3' + str(n)
+            m = int(n) - 1
+            patch = patches.PathPatch(p, fill=True, alpha=.2, edgecolor=None, facecolor=self.labelcolor[m])
+            self.newax3.add_patch(patch)
+
+            sepkey = os.path.split(self.selectorPath)
+            sepkey = sepkey[1]
+            layer_name = sepkey  # bodyregion:t1_tse...
+
+            with open(self.markfile, 'r') as json_data:
+                saveFile = json.load(json_data)
+                p = np.ndarray.tolist(p.vertices)  #
+                # print(type(p))
+                if 99 <= self.ind < 999:
+                    ind = '0' + str(self.ind + 1)  # local ind
+                elif 9 <= self.ind < 99:
+                    ind = '00' + str(self.ind + 1)
+                elif self.ind < 9:
+                    ind = '000' + str(self.ind + 1)
+                else:
+                    ind = str(self.ind + 1)
+
+                num = 0  # num of some specific roi
+                if layer_name in saveFile['layer']:
+                    for key in saveFile['layer'][layer_name].keys():
+                        if key[5] + key[6] == n:  # str!！
+                            num += 1
+                    if 9 <= num < 99:
+                        numinkey = '0' + str(num + 1)
+                    elif num < 9:
+                        numinkey = '00' + str(num + 1)
+                    else:
+                        numinkey = str(num + 1)
+                    number_str = ind + col_str + numinkey
+                    saveFile['layer'][layer_name][number_str] = {'vertices': p, 'codes': None}
+                else:
+                    numinkey = '001'
+                    number_str = ind + col_str + numinkey
+                    saveFile['layer'][layer_name] = {number_str: {'vertices': p, 'codes': None}}
+                saveFile['names']['list'] = self.labelnames
+                saveFile['colors']['list'] = self.labelcolor
+            with open(self.markfile, 'w') as json_data:
+                json_data.write(json.dumps(saveFile))
+
+            self.orderROIs()
+
+        def ronselect3(eclick, erelease):
+            col_str = None
+            x1, y1 = eclick.xdata, eclick.ydata
+            x2, y2 = erelease.xdata, erelease.ydata
+
+            p = np.array(([x1, y1, x2, y2]))
+            sepkey = os.path.split(self.selectorPath)
+            sepkey = sepkey[1]
+            layer_name = sepkey
+
+            n = self.labelbox.currentIndex()
+
+            if toggle_selector.RS3.active and not toggle_selector.ES3.active:
+                if n < 9:
+                    n = '0' + str(n + 1)
+                else:
+                    n = str(n + 1)
+
+                col_str = '1' + n
+
+                m = int(n) - 1
+                rect = plt.Rectangle((min(x1, x2), min(y1, y2)), np.abs(x1 - x2), np.abs(y1 - y2), fill=True,
+                                     alpha=.2, edgecolor=None, facecolor=self.labelcolor[m])
+                self.newax3.add_patch(rect)
+            elif toggle_selector.ES3.active and not toggle_selector.RS3.active:
+                if n < 9:
+                    n = '0' + str(n + 1)
+                else:
+                    n = str(n + 1)
+
+                col_str = '2' + n
+                m = int(n) - 1
+                ell = Ellipse(xy=(min(x1, x2) + np.abs(x1 - x2) / 2, min(y1, y2) + np.abs(y1 - y2) / 2),
+                              width=np.abs(x1 - x2), height=np.abs(y1 - y2), alpha=.2, edgecolor=None,
+                              facecolor=self.labelcolor[m])
+                self.newax3.add_patch(ell)
+
+            with open(self.markfile, 'r') as json_data:
+                saveFile = json.load(json_data)
+                p = np.ndarray.tolist(p)  # format from datapre
+                if 99 <= self.ind < 999:
+                    ind = '0' + str(self.ind + 1)  # local ind
+                elif 9 <= self.ind < 99:
+                    ind = '00' + str(self.ind + 1)
+                elif self.ind < 9:
+                    ind = '000' + str(self.ind + 1)
+                else:
+                    ind = str(self.ind + 1)
+                num = 0
+                if layer_name in saveFile['layer']:
+                    for key in saveFile['layer'][layer_name].keys():
+                        if key[5] + key[6] == n:
+                            num += 1
+                    if 9 <= num < 99:
+                        numinkey = '0' + str(num + 1)
+                    elif num < 9:
+                        numinkey = '00' + str(num + 1)
+                    else:
+                        numinkey = str(num + 1)
+                    number_str = ind + col_str + numinkey
+                    saveFile['layer'][layer_name][number_str] = {'points': p}
+                else:
+                    numinkey = '001'
+                    number_str = ind + col_str + numinkey
+                    saveFile['layer'][layer_name] = {number_str: {'points': p}}
+                saveFile['names']['list'] = self.labelnames
+                saveFile['colors']['list'] = self.labelcolor
+            with open(self.markfile, 'w') as json_data:
+                json_data.write(json.dumps(saveFile))
+
+            self.orderROIs()
+
+        toggle_selector.RS3 = RectangleSelector(self.newax3, ronselect, button=[1], drawtype='box', useblit=True,
+                                               minspanx=5, minspany=5, spancoords='pixels', interactive=False)
+        # useblit: canvas fast update
+
+        toggle_selector.ES3 = EllipseSelector(self.newax3, ronselect, drawtype='box', button=[1], minspanx=5,
+                                             useblit=True, minspany=5, spancoords='pixels', interactive=False)
+
+        toggle_selector.LS3 = LassoSelector(self.newax3, lasso_onselect, button=[1])
+
+        toggle_selector.ES3.set_active(False)
+        toggle_selector.RS3.set_active(False)
+        toggle_selector.LS3.set_active(False)
 
         self.openfile.clicked.connect(self.loadMR)
         self.bdswitch.clicked.connect(self.switchview)
@@ -305,13 +754,13 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.bsetcolor.clicked.connect(self.setColor)
 
         self.bselectoron.clicked.connect(self.selectormode)
-        self.bchoosemark.clicked.connect(self.chooseMark)
+        # self.bchoosemark.clicked.connect(self.chooseMark)
         self.bdelete.clicked.connect(self.deleteLabel)
         self.labelbox.setDisabled(True)
         self.brectangle.setDisabled(True)
         self.bellipse.setDisabled(True)
         self.blasso.setDisabled(True)
-        self.bchoosemark.setDisabled(True)
+        # self.bchoosemark.setDisabled(True)
         self.bnoselect.setDisabled(True)
         self.labelWidget.setDisabled(True)
         self.bdelete.setDisabled(True)
@@ -336,14 +785,32 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.actionLoad.triggered.connect(self.loadOld)
         self.actionColor.triggered.connect(self.defaultColor)
         self.actionLabels.triggered.connect(self.editLabel)
+        self.actionCross.triggered.connect(self.HandleCross)
+
+
 
         # plt.connect('key_press_event', toggle_selector)
+        self.Cross = 0
         self.ind = 0
-        self.slice = 0
+        self.ind2 = 0
+        self.ind3 = 0
+        self.slices = 0
+        self.slices2 = 0
+        self.slices3 = 0
         self.newcanvas.mpl_connect('scroll_event', self.newonscroll)
         self.newcanvas.mpl_connect('button_press_event', self.mouse_clicked)
         self.newcanvas.mpl_connect('motion_notify_event', self.mouse_move)
         self.newcanvas.mpl_connect('button_release_event', self.mouse_release)
+
+        self.newcanvas2.mpl_connect('scroll_event', self.newonscrol2)
+        self.newcanvas2.mpl_connect('button_press_event', self.mouse_clicked2)
+        self.newcanvas2.mpl_connect('motion_notify_event', self.mouse_move2)
+        self.newcanvas2.mpl_connect('button_release_event', self.mouse_release2)
+
+        self.newcanvas3.mpl_connect('scroll_event', self.newonscrol3)
+        self.newcanvas3.mpl_connect('button_press_event', self.mouse_clicked3)
+        self.newcanvas3.mpl_connect('motion_notify_event', self.mouse_move3)
+        self.newcanvas3.mpl_connect('button_release_event', self.mouse_release3)
 
         ############ second tab from Yannick
         # initialize DeepLearningArt Application
@@ -461,6 +928,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.radioButton_3.hide()
         self.radioButton_4.hide()
 
+
         self.wyChooseFile.setToolTip('Choose .H5 File')
         self.wyShowArchitecture.setToolTip('Show the Architecture')
         self.radioButton.setToolTip('Weights of Filters')
@@ -531,6 +999,23 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.lineEdit.textChanged[str].connect(self.textChangeAlpha)
         self.lineEdit_2.textChanged[str].connect(self.textChangeGamma)
+
+
+    def on_chooseModelFile_clicked(self):
+        self.openfile_name = QFileDialog.getOpenFileName(self, 'Choose the file', '.', 'All files')[0]
+        if len(self.openfile_name) == 0:
+            pass
+        else:
+            self.horizontalSliderPatch.hide()
+            self.horizontalSliderSlice.hide()
+            self.labelPatch.hide()
+            self.labelSlice.hide()
+            self.lcdNumberSlice.hide()
+            self.lcdNumberPatch.hide()
+            self.matplotlibwidget_static.mpl.fig.clf()
+
+            self.model = load_model(self.openfile_name)
+            print()
 
     def switchview(self):
         if self.vision == 2:
@@ -791,27 +1276,13 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                         self.maingrids1.itemAtPosition(i, j).anewcanvas.linkedSlice(data)
 
     def loadMR(self):
-        current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-        parent_dir = os.path.dirname(os.path.dirname(current_dir))
-        cfgFile = Path(parent_dir + os.sep + 'config' + os.sep + 'param.yml')
-
-        if(cfgFile.exists()):
-            with open(parent_dir + os.sep + 'config' + os.sep + 'param.yml', 'r') as ymlfile:
-                cfg = yaml.safe_load(ymlfile)
-                if(Path(cfg['MRdatabase']).exists()):
-                    dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
-                    sDICOMPath = dbinfo.sPathIn
-                else:
-                    sDICOMPath = current_dir
-        else:
-            sDICOMPath = current_dir
-
-        if( not Path(sDICOMPath).exists()): # safety check
-            sDICOMPath = current_dir
-
-        self.PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "open file", sDICOMPath)
+        with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
+            cfg = yaml.safe_load(ymlfile)
+        dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
+        self.PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "open file", dbinfo.sPathIn)
         # self.PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "open file", "C:/Users/hansw/Videos/artefacts")
         if self.PathDicom:
+            self.selectorPath = self.PathDicom
             self.i = self.i + 1
             self.openfile.setDisabled(True)
             self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
@@ -819,10 +1290,27 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.overlay.show()
             from loadf import loadImage
             self.newMR = loadImage(self.PathDicom)
-            self.newMR.trigger0.connect(self.loadEnd)
+            self.newMR.trigger.connect(self.loadEnd)
             self.newMR.start()
         else:
             pass
+
+    # def plot_3d(self, image, threshold=-300):
+    #     # Position the scan upright,
+    #     # so the head of the patient would be at the top facing the camera
+    #     p = image.transpose(2, 1, 0)
+    #     verts, faces, a, b = measure.marching_cubes(p, threshold)
+    #     fig = plt.figure(figsize=(10, 10))
+    #     ax = fig.add_subplot(111, projection='3d')
+    #     # Fancy indexing: `verts[faces]` to generate a collection of triangles
+    #     mesh = Poly3DCollection(verts[faces], alpha=0.1)
+    #     face_color = [0.5, 0.5, 1]
+    #     mesh.set_facecolor(face_color)
+    #     ax.add_collection3d(mesh)
+    #     ax.set_xlim(0, p.shape[0])
+    #     ax.set_ylim(0, p.shape[1])
+    #     ax.set_zlim(0, p.shape[2])
+    #     plt.show()
 
     def loadEnd(self):
         self.overlay.killTimer(self.overlay.timer)
@@ -901,13 +1389,12 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
     def loadPatch(self):
-        resultfile = QtWidgets.QFileDialog.getOpenFileName(self, 'choose the result file', '',
-                'mat files(*.mat);;h5 files(*.h5)', None, QtWidgets.QFileDialog.DontUseNativeDialog)[0]
+        # resultfile = QtWidgets.QFileDialog.getOpenFileName(self, 'choose the result file', '',
+        #         'mat files(*.mat);;h5 files(*.h5);;HDF5 files(*.hdf5)', None, QtWidgets.QFileDialog.DontUseNativeDialog)[0]
+        resultfile = QtWidgets.QFileDialog.getOpenFileName(self, 'choose the result file', '', 'All Files (*)', None,QtWidgets.QFileDialog.DontUseNativeDialog)[0]
 
         if resultfile:
-            current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-            parent_dir = os.path.dirname(os.path.dirname(current_dir))
-            with open(parent_dir + os.sep + 'config' + os.sep + 'param.yml', 'r') as ymlfile:
+            with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
                 cfg = yaml.safe_load(ymlfile)
             dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
             PathDicom = QtWidgets.QFileDialog.getExistingDirectory(self, "choose the corresponding image", dbinfo.sPathIn)
@@ -935,7 +1422,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                         problist.append(IType)
                         hatchlist.append(empty1)
                         cnrlist.append(2)
-                    # elif cnum.shape[1] == 8:
+                    # elif cnum.shape[1] == 8: 
 
                 nameofCfile = os.path.split(resultfile)[1]
                 nameofCfile = nameofCfile + '   class:' + str(cnum.shape[1])
@@ -974,6 +1461,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             hmap2 = h2
             vtr1 = v1
             vtr3 = v3
+
 
     def editLabel(self):
         labelnames, labelcolors, pathROI, ok= Label_window.getData()
@@ -1015,7 +1503,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.brectangle.setDisabled(False)
             self.bellipse.setDisabled(False)
             self.blasso.setDisabled(False)
-            self.bchoosemark.setDisabled(False)
+            # self.bchoosemark.setDisabled(False)
             self.bnoselect.setDisabled(False)
             self.labelWidget.setDisabled(False)
             self.bdelete.setDisabled(False)
@@ -1031,6 +1519,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.actionOpen_file.setEnabled(False)
             self.actionSave.setEnabled(False)
             self.actionLoad.setEnabled(False)
+            self.chooseMark()
         else:
             self.selectoron = False
             self.stackedWidget.setCurrentIndex(0)
@@ -1041,7 +1530,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             self.brectangle.setDisabled(True)
             self.bellipse.setDisabled(True)
             self.blasso.setDisabled(True)
-            self.bchoosemark.setDisabled(True)
+            # self.bchoosemark.setDisabled(True)
             self.bnoselect.setDisabled(True)
             self.labelWidget.setDisabled(True)
             self.labelWidget.clear()
@@ -1070,44 +1559,45 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         # with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
         #     cfg = yaml.safe_load(ymlfile)
         # dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
-        current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-        parent_dir = os.path.dirname(os.path.dirname(current_dir))
-        cfgFile = Path(parent_dir + os.sep + 'config' + os.sep + 'param.yml')
-
-        if(cfgFile.exists()):
-            with open(parent_dir + os.sep + 'config' + os.sep + 'param.yml', 'r') as ymlfile:
-                cfg = yaml.safe_load(ymlfile)
-                if(Path(cfg['MRdatabase']).exists()):
-                    dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
-                    sDICOMPath = dbinfo.sPathIn
-                else:
-                    sDICOMPath = current_dir
-        else:
-            sDICOMPath = current_dir
-
-        if( not Path(sDICOMPath).exists()): # safety check
-            sDICOMPath = current_dir
-
-        self.selectorPath = QtWidgets.QFileDialog.getExistingDirectory(self, "choose the image to view", sDICOMPath)
+        # self.selectorPath = QtWidgets.QFileDialog.getExistingDirectory(self, "choose the image to view", dbinfo.sPathIn)
+        print(self.selectorPath)
         if self.selectorPath:
             probandname = os.path.split(os.path.split(os.path.split(self.selectorPath)[0])[0])[1]
             self.markfile = str(self.pathROI) + '/' + str(probandname) + '.json'
-
-            self.overlay = Overlay(self.centralWidget())
+            
+            self.overlay = Overlay(self.centralWidget()) 
             self.overlay.setGeometry(QtCore.QRect(950, 400, 171, 141))
             self.overlay.show()
             from loadf import loadImage
             self.newMR = loadImage(self.selectorPath)
-            self.newMR.trigger0.connect(self.loadEnd)
+            self.newMR.trigger.connect(self.loadEnd)
             self.newMR.start()
         else:
             pass
 
-    def loadSelect(self): # from loadEnd
+    def loadSelect(self):  # from loadEnd
         self.mrinmain = self.newMR.voxel_ndarray
-        self.labelimage = True
         self.ind = 0
         self.slices = self.mrinmain.shape[2]
+        self.ind = self.slices // 2 - 1
+        # 40
+        self.slices2 = self.mrinmain.shape[0]
+        self.ind2 = self.slices2 // 2 - 1
+        self.slices3 = self.mrinmain.shape[1]
+        self.ind3 = self.slices3 // 2 - 1
+        self.NS = self.newMR.new_shape  # I.E: [196,256,40*3.3=132]
+        print(self.NS)
+        self.cor3X = [0, self.NS[0]]
+        self.cor3Y = [self.NS[2] // 3.3 + 15, self.NS[2] // 3.3 + 15]
+        self.add3Y1 = [2.5, 2.5]
+        self.add3Y2 = [4, 4]
+        self.cor5Y = [self.NS[2] // 3.3 + 18, self.NS[2] // 3.3 + 18]
+        self.add5Y1 = [3, 3]
+        self.add5Y2 = [4, 4]
+        self.cor2X = [self.NS[0] // 2 - 28, self.NS[0] // 2 - 28]
+        self.add2X1 = [1, 1]
+        self.cor1X = [self.NS[0] // 2 - 18, self.NS[0] // 2 - 18]
+        self.cor4X = [self.NS[0] // 2 - 8, self.NS[0] // 2 - 8]
 
         self.graylist = []
         self.graylist.append(None)
@@ -1116,19 +1606,51 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.emitlist.append(self.ind)
         self.emitlist.append(self.slices)
 
-        self.slicelabel.setText('Slice %s' % (self.ind + 1) + '/ %s' % (self.slices))
+        self.graylist2 = []
+        self.graylist2.append(None)
+        self.graylist2.append(None)
+        self.emitlist2 = []
+        self.emitlist2.append(self.ind2)
+        self.emitlist2.append(self.slices2)
+
+        self.graylist3 = []
+        self.graylist3.append(None)
+        self.graylist3.append(None)
+        self.emitlist3 = []
+        self.emitlist3.append(self.ind3)
+        self.emitlist3.append(self.slices3)
+
+        self.slicelabel.setText('S %s' % (self.ind + 1) + '/ %s' % (self.slices))
         # self.graylabel.setText('Grayscale Range %s' % (self.graylist))
-        self.zoomlabel.setText('Current Zooming %s' % (1))
+        self.zoomlabel.setText('Z %s' % (1.0))
         self.update_data.connect(self.updateSlices)
         self.gray_data.connect(self.updateGray)
         self.new_page.connect(self.newSliceview)
         self.viewLabel.zooming_data.connect(self.updateZoom)
         self.seditgray.clicked.connect(self.setGreymain)
 
+        self.slicelabel2.setText('S %s' % (self.ind2 + 1) + '/ %s' % (self.slices2))
+        # self.graylabel.setText('Grayscale Range %s' % (self.graylist))
+        self.zoomlabel2.setText('Z %s' % (1.0))
+        self.update_data2.connect(self.updateSlices2)
+        self.gray_data2.connect(self.updateGray2)
+        self.new_page2.connect(self.newSliceview2)
+        self.viewLabel2.zooming_data.connect(self.updateZoom2)
+        self.seditgray2.clicked.connect(self.setGreymain2)
+
+        self.slicelabel3.setText('S %s' % (self.ind3 + 1) + '/ %s' % (self.slices3))
+        # self.graylabel.setText('Grayscale Range %s' % (self.graylist))
+        self.zoomlabel3.setText('Z %s' % (1.0))
+        self.update_data3.connect(self.updateSlices3)
+        self.gray_data3.connect(self.updateGray3)
+        self.new_page3.connect(self.newSliceview3)
+        self.viewLabel3.zooming_data.connect(self.updateZoom3)
+        self.seditgray3.clicked.connect(self.setGreymain3)
+
         # replace reference with old values
         with open(self.markfile, 'r') as json_data:
             saveFile = json.load(json_data)
-            self.labelnames=saveFile['names']['list']
+            self.labelnames = saveFile['names']['list']
             self.labelcolor = saveFile['colors']['list']
         with open('editlabel.json', 'r') as json_data:
             self.infos = json.load(json_data)
@@ -1137,20 +1659,17 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         with open('editlabel.json', 'w') as json_data:
             json_data.write(json.dumps(self.infos))
 
-        self.labelbox.clear()
-        self.labelbox.addItems(self.labelnames)
-
         self.orderROIs()
 
     def orderROIs(self):
         with open(self.markfile, 'r') as json_data:
             saveFile = json.load(json_data)
         sepkey = os.path.split(self.selectorPath)[1]
-        self.newkeylist=[]
-        if sepkey in saveFile['layer']:
+        self.newkeylist = []
+        if sepkey in saveFile['layer']:  #### void key?
             for key in saveFile['layer'][sepkey].keys():
-                newkey = (key[0]+key[1], key[2], key[3], key[4]+key[5])
-                self.newkeylist.append(newkey)
+                newkey = (key[0] + key[1] + key[2] + key[3], key[4], key[5] + key[6], key[7] + key[8] + key[9])
+                self.newkeylist.append(newkey)  # dont cover original json file
 
             first = sorted(self.newkeylist, key=lambda e: e.__getitem__(2))
             second = sorted(first, key=lambda e: (e.__getitem__(2), e.__getitem__(3)))
@@ -1161,18 +1680,30 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.keylist = []
         self.labelWidget.clear()
         for element in self.third:
-            oldkey =element[0]+element[1]+element[2]+element[3]
+            oldkey = element[0] + element[1] + element[2] + element[3]  # format?
             self.keylist.append(oldkey)
-            item=self.labelnames[int(oldkey[3])] + '-'+ oldkey[4]+oldkey[5] + '-'+ oldkey[0]+oldkey[1] + '/' + str(self.slices)
+            a = len(self.labelnames)  # 30
+
+            a2 = int(oldkey[5] + oldkey[6])  # label
+            print('oldkey', oldkey)
+            print('len', a)
+            print('idx', a2 - 1)
+            item = self.labelnames[int(oldkey[5] + oldkey[6]) - 1] + '-' + oldkey[7] + oldkey[8] + oldkey[9] + '-' + \
+                   oldkey[0] + oldkey[1] + oldkey[2] + oldkey[3] + '/' + str(self.slices)
+
             self.labelWidget.addItem(item)
 
         self.newslicesview()
 
     def newonscroll(self, event):
         if event.button == 'up':
-            self.ind = (self.ind + 1)  % self.slices
+            self.ind = (self.ind + 1) % self.slices
+            self.cor3Y = (self.cor3Y[0] + self.add3Y1[0], self.cor3Y[1] + self.add3Y1[1])
+            self.cor5Y = (self.cor5Y[0] + self.add5Y1[0], self.cor5Y[1] + self.add5Y1[1])
         else:
-            self.ind = (self.ind - 1)  % self.slices
+            self.ind = (self.ind - 1) % self.slices
+            self.cor3Y = (self.cor3Y[0] - self.add3Y2[0], self.cor3Y[1] - self.add3Y2[1])
+            self.cor5Y = (self.cor5Y[0] - self.add5Y2[0], self.cor5Y[1] - self.add5Y2[1])
         if self.ind >= self.slices:
             self.ind = 0
         if self.ind <= -1:
@@ -1182,12 +1713,90 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
         self.update_data.emit(self.emitlist)
         self.newslicesview()
 
-    def newslicesview(self): # refreshing
-        self.newax.clear()
-        self.pltc = self.newax.imshow(np.swapaxes(self.mrinmain[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
+    def newonscrol2(self, event):
+        print(event.button)
+        if event.button == 'up':
+            self.ind2 = (self.ind2 + 1) % self.slices2
+            self.cor2X = (self.cor2X[0] + self.add2X1[0], self.cor2X[1] + self.add2X1[1])
+        else:
+            self.ind2 = (self.ind2 - 1) % self.slices2
+            self.cor2X = (self.cor2X[0] - self.add2X1[0], self.cor2X[1] - self.add2X1[1])
+        if self.ind2 >= self.slices2:
+            self.ind2 = 0
+        if self.ind2 <= -1:
+            self.ind2 = self.slices2 - 1
 
-        sepkey = os.path.split(self.selectorPath)
+        self.emitlist2[0] = self.ind2
+        self.update_data2.emit(self.emitlist2)
+        self.newslicesview()
+
+    def newonscrol3(self, event):
+        print(event.button)
+        if event.button == 'up':
+            self.ind3 = (self.ind3 + 1) % self.slices3
+            self.cor1X = (self.cor1X[0] + self.add2X1[0], self.cor1X[1] + self.add2X1[1])
+            self.cor4X = (self.cor4X[0] + self.add2X1[0], self.cor4X[1] + self.add2X1[1])
+        else:
+            self.ind3 = (self.ind3 - 1) % self.slices3
+            self.cor1X = (self.cor1X[0] - self.add2X1[0], self.cor1X[1] - self.add2X1[1])
+            self.cor4X = (self.cor4X[0] - self.add2X1[0], self.cor4X[1] - self.add2X1[1])
+        if self.ind3 >= self.slices3:
+            self.ind3 = 0
+        if self.ind3 <= -1:
+            self.ind3 = self.slices3 - 1
+        #
+        self.emitlist3[0] = self.ind3
+        self.update_data3.emit(self.emitlist3)
+        self.newslicesview()
+
+    def HandleCross(self):
+        if self.Cross == 0:
+            self.Cross = 1
+        else:
+            self.Cross = 0
+
+    def newslicesview(self):  # refreshing
+        from scipy.misc import imread
+        self.newax.clear()
+        self.newax2.clear()
+        self.newax3.clear()
+        # list1.append(self.newMR.voxel_ndarray)
+        # shapelist.append(self.newMR.new_shape)
+        # param1 = {'image': list1[1 - 1], 'mode': 1, 'shape': shapelist[1 - 1]}
+        # param2 = {'image': list1[1 - 1], 'mode': 2, 'shape': shapelist[1 - 1]}
+        # param3 = {'image': list1[1 - 1], 'mode': 3, 'shape': shapelist[1 - 1]}
+        # self.newcanvas1 = Canvas(param1)
+        # self.newcanvas2 = Canvas(param2)
+        # self.newcanvas3 = Canvas(param3
+        # img1 = imread('img1.jpg')
+        # img2 = imread('img2.jpg')
+        # img3 = imread('img3.jpg')        #a = np.swapaxes(self.mrinmain[:, :, self.ind], 0, 1#      #
+
+        self.pltc = self.newax.imshow(np.swapaxes(self.mrinmain[:, :, self.ind], 0, 1), cmap='gray', vmin=0, vmax=2094)
+        self.pltc2 = self.newax2.imshow(np.swapaxes(self.mrinmain[self.ind2, :, :], 0, 1), cmap='gray', vmin=0,
+                                        vmax=2094,
+                                        extent=[0, self.NS[1], self.NS[2], 0], interpolation='sinc')
+        self.pltc3 = self.newax3.imshow(np.swapaxes(self.mrinmain[:, self.ind3, :], 0, 1), cmap='gray', vmin=0,
+                                        vmax=2094,
+                                        extent=[0, self.NS[0], self.NS[2], 0], interpolation='sinc')
+
+        if self.Cross == 1:
+            self.line1 = self.newax.add_line(matplotlib.lines.Line2D([0, self.NS[0]], [self.cor1X], color='b'))
+            self.line2 = self.newax.add_line(matplotlib.lines.Line2D([self.cor2X], [self.NS[1], 0], color='g'))
+            self.line3 = self.newax2.add_line(matplotlib.lines.Line2D(self.cor3X, self.cor3Y, color='r'))
+            self.line4 = self.newax2.add_line(matplotlib.lines.Line2D([self.cor4X], [self.NS[2]+40, 0], color='b'))
+            self.line5 = self.newax3.add_line(matplotlib.lines.Line2D([0, self.NS[0]], self.cor5Y, color='r'))
+            self.line6 = self.newax3.add_line(matplotlib.lines.Line2D([self.cor2X], [self.NS[2]+40, 0], color='g'))
+        else:
+            pass
+        # self.pltc = self.newax.imshow(img1)
+        # self.pltc2  = self.newax2.imshow(img2)
+        # self.pltc3  = self.newax3.imshow(img3)
+
+        sepkey = os.path.split(
+            self.selectorPath)  # ('C:/Users/hansw/Videos/artefacts/MRPhysics/newProtocol/01_ab/dicom_sorted', 't1_tse_tra_Kopf_Motion_0003')
         sepkey = sepkey[1]  # t1_tse_tra_Kopf_Motion_0003
+
 
         with open(self.markfile, 'r') as json_data:
             loadFile = json.load(json_data)
@@ -1195,31 +1804,53 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
             if sepkey in loadFile['layer']:
                 layer = loadFile['layer'][sepkey]
                 for key in layer.keys():
-                    if self.ind+1 < 10:
-                        sIndex = "0" + str(self.ind+1)
+                    if 99 <= self.ind < 999:
+                        ind = '0' + str(self.ind + 1)  # local ind
+                    elif 9 <= self.ind < 99:
+                        ind = '00' + str(self.ind + 1)
+                    elif self.ind < 9:
+                        ind = '000' + str(self.ind + 1)
                     else:
-                        sIndex = str(self.ind+1)
-                    #print(sIndex)
-
-                    if key[0]+key[1]== sIndex:
+                        ind = str(self.ind + 1)
+                    if key[0] + key[1] + key[2] + key[3] == ind:
                         p = layer[key]
-                        if key[2] == '1':
+                        if key[4] == '1':
                             p = np.asarray(p['points'])
-                            patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]), np.abs(p[1] - p[3]), fill=True, alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[3])])
-                        elif key[2] == '2':
+                            patch = plt.Rectangle((min(p[0], p[2]), min(p[1], p[3])), np.abs(p[0] - p[2]),
+                                                  np.abs(p[1] - p[3]), fill=True,
+                                                  alpha=.2, edgecolor=None,
+                                                  facecolor=self.labelcolor[int(key[5] + key[6]) - 1])
+                        elif key[4] == '2':
                             p = np.asarray(p['points'])
-                            patch = Ellipse(xy=(min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2), width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]), alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[3])])
+                            patch = Ellipse(
+                                xy=(
+                                min(p[0], p[2]) + np.abs(p[0] - p[2]) / 2, min(p[1], p[3]) + np.abs(p[1] - p[3]) / 2),
+                                width=np.abs(p[0] - p[2]), height=np.abs(p[1] - p[3]),
+                                alpha=.2, edgecolor=None, facecolor=self.labelcolor[int(key[5] + key[6]) - 1])
                         else:
                             p = path.Path(np.asarray(p['vertices']), p['codes'])
-                            patch = patches.PathPatch(p, fill=True, alpha=.2, edgecolor= None, facecolor=self.labelcolor[int(key[3])])
+                            patch = patches.PathPatch(p, fill=True, alpha=.2, edgecolor=None,
+                                                      facecolor=self.labelcolor[int(key[5] + key[6]) - 1])
 
                         self.newax.add_patch(patch)
-        self.newcanvas.draw()
+        self.newcanvas.draw()  # not self.newcanvas.show()
+        self.newcanvas2.draw()
+        self.newcanvas3.draw()
 
         v_min, v_max = self.pltc.get_clim()
         self.graylist[0] = v_min
         self.graylist[1] = v_max
         self.new_page.emit()
+
+        v_min, v_max = self.pltc2.get_clim()
+        self.graylist2[0] = v_min
+        self.graylist2[1] = v_max
+        self.new_page2.emit()
+
+        v_min, v_max = self.pltc3.get_clim()
+        self.graylist3[0] = v_min
+        self.graylist3[1] = v_max
+        self.new_page3.emit()
 
     def deleteLabel(self):
         pos = self.labelWidget.currentRow()
@@ -1243,11 +1874,25 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.newslicesview()
 
+
     def mouse_clicked(self, event):
         if event.button == 2:
             self.x_clicked = event.x
             self.y_clicked = event.y
             self.mouse_second_clicked = True
+
+    def mouse_clicked2(self, event):
+        if event.button == 2:
+            self.x_clicked = event.x
+            self.y_clicked = event.y
+            self.mouse_second_clicked = True
+
+    def mouse_clicked3(self, event):
+        if event.button == 2:
+            self.x_clicked = event.x
+            self.y_clicked = event.y
+            self.mouse_second_clicked = True
+            # todo
 
     def mouse_move(self, event):
         if self.mouse_second_clicked:
@@ -1286,30 +1931,176 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                 v_min -= __vmin
                 v_max -= __vmax
 
+    def mouse_move2(self, event):
+        if self.mouse_second_clicked:
+            factor = 10
+            __x = event.x - self.x_clicked
+            __y = event.y - self.y_clicked
+            v_min, v_max = self.pltc2.get_clim()
+            if __x >= 0 and __y >= 0:
+                __vmin = np.abs(__x) * factor - np.abs(__y) * factor
+                __vmax = np.abs(__x) * factor + np.abs(__y) * factor
+            elif __x < 0 and __y >= 0:
+                __vmin = -np.abs(__x) * factor - np.abs(__y) * factor
+                __vmax = -np.abs(__x) * factor + np.abs(__y) * factor
+            elif __x < 0 and __y < 0:
+                __vmin = -np.abs(__x) * factor + np.abs(__y) * factor
+                __vmax = -np.abs(__x) * factor - np.abs(__y) * factor
+            else:
+                __vmin = np.abs(__x) * factor + np.abs(__y) * factor
+                __vmax = np.abs(__x) * factor - np.abs(__y) * factor
+
+            if (float(__vmin - __vmax)) / (v_max - v_min + 0.001) > 1:
+                nmb = (float(__vmin - __vmax)) / (v_max - v_min + 0.001) + 1
+                __vmin = (float(__vmin - __vmax)) / nmb * (__vmin / (__vmin - __vmax))
+                __vmax = (float(__vmin - __vmax)) / nmb * (__vmax / (__vmin - __vmax))
+
+            v_min += __vmin
+            v_max += __vmax
+            if v_min < v_max:
+                self.pltc2.set_clim(vmin=v_min, vmax=v_max)
+                self.graylist2[0] = v_min.round(2)
+                self.graylist2[1] = v_max.round(2)
+                self.gray_data2.emit(self.graylist2)
+
+                self.newcanvas2.draw_idle()
+            else:
+                v_min -= __vmin
+                v_max -= __vmax
+
+    def mouse_move3(self, event):
+        if self.mouse_second_clicked:
+            factor = 10
+            __x = event.x - self.x_clicked
+            __y = event.y - self.y_clicked
+            v_min, v_max = self.pltc3.get_clim()
+            if __x >= 0 and __y >= 0:
+                __vmin = np.abs(__x) * factor - np.abs(__y) * factor
+                __vmax = np.abs(__x) * factor + np.abs(__y) * factor
+            elif __x < 0 and __y >= 0:
+                __vmin = -np.abs(__x) * factor - np.abs(__y) * factor
+                __vmax = -np.abs(__x) * factor + np.abs(__y) * factor
+            elif __x < 0 and __y < 0:
+                __vmin = -np.abs(__x) * factor + np.abs(__y) * factor
+                __vmax = -np.abs(__x) * factor - np.abs(__y) * factor
+            else:
+                __vmin = np.abs(__x) * factor + np.abs(__y) * factor
+                __vmax = np.abs(__x) * factor - np.abs(__y) * factor
+
+            if (float(__vmin - __vmax)) / (v_max - v_min + 0.001) > 1:
+                nmb = (float(__vmin - __vmax)) / (v_max - v_min + 0.001) + 1
+                __vmin = (float(__vmin - __vmax)) / nmb * (__vmin / (__vmin - __vmax))
+                __vmax = (float(__vmin - __vmax)) / nmb * (__vmax / (__vmin - __vmax))
+
+            v_min += __vmin
+            v_max += __vmax
+            if v_min < v_max:
+                self.pltc3.set_clim(vmin=v_min, vmax=v_max)
+                self.graylist3[0] = v_min.round(2)
+                self.graylist3[1] = v_max.round(2)
+                self.gray_data3.emit(self.graylist3)
+
+                self.newcanvas3.draw_idle()
+            else:
+                v_min -= __vmin
+                v_max -= __vmax
+
     def mouse_release(self, event):
         if event.button == 2:
             self.mouse_second_clicked = False
 
+    def mouse_release2(self, event):
+        if event.button == 2:
+            self.mouse_second_clicked = False
+
+    def mouse_release3(self, event):
+        if event.button == 2:
+            self.mouse_second_clicked = False
+
     def newSliceview(self):
-        self.graylabel.setText('Grayscale Range %s' % (self.graylist))
+        print(1)
+        self.graylabel.setText('G %s' % (self.graylist))
 
     def updateSlices(self, elist):
-        self.slicelabel.setText('Slice %s' % (elist[0] + 1) + '/ %s' % (elist[1]))
+        self.slicelabel.setText('S %s' % (elist[0] + 1) + '/ %s' % (elist[1]))
 
     def updateGray(self, elist):
-        self.graylabel.setText('Grayscale Range %s' % (elist))
+        self.graylabel.setText('G %s' % (elist))
 
     def updateZoom(self, factor):
-        self.zoomlabel.setText('Current Zooming %s' % (factor))
+        self.zoomlabel.setText('Z %s' % (factor))
 
     def setGreymain(self):
         maxv, minv, ok = grey_window.getData()
         if ok:
             self.pltc.set_clim(vmin=minv, vmax=maxv)
+            self.pltc2.set_clim(vmin=minv, vmax=maxv)
+            self.pltc3.set_clim(vmin=minv, vmax=maxv)
             self.graylist[0] = minv
             self.graylist[1] = maxv
             self.gray_data.emit(self.graylist)
             self.newcanvas.draw_idle()
+            self.gray_data2.emit(self.graylist)
+            self.newcanvas2.draw_idle()
+            self.gray_data3.emit(self.graylist)
+            self.newcanvas3.draw_idle()
+
+    def newSliceview2(self):
+        print(1)
+        self.graylabel2.setText('G %s' % (self.graylist2))
+
+    def updateSlices2(self, elist):
+        self.slicelabel2.setText('S %s' % (elist[0] + 1) + '/ %s' % (elist[1]))
+
+    def updateGray2(self, elist):
+        self.graylabel2.setText('G %s' % (elist))
+
+    def updateZoom2(self, factor):
+        self.zoomlabel2.setText('Z %s' % (factor))
+
+    def setGreymain2(self):
+        maxv, minv, ok = grey_window.getData()
+        if ok:
+            self.pltc.set_clim(vmin=minv, vmax=maxv)
+            self.pltc2.set_clim(vmin=minv, vmax=maxv)
+            self.pltc3.set_clim(vmin=minv, vmax=maxv)
+            self.graylist2[0] = minv
+            self.graylist2[1] = maxv
+            self.gray_data.emit(self.graylist)
+            self.newcanvas.draw_idle()
+            self.gray_data2.emit(self.graylist)
+            self.newcanvas2.draw_idle()
+            self.gray_data3.emit(self.graylist)
+            self.newcanvas3.draw_idle()
+
+    def newSliceview3(self):
+        print(1)
+        self.graylabel3.setText('G %s' % (self.graylist3))
+
+    def updateSlices3(self, elist):
+        self.slicelabel3.setText('S %s' % (elist[0] + 1) + '/ %s' % (elist[1]))
+
+    def updateGray3(self, elist):
+        self.graylabel3.setText('G %s' % (elist))
+
+    def updateZoom3(self, factor):
+        self.zoomlabel3.setText('Z %s' % (factor))
+
+    def setGreymain3(self):
+        maxv, minv, ok = grey_window.getData()
+        if ok:
+            self.pltc.set_clim(vmin=minv, vmax=maxv)
+            self.pltc2.set_clim(vmin=minv, vmax=maxv)
+            self.pltc3.set_clim(vmin=minv, vmax=maxv)
+            self.graylist3[0] = minv
+            self.graylist3[1] = maxv
+            self.gray_data.emit(self.graylist)
+            self.newcanvas.draw_idle()
+            self.gray_data2.emit(self.graylist)
+            self.newcanvas2.draw_idle()
+            self.gray_data3.emit(self.graylist)
+            self.newcanvas3.draw_idle()
+
 
     def closeEvent(self, QCloseEvent):
         reply = QMessageBox.question(self, 'Warning', 'Are you sure to exit?', QMessageBox.Yes | QMessageBox.No,
@@ -1515,9 +2306,7 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def openFileNamesDialog(self, dir=None):
         if dir==None:
-            current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-            parent_dir = os.path.dirname(os.path.dirname(current_dir))
-            with open(parent_dir + os.sep + 'config' + os.sep + 'param.yml', 'r') as ymlfile:
+            with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
                 cfg = yaml.safe_load(ymlfile)
             dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
             dir = dbinfo.sPathIn + os.sep + 'MRPhysics'  + os.sep + 'newProtocol'
@@ -1964,9 +2753,80 @@ class MyApp(QtWidgets.QMainWindow, Ui_MainWindow):
                                                                     self.act[inputLayerNameList[3]],
                                                                     self.act[inputLayerNameList[4]],
                                                                              0])[0]
+                        elif len(layer.input) == 6:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name))
 
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],layer.input[5],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[layer.name] = get_activations([self.act[inputLayerNameList[0]],
+                                                                    self.act[inputLayerNameList[1]],
+                                                                    self.act[inputLayerNameList[2]],
+                                                                    self.act[inputLayerNameList[3]],
+                                                                    self.act[inputLayerNameList[4]],
+                                                                    self.act[inputLayerNameList[5]],
+                                                                             0])[0]
+
+                        elif len(layer.input) == 7:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name))
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],layer.input[5],layer.input[6],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[layer.name] = get_activations([self.act[inputLayerNameList[0]],
+                                                                    self.act[inputLayerNameList[1]],
+                                                                    self.act[inputLayerNameList[2]],
+                                                                    self.act[inputLayerNameList[3]],
+                                                                    self.act[inputLayerNameList[4]],
+                                                                    self.act[inputLayerNameList[5]],
+                                                                    self.act[inputLayerNameList[6]],
+                                                                             0])[0]
+                        elif len(layer.input) == 8:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name))
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],layer.input[5],layer.input[6],layer.input[7],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[layer.name] = get_activations([self.act[inputLayerNameList[0]],
+                                                                    self.act[inputLayerNameList[1]],
+                                                                    self.act[inputLayerNameList[2]],
+                                                                    self.act[inputLayerNameList[3]],
+                                                                    self.act[inputLayerNameList[4]],
+                                                                    self.act[inputLayerNameList[5]],
+                                                                    self.act[inputLayerNameList[6]],
+                                                                    self.act[inputLayerNameList[7]],
+                                                                             0])[0]
+
+                        elif len(layer.input) == 9:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name))
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],layer.input[5],layer.input[6],layer.input[7],layer.input[8],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[layer.name] = get_activations([self.act[inputLayerNameList[0]],
+                                                                    self.act[inputLayerNameList[1]],
+                                                                    self.act[inputLayerNameList[2]],
+                                                                    self.act[inputLayerNameList[3]],
+                                                                    self.act[inputLayerNameList[4]],
+                                                                    self.act[inputLayerNameList[5]],
+                                                                    self.act[inputLayerNameList[6]],
+                                                                    self.act[inputLayerNameList[7]],
+                                                                    self.act[inputLayerNameList[8]],
+                                                                             0])[0]
                         else:
-                            print('the number of input is more than 5')
+                            print('the number of input is more than 9')
 
                     else:
                         get_activations = K.function([layer.input, K.learning_phase()], [layer.output, ])
