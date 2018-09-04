@@ -211,43 +211,109 @@ def fPredict(test_ref, test_art, dParam, dHyper):
 
 
         if dHyper['evaluate']:
-            fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(15, 10), sharex=True, sharey=True)
-            # fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(15, 15), sharex=True, sharey=True)
-            ax = axes.ravel()
-            plt.gray()
-            label = 'NRMSE: {:.2f}, SSIM: {:.3f}, NMI: {:.3f}'
+            if dParam['lSaveIndividual']:
+                fig = plt.figure()
+                plt.gray()
+                label = 'NRMSE: {:.2f}, SSIM: {:.3f}, NMI: {:.3f}'
+                for i in range(len(test_ref)):
+                    ax = imshow(test_ref[i])
+                    plt.xticks([])
+                    plt.yticks([])
+                    ax.set_xlabel(label.format(nrmse(test_ref[i], test_ref[i]), ssim(test_ref[i], test_ref[i], data_range=(test_ref[i].max() - test_ref[i].min())), nmi(test_ref[i].flatten(), test_ref[i].flatten())))
+                    ax.set_title('reference image')
+                    if dParam['lSave']:
+                        plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + 'reference_' + str(i) + '.png')
+                    else:
+                        plt.show()
 
-            for i in range(len(test_ref)):
-                # orignal reconstructed images
-                ax[0].imshow(test_ref[i])
-                ax[0].set_xlabel(label.format(nrmse(test_ref[i], test_ref[i]), ssim(test_ref[i], test_ref[i], data_range=(test_ref[i].max() - test_ref[i].min())), nmi(test_ref[i].flatten(), test_ref[i].flatten())))
-                ax[0].set_title('reference image')
+                    ax = imshow(test_art[i])
+                    plt.xticks([])
+                    plt.yticks([])
+                    ax.set_xlabel(label.format(nrmse(test_ref[i], test_art[i]), ssim(test_ref[i], test_art[i], data_range=(test_art[i].max() - test_art[i].min())), nmi(test_ref[i].flatten(), test_art[i].flatten())))
+                    ax.set_title('motion-affected image')
+                    if dParam['lSave']:
+                        plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + 'art_' + str(i) + '.png')
+                    else:
+                        plt.show()
 
-                ax[1].imshow(test_art[i])
-                ax[1].set_xlabel(label.format(nrmse(test_ref[i], test_art[i]), ssim(test_ref[i], test_art[i], data_range=(test_art[i].max() - test_art[i].min())), nmi(test_ref[i].flatten(), test_art[i].flatten())))
-                ax[1].set_title('motion-affected image')
+                    ax = imshow(predict_art[i])
+                    plt.xticks([])
+                    plt.yticks([])
+                    ax.set_xlabel(label.format(nrmse(test_ref[i], predict_art[i]), ssim(test_ref[i], predict_art[i], data_range=(predict_art[i].max() - predict_art[i].min())), nmi(test_ref[1].flatten(), predict_art[i].flatten())))
+                    ax.set_title('reconstructed image')
+                    if dParam['lSave']:
+                        plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + 'recon_' + str(i) + '.png')
+                    else:
+                        plt.show()
 
-                ax[2].imshow(predict_art[i])
-                ax[2].set_xlabel(label.format(nrmse(test_ref[i], predict_art[i]), ssim(test_ref[i], predict_art[i], data_range=(predict_art[i].max() - predict_art[i].min())), nmi(test_ref[1].flatten(), predict_art[i].flatten())))
-                ax[2].set_title('reconstructed image')
+                    ax = imshow(test_art_tv_1[i])
+                    plt.xticks([])
+                    plt.yticks([])
+                    ax.set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_1[i]), ssim(test_ref[i], test_art_tv_1[i], data_range=(test_art_tv_1[i].max() - test_art_tv_1[i].min())), nmi(test_ref[i].flatten(), test_art_tv_1[i].flatten())))
+                    ax.set_title('TV weight 1')
+                    if dParam['lSave']:
+                        plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + 'tv1_' + str(i) + '.png')
+                    else:
+                        plt.show()
 
-                # TV denoiser
-                ax[3].imshow(test_art_tv_1[i])
-                ax[3].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_1[i]), ssim(test_ref[i], test_art_tv_1[i], data_range=(test_art_tv_1[i].max() - test_art_tv_1[i].min())), nmi(test_ref[i].flatten(), test_art_tv_1[i].flatten())))
-                ax[3].set_title('TV weight 1')
+                    ax = imshow(test_art_tv_3[i])
+                    plt.xticks([])
+                    plt.yticks([])
+                    ax.set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_3[i]), ssim(test_ref[i], test_art_tv_3[i], data_range=(test_art_tv_3[i].max() - test_art_tv_3[i].min())), nmi(test_ref[i].flatten(), test_art_tv_3[i].flatten())))
+                    ax.set_title('TV weight 3')
+                    if dParam['lSave']:
+                        plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + 'tv3_' + str(i) + '.png')
+                    else:
+                        plt.show()
 
-                ax[4].imshow(test_art_tv_3[i])
-                ax[4].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_3[i]), ssim(test_ref[i], test_art_tv_3[i], data_range=(test_art_tv_3[i].max() - test_art_tv_3[i].min())), nmi(test_ref[i].flatten(), test_art_tv_3[i].flatten())))
-                ax[4].set_title('TV weight 3')
+                    ax = imshow(test_art_tv_5[i])
+                    plt.xticks([])
+                    plt.yticks([])
+                    ax.set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_5[i]), ssim(test_ref[i], test_art_tv_5[i], data_range=(test_art_tv_5[i].max() - test_art_tv_5[i].min())), nmi(test_ref[i].flatten(), test_art_tv_5[i].flatten())))
+                    ax.set_title('TV weight 5')
+                    if dParam['lSave']:
+                        plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + 'tv5_' + str(i) + '.png')
+                    else:
+                        plt.show()
 
-                ax[5].imshow(test_art_tv_5[i])
-                ax[5].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_5[i]), ssim(test_ref[i], test_art_tv_5[i], data_range=(test_art_tv_5[i].max() - test_art_tv_5[i].min())), nmi(test_ref[i].flatten(), test_art_tv_5[i].flatten())))
-                ax[5].set_title('TV weight 5')
+            else:
+                fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(15, 10), sharex=True, sharey=True)
+                # fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(15, 15), sharex=True, sharey=True)
+                ax = axes.ravel()
+                plt.gray()
+                label = 'NRMSE: {:.2f}, SSIM: {:.3f}, NMI: {:.3f}'
 
-                if dParam['lSave']:
-                    plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')
-                else:
-                    plt.show()
+                for i in range(len(test_ref)):
+                    # orignal reconstructed images
+                    ax[0].imshow(test_ref[i])
+                    ax[0].set_xlabel(label.format(nrmse(test_ref[i], test_ref[i]), ssim(test_ref[i], test_ref[i], data_range=(test_ref[i].max() - test_ref[i].min())), nmi(test_ref[i].flatten(), test_ref[i].flatten())))
+                    ax[0].set_title('reference image')
+
+                    ax[1].imshow(test_art[i])
+                    ax[1].set_xlabel(label.format(nrmse(test_ref[i], test_art[i]), ssim(test_ref[i], test_art[i], data_range=(test_art[i].max() - test_art[i].min())), nmi(test_ref[i].flatten(), test_art[i].flatten())))
+                    ax[1].set_title('motion-affected image')
+
+                    ax[2].imshow(predict_art[i])
+                    ax[2].set_xlabel(label.format(nrmse(test_ref[i], predict_art[i]), ssim(test_ref[i], predict_art[i], data_range=(predict_art[i].max() - predict_art[i].min())), nmi(test_ref[1].flatten(), predict_art[i].flatten())))
+                    ax[2].set_title('reconstructed image')
+
+                    # TV denoiser
+                    ax[3].imshow(test_art_tv_1[i])
+                    ax[3].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_1[i]), ssim(test_ref[i], test_art_tv_1[i], data_range=(test_art_tv_1[i].max() - test_art_tv_1[i].min())), nmi(test_ref[i].flatten(), test_art_tv_1[i].flatten())))
+                    ax[3].set_title('TV weight 1')
+
+                    ax[4].imshow(test_art_tv_3[i])
+                    ax[4].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_3[i]), ssim(test_ref[i], test_art_tv_3[i], data_range=(test_art_tv_3[i].max() - test_art_tv_3[i].min())), nmi(test_ref[i].flatten(), test_art_tv_3[i].flatten())))
+                    ax[4].set_title('TV weight 3')
+
+                    ax[5].imshow(test_art_tv_5[i])
+                    ax[5].set_xlabel(label.format(nrmse(test_ref[i], test_art_tv_5[i]), ssim(test_ref[i], test_art_tv_5[i], data_range=(test_art_tv_5[i].max() - test_art_tv_5[i].min())), nmi(test_ref[i].flatten(), test_art_tv_5[i].flatten())))
+                    ax[5].set_title('TV weight 5')
+
+                    if dParam['lSave']:
+                        plt.savefig(dParam['sOutPath'] + os.sep + 'result' + os.sep + str(i) + '.png')
+                    else:
+                        plt.show()
 
         else:
             plt.figure()
