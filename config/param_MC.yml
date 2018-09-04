@@ -54,7 +54,7 @@ motion_head_abd_becken: &id006
    bestmodel : {CNN2D: "head_abd_becken_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 #### set parameters ####
-# database name
+# database name (MRPhysics | NAKOIQA)
 MRdatabase : MRPhysics
 # subdirectories in database, patient, output directory
 subdirs : ["newProtocol", "dicom_sorted", "testout", "correction"]
