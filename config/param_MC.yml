@@ -57,6 +57,8 @@ motion_head_abd_becken: &id006
 # database name (MRPhysics | NAKOIQA)
 MRdatabase : MRPhysics
 # subdirectories in database, patient, output directory
+# subdirs MRPhysics: ["newProtocol", "dicom_sorted", "testout", "correction"]
+# subdirs NAKOIQA: ["", "dicom_sorted", "testout", "correction"]
 subdirs : ["newProtocol", "dicom_sorted", "testout", "correction"]
 # CNN database to be modeled
 selectedDatabase: *id001
