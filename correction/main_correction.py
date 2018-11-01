@@ -58,7 +58,7 @@ def run(cfg, dbinfo):
     dHyper = cfg['correction']
     dParam = {'batchSize': cfg['batchSize'], 'patchSize': patchSize, 'patchOverlap': cfg['patchOverlap'],
               'learningRate': cfg['lr'], 'epochs': cfg['epochs'], 'lTrain': cfg['lTrain'], 'lSave': cfg['lSave'],
-              'sOutPath': sOutPath}
+              'sOutPath': sOutPath, 'lSaveIndividual': cfg['lSaveIndividual']}
 
     if len(train_ref) == 1:
         dData = {'train_ref': train_ref[0], 'test_ref': test_ref[0],

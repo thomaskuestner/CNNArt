@@ -56,7 +56,7 @@ def fTrainInner(sOutPath, model, learningRate=0.001, patchSize=None, sInPaths=No
 
 
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
-    callbacks.append(ModelCheckpoint('/home/s1222/no_backup/s1222/checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
+    callbacks.append(ModelCheckpoint('checkpoint/checker.hdf5', monitor='val_acc', verbose=0,
         period=5, save_best_only=True))# overrides the last checkpoint, its just for security
     callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1))
 
@@ -105,8 +105,8 @@ def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
         X: Samples to predict on. The shape of X should fit to the input shape of the model
         y: Labels for the Samples. Number of Samples should be equal to the number of samples in X
         sModelPath: (String) full path to a trained keras model. It should be *_json.txt file. there has to be a corresponding *_weights.h5 file in the same directory!
-        sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy stored. 
-                    The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the suffix '_pred.mat' 
+        sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy stored.
+                    The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the suffix '_pred.mat'
         batchSize: Batchsize, number of samples that are processed at once"""
     sModelPath=sModelPath.replace("_json.txt", "")
     weight_name = sModelPath + '_weights.h5'

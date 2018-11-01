@@ -7,7 +7,7 @@ This GUI is designed with PyQt5 and works for Python >2.7 and >3.5.
 to open the GUI. This GUI can be run independent from CNNArt.
 
 ### Requirements
-`pip3 install matplotlib PyQt5 dicom pyyaml scipy numpy dicom_numpy h5py pandas sklearn keras tensorflow`
+`python3.6 -m pip install matplotlib PyQt5 dicom pyyaml scipy numpy dicom dicom_numpy h5py pandas sklearn scikit-image keras tensorflow hyperopt hyperas`
 
 ## GUI features
 - data viewing (DICOM, natural scene images)

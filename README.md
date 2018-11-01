@@ -1,4 +1,4 @@
-# CNNArt [![Build Status](https://semaphoreci.com/api/v1/thomaskuestner/cnnart/branches/master/shields_badge.svg)](https://semaphoreci.com/thomaskuestner/cnnart) [![Waffle.io - Columns and their card count](https://badge.waffle.io/thomaskuestner/CNNArt.svg?columns=all)](https://waffle.io/thomaskuestner/CNNArt) 
+# CNNArt [![Build Status](https://semaphoreci.com/api/v1/thomaskuestner/cnnart/branches/master/shields_badge.svg)](https://semaphoreci.com/thomaskuestner/cnnart) [![Waffle.io - Columns and their card count](https://badge.waffle.io/thomaskuestner/CNNArt.svg?columns=all)](https://waffle.io/thomaskuestner/CNNArt)
 ### Automatic and reference-free MR artifact detection
 - localization and quantification of artifacts (motion, magnetic field inhomogeneity and noise) in binary or multi-class setting
 - correction of motion-induced artifacts (rigid and non-rigid motion)
@@ -16,9 +16,17 @@ easy-to-use graphical interface for medical deep learning
 - network visualization: kernel weights, feature maps and deep visualization
 
 ## Usage
+### direct
 1. define database layout in `config/database/_NAME_OF_DATABASE_.csv` (as specified in param.yml -> MRdatabase)
 2. edit parameters in `config/param.yml`
 3. run code via `main.py`
+
+### GUI
+training/prediction can also be invoked from the GUI. Please adapt `mainPatches_Template.py` according to your needs   
+`Qt_main.py`
+
+### calling structure
+`main.py ==> mainPatches.py ==> model.fTrain()/fPredict()`
 
 ## Networks
 Network | Artifact type detection | Publication
@@ -27,12 +35,12 @@ CNN2D | motion_rigid <br/> motion_non-rigid <br/> motion_both | 1, 7
 CNN3D | motion_rigid <br/> motion_non-rigid <br/> motion_both | 2, 6
 MNetArt | motion_rigid <br/> motion_non-rigid <br/> motion_both | 2, 4
 VNetArt | motion_rigid <br/> motion_non-rigid <br/> motion_both | 2, 4, 5
-DenseNet | motion_both <br/> inhomogeneity <br/> noise | 
+DenseNet | motion_both <br/> inhomogeneity <br/> noise |
 DenseResNet | motion_both <br/> inhomogeneity <br/> noise | 3
-ResNet | motion_both <br/> inhomogeneity <br/> noise | 
-GoogleNet | motion_both <br/> inhomogeneity | 
+ResNet | motion_both <br/> inhomogeneity <br/> noise |
+GoogleNet | motion_both <br/> inhomogeneity |
 InceptionNet | motion_both <br/> inhomogeneity <br/> noise | 3
-VGGNet | motion_both <br/> inhomogeneity | 
+VGGNet | motion_both <br/> inhomogeneity |
 
 ## References
 1. [Küstner, T., Liebgott, A., Mauch, L., Martirosian, P., Bamberg, F., Nikolaou, K., Yang B., Schick F. & Gatidis, S. (2017). Automated reference-free detection of motion artifacts in magnetic resonance images. Magnetic Resonance Materials in Physics, Biology and Medicine, 1-14.](https://link.springer.com/article/10.1007/s10334-017-0650-z)<br/>

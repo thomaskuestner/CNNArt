@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
 """
-----------------------------------
-Main function for calling the CNNs
-----------------------------------
-Created on Wed Jan 27 16:57:10 2016
-Copyright: 2016, 2017 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) under Apache2 license
++-----------------------------------------------------------------------+
+| Main function for calling the CNNs                                    |
+| - starting point: data is alrady patched, augmented, splitted, ...    |
++-----------------------------------------------------------------------+
+This script performs the calling of the appropriate training/prediction model function
+    main.py ==> mainPatches.py ==> model.fTrain()/fPredict()
+------------------------------------------------------------------
+Copyright: 2016-2018 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) under Apache2 license
 @author: Thomas Kuestner
 """
 
-
-"""Import"""
-
+# imports
 import sys
 import numpy as np                  # for algebraic operations, matrices
 import h5py
@@ -32,7 +32,7 @@ from correction.networks.motion import *
 
 
 
-"""functions"""    
+"""functions"""
 def fLoadData(conten):
     # prepared in matlab
     print('Loading data')
@@ -48,7 +48,7 @@ def fLoadData(conten):
     y_train= np.asarray([y_train[:,0], np.abs(np.asarray(y_train[:,0],dtype=np.float32)-1)]).T
     y_test= np.asarray([y_test[:,0], np.abs(np.asarray(y_test[:,0],dtype=np.float32)-1)]).T
     return X_train, y_train, X_test, y_test
-    
+
 
 def fRemove_entries(entries, the_dict):
     for key in entries:
@@ -71,19 +71,19 @@ def fLoadMat(sInPath):
     else:
         sys.exit('Input file is not existing')
     X_train, y_train, X_test, y_test = fLoadData(conten) # output order needed for hyperas
-    
+
     fRemove_entries(('X_train', 'X_test', 'y_train', 'y_test'), conten )
     dData = {'X_train':X_train, 'X_test':X_test, 'y_train':y_train, 'y_test':y_test}
     dOut = dData.copy()
     dOut.update(conten)
     return dOut # output dictionary (similar to conten, but with reshaped X_train, ...)
-    
+
 def fLoadDataForOptim(sInPath):
      if os.path.isfile(sInPath):
         conten = sio.loadmat(sInPath)
      X_train, y_train, X_test, y_test = fLoadData(conten) # output order needed for hyperas
      return X_train, y_train, X_test, y_test, conten["patchSize"]
- 
+
 #def fLoadAddData(sInPath): # deprecated
 #    if os.path.isfile(sInPath):
 #        conten = sio.loadmat(sInPath)
@@ -188,10 +188,27 @@ def fRunCNNCorrection(dData, dHyper, dParam):
         # perform prediction
         model.fPredict(dData['test_ref'], dData['test_art'], dParam, dHyper)
 
+def fMainCNN(X_train, X_val, X_test, label_train, label_val, label_test, lTrain=true, param):
+    # X_train, X_val, X_test: numpy arrays with training, validation, test data
+    # label_train, label_val, label_test: corresponding labels
+    # lTrain: perform training (true) or prediction with trained architecture (false)
+    # param: dictionary containing all set UI parameters and further requested configs
+
+    # link input data
+    dData['X_train'] = X_train
+    dData['X_test'] = X_test
+    dData['y_train'] = label_train
+    dData['y_test'] = label_test
+
+    # set output
+    sOutPath = param['sOutPath']
+
+    fRunCNN(dData,param['sModel'], lTrain, param['paraOptim'], sOutPath, param['batchSize'], param['learningRate'], param['epochs'])
+
 # Main Code
+# calling it as a script -> requires a mat/h5 file with the stored data
 if __name__ == "__main__": # for command line call
     # input parsing
-    # ADD new options here!
     parser = argparse.ArgumentParser(description='''CNN artifact detection''', epilog='''(c) Thomas Kuestner, thomas.kuestner@iss.uni-stuttgart.de''')
     parser.add_argument('-i','--inPath', nargs = 1, type = str, help='input path to *.mat of stored patches', default= '/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Datatmp/in.mat')
     parser.add_argument('-o','--outPath', nargs = 1, type = str, help='output path to the file used for storage (subfiles _model, _weights, ... are automatically generated)', default= '/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Datatmp/out' )
@@ -208,6 +225,7 @@ if __name__ == "__main__": # for command line call
         print('Warning! Output file is already existing and will be overwritten')
 
     # load input data
+
     dData = fLoadMat(args.inPath[0])
     # save path for keras model
     if 'outPath' in dData:
@@ -216,5 +234,3 @@ if __name__ == "__main__": # for command line call
         sOutPath = args.outPath[0]
 
     fRunCNN(dData,args.model[0], args.train, args.paraOptim, sOutPath, args.batchSize, args.learningRate, args.epochs[0])
-
-

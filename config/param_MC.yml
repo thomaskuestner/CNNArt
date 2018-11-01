@@ -9,7 +9,7 @@ motion_head: &id001
    bestmodel : {CNN2D: "head_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_abd: &id002
-   name      : "motion_abd" 
+   name      : "motion_abd"
    dataref   : ["t1_tse_tra_fs_mbh_Leber_0004"]
    labelref  : [0]
    dataart   : ["t1_tse_tra_fs_mbh_Leber_Motion_0005"]
@@ -54,9 +54,11 @@ motion_head_abd_becken: &id006
    bestmodel : {CNN2D: "head_abd_becken_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 #### set parameters ####
-# database name
+# database name (MRPhysics | NAKOIQA)
 MRdatabase : MRPhysics
 # subdirectories in database, patient, output directory
+# subdirs MRPhysics: ["newProtocol", "dicom_sorted", "testout", "correction"]
+# subdirs NAKOIQA: ["", "dicom_sorted", "testout", "correction"]
 subdirs : ["newProtocol", "dicom_sorted", "testout", "correction"]
 # CNN database to be modeled
 selectedDatabase: *id001
@@ -104,7 +106,7 @@ lTrain : true
 # save intermediate results
 lSave : true
 # (list of) path(s) of to be predicted images
-lPredictImg : ["/med_data/ImageSimilarity/Databases/MRPhysics/..."] 
+lPredictImg : ["/med_data/ImageSimilarity/Databases/MRPhysics/..."]
 # (list with) labels of to be predicted images (either scalar or path to patch-wise label file)
 lLabelPredictImg : [ 1 ]
 # sPredictModel: if empty, the best model in the selected database will be chosen.
@@ -149,9 +151,10 @@ correction:
   nScale: 255
   # specify the actual size of the images when predicting
   # Head:[256, 196]
-  # Abdomen: sizes differ for different patients. e.g. Abdomen 01_ab: [256, 320], Abdomen 06_hr: [192, 320], Abdomen 17_ks: [260, 320] 
-  # Pelvis: sizes differ for different patients. e.g. Pelvis 10_mar: [240, 320], Pelvis 15_yb: [208, 320]  
+  # Abdomen: sizes differ for different patients. e.g. Abdomen 01_ab: [256, 320], Abdomen 06_hr: [192, 320], Abdomen 17_ks: [260, 320]
+  # Pelvis: sizes differ for different patients. e.g. Pelvis 10_mar: [240, 320], Pelvis 15_yb: [208, 320]
   actualSize: [256, 196]
   evaluate: true
   test_patient: "10_mar"
   augmentation: false # augmentation flag
+  lSaveIndividual: true # save individual images
