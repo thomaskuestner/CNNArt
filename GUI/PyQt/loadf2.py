@@ -20,8 +20,8 @@ import tensorflow as tf
 import keras.backend as K
 from keras.models import load_model
 import h5py
-#import network_visualization
-from deepvis.network_visualization import *
+import network_visualization
+from network_visualization import *
 
 class loadImage_weights_plot_2D(QtCore.QThread):
     trigger = QtCore.pyqtSignal()
@@ -198,6 +198,22 @@ class MyMplCanvas(FigureCanvas):
         ax.imshow(strImg)
         ax.set_axis_off()
 
+    def plot_filters(self,chosenLayerName):
+
+        filters = chosenLayerName.get_weights()[0]
+        fig = plt.figure()
+        plt.xticks(np.array([]))
+        plt.yticks(np.array([]))
+        for j in range(len(filters)):
+            ax = fig.add_subplot(j + 1)
+            im = ax.matshow(filters[j][0], cmap="Greys")
+            plt.xticks(np.array([]))
+            plt.yticks(np.array([]))
+        fig.subplots_adjust(right=0.8)
+        cbar_ax = fig.add_axes([1, 0.07, 0.05, 0.821])
+        fig.colorbar(im, cax=cbar_ax)
+        plt.tight_layout()
+        plt.show()
 
     def weights_plot_2D(self,chosenLayerName):
         self.fig.clf()
@@ -213,6 +229,45 @@ class MyMplCanvas(FigureCanvas):
         self.fig.clf()
 
         self.plot_weight_mosaic_3D(w)
+
+    def weights_offset_opt(self,w):
+        fig, ax = plt.subplots()
+
+        image = w
+        ax.imshow(image, cmap=plt.cm.gray, interpolation='nearest')
+        ax.set_title('dropped spines')
+
+
+        ax.spines['left'].set_position(('outward', 2))
+        ax.spines['bottom'].set_position(('outward', 2))
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.yaxis.set_ticks_position('left')
+        ax.xaxis.set_ticks_position('bottom')
+
+        plt.show()
+
+    def Weights_opt(self, matrix, max_weight=None, ax=None):
+
+        ax = ax if ax is not None else plt.gca()
+
+        if not max_weight:
+            max_weight = 2 ** np.ceil(np.log(np.abs(matrix).max()) / np.log(2))
+
+        ax.patch.set_facecolor('gray')
+        ax.set_aspect('equal', 'box')
+        ax.xaxis.set_major_locator(plt.NullLocator())
+        ax.yaxis.set_major_locator(plt.NullLocator())
+
+        for (x, y), w in np.ndenumerate(matrix):
+            color = 'white' if w > 0 else 'black'
+            size = np.sqrt(np.abs(w))
+            rect = plt.Rectangle([x - size / 2, y - size / 2], size, size,
+                                 facecolor=color, edgecolor=color)
+            ax.add_patch(rect)
+
+        ax.autoscale_view()
+        ax.invert_yaxis()
 
     def features_plot(self,chosenPatchNumber):
 
