@@ -60,13 +60,13 @@ if __name__ == '__main__':
             num_parallel_calls=num_parallel_calls)
     '''
     '''
-
     # ensure correct dims
+    image_size = [236,320,260]
     dataset = dataset.map(
-        map_func=lambda a, b: (tf.slice(a, [0,0,0], [236,320,260]),
+        map_func=lambda a, b: (tf.slice(a, [0,0,0], image_size),
                                   b,),
         num_parallel_calls=num_parallel_calls)
-        '''
+    '''
 
     # here one could use shuffle, repeat, prefetch, ...
     dataset_batched = dataset.batch(batch_size=4)

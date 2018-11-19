@@ -14,6 +14,8 @@ if __name__ == '__main__':
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     num_parallel_calls = 4
+    # slice_size the slice you cut
+    slice_size = [64, 64, 64]
 
     # define some example values
     data_dir = '/home/d1274/no_backup/d1274/data'
@@ -59,7 +61,7 @@ if __name__ == '__main__':
     # ensure correct dims
 
     dataset = dataset.map(
-        map_func=lambda a, b: (tf.slice(a, [0,0,0], [64,64,64]),
+        map_func=lambda a, b: (tf.slice(a, [0,0,0], slice_size),
                                   b,),
         num_parallel_calls=num_parallel_calls)
 
