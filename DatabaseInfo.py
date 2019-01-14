@@ -13,21 +13,14 @@ class DatabaseInfo:
     lPats = ''
     lImgData = '' # list of imaging data
 
-    def __init__(self,sDatabase = None,sSubDirs = None, *args):
-        if sDatabase is None:
-            self.sDatabase = 'MRPhysics'
-        else:
-            self.sDatabase = sDatabase
-
-        if sSubDirs is None:
-            self.sSubDirs = ['newProtocol','dicom_sorted','testout'] # name of subdirectory in [database, patient]
-        else:
-            self.sSubDirs = sSubDirs
+    def __init__(self, sDatabase = 'MRPhysics', sSubDirs = ['newProtocol','dicom_sorted','testout'], sDatabaseRootPath = '/med_data/ImageSimilarity/Databases', *args):
+        self.sDatabase = sDatabase
+        self.sSubDirs = sSubDirs # name of subdirectory in [database, patient]
 
         if not self.sSubDirs[0]:
-            self.sPathIn = '/med_data/ImageSimilarity/Databases' + os.sep + self.sDatabase
+            self.sPathIn = sDatabaseRootPath + os.sep + self.sDatabase
         else:
-            self.sPathIn = '/med_data/ImageSimilarity/Databases' + os.sep + self.sDatabase + os.sep + self.sSubDirs[0]
+            self.sPathIn = sDatabaseRootPath + os.sep + self.sDatabase + os.sep + self.sSubDirs[0]
         # parse patients
         self.lPats = [name for name in os.listdir(self.sPathIn) if os.path.isdir(os.path.join(self.sPathIn, name))]
 
