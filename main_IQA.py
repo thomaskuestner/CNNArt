@@ -7,11 +7,10 @@ sys.path.append('/home/d1274/PycharmProjects/NAKO_transfer_learning')
 from tensorflow.keras import backend as K
 from tensorflow.python import keras
 
-from model import multiclass_3D_SE_ResNet
-from util import get_train_eval_files
-from util import get_train_eval_files_NAKO_IQA
-from util import generator
-from util import patches
+from networks.multiclass.CNN3D import multiclass_3D_SE_ResNet
+from utils import get_train_eval_files_NAKO_IQA
+from utils import generator
+from utils import Patching
 
 config = tf.ConfigProto()
 os.environ["CUDA_VISIBLE_DEVICES"] = '1'
@@ -42,12 +41,12 @@ if __name__ == '__main__':
     overlap = 32
 
     # there are two ways to extract the image, start from the beginning bprder or start from the ned border
-    patches_per_image_1 = len(patches.compute_patch_indices(image_shape=image_shape,
+    patches_per_image_1 = len(Patching.compute_patch_indices(image_shape=image_shape,
                                       patch_size=patch_shape,
                                       overlap=overlap,
                                       start=start,
                                       order = True))
-    patches_per_image_2 = len(patches.compute_patch_indices(image_shape=image_shape,
+    patches_per_image_2 = len(Patching.compute_patch_indices(image_shape=image_shape,
                                                             patch_size=patch_shape,
                                                             overlap=overlap,
                                                             start=start,
