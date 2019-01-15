@@ -1,0 +1,19 @@
+
+# parameters for dataset information
+# database name
+MRdatabase : NAKO_IQA
+# subdirectories in database, patient, output directory
+subdirs : ["", "dicom_sorted", "testout", "correction"]
+sDatabaseRootPath : '/home/d1274/med_data/NAKO'
+tfrecordsPath : '/home/d1274/med_data/NAKO/NAKO_IQA_tf'
+
+MRTfrecordDatabase : NAKO_IQA_tf
+
+# parameters for training
+epoch : 200
+batch_size : 48
+image_shape : [236, 320, 260]
+patch_shape : [64, 64, 64]
+start : [20, 20, 20]
+num_images_loaded : 30
+overlap : 32

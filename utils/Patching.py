@@ -3,6 +3,7 @@
 """
 import numpy as np
 import math
+import random
 from utils.scaling import fScaleOnePatch
 
 #########################################################################################################################################
@@ -204,18 +205,13 @@ def fRigidPatching3D(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_arra
         dLabels = dLabels[0:idxPatch]
     return dPatches, dLabels
 
+########################################################################################################################
+# @ author : Shanqi Yang
+# input : 3D image tensor
+# output : lists of pathes cropped from this 3D tensor
+# calls compute_patch_indices to calculate the index lists where the image will be cropped
+########################################################################################################################
 
-"""
-@author: Shanqi Yang
-
-get_pathes ==>  compute_patch_indices ==> get_set_of_patch_indices & get_random_indexs
-
-"""
-####################################################################################################
-# Input : image : 3d tensor , num_patch: expected patches cropped
-# Output : lists of 3d tensor patch cropped from the original image
-####################################################################################################
-########################
 def get_patches(image, num_patches, image_shape = [316, 260, 320],
                 patch_size=[64, 64, 64], overlap = 32, start = [0, 0, 0]):
 
@@ -239,6 +235,13 @@ def get_patches(image, num_patches, image_shape = [316, 260, 320],
     patches_collection = tf.stack(patches_collection)
     assert patches_collection.get_shape().dims == [num_patches, patch_size[0], patch_size[1], patch_size[2]]
     return patches_collection
+
+########################################################################################################################
+# @ author : Shanqi Yang
+# input : the information about the image, and how it is supposed to be cropped
+# output : lists of indexs list
+# calls compute_patch_indices to calculate the index lists where the image will be cropped
+########################################################################################################################
 
 def compute_patch_indices(image_shape, patch_size, overlap, start = [0, 0, 0], order = True):
     if isinstance(overlap, int):
@@ -278,4 +281,3 @@ def get_random_indexs (image_shape, patch_size, index_list):
         index[2] = newIndex2 if (newIndex2 <= index2bound and newIndex2 >= 0) else index[2]
 
     return index_list
-

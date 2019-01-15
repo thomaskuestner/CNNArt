@@ -2,15 +2,17 @@ import os
 import tensorflow as tf
 import glob
 import sys
+import yaml
+from DatabaseInfo import DatabaseInfo, NAKO_IQA_Info
 
 sys.path.append('/home/d1274/PycharmProjects/NAKO_transfer_learning')
 from tensorflow.keras import backend as K
 from tensorflow.python import keras
 
-from networks.multiclass.CNN3D import multiclass_3D_SE_ResNet
-from utils import get_train_eval_files_NAKO_IQA
+#from networks.multiclass.CNN3D import multiclass_3D_SE-ResNet
 from utils import generator
 from utils import Patching
+from utils.tfrecord.medio import convert_tf, read_image
 
 config = tf.ConfigProto()
 os.environ["CUDA_VISIBLE_DEVICES"] = '1'
@@ -26,19 +28,55 @@ from tensorflow.keras.callbacks import (
 )
 
 if __name__ == '__main__':
+
+    with open('config' + os.sep + 'param_IQA.yml', 'r') as ymlfile:
+        cfg = yaml.safe_load(ymlfile)
+
+    dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'], cfg['sDatabaseRootPath'])
+
+    # check if there are tfrecord files existing, if not, creating corresponding one
+    original_dataset_path = os.path.join(cfg['sDatabaseRootPath'], cfg['MRdatabase'])
+    print('original database path: ', original_dataset_path)
+    for ipat, pat in enumerate(dbinfo.lPats):
+        # the expected tfrecord saved format: med_data/NAKO/NAKO_IQA/Q1/....tfrecord
+
+        if not os.path.exists(os.path.join(cfg['tfrecordsPath'], pat, dbinfo.sSubDirs[0])):
+            if (pat == 'Results'):
+                continue
+
+            # tfrecords not yet created
+            for iseq, seq in enumerate(dbinfo.lImgData):
+                # create tfrecords
+
+                # example result: /home/d1274/med_data/NAKO/NAKO_IQA/Q1/dicom_sorted/3D_GRE_TRA_bh_F_COMPOSED_0015.mat
+                subject_path = os.path.join(original_dataset_path, pat + os.sep + dbinfo.sSubDirs[1]+ os.sep + seq.sPath + '.mat')
+
+                image = read_image.read_mat_image(subject_path)
+
+                # example result: /home/d1274/med_data/NAKO/NAKO_IQA_tf/Q1/3D_GRE_TRA_bh_F_COMPOSED_0015.tfrecord
+                tf_save_path = os.path.join(cfg['tfrecordsPath'], pat, dbinfo.sSubDirs[0], seq.sPath + '.tfrecord')
+
+                tf_save_path.parent.mkdir(parents=True, exist_ok=True)
+                convert_tf.im2tfrecord(image=image, path=tf_save_path)
+
+
+    # begin training
     print('begin creating the input dataset')
 
 
-    epoch = 200
-    path = '/home/d1274/med_data/NAKO/NAKO_IQA_tf'
+    epoch = cfg['epoch']
+    path = cfg['tfrecordsPath']
+    batch_size = cfg['batch_size']
+    image_shape = cfg ['image_shape']
+    patch_shape = cfg['patch_shape']
+    start = cfg['start']
+    num_images_loaded = cfg['num_images_loaded']
+    overlap = cfg['overlap']
 
+    db_tf = NAKO_IQA_Info(cfg['MRTfrecordDatabase'], cfg['subdirs'], cfg['sDatabaseRootPath'])
 
-    batch_size = 48
-    image_shape = [236, 320, 260]
-    patch_shape = [64, 64, 64]
-    start = [20, 20, 20]
-    num_images_loaded = 30
-    overlap = 32
+    train_files, train_labels, eva_files, eva_labels = db_tf.get_train_eval_files( pattern='_F_',train_eval_ratio = 0.85)
+
 
     # there are two ways to extract the image, start from the beginning bprder or start from the ned border
     patches_per_image_1 = len(Patching.compute_patch_indices(image_shape=image_shape,
@@ -54,11 +92,11 @@ if __name__ == '__main__':
     assert patches_per_image_1 == patches_per_image_2
     patches_per_image = patches_per_image_1
 
-    train_files, train_labels, eva_files, eva_labels = get_train_eval_files_NAKO_IQA.get_train_eval_files(path, pattern='_F_')
 
     steps_per_epoch = int(len(train_files) * patches_per_image / batch_size)
     validata_steps = int(len(eva_files) * patches_per_image / batch_size)
     print('expected step per epoch: ' , steps_per_epoch)
+
 
     # construct the model
     model, _ = multiclass_3D_SE_ResNet.createModel(patchSize=patch_shape, numClasses=3)
