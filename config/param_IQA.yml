@@ -17,3 +17,12 @@ patch_shape : [64, 64, 64]
 start : [20, 20, 20]
 num_images_loaded : 30
 overlap : 32
+num_classes : 3
+
+# There are totally 12 groups, here define which groups are used for testing, all the others will be used as training
+# and validation during the training stage
+test_groups : ['Q10', 'Q11', 'Q12']
+
+# for normalization the input image
+mean_value : 78.242
+std_value : 144.83

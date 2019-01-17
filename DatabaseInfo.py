@@ -61,10 +61,9 @@ class DatabaseInfo:
 
 
 
+class NAKOInfo(DatabaseInfo):
 
-
-class NAKO_IQA_Info(DatabaseInfo):
-
+    #  parse label according to the file name
     def parse_file_name(self, fileName):
         if fileName.find('_deep_') != -1:
             return 2
@@ -73,16 +72,25 @@ class NAKO_IQA_Info(DatabaseInfo):
         elif fileName.find('fb') != -1:
             return 1
 
-    def get_train_eval_files(self, pattern='_F_', train_eval_ratio = 0.85):
-        # print('begin fetch')
+    def parse_label_list (self, file_list):
+        label_list = []
+        for file in file_list:
+            label_list.append(self.parse_file_name(file))
+        return label_list
+
+    # getting the filename list according to the specific pattern and if it is testing file or train file
+    def get_file_lists(self, pattern='_F_', test_groups = ['Q10', 'Q11', 'Q12'], is_testing = True ):
+
         data_dir = self.sDatabaseRootPath + os.sep + self.sDatabase
-
         file_lists = []
-
         groups = os.listdir(data_dir)
 
         for group in groups:
-            if ('Q10' in group) or ('Q12' in group) or ('Q11' in group):
+            # check if the group belong to the test group or not
+
+            if (not is_testing) and (group in test_groups):
+                continue
+            if (is_testing) and (group not in test_groups):
                 continue
             group_path = os.path.join(data_dir, group)
             files = os.listdir(group_path)
@@ -91,40 +99,27 @@ class NAKO_IQA_Info(DatabaseInfo):
                 if file.endswith('.tfrecord') and pattern in file:
                     file_lists.append(os.path.join(group_path, file))
 
-        num_train_files = int(len(file_lists) * train_eval_ratio)
-        shuffle(file_lists)
-        train_files = file_lists[:num_train_files]
-        eval_files = file_lists[num_train_files:]
+        return  file_lists
 
-        train_labels = []
-        for file in train_files:
-            train_labels.append(self.parse_file_name(file))
-        eval_labels = []
-        for file in eval_files:
-            eval_labels.append(self.parse_file_name(file))
+
+    def get_train_eval_files(self, pattern='_F_', test_groups = ['Q10', 'Q11', 'Q12'], train_eval_ratio = 0.85):
+
+        file_list = self.get_file_lists(pattern=pattern, test_groups=test_groups, is_testing=False)
+
+        num_train_files = int(len(file_list) * train_eval_ratio)
+        shuffle(file_list)
+        train_files = file_list[:num_train_files]
+        eval_files = file_list[num_train_files:]
+
+        train_labels = self.parse_label_list(train_files)
+        eval_labels = self.parse_label_list(eval_files)
 
         return train_files, train_labels, eval_files, eval_labels
 
-    def get_test_files(self, pattern='_F_'):
-        data_dir = self.sDatabaseRootPath + os.sep + self.sDatabase
+    def get_test_files(self, pattern='_F_', test_groups = ['Q10', 'Q11', 'Q12']):
 
-        file_lists = []
+        test_files = self.get_file_lists(pattern=pattern, test_groups=test_groups, is_testing= True)
 
-        groups = os.listdir(data_dir)
+        test_labels = self.parse_label_list(test_files)
 
-        for group in groups:
-            if ('Q10' in group) or ('Q12' in group) or ('Q11' in group):
-
-                group_path = os.path.join(data_dir, group)
-                files = os.listdir(group_path)
-
-                for file in files:
-                    if file.endswith('.tfrecord') and pattern in file:
-                        file_lists.append(os.path.join(group_path, file))
-
-        label_lists = []
-        for file in file_lists:
-            label_lists.append(self.parse_file_name(file))
-
-
-        return file_lists, label_lists
+        return test_files, test_labels

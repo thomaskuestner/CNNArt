@@ -10,9 +10,12 @@ from tensorflow.keras import backend as K
 
 def tfdata_generator(file_lists, label_lists, is_training, num_parallel_calls=4, patch_size=[64, 64, 64],
                      overlap=32, image_shape=[316, 260, 320], start=[20, 60, 50],
-                     num_imgaes_loaded=30, batch_size=32, prefetched_buffer_size=8000, ):
+                     num_imgaes_loaded=30, batch_size=32, num_classes = 3,
+                     mean_value = 78.242,
+                     std_value = 144.83,
+                     prefetched_buffer_size=8000):
+
     # begin construct tensorflow input pipeline
-    NUM_CLASSES = 3
     # define the patch you want to crop
     len_file_lists = len(file_lists)
     patch_size = patch_size  # size of the patches per axis
@@ -52,8 +55,8 @@ def tfdata_generator(file_lists, label_lists, is_training, num_parallel_calls=4,
         num_parallel_calls=num_parallel_calls)
 
     # normalization
-    mean = tf.constant(78.242, dtype=tf.float32)
-    std = tf.constant(144.83, dtype=tf.float32)
+    mean = tf.constant(mean_value, dtype=tf.float32)
+    std = tf.constant(std_value, dtype=tf.float32)
 
     dataset = dataset.map(
         map_func=lambda a, b: (tf.subtract(a, mean), b),
@@ -74,7 +77,7 @@ def tfdata_generator(file_lists, label_lists, is_training, num_parallel_calls=4,
 
     dataset = dataset.map(
         map_func=lambda a, b: (tf.expand_dims(a, -1),
-                               tf.one_hot(b, NUM_CLASSES),),
+                               tf.one_hot(b, num_classes),),
         num_parallel_calls=num_parallel_calls)
 
     # here one could use shuffle, repeat, prefetch, ...

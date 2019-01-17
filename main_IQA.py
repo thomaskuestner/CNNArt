@@ -3,7 +3,7 @@ import tensorflow as tf
 import glob
 import sys
 import yaml
-from DatabaseInfo import DatabaseInfo, NAKO_IQA_Info
+from DatabaseInfo import DatabaseInfo, NAKOInfo
 
 sys.path.append('/home/d1274/PycharmProjects/NAKO_transfer_learning')
 from tensorflow.keras import backend as K
@@ -72,11 +72,15 @@ if __name__ == '__main__':
     start = cfg['start']
     num_images_loaded = cfg['num_images_loaded']
     overlap = cfg['overlap']
+    num_classes = cfg['num_classes']
+    mean_value = cfg['mean_value']
+    std_value = cfg['std_value']
+    test_groups = cfg['test_groups']
 
-    db_tf = NAKO_IQA_Info(cfg['MRTfrecordDatabase'], cfg['subdirs'], cfg['sDatabaseRootPath'])
+    db_tf = NAKOInfo(cfg['MRTfrecordDatabase'], cfg['subdirs'], cfg['sDatabaseRootPath'])
 
-    train_files, train_labels, eva_files, eva_labels = db_tf.get_train_eval_files( pattern='_F_',train_eval_ratio = 0.85)
-
+    train_files, train_labels, eva_files, eva_labels = db_tf.get_train_eval_files( pattern='_F_',test_groups=test_groups,
+                                                                                   train_eval_ratio = 0.85)
 
     # there are two ways to extract the image, start from the beginning bprder or start from the ned border
     patches_per_image_1 = len(Patching.compute_patch_indices(image_shape=image_shape,
@@ -135,7 +139,10 @@ if __name__ == '__main__':
                                                  start=start,
                                                  batch_size=batch_size,
                                                  overlap = overlap,
-                                                 num_imgaes_loaded=num_images_loaded)
+                                                 num_imgaes_loaded=num_images_loaded,
+                                                 num_classes=num_classes,
+                                                 mean_value= mean_value,
+                                                 std_value=std_value)
 
     val_generator = generator.tfdata_generator(file_lists=eva_files, label_lists=eva_labels,
                                                is_training=False,
@@ -143,7 +150,10 @@ if __name__ == '__main__':
                                                patch_size=patch_shape,
                                                start= start,
                                                overlap = overlap,
-                                               batch_size=batch_size)
+                                               batch_size=batch_size,
+                                               num_classes=num_classes,
+                                               mean_value=mean_value,
+                                               std_value=std_value)
 
     res = model.fit(
         train_generator.make_one_shot_iterator(),
@@ -154,3 +164,5 @@ if __name__ == '__main__':
         callbacks=get_callbacks(model_file=model_file, logging_file=logging_file))
 
     print('the result: ', res)
+    
+
