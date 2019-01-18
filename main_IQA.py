@@ -76,11 +76,14 @@ if __name__ == '__main__':
     mean_value = cfg['mean_value']
     std_value = cfg['std_value']
     test_groups = cfg['test_groups']
+    lShuffleTraining = cfg['lShuffleTraining']
 
     db_tf = NAKOInfo(cfg['MRTfrecordDatabase'], cfg['subdirs'], cfg['sDatabaseRootPath'])
 
-    train_files, train_labels, eva_files, eva_labels = db_tf.get_train_eval_files( pattern='_F_',test_groups=test_groups,
-                                                                                   train_eval_ratio = 0.85)
+    train_files, train_labels, eva_files, eva_labels = db_tf.get_train_eval_files( pattern='_F_',
+                                                                                   test_groups=test_groups,
+                                                                                   train_eval_ratio = 0.85,
+                                                                                   lShuffleTraining=lShuffleTraining)
 
     # there are two ways to extract the image, start from the beginning bprder or start from the ned border
     patches_per_image_1 = len(Patching.compute_patch_indices(image_shape=image_shape,

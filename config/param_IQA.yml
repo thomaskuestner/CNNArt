@@ -9,6 +9,12 @@ tfrecordsPath : '/home/d1274/med_data/NAKO/NAKO_IQA_tf'
 
 MRTfrecordDatabase : NAKO_IQA_tf
 
+# the path to the excel file of NAKO label
+sPathToExcel: ""
+
+# if shuffle the train patients or not
+lShuffleTraining : True
+
 # parameters for training
 epoch : 200
 batch_size : 48

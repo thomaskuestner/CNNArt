@@ -102,12 +102,14 @@ class NAKOInfo(DatabaseInfo):
         return  file_lists
 
 
-    def get_train_eval_files(self, pattern='_F_', test_groups = ['Q10', 'Q11', 'Q12'], train_eval_ratio = 0.85):
+    def get_train_eval_files(self, pattern='_F_', test_groups = ['Q10', 'Q11', 'Q12'],
+                             train_eval_ratio = 0.85, lShuffleTraining = True):
 
         file_list = self.get_file_lists(pattern=pattern, test_groups=test_groups, is_testing=False)
 
         num_train_files = int(len(file_list) * train_eval_ratio)
-        shuffle(file_list)
+        if lShuffleTraining :
+            shuffle(file_list)
         train_files = file_list[:num_train_files]
         eval_files = file_list[num_train_files:]
 
