@@ -1,0 +1,34 @@
+
+# parameters for dataset information
+# database name
+MRdatabase : NAKO_IQA
+# subdirectories in database, patient, output directory
+subdirs : ["", "dicom_sorted", "testout", "correction"]
+sDatabaseRootPath : '/home/d1274/med_data/NAKO'
+tfrecordsPath : '/home/d1274/med_data/NAKO/NAKO_IQA_tf'
+
+MRTfrecordDatabase : NAKO_IQA_tf
+
+# the path to the excel file of NAKO label
+sPathToExcel: ""
+
+# if shuffle the train patients or not
+lShuffleTraining : True
+
+# parameters for training
+epoch : 200
+batch_size : 48
+image_shape : [236, 320, 260]
+patch_shape : [64, 64, 64]
+start : [20, 20, 20]
+num_images_loaded : 30
+overlap : 32
+num_classes : 3
+
+# There are totally 12 groups, here define which groups are used for testing, all the others will be used as training
+# and validation during the training stage
+test_groups : ['Q10', 'Q11', 'Q12']
+
+# for normalization the input image
+mean_value : 78.242
+std_value : 144.83
