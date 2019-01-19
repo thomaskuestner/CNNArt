@@ -19,7 +19,7 @@ class DatabaseInfo:
         self.sDatabase = sDatabase
         self.sSubDirs = sSubDirs # name of subdirectory in [database, patient]
 
-        if not self.sSubDirs[0]:   
+        if not self.sSubDirs[0]:
             self.sPathIn = sDatabaseRootPath + os.sep + self.sDatabase
         else:
             self.sPathIn = sDatabaseRootPath + os.sep + self.sDatabase + os.sep + self.sSubDirs[0]
