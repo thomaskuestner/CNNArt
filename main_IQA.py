@@ -4,12 +4,13 @@ import glob
 import sys
 import yaml
 from DatabaseInfo import DatabaseInfo, NAKOInfo
+import pathlib
 
 sys.path.append('/home/d1274/PycharmProjects/NAKO_transfer_learning')
 from tensorflow.keras import backend as K
 from tensorflow.python import keras
 
-#from networks.multiclass.CNN3D import multiclass_3D_SE-ResNet
+from networks.multiclass.CNN3D import multiclass_3D_SE_ResNet
 from utils import generator
 from utils import Patching
 from utils.tfrecord.medio import convert_tf, read_image
@@ -29,7 +30,14 @@ from tensorflow.keras.callbacks import (
 
 if __name__ == '__main__':
 
-    with open('config' + os.sep + 'param_IQA.yml', 'r') as ymlfile:
+    # use different param.yml if with sys.argv
+    if len(sys.argv) > 1:
+        param_yml = sys.argv[1] + '.yml'
+    else:
+        param_yml = 'param.yml'
+
+    # get config file
+    with open('config' + os.sep + param_yml, 'r') as ymlfile:
         cfg = yaml.safe_load(ymlfile)
 
     dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'], cfg['sDatabaseRootPath'])
@@ -55,8 +63,8 @@ if __name__ == '__main__':
 
                 # example result: /home/d1274/med_data/NAKO/NAKO_IQA_tf/Q1/3D_GRE_TRA_bh_F_COMPOSED_0015.tfrecord
                 tf_save_path = os.path.join(cfg['tfrecordsPath'], pat, dbinfo.sSubDirs[0], seq.sPath + '.tfrecord')
-
-                tf_save_path.parent.mkdir(parents=True, exist_ok=True)
+                tf_save_pathlib = pathlib.Path(tf_save_path)
+                tf_save_pathlib.parent.mkdir(parents=True, exist_ok=True)
                 convert_tf.im2tfrecord(image=image, path=tf_save_path)
 
 
