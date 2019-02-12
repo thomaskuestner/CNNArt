@@ -3,7 +3,6 @@ import os
 #os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from tensorflow.python.client import device_lib
-print(device_lib.list_local_devices)
 
 import os.path
 import scipy.io as sio
@@ -32,6 +31,8 @@ from GUI.PyQt.DLArt_GUI.dlart import DeepLearningArtApp
 from GUI.PyQt.utilsGUI.image_preprocessing import ImageDataGenerator
 from GUI.PyQt.utilsGUI.LivePlotCallback import LivePlotCallback
 from matplotlib import pyplot as plt
+
+print(device_lib.list_local_devices)
 
 
 def createModel(patchSize, numClasses):
@@ -138,7 +139,6 @@ def createModel(patchSize, numClasses):
     return cnn, sModelName
 
 
-
 def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None,
            patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
     # grid search on batch_sizes and learning rates
@@ -195,6 +195,7 @@ def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, 
     #                     learningRate=iLearn,
     #                     iEpochs=iEpochs,
     #                     dlart_handle=dlart_handle)
+
 
 def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None,
                 sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None):
@@ -377,7 +378,6 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                              'prob_test': prob_test})
 
 
-
 def step_decay(epoch, lr):
    drop = 0.1
    epochs_drop = 10.0
@@ -421,6 +421,7 @@ def fPredict(X, y, sModelPath, sOutPath, batchSize=64):
     modelSave = sOutPath + sModelFileSave + '_pred.mat'
     print('saving Model:{}'.format(modelSave))
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
+
 
 ###############################################################################
 ## OPTIMIZATIONS ##
@@ -502,6 +503,7 @@ def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
     score_test, acc_test = cnn.evaluate(X_test, Y_test, verbose=0)
 
     # return {'loss': -acc_test, 'status': STATUS_OK, 'model': cnn, 'trainresult': result, 'score_test': score_test}
+
 
 ## helper functions
 def drange(start, stop, step):
