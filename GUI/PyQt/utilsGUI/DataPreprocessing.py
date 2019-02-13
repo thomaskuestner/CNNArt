@@ -1,9 +1,9 @@
 import numpy as np
-import dicom
+import pydicom as dicom
 import dicom_numpy
 import os
 import shelve
-from utilsGUI.RigidPatching import *
+from RigidPatching import *
 import cProfile
 import json
 from matplotlib import path

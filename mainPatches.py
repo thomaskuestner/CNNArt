@@ -188,7 +188,7 @@ def fRunCNNCorrection(dData, dHyper, dParam):
         # perform prediction
         model.fPredict(dData['test_ref'], dData['test_art'], dParam, dHyper)
 
-def fMainCNN(X_train, X_val, X_test, label_train, label_val, label_test, lTrain=true, param):
+def fMainCNN(X_train, X_val, X_test, label_train, label_val, label_test, lTrain=True, param=None):
     # X_train, X_val, X_test: numpy arrays with training, validation, test data
     # label_train, label_val, label_test: corresponding labels
     # lTrain: perform training (true) or prediction with trained architecture (false)

@@ -18,7 +18,7 @@ from GUI.PyQt.utilsGUI.Dataset import Dataset
 from GUI.PyQt.utilsGUI import Label
 import tensorflow as tf
 import numpy as np
-import dicom as dicom
+import pydicom as dicom
 import dicom_numpy as dicom_np
 import json
 import datetime

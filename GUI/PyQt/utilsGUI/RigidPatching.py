@@ -1,7 +1,7 @@
 import numpy as np
 import math
 
-from utilsGUI.Label import Label
+from Label import Label
 
 #########################################################################################################################################
 #Function: fRigidPatching                                                                                                               #

@@ -6,7 +6,7 @@ import yaml
 from DatabaseInfo import DatabaseInfo, NAKOInfo
 import pathlib
 
-sys.path.append('/home/d1274/PycharmProjects/NAKO_transfer_learning')
+sys.path.append('/home/d1290/no_backup/d1290/test/CNNArt')
 from tensorflow.keras import backend as K
 from tensorflow.python import keras
 
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         param_yml = sys.argv[1] + '.yml'
     else:
-        param_yml = 'param.yml'
+        param_yml = 'param_IQA.yml'
     # get config file
     with open('config' + os.sep + param_yml, 'r') as ymlfile:
         cfg = yaml.safe_load(ymlfile)
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
     # construct the model
     model, _ = multiclass_3D_SE_ResNet.createModel(patchSize=patch_shape, numClasses=3)
-    print(model.summary())
+    print('model.summary\n', model.summary())
 
     # optimize way ???
     learning_rate = 0.1
@@ -128,7 +128,7 @@ if __name__ == '__main__':
         return callbacks
 
 
-    model_file = os.path.join('/home/d1274/no_backup/d1274/NAKO_transfer_learning_model/NAKO_IQA_model',
+    model_file = os.path.join('/home/d1290/no_backup/d1290/test/NAKO_IQA_model',
                               'simple_test_1.h5')
     logging_file = 'simple_test_1.log'
 
