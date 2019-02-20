@@ -103,6 +103,35 @@ def fCreateConv2D_ResBlock(filters, kernel_size=(3, 3), strides=(2, 2), padding=
         return output
     return f
 
+def fCreateConv3D_ResBlock(filters, kernel_size=(3, 3, 2), strides=(2, 2, 1), padding='same'):
+    l1_reg = 0
+    l2_reg = 1e-6
+
+    def f(inputs):
+        output = Conv3D(filters,
+                        kernel_size=kernel_size,
+                        strides=strides,
+                        padding=padding,
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
+        skip = LeakyReLU()(output)
+
+        output = Conv3D(filters,
+                        kernel_size=kernel_size,
+                        strides=(1, 1, 1),
+                        padding=padding,
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(skip)
+        output = LeakyReLU()(output)
+
+        output = Conv3D(filters,
+                        kernel_size=kernel_size,
+                        strides=(1, 1, 1),
+                        padding=padding,
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(output)
+        output = LeakyReLU()(output)
+
+        output = add([skip, output])
+        return output
+    return f
 
 def fCreateConv2DTranspose_ResBlock(filters, kernel_size=(3, 3), strides=(2, 2), padding='same'):
     l1_reg = 0
@@ -136,6 +165,37 @@ def fCreateConv2DTranspose_ResBlock(filters, kernel_size=(3, 3), strides=(2, 2),
     return f
 
 
+def fCreateConv3DTranspose_ResBlock(filters, kernel_size=(3, 3, 1), strides=(2, 2, 1), padding='same'):
+    l1_reg = 0
+    l2_reg = 1e-6
+
+    def f(inputs):
+        output = Conv3DTranspose(filters=filters,
+                                 kernel_size=kernel_size,
+                                 strides=strides,
+                                 padding=padding,
+                                 kernel_regularizer=l1_l2(l1_reg, l2_reg))(inputs)
+        skip = LeakyReLU()(output)
+
+        output = Conv3DTranspose(filters,
+                        kernel_size=kernel_size,
+                        strides=(1, 1, 1),
+                        padding=padding,
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(skip)
+        output = LeakyReLU()(output)
+
+        output = Conv3DTranspose(filters,
+                        kernel_size=kernel_size,
+                        strides=(1, 1, 1),
+                        padding=padding,
+                        kernel_regularizer=l1_l2(l1_reg, l2_reg))(output)
+        output = LeakyReLU()(output)
+
+        output = add([skip, output])
+
+        return output
+    return f
+
 def fCreateConv2DTranspose(filters, strides, kernel_size=(3, 3), padding='same'):
     l1_reg = 0
     l2_reg = 1e-6
@@ -167,7 +227,7 @@ def fCreateConv2DBNTranspose(filters, strides, kernel_size=(3, 3), padding='same
     return f
 
 
-def fCreateConv3DTranspose(filters, strides, kernel_size=(3, 3, 3), padding='same'):
+def fCreateConv3DTranspose(filters, strides, kernel_size=(4, 4, 2), padding='same'):
     l1_reg = 0
     l2_reg = 1e-6
 
