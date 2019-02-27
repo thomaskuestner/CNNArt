@@ -2,7 +2,7 @@
 This CNN based motion correction approach is implemented with Variational Autoencoder (VAE) and tested on Head, Pelvis, Abdomen and combined datasets.
 
 ## Motion Correction training
-Make following modifications in config/param.yml (refer to config/param_MC.yml) and run `python main.py`.
+Make following modifications in config/param.yml (refer to config/param_MC.yml or param_2D.yml/param_3D.yml) and run `python main.py`.
 
 - `selectedDatabase`: select the specific dataset for training
 - `range`: [-1, 1]
@@ -38,3 +38,11 @@ Make following odifications in config/param.yml based on previous parameter sett
 - `actualSize`: the actual unpatched size of the original images
 - `evaluate`: true
 - `unpatch`: true
+
+## Version control
+### 3D VAE
+- ../utils/MotionCorrection/network_block.py add 3D structure
+- ../utils/MotionCorrection/network.py define 3D network
+- ../utils/MotionCorrection/customLoss.py define new loss functions
+- ../correction/networks/motion/VAE2D/motion_VAE2D.py add 2D MS_SSIM_loss
+- ../correction/networks/motion/VAE3D/motion_VAE3D.py add 3D MS_SSIM_loss
