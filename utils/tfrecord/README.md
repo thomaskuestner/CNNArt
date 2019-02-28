@@ -4,7 +4,7 @@ The code base was developed and is maintained by Marc Fischer (marc.fischer@iss.
 ## Usage
 The example folder shows how to parse into tfrecord and load it with tensorflow.
 
-1. ex_conv_set.py: it parse all the data in the folder into tfrecord and save them into another director
+1. ex_conv_set.py: it parse all the data in the folder into tfrecord and save them into another directory
 
                     convert_dir.dir2tf -- parse_gen.parse_data_gen(find the required file path)
                     -- read_image.read_mat_image(load image) -- convert_tf.im2tfrecord(parse into tfrecord and save)
@@ -21,11 +21,11 @@ The example folder shows how to parse into tfrecord and load it with tensorflow.
 
 4. ex_pipeline_folder2.py: for each image, spliited it with tf.random_crop, which make good use of the images.
 
-                    refers to:https://stackoverflow.com/questions/48777889/tf-data-api-how-to-efficiently-sample-small-patches-from-images
+                    refers to: https://stackoverflow.com/questions/48777889/tf-data-api-how-to-efficiently-sample-small-patches-from-images
 
 5. ex_pipeline_folder3.py: for each image, create the index list to specify which patch shall be cropped.
-
-The train flolder shows how to use input pipeline with a keras model.
+                    
+                    The train flolder shows how to use input pipeline with a keras model.
 
 1. multiclass_3D_CNN.py: a simple CNN architectureblock. All the basic part should be imported from tf.keras instead of keras
 
