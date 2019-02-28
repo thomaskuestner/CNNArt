@@ -1,7 +1,7 @@
-The code base was developed and is maintained by Marc Fischer (marc.fischer@iss.uni-stuttgart.de)
-- Many thanks for that -
+The code base was developed and is maintained by Marc Fischer (marc.fischer@iss.uni-stuttgart.de)<br/>
+-- Many thanks for that --
 
-# Usage
+## Usage
 The example folder shows how to parse into tfrecord and load it with tensorflow.
 
 1. ex_conv_set.py: it parse all the data in the folder into tfrecord and save them into another director
