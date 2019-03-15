@@ -212,6 +212,7 @@ pip-log.txt
 
 #GUI
 GUI/PyQt/dump*.txt
+GUI/PyQt/Markings/*
 
 #Translations
 *.mo
