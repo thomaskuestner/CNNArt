@@ -1,5 +1,9 @@
 # CNNArtGUI
 
+The the original code repository is
+
+https://github.com/thomaskuestner/CNNArt
+
 This GUI is designed with PyQt5 and works for Python >2.7 and >3.5.
 
 ## GUI calling
