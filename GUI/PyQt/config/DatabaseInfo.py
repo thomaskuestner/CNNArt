@@ -3,7 +3,7 @@ import os.path
 import csv
 
 from config.MRData import MRData
-
+from config.PATH import *
 
 class DatabaseInfo:
 
@@ -14,21 +14,21 @@ class DatabaseInfo:
     lPats = ''
     lImgData = '' # list of imaging data
 
-    def __init__(self,sDatabase = None,sSubDirs = None, *args):
+    def __init__(self, sDatabase = None, sSubDirs = None, *args):
         if sDatabase is None:
             self.sDatabase = 'MRPhysics'
         else:
             self.sDatabase = sDatabase
 
         if sSubDirs is None:
-            self.sSubDirs = ['newProtocol','dicom_sorted','testout'] # name of subdirectory in [database, patient]
+            self.sSubDirs = ['newProtocol', 'dicom_sorted', 'testout'] # name of subdirectory in [database, patient]
         else:
             self.sSubDirs = sSubDirs
 
         if not self.sSubDirs[0]:
-            self.sPathIn = 'config/database' + os.sep + self.sDatabase
+            self.sPathIn = PATH_OUT + os.sep + self.sDatabase
         else:
-            self.sPathIn = 'config/database' + os.sep + self.sDatabase + os.sep + self.sSubDirs[0]
+            self.sPathIn = PATH_OUT + os.sep + self.sDatabase + os.sep + self.sSubDirs[0]
         # parse patients
         self.lPats = [name for name in os.listdir(self.sPathIn) if os.path.isdir(os.path.join(self.sPathIn, name))]
 
