@@ -31,6 +31,7 @@ class Canvas(FigureCanvas):
     newShape = pyqtSignal()
     selectionChanged = pyqtSignal(bool)
     deleteEvent = pyqtSignal()
+    labelpath = pyqtSignal(str)
     MARK, SELECT = list(range(2))
 
     def __init__(self, param, parent=None):
@@ -141,6 +142,7 @@ class Canvas(FigureCanvas):
         self._extents_on_press = None
         self.maxdist = 10
         self.labelon = False
+        self.legendon = True
         self.selectedshape_name = None
 
         self.view_image()
@@ -362,7 +364,8 @@ class Canvas(FigureCanvas):
                         artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
                     self.im3 = self.ax1.imshow(self.total_mask, alpha=self.trans,
                                                extent=[0, self.shape[-2], 0, self.shape[-3]])
-                    self.ax1.legend(handles=artists, fontsize='x-small')
+                    if self.legendon:
+                        self.ax1.legend(handles=artists, fontsize='x-small')
                 else:
                     self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, :, :, self.ind], cmap='gray',
                                                 extent=[0, self.shape[-2], 0, self.shape[-3]])
@@ -397,7 +400,8 @@ class Canvas(FigureCanvas):
                         self.total_mask += mask * self.cmap[i]
                         artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
                     self.im3 = self.ax1.imshow(self.total_mask, alpha=self.trans, extent=[0, self.shape[-2], 0, self.shape[-3]])
-                    self.ax1.legend(handles=artists, fontsize='x-small')
+                    if self.legendon:
+                        self.ax1.legend( handles=artists, fontsize='x-small' )
                 else:
                     self.pltc = self.ax1.imshow(self.voxel[:, :, self.ind], cmap='gray',
                                                 extent=[0, self.shape[-2], 0, self.shape[-3]])
@@ -436,7 +440,8 @@ class Canvas(FigureCanvas):
                         self.total_mask += mask * self.cmap[i]
                         artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
                     self.im3 = self.ax1.imshow(self.total_mask, alpha=self.trans, extent=[0, self.shape[-2], 0, self.shape[-1]])
-                    self.ax1.legend(handles=artists, fontsize='x-small')
+                    if self.legendon:
+                        self.ax1.legend( handles=artists, fontsize='x-small' )
                 else:
                     self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, self.ind, :, :], cmap='gray',
                                                extent=[0, self.shape[-2], 0, self.shape[-1]], interpolation='sinc')
@@ -473,7 +478,8 @@ class Canvas(FigureCanvas):
                         self.total_mask += mask * self.cmap[i]
                         artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
                     self.im3 = self.ax1.imshow(self.total_mask, alpha=self.trans, extent=[0, self.shape[-2], 0, self.shape[-1]])
-                    self.ax1.legend(handles=artists, fontsize='x-small')
+                    if self.legendon:
+                        self.ax1.legend( handles=artists, fontsize='x-small' )
                 else:
                     self.pltc = self.ax1.imshow(self.voxel[self.ind, :, :], cmap='gray',
                                                 extent=[0, self.shape[-2], 0, self.shape[-1]], interpolation='sinc')
@@ -514,7 +520,8 @@ class Canvas(FigureCanvas):
                         self.total_mask += mask * self.cmap[i]
                         artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
                     self.im3 = self.ax1.imshow(self.total_mask, alpha=self.trans, extent=[0, self.shape[-3], 0, self.shape[-1]])
-                    self.ax1.legend(handles=artists, fontsize='x-small')
+                    if self.legendon:
+                        self.ax1.legend( handles=artists, fontsize='x-small' )
                 else:
                     self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, :, self.ind, :], cmap='gray',
                                                 extent=[0, self.shape[-3], 0, self.shape[-1]], interpolation='sinc')
@@ -552,7 +559,8 @@ class Canvas(FigureCanvas):
                         self.total_mask += mask * self.cmap[i]
                         artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
                     self.im3 = self.ax1.imshow(self.total_mask, alpha=self.trans, extent=[0, self.shape[-3], 0, self.shape[-1]])
-                    self.ax1.legend(handles=artists, fontsize='x-small')
+                    if self.legendon:
+                        self.ax1.legend( handles=artists, fontsize='x-small' )
                 else:
                     self.pltc = self.ax1.imshow(self.voxel[:, self.ind, :], cmap='gray',
                                                 extent=[0, self.shape[-3], 0, self.shape[-1]], interpolation='sinc')
@@ -656,7 +664,10 @@ class Canvas(FigureCanvas):
             self.selectedShape.set_edgecolor('black')
             self.draw_idle()
             self.set_state(2)
-            self.edit_selectedShape(self.selectedShape)
+            try:
+                self.edit_selectedShape(self.selectedShape)
+            except:
+                pass
         elif type(self.selectedShape) is PathPatch:
             self.selectedShape.set_edgecolor('black')
             self.draw_idle()
@@ -882,7 +893,10 @@ class Canvas(FigureCanvas):
                 self.set_state(2)
         elif event.button == 1:
             if self.picked:
-                self._edit_on_press(event)
+                try:
+                    self._edit_on_press(event)
+                except:
+                    pass
 
     def _edit_on_press(self, event):
         self.pressEvent = event
@@ -964,7 +978,10 @@ class Canvas(FigureCanvas):
                 self.override_cursor(CURSOR_DEFAULT)
 
             if self.picked:
-                self._edit_on_move(event)
+                try:
+                    self._edit_on_move(event)
+                except:
+                    pass
 
     def _edit_on_move(self, event):
 
@@ -1078,6 +1095,10 @@ class Canvas(FigureCanvas):
 
     def set_labelon(self, labelon):
         self.labelon = labelon
+
+    def set_legendon(self, legendon):
+        self.legendon = legendon
+        self.view_image()
 
     def set_toolTip(self, name):
         if self.labelon:
@@ -1230,6 +1251,7 @@ class Canvas(FigureCanvas):
         self.df.loc[df_rows, 'path'] = plist
         self.df.loc[df_rows, 'status'] = 0
         self.df.to_csv('Markings/marking_records.csv', index=False)
+        self.labelpath.emit(plist)
 
     def ell_onselect(self, eclick, erelease):
         x1, y1 = eclick.xdata, eclick.ydata
@@ -1256,6 +1278,7 @@ class Canvas(FigureCanvas):
         self.df.loc[df_rows, 'path'] = plist
         self.df.loc[df_rows, 'status'] = 0
         self.df.to_csv('Markings/marking_records.csv', index=False)
+        self.labelpath.emit( plist )
 
     def lasso_onselect(self, verts):
         self.pathlasso = path.Path(verts)
@@ -1279,6 +1302,7 @@ class Canvas(FigureCanvas):
         self.df.loc[df_rows,'path'] = plist
         self.df.loc[df_rows, 'status'] = 0
         self.df.to_csv('Markings/marking_records.csv', index=False)
+        self.labelpath.emit( plist )
 
     def rec_toggle_selector_on(self):
         self.toggle_selector_RS.set_active(True)
@@ -2115,8 +2139,11 @@ class LassoSelector(_SelectorWidget):
         useblit
 
         """
-        pathlasso = path.Path(self.verts)
-        self.patch = patches.PathPatch(pathlasso, fill=True, alpha=.2, edgecolor=None)
+        if not self.verts is None:
+            pathlasso = path.Path(np.asarray(self.verts))
+            self.patch = patches.PathPatch(pathlasso, fill=True, alpha=.2, edgecolor=None)
+        else:
+            self.patch = None
         if not self.ax.get_visible():
             return False
 
@@ -2143,8 +2170,12 @@ class LassoSelector(_SelectorWidget):
         return self.new_shape
 
     def get_select(self):
-        return self.patch
+        if not self.patch is None:
+            return self.patch
+        else:
+            return False
 
     def set_facecolor(self, color):
-        self.patch.set_facecolor(color)
-        self.update()
+        if not self.patch is None:
+            self.patch.set_facecolor(color)
+            self.update()
