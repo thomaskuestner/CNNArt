@@ -6,7 +6,7 @@ import numpy as np
 
 # internal import
 import utils.DataPreprocessing as datapre
-import mainPatches as cnn_main
+import main as cnn_main
 
 def run(cfg, dbinfo):
     """

@@ -3,9 +3,7 @@
 | Main template function for calling the CNNs                           |
 | - starting point: data is alrady patched, augmented, splitted, ...    |
 +-----------------------------------------------------------------------+
-This script performs the calling of the appropriate training/prediction model function
-    main.py ==> mainPatches.py ==> model.fTrain()/fPredict()
-------------------------------------------------------------------
+
 Copyright: 2016-2018 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) under Apache2 license
 @author: Thomas Kuestner
 """
