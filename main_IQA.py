@@ -4,15 +4,18 @@ import glob
 import sys
 import yaml
 from DatabaseInfo import DatabaseInfo, NAKOInfo
+import pathlib
 
-sys.path.append('/home/d1274/PycharmProjects/NAKO_transfer_learning')
+sys.path.append('/home/d1290/no_backup/d1290/test/CNNArt')
 from tensorflow.keras import backend as K
 from tensorflow.python import keras
 
-#from networks.multiclass.CNN3D import multiclass_3D_SE-ResNet
+from networks.multiclass.CNN3D import multiclass_3D_SE_ResNet
 from utils import generator
 from utils import Patching
 from utils.tfrecord.medio import convert_tf, read_image
+import tensorflow.keras.optimizers as optimizers
+from tensorflow.keras.callbacks import CSVLogger, ModelCheckpoint
 
 config = tf.ConfigProto()
 os.environ["CUDA_VISIBLE_DEVICES"] = '1'
@@ -20,16 +23,15 @@ os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 config.gpu_options.allow_growth = True
 tf.keras.backend.set_session(tf.Session(config=config))
 
-import tensorflow.keras.optimizers as optimizers
-
-from tensorflow.keras.callbacks import (
-    CSVLogger,
-    ModelCheckpoint
-)
 
 if __name__ == '__main__':
-
-    with open('config' + os.sep + 'param_IQA.yml', 'r') as ymlfile:
+    # use different param.yml if with sys.argv
+    if len(sys.argv) > 1:
+        param_yml = sys.argv[1] + '.yml'
+    else:
+        param_yml = 'param_IQA.yml'
+    # get config file
+    with open('config' + os.sep + param_yml, 'r') as ymlfile:
         cfg = yaml.safe_load(ymlfile)
 
     dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'], cfg['sDatabaseRootPath'])
@@ -41,7 +43,7 @@ if __name__ == '__main__':
         # the expected tfrecord saved format: med_data/NAKO/NAKO_IQA/Q1/....tfrecord
 
         if not os.path.exists(os.path.join(cfg['tfrecordsPath'], pat, dbinfo.sSubDirs[0])):
-            if (pat == 'Results'):
+            if pat == 'Results':
                 continue
 
             # tfrecords not yet created
@@ -55,14 +57,12 @@ if __name__ == '__main__':
 
                 # example result: /home/d1274/med_data/NAKO/NAKO_IQA_tf/Q1/3D_GRE_TRA_bh_F_COMPOSED_0015.tfrecord
                 tf_save_path = os.path.join(cfg['tfrecordsPath'], pat, dbinfo.sSubDirs[0], seq.sPath + '.tfrecord')
-
-                tf_save_path.parent.mkdir(parents=True, exist_ok=True)
+                tf_save_pathlib = pathlib.Path(tf_save_path)
+                tf_save_pathlib.parent.mkdir(parents=True, exist_ok=True)
                 convert_tf.im2tfrecord(image=image, path=tf_save_path)
-
 
     # begin training
     print('begin creating the input dataset')
-
 
     epoch = cfg['epoch']
     path = cfg['tfrecordsPath']
@@ -80,34 +80,32 @@ if __name__ == '__main__':
 
     db_tf = NAKOInfo(cfg['MRTfrecordDatabase'], cfg['subdirs'], cfg['sDatabaseRootPath'])
 
-    train_files, train_labels, eva_files, eva_labels = db_tf.get_train_eval_files( pattern='_F_',
-                                                                                   test_groups=test_groups,
-                                                                                   train_eval_ratio = 0.85,
-                                                                                   lShuffleTraining=lShuffleTraining)
+    train_files, train_labels, eva_files, eva_labels = db_tf.get_train_eval_files(pattern='_F_',
+                                                                                  test_groups=test_groups,
+                                                                                  train_eval_ratio = 0.85,
+                                                                                  lShuffleTraining=lShuffleTraining)
 
     # there are two ways to extract the image, start from the beginning bprder or start from the ned border
     patches_per_image_1 = len(Patching.compute_patch_indices(image_shape=image_shape,
-                                      patch_size=patch_shape,
-                                      overlap=overlap,
-                                      start=start,
-                                      order = True))
+                                                             patch_size=patch_shape,
+                                                             overlap=overlap,
+                                                             start=start,
+                                                             order=True))
     patches_per_image_2 = len(Patching.compute_patch_indices(image_shape=image_shape,
-                                                            patch_size=patch_shape,
-                                                            overlap=overlap,
-                                                            start=start,
-                                                            order = False))
+                                                             patch_size=patch_shape,
+                                                             overlap=overlap,
+                                                             start=start,
+                                                             order=False))
     assert patches_per_image_1 == patches_per_image_2
     patches_per_image = patches_per_image_1
 
-
     steps_per_epoch = int(len(train_files) * patches_per_image / batch_size)
     validata_steps = int(len(eva_files) * patches_per_image / batch_size)
-    print('expected step per epoch: ' , steps_per_epoch)
-
+    print('expected step per epoch: ', steps_per_epoch)
 
     # construct the model
     model, _ = multiclass_3D_SE_ResNet.createModel(patchSize=patch_shape, numClasses=3)
-    print(model.summary())
+    print('model.summary\n', model.summary())
 
     # optimize way ???
     learning_rate = 0.1
@@ -117,7 +115,6 @@ if __name__ == '__main__':
     model.compile(loss="categorical_crossentropy",
                   optimizer="sgd",
                   metrics=['acc'])
-
 
     def get_callbacks(model_file, logging_file=None, early_stopping_patience=None,
                       initial_learning_rate=0.01, lr_change_mode=None, verbosity=1):
@@ -131,28 +128,28 @@ if __name__ == '__main__':
         return callbacks
 
 
-    model_file = os.path.join('/home/d1274/no_backup/d1274/NAKO_transfer_learning_model/NAKO_IQA_model',
+    model_file = os.path.join('/home/d1290/no_backup/d1290/test/NAKO_IQA_model',
                               'simple_test_1.h5')
     logging_file = 'simple_test_1.log'
 
     train_generator = generator.tfdata_generator(file_lists=train_files, label_lists=train_labels,
                                                  is_training=True,
-                                                 image_shape= image_shape,
+                                                 image_shape=image_shape,
                                                  patch_size=patch_shape,
                                                  start=start,
                                                  batch_size=batch_size,
-                                                 overlap = overlap,
+                                                 overlap=overlap,
                                                  num_imgaes_loaded=num_images_loaded,
                                                  num_classes=num_classes,
-                                                 mean_value= mean_value,
+                                                 mean_value=mean_value,
                                                  std_value=std_value)
 
     val_generator = generator.tfdata_generator(file_lists=eva_files, label_lists=eva_labels,
                                                is_training=False,
-                                               image_shape= image_shape,
+                                               image_shape=image_shape,
                                                patch_size=patch_shape,
-                                               start= start,
-                                               overlap = overlap,
+                                               start=start,
+                                               overlap=overlap,
                                                batch_size=batch_size,
                                                num_classes=num_classes,
                                                mean_value=mean_value,

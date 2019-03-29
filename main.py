@@ -138,7 +138,7 @@ elif lTrain:
                 if os.path.exists(dbinfo.sPathIn + os.sep + pat + os.sep + dbinfo.sSubDirs[1]):
                     for iseq, seq in enumerate(lDatasets):
                         # patches and labels of reference/artifact
-                        tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), scpatchSize, cfg['patchOverlap'], 1, cfg['sLabeling'], sTrainingMethod=sTrainingMethod, cfg['range'])
+                        tmpPatches, tmpLabels  = datapre.fPreprocessData(os.path.join(dbinfo.sPathIn, pat, dbinfo.sSubDirs[1], seq), scpatchSize, cfg['patchOverlap'], 1, cfg['sLabeling'], sTrainingMethod=sTrainingMethod, range_norm=cfg['range'])
                         dAllPatches = np.concatenate((dAllPatches, tmpPatches), axis=0)
                         dAllLabels = np.concatenate((dAllLabels, iLabels[iseq]*tmpLabels), axis=0)
                         dAllPats = np.concatenate((dAllPats, ipat*np.ones((tmpLabels.shape[0],1), dtype=np.int)), axis=0)
