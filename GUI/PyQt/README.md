@@ -4,14 +4,20 @@ The the original code repository is
 
 https://github.com/thomaskuestner/CNNArt
 
-This GUI is designed with PyQt5 and works for Python >2.7 and >3.5.
+This GUI is designed with PyQt5 and works for Python >3.5.
 
 ## GUI calling
-`Qt_main.py`<br/>
-to open the GUI. This GUI can be run independent from CNNArt. Before running, please change path in param.yml.
+run `Qt_main.py` to open the GUI. <br/>
+This GUI can be run independent from CNNArt. <br/>
+Before running, please change path in param.yml. <br/>
+Call methods <br/>
+`from Qt_main import imagine`<br/>
+`imagine.main()`<br/>
+`imagine.main('pathOfImageFile','pathOfImageDirectory', ...)`<br/>
+`imagine.main(image array)`<br/>
 
-### Requirements
-`python3.6 -m pip install openapi-codec json pickle subprocess sys os h5py keras matplotlib pandas scipy tensorflow yaml PyQt5 numbers copy numpy pandas argparse hyperopt hyperopt hashlib math dicom pydicom dicom-numpy collections pyqtgraph python-csv gtabview pyqtdeploy`
+## Requirements
+`python3.6 -m pip install jsonschema pickleshare h5py keras matplotlib pandas scipy protobuf tensorflow pyYAML PyQt5-stubs PyQt5 numpy pandas argparse hyperas hyperopt dicom pydicom dicom-numpy pydot pyqtgraph python-csv gtabview pyqtdeploy nibabel Pillow xtract scikit-learn scikit-image seaborn`
 
 ## GUI features
 - data viewing (DICOM, natural scene images)
@@ -21,13 +27,18 @@ to open the GUI. This GUI can be run independent from CNNArt. Before running, pl
 - network visualization: architecture, feature maps, kernel weights, deep visualization
 
 ### Data viewing
-- image viewing: flexible layout, 2D/3D mode, images can be loaded from python workspace
+#### Image Viewing
+- flexible layout, 2D/3D mode, images can be loaded from python workspace
 - prediction overlay: colors and hatches can be modified
-- labeling: 3 selector(rectangle, ellipse, lasso), the name and color of the labels can be modified
+#### Result Showing
+#### labeling
+- 3 selector(rectangle, ellipse, lasso), the name and color of the labels can be modified
 
 ### Network training
-- data preprocessing, parameter setting
+#### data preprocessing, parameter setting
 - accuracy/loss curves can be dynamically plotted
+#### network training
+#### network test
 
 ### Network visualization 
 - network structure: the network structure can be loaded from h5 file

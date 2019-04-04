@@ -1,3 +1,4 @@
+# https://github.com/thomaskuestner/CNNArt
 from setuptools import setup
 import sys
 
@@ -25,9 +26,9 @@ if sys.argv[-1] == 'test':
           tests_require=['pytest'],
           include_package_data=True,
           zip_safe=False,
-          install_requires=['openapi-codec', 'jsonschema', 'pickle', 'subprocess', 'sys', 'os', 'h5py', 'keras', 'matplotlib',
-                            'pandas', 'scipy', 'tensorflow', 'yaml', 'PyQt5', 'numbers', 'copy', 'numpy', 'pandas',
-                            'argparse', 'hyperas', 'hyperopt', 'hashlib', 'math', 'dicom', 'pydicom', 'dicom-numpy',
-                            'collections', 'pyqtgraph', 'python-csv', 'gtabview' , 'pyqtdeploy', 'nibabel', 'Pillow',
+          install_requires=['jsonschema', 'pickleshare', 'h5py', 'keras', 'matplotlib',
+                            'pandas', 'scipy', 'protobuf', 'tensorflow', 'pyYAML', 'PyQt5-stubs', 'PyQt5',
+                            'numpy', 'pandas', 'argparse', 'hyperas', 'hyperopt','dicom', 'pydicom', 'dicom-numpy',
+                            'pyqtgraph', 'python-csv', 'gtabview', 'pyqtdeploy', 'nibabel', 'Pillow', 'pydot',
                             'xtract', 'scikit-image', 'scikit-learn', 'seaborn'])
     sys.exit()
