@@ -1,3 +1,4 @@
+# https://github.com/thomaskuestner/CNNArt
 from PyQt5 import QtWidgets
 
 class Activescene(QtWidgets.QGraphicsScene):

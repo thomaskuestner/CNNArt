@@ -20,6 +20,7 @@ CURSOR_DEFAULT = Qt.ArrowCursor
 CURSOR_DRAW = Qt.CrossCursor
 CURSOR_SELECT = Qt.ClosedHandCursor
 
+
 class Canvas(FigureCanvas):
     update_data = pyqtSignal(list)
     gray_data = pyqtSignal(list)
@@ -31,7 +32,6 @@ class Canvas(FigureCanvas):
     newShape = pyqtSignal()
     selectionChanged = pyqtSignal(bool)
     deleteEvent = pyqtSignal()
-    labelpath = pyqtSignal(str)
     MARK, SELECT = list(range(2))
 
     def __init__(self, param, parent=None):
@@ -40,7 +40,7 @@ class Canvas(FigureCanvas):
         FigureCanvas.__init__(self, self.figure)
         self.setParent(parent)
 
-        self.figure.set_facecolor("black") # white region outsides the (ax)dicom image
+        self.figure.set_facecolor("black")  # white region outsides the (ax)dicom image
 
         self.voxel = param.get('image')
         self.shape = param.get('shape')
@@ -63,7 +63,7 @@ class Canvas(FigureCanvas):
             self.ind = self.slices // 2
         elif self.mode == 3 or self.mode == 6 or self.mode == 9:
             self.slices = self.voxel.shape[-2]
-            self.ind = self.slices//2
+            self.ind = self.slices // 2
 
         self.time = 0
         try:
@@ -91,11 +91,12 @@ class Canvas(FigureCanvas):
         self.cursor2D = Cursor(self.ax1, useblit=True, color='blue', linestyle='dashed')
         self.cursor2D.set_active(True)
 
-        self.toggle_selector_RS = RectangleSelector(self.ax1, self.rec_onselect, button=[1], drawtype='box', useblit=True,
-                                               minspanx=5, minspany=5, spancoords='pixels')
+        self.toggle_selector_RS = RectangleSelector(self.ax1, self.rec_onselect, button=[1], drawtype='box',
+                                                    useblit=True,
+                                                    minspanx=5, minspany=5, spancoords='pixels')
 
         self.toggle_selector_ES = EllipseSelector(self.ax1, self.ell_onselect, drawtype='box', button=[1], minspanx=5,
-                                             useblit=True, minspany=5, spancoords='pixels')
+                                                  useblit=True, minspany=5, spancoords='pixels')
 
         self.toggle_selector_LS = LassoSelector(self.ax1, self.lasso_onselect, useblit=True, button=[1])
 
@@ -239,7 +240,7 @@ class Canvas(FigureCanvas):
 
         elif event.key == '3':
             # keyboard 3
-            self.depth = self.depth -1
+            self.depth = self.depth - 1
 
             self.depthchange()
         elif event.key == '4':
@@ -275,8 +276,11 @@ class Canvas(FigureCanvas):
             self._center_handle = None
             self._edge_handles = None
             self._corner_handles = None
-            canvas = self.selectedShape.figure.canvas
-            canvas.draw_idle()
+            try:
+                canvas = self.selectedShape.get_figure().canvas
+                canvas.draw_idle()
+            except:
+                pass
 
             self.df = pandas.read_csv('Markings/marking_records.csv')
             self.df = self.df.drop(self.df.index[self.selectind])
@@ -310,29 +314,41 @@ class Canvas(FigureCanvas):
         if self.mode == 1:
             self.ax1.axis('off')
             try:
-                self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, :, :, self.ind], cmap='gray',
-                                            extent=[0, self.shape[-2], 0, self.shape[-3]])
+                img = np.swapaxes(self.voxel[self.time, self.depth, :, :, self.ind], 0, 1)
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0])
+                self.image_array = self.voxel[self.time, self.depth, :, :, self.ind]
             except:
-                self.pltc = self.ax1.imshow(self.voxel[:, :, self.ind], cmap='gray',
-                                            extent=[0, self.shape[-2], 0, self.shape[-3]])
+                img = np.swapaxes(self.voxel[:, :, self.ind], 0, 1)
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0])
+                self.image_array = self.voxel[:, :, self.ind]
             self.draw_idle()
         elif self.mode == 2:
             self.ax1.axis('off')
             try:
-                self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, self.ind, :, :], cmap='gray',
-                                            extent=[0, self.shape[-2], 0, self.shape[-1]], interpolation='sinc')
+                img = np.swapaxes(self.voxel[self.time, self.depth, self.ind, :, :], 0, 1)
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                self.image_array = self.voxel[self.time, self.depth, self.ind, :, :]
             except:
-                self.pltc = self.ax1.imshow(self.voxel[self.ind, :, :], cmap='gray',
-                                            extent=[0, self.shape[-2], 0, self.shape[-1]], interpolation='sinc')
+                img = np.swapaxes(self.voxel[self.ind, :, :], 0, 1)
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                self.image_array = self.voxel[self.ind, :, :]
             self.draw_idle()
         elif self.mode == 3:
             self.ax1.axis('off')
             try:
-                self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, :, self.ind, :], cmap='gray',
-                                            extent=[0, self.shape[-3], 0, self.shape[-1]], interpolation='sinc')
+                img = np.swapaxes(self.voxel[self.time, self.depth, :, self.ind, :], 0, 1)
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                self.image_array = self.voxel[self.time, self.depth, :, self.ind, :]
             except:
-                self.pltc = self.ax1.imshow(self.voxel[:, self.ind, :], cmap='gray',
-                                            extent = [0, self.shape[-3], 0, self.shape[-1]], interpolation = 'sinc')
+                img = np.swapaxes(self.voxel[:, self.ind, :], 0, 1)
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                self.image_array = self.voxel[:, self.ind, :]
             self.draw_idle()
         elif self.mode == 4:
             self.ax1.axis('off')
@@ -342,8 +358,10 @@ class Canvas(FigureCanvas):
                     patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
                     num_classes = patch_color_df['class'].count()
                     labels = list(patch_color_df.iloc[0:num_classes]['class'])
-                    self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, :, :, self.ind], cmap='gray',
-                                                extent=[0, self.shape[-2], 0, self.shape[-3]])
+                    img = self.voxel[self.time, self.depth, :, :, self.ind]
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0])
+                    self.image_array = self.voxel[self.time, self.depth, :, :, self.ind]
                     if not self.Y == []:
                         mask_shape = list(self.voxel[self.time, self.depth, :, :, self.ind].shape)
                         mask_shape.append(3)
@@ -351,9 +369,10 @@ class Canvas(FigureCanvas):
                         for i in range(len(self.cmap)):
                             mask = color.gray2rgb(self.Y[i][self.time, self.depth, :, :, self.ind])
                             self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
-                            self.total_mask += mask*self.cmap[i]
-                        self.im2 = self.ax1.imshow(self.total_mask, alpha=self.trans,
-                                                   extent=[0, self.shape[-2], 0, self.shape[-3]])
+                            self.total_mask += mask * self.cmap[i]
+                        img = self.total_mask
+                        self.im2 = self.ax1.imshow(img, alpha=self.trans, aspect='auto',
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
                     mask_shape = list(self.voxel[self.time, self.depth, :, :, self.ind].shape)
                     mask_shape.append(3)
                     self.total_mask = np.zeros(mask_shape)
@@ -362,26 +381,34 @@ class Canvas(FigureCanvas):
                         self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
                         self.total_mask += mask * self.cmap[i]
                         artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
-                    self.im3 = self.ax1.imshow(self.total_mask, alpha=self.trans,
-                                               extent=[0, self.shape[-2], 0, self.shape[-3]])
+                    img = self.total_mask
+                    self.im3 = self.ax1.imshow(img, alpha=self.trans, aspect='auto',
+                                               extent=[0, img.shape[1], img.shape[0], 0])
                     if self.legendon:
                         self.ax1.legend(handles=artists, fontsize='x-small')
                 else:
-                    self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, :, :, self.ind], cmap='gray',
-                                                extent=[0, self.shape[-2], 0, self.shape[-3]])
+                    img = self.voxel[self.time, self.depth, :, :, self.ind]
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0])
                     local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
                     if not self.Y == []:
-                        self.im2 = self.ax1.imshow(self.Y[0][self.time, self.depth, :, :, self.ind],
-                                                   cmap=local_cmap, alpha=self.trans, extent=[0, self.shape[-2], 0, self.shape[-3]])
-                    self.im3 = self.ax1.contourf(self.Z[0][self.time, self.depth, :, :, self.ind],
-                                                 cmap=local_cmap, alpha=self.trans, extent=[0, self.shape[-2], self.shape[-3], 0])
+                        img = self.Y[0][self.time, self.depth, :, :, self.ind]
+                        self.im2 = self.ax1.imshow(img, aspect='auto',
+                                                   cmap=local_cmap, alpha=self.trans,
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                    img = self.Z[0][self.time, self.depth, :, :, self.ind]
+                    self.im3 = self.ax1.contourf(img, aspect='auto',
+                                                 cmap=local_cmap, alpha=self.trans,
+                                                 extent=[0, img.shape[1], 0, img.shape[0]])
             except:
                 if len(self.cmap) > 1:
                     artists = []
                     patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
                     num_classes = patch_color_df['class'].count()
                     labels = list(patch_color_df.iloc[0:num_classes]['class'])
-                    self.pltc = self.ax1.imshow(self.voxel[:, :, self.ind], cmap='gray', extent=[0, self.shape[-2], 0, self.shape[-3]])
+                    img = self.voxel[:, :, self.ind]
+                    self.pltc = self.ax1.imshow(img, cmap='gray',  aspect='auto', extent=[0, img.shape[1], img.shape[0], 0])
+                    self.image_array = self.voxel[:, :, self.ind]
                     if not self.Y == []:
                         mask_shape = list(self.voxel[:, :, self.ind].shape)
                         mask_shape.append(3)
@@ -389,8 +416,9 @@ class Canvas(FigureCanvas):
                         for i in range(len(self.cmap)):
                             mask = color.gray2rgb(self.Y[i][:, :, self.ind])
                             self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
-                            self.total_mask += mask*self.cmap[i]
-                        self.im2 = self.ax1.imshow(self.total_mask, alpha=self.trans, extent=[0, self.shape[-2], 0, self.shape[-3]])
+                            self.total_mask += mask * self.cmap[i]
+                        img = self.total_mask
+                        self.im2 = self.ax1.imshow(img, alpha=self.trans,  aspect='auto', extent=[0, img.shape[1], img.shape[0], 0])
                     mask_shape = list(self.voxel[:, :, self.ind].shape)
                     mask_shape.append(3)
                     self.total_mask = np.zeros(mask_shape)
@@ -399,18 +427,22 @@ class Canvas(FigureCanvas):
                         self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
                         self.total_mask += mask * self.cmap[i]
                         artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
-                    self.im3 = self.ax1.imshow(self.total_mask, alpha=self.trans, extent=[0, self.shape[-2], 0, self.shape[-3]])
+                    img = self.total_mask
+                    self.im3 = self.ax1.imshow(img, alpha=self.trans,  aspect='auto', extent=[0, img.shape[1], img.shape[0], 0])
                     if self.legendon:
-                        self.ax1.legend( handles=artists, fontsize='x-small' )
+                        self.ax1.legend(handles=artists, fontsize='x-small')
                 else:
-                    self.pltc = self.ax1.imshow(self.voxel[:, :, self.ind], cmap='gray',
-                                                extent=[0, self.shape[-2], 0, self.shape[-3]])
+                    img = self.voxel[:, :, self.ind]
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0])
                     local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
                     if not self.Y == []:
-                        self.im2 = self.ax1.imshow(self.Y[0][:, :, self.ind], cmap=local_cmap, alpha=self.trans,
-                                                   extent=[0, self.shape[-2], 0, self.shape[-3]])
-                    self.im3 = self.ax1.contourf(self.Z[0][:, :, self.ind], cmap=local_cmap, alpha=self.trans,
-                                                 extent=[0, self.shape[-2], self.shape[-3], 0])
+                        img = self.Y[0][:, :, self.ind]
+                        self.im2 = self.ax1.imshow(img, cmap=local_cmap, alpha=self.trans, aspect='auto',
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                    img = self.Z[0][:, :, self.ind]
+                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, alpha=self.trans, aspect='auto',
+                                                 extent=[0, img.shape[1], 0, img.shape[0]])
             self.draw_idle()
         elif self.mode == 5:
             self.ax1.axis('off')
@@ -420,8 +452,10 @@ class Canvas(FigureCanvas):
                     patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
                     num_classes = patch_color_df['class'].count()
                     labels = list(patch_color_df.iloc[0:num_classes]['class'])
-                    self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, self.ind, :, :], cmap='gray',
-                                                extent=[0, self.shape[-2], 0, self.shape[-1]], interpolation='sinc')
+                    img = self.voxel[self.time, self.depth, self.ind, :, :]
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    self.image_array = self.voxel[self.time, self.depth, self.ind, :, :]
                     if not self.Y == []:
                         mask_shape = list(self.voxel[self.time, self.depth, self.ind, :, :].shape)
                         mask_shape.append(3)
@@ -429,8 +463,9 @@ class Canvas(FigureCanvas):
                         for i in range(len(self.cmap)):
                             mask = color.gray2rgb(self.Y[i][self.time, self.depth, self.ind, :, :])
                             self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
-                            self.total_mask += mask*self.cmap[i]
-                        self.im2 = self.ax1.imshow(self.total_mask, alpha=self.trans)
+                            self.total_mask += mask * self.cmap[i]
+                        img = self.total_mask
+                        self.im2 = self.ax1.imshow(img, extent=[0, img.shape[1], img.shape[0], 0], aspect='auto', alpha=self.trans)
                     mask_shape = list(self.voxel[self.time, self.depth, self.ind, :, :].shape)
                     mask_shape.append(3)
                     self.total_mask = np.zeros(mask_shape)
@@ -439,27 +474,33 @@ class Canvas(FigureCanvas):
                         self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
                         self.total_mask += mask * self.cmap[i]
                         artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
-                    self.im3 = self.ax1.imshow(self.total_mask, alpha=self.trans, extent=[0, self.shape[-2], 0, self.shape[-1]])
+                    img = self.total_mask
+                    self.im3 = self.ax1.imshow(img, alpha=self.trans, aspect='auto', extent=[0, img.shape[1], img.shape[0], 0])
                     if self.legendon:
-                        self.ax1.legend( handles=artists, fontsize='x-small' )
+                        self.ax1.legend(handles=artists, fontsize='x-small')
                 else:
-                    self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, self.ind, :, :], cmap='gray',
-                                               extent=[0, self.shape[-2], 0, self.shape[-1]], interpolation='sinc')
+                    img = self.voxel[self.time, self.depth, self.ind, :, :]
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    self.image_array = self.voxel[self.time, self.depth, self.ind, :, :]
                     local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
                     if not self.Y == []:
-                        self.im2 = self.ax1.imshow(self.Y[-1][self.time, self.depth, self.ind, :, :], cmap=local_cmap, alpha=self.trans,
-                                                   extent=[0, self.shape[-2], 0, self.shape[-1]])
-
-                    self.im3 = self.ax1.contourf(self.Z[-1][self.time, self.depth, self.ind, :, :], cmap=local_cmap,
-                                                 alpha=self.trans, extent=[0, self.shape[-2], self.shape[-1], 0])
+                        img = self.Y[-1][self.time, self.depth, self.ind, :, :]
+                        self.im2 = self.ax1.imshow(img, cmap=local_cmap, alpha=self.trans, aspect='auto',
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                    img = self.Z[-1][self.time, self.depth, self.ind, :, :]
+                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, aspect='auto',
+                                                 alpha=self.trans, extent=[0, img.shape[1], 0, img.shape[0]])
             except:
                 if len(self.cmap) > 1:
                     artists = []
                     patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
                     num_classes = patch_color_df['class'].count()
                     labels = list(patch_color_df.iloc[0:num_classes]['class'])
-                    self.pltc = self.ax1.imshow(self.voxel[self.ind, :, :], cmap='gray',
-                                                extent=[0, self.shape[-2], 0, self.shape[-1]], interpolation='sinc')
+                    img = self.voxel[self.ind, :, :]
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    self.image_array = self.voxel[self.ind, :, :]
                     if not self.Y == []:
                         mask_shape = list(self.voxel[self.ind, :, :].shape)
                         mask_shape.append(3)
@@ -467,8 +508,9 @@ class Canvas(FigureCanvas):
                         for i in range(len(self.cmap)):
                             mask = color.gray2rgb(self.Y[i][self.ind, :, :])
                             self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
-                            self.total_mask += mask*self.cmap[i]
-                        self.im2 = self.ax1.imshow(self.total_mask, alpha=self.trans)
+                            self.total_mask += mask * self.cmap[i]
+                        img = self.total_mask
+                        self.im2 = self.ax1.imshow(img, extent=[0, img.shape[1], img.shape[0], 0], aspect='auto', alpha=self.trans)
                     mask_shape = list(self.voxel[self.ind, :, :].shape)
                     mask_shape.append(3)
                     self.total_mask = np.zeros(mask_shape)
@@ -477,20 +519,24 @@ class Canvas(FigureCanvas):
                         self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
                         self.total_mask += mask * self.cmap[i]
                         artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
-                    self.im3 = self.ax1.imshow(self.total_mask, alpha=self.trans, extent=[0, self.shape[-2], 0, self.shape[-1]])
+                    img = self.total_mask
+                    self.im3 = self.ax1.imshow(img,  aspect='auto', alpha=self.trans, extent=[0, img.shape[1], img.shape[0], 0])
                     if self.legendon:
-                        self.ax1.legend( handles=artists, fontsize='x-small' )
+                        self.ax1.legend(handles=artists, fontsize='x-small')
                 else:
-                    self.pltc = self.ax1.imshow(self.voxel[self.ind, :, :], cmap='gray',
-                                                extent=[0, self.shape[-2], 0, self.shape[-1]], interpolation='sinc')
+                    img = self.voxel[self.ind, :, :]
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    self.image_array = self.voxel[self.ind, :, :]
                     local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
                     if not self.Y == []:
-                        self.im2 = self.ax1.imshow(self.Y[-1][self.ind, :, :], cmap=local_cmap,
-                                                   alpha=self.trans,
-                                                   extent=[0, self.shape[-2], 0, self.shape[-1]])
-
-                    self.im3 = self.ax1.contourf(self.Z[-1][self.ind, :, :], cmap=local_cmap, alpha=self.trans,
-                                                 extent=[0, self.shape[-2], self.shape[-1], 0])
+                        img = self.Y[-1][self.ind, :, :]
+                        self.im2 = self.ax1.imshow(img, cmap=local_cmap,
+                                                   alpha=self.trans, aspect='auto',
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                    img = self.Z[-1][self.ind, :, :]
+                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, alpha=self.trans, aspect='auto',
+                                                 extent=[0, img.shape[1], 0, img.shape[0]])
             self.draw_idle()
         elif self.mode == 6:
             self.ax1.axis('off')
@@ -500,8 +546,10 @@ class Canvas(FigureCanvas):
                     patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
                     num_classes = patch_color_df['class'].count()
                     labels = list(patch_color_df.iloc[0:num_classes]['class'])
-                    self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, :, self.ind, :], cmap='gray',
-                                                extent=[0, self.shape[-3], 0, self.shape[-1]], interpolation='sinc')
+                    img = self.voxel[self.time, self.depth, :, self.ind, :]
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    self.image_array = self.voxel[self.time, self.depth, :, self.ind, :]
                     if not self.Y == []:
                         mask_shape = list(self.voxel[self.time, self.depth, :, self.ind, :].shape)
                         mask_shape.append(3)
@@ -509,8 +557,9 @@ class Canvas(FigureCanvas):
                         for i in range(len(self.cmap)):
                             mask = color.gray2rgb(self.Y[i][self.time, self.depth, :, self.ind, :])
                             self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
-                            self.total_mask += mask*self.cmap[i]
-                        self.im2 = self.ax1.imshow(self.total_mask, alpha=self.trans)
+                            self.total_mask += mask * self.cmap[i]
+                        img = self.total_mask
+                        self.im2 = self.ax1.imshow(img, extent=[0, img.shape[1], img.shape[0], 0], aspect='auto', alpha=self.trans)
                     mask_shape = list(self.voxel[self.time, self.depth, :, self.ind, :].shape)
                     mask_shape.append(3)
                     self.total_mask = np.zeros(mask_shape)
@@ -519,28 +568,34 @@ class Canvas(FigureCanvas):
                         self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
                         self.total_mask += mask * self.cmap[i]
                         artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
-                    self.im3 = self.ax1.imshow(self.total_mask, alpha=self.trans, extent=[0, self.shape[-3], 0, self.shape[-1]])
+                    img = self.total_mask
+                    self.im3 = self.ax1.imshow(img, alpha=self.trans, aspect='auto', extent=[0, img.shape[1], img.shape[0], 0])
                     if self.legendon:
-                        self.ax1.legend( handles=artists, fontsize='x-small' )
+                        self.ax1.legend(handles=artists, fontsize='x-small')
                 else:
-                    self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, :, self.ind, :], cmap='gray',
-                                                extent=[0, self.shape[-3], 0, self.shape[-1]], interpolation='sinc')
+                    img = self.voxel[self.time, self.depth, :, self.ind, :]
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    self.image_array = self.voxel[self.time, self.depth, :, self.ind, :]
                     local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
                     if not self.Y == []:
-                        self.im2 = self.ax1.imshow(self.Y[-1][self.time, self.depth, :, self.ind, :], cmap=local_cmap,
+                        img = self.Y[-1][self.time, self.depth, :, self.ind, :]
+                        self.im2 = self.ax1.imshow(img, cmap=local_cmap, aspect='auto',
                                                    alpha=self.trans,
-                                                   extent=[0, self.shape[-3], 0, self.shape[-1]])
-
-                    self.im3 = self.ax1.contourf(self.Z[-1][self.time, self.depth, :, self.ind, :], cmap=local_cmap,
-                                                 alpha=self.trans, extent=[0, self.shape[-3], self.shape[-1], 0])
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                    img = self.Z[-1][self.time, self.depth, :, self.ind, :]
+                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, aspect='auto',
+                                                 alpha=self.trans, extent=[0, img.shape[1], 0, img.shape[0]])
             except:
                 if len(self.cmap) > 1:
                     artists = []
                     patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
                     num_classes = patch_color_df['class'].count()
                     labels = list(patch_color_df.iloc[0:num_classes]['class'])
-                    self.pltc = self.ax1.imshow(self.voxel[:, self.ind, :], cmap='gray',
-                                                extent=[0, self.shape[-3], 0, self.shape[-1]], interpolation='sinc')
+                    img = self.voxel[:, self.ind, :]
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    self.image_array = self.voxel[:, self.ind, :]
                     if not self.Y == []:
                         mask_shape = list(self.voxel[:, self.ind, :].shape)
                         mask_shape.append(3)
@@ -548,8 +603,9 @@ class Canvas(FigureCanvas):
                         for i in range(len(self.cmap)):
                             mask = color.gray2rgb(self.Y[i][:, self.ind, :])
                             self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
-                            self.total_mask += mask*self.cmap[i]
-                        self.im2 = self.ax1.imshow(self.total_mask, alpha=self.trans)
+                            self.total_mask += mask * self.cmap[i]
+                        img = self.total_mask
+                        self.im2 = self.ax1.imshow(img, extent=[0, img.shape[1], img.shape[0], 0], aspect='auto', alpha=self.trans)
                     mask_shape = list(self.voxel[:, self.ind, :].shape)
                     mask_shape.append(3)
                     self.total_mask = np.zeros(mask_shape)
@@ -558,66 +614,81 @@ class Canvas(FigureCanvas):
                         self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
                         self.total_mask += mask * self.cmap[i]
                         artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
-                    self.im3 = self.ax1.imshow(self.total_mask, alpha=self.trans, extent=[0, self.shape[-3], 0, self.shape[-1]])
+                    img = self.total_mask
+                    self.im3 = self.ax1.imshow(img, alpha=self.trans, aspect='auto', extent=[0, img.shape[1], img.shape[0], 0])
                     if self.legendon:
-                        self.ax1.legend( handles=artists, fontsize='x-small' )
+                        self.ax1.legend(handles=artists, fontsize='x-small')
                 else:
-                    self.pltc = self.ax1.imshow(self.voxel[:, self.ind, :], cmap='gray',
-                                                extent=[0, self.shape[-3], 0, self.shape[-1]], interpolation='sinc')
+                    img = self.voxel[:, self.ind, :]
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    self.image_array = self.voxel[:, self.ind, :]
                     local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
                     if not self.Y == []:
-                        self.im2 = self.ax1.imshow(self.Y[-1][:, self.ind, :], cmap=local_cmap,
+                        img = self.Y[-1][:, self.ind, :]
+                        self.im2 = self.ax1.imshow(img, cmap=local_cmap, aspect='auto',
                                                    alpha=self.trans,
-                                                   extent=[0, self.shape[-3], 0, self.shape[-1]])
-
-                    self.im3 = self.ax1.contourf(self.Z[-1][:, self.ind, :], cmap=local_cmap, alpha=self.trans,
-                                                 extent=[0, self.shape[-3], self.shape[-1], 0])
-            self.draw_idle()
-
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                        img = self.Z[-1][:, self.ind, :]
+                        self.im3 = self.ax1.contourf(img, cmap=local_cmap, alpha=self.trans, aspect='auto',
+                                                     extent=[0, img.shape[1], 0, img.shape[0]])
+                        self.draw_idle()
         elif self.mode == 7:
             self.ax1.axis('off')
             try:
-                self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, :, :, self.ind], cmap='gray',
-                                            extent=[0, self.shape[-2], 0, self.shape[-3]])
+                img = self.voxel[self.time, self.depth, :, :, self.ind]
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0])
                 if not self.Y == []:
-                    self.im2 = self.ax1.imshow(self.Y[self.time, self.depth, self.ind, :, :], cmap=self.cmap, alpha=self.trans,
-                                               extent=[0, self.shape[-2], 0, self.shape[-3]])
+                    img = self.Y[self.time, self.depth, self.ind, :, :]
+                    self.im2 = self.ax1.imshow(img, cmap=self.cmap,  aspect='auto',alpha=self.trans,
+                                               extent=[0, img.shape[1], img.shape[0], 0])
             except:
-                self.pltc = self.ax1.imshow(self.voxel[:, :, self.ind], cmap='gray',
-                                            extent=[0, self.shape[-2], 0, self.shape[-3]])
+                img = self.voxel[:, :, self.ind]
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0])
                 if not self.Y == []:
-                    self.im2 = self.ax1.imshow(self.Y[:, :, self.ind], cmap=self.cmap, alpha=self.trans,
-                                               extent=[0, self.shape[-2], 0, self.shape[-3]])
+                    img = self.Y[:, :, self.ind]
+                    self.im2 = self.ax1.imshow(img, cmap=self.cmap, alpha=self.trans, aspect='auto',
+                                               extent=[0, img.shape[1], img.shape[0], 0])
             self.draw_idle()
         elif self.mode == 8:
             self.ax1.axis('off')
             try:
-                self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, self.ind, :, :], cmap='gray',
-                                            extent=[0, self.shape[-2], 0, self.shape[-1]], interpolation='sinc')
+                img = self.voxel[self.time, self.depth, self.ind, :, :]
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
                 if not self.Y == []:
-                    self.im2 = self.ax1.imshow(self.Y[self.time, self.depth, self.ind, :, :], cmap=self.cmap, alpha=self.trans,
-                                               extent=[0, self.shape[-2], self.shape[-1], 0])
+                    img = self.Y[self.time, self.depth, self.ind, :, :]
+                    self.im2 = self.ax1.imshow(img, cmap=self.cmap, alpha=self.trans, aspect='auto',
+                                               extent=[0, img.shape[1], img.shape[0], 0])
             except:
-                self.pltc = self.ax1.imshow(self.voxel[self.ind, :, :], cmap='gray',
-                                            extent=[0, self.shape[-2], 0, self.shape[-1]], interpolation='sinc')
+                img = self.voxel[self.ind, :, :]
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
                 if not self.Y == []:
-                    self.im2 = self.ax1.imshow(self.Y[self.ind, :, :], cmap=self.cmap, alpha=self.trans,
-                                               extent=[0, self.shape[-2], self.shape[-1], 0])
+                    img = self.Y[self.ind, :, :]
+                    self.im2 = self.ax1.imshow(img, cmap=self.cmap, alpha=self.trans, aspect='auto',
+                                               extent=[0, img.shape[1], img.shape[0], 0])
             self.draw_idle()
         elif self.mode == 9:
             self.ax1.axis('off')
             try:
-                self.pltc = self.ax1.imshow(self.voxel[self.time, self.depth, :, self.ind, :], cmap='gray',
-                                            extent=[0, self.shape[-3], 0, self.shape[-1]], interpolation='sinc')
+                img = self.voxel[self.time, self.depth, :, self.ind, :]
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
                 if not self.Y == []:
-                    self.im2 = self.ax1.imshow(self.Y[self.time, self.depth, :, self.ind, :], cmap=self.cmap, alpha=self.trans,
-                                               extent=[0, self.shape[-3], self.shape[-1], 0])
+                    img = self.Y[self.time, self.depth, :, self.ind, :]
+                    self.im2 = self.ax1.imshow(img, cmap=self.cmap, alpha=self.trans, aspect='auto',
+                                               extent=[0, img.shape[1], img.shape[0], 0])
             except:
-                self.pltc = self.ax1.imshow(self.voxel[:, self.ind, :], cmap='gray',
-                                            extent=[0, self.shape[-3], 0, self.shape[-1]], interpolation='sinc')
+                img = self.voxel[:, self.ind, :]
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
                 if not self.Y == []:
-                    self.im2 = self.ax1.imshow(self.Y[:, self.ind, :, 0, 0], cmap=self.cmap, alpha=self.trans,
-                                               extent=[0, self.shape[-3], self.shape[-1], 0])
+                    img = self.Y[:, self.ind, :, 0, 0]
+                    self.im2 = self.ax1.imshow(img, cmap=self.cmap, alpha=self.trans, aspect='auto',
+                                               extent=[0, img.shape[1], img.shape[0], 0])
             self.draw_idle()
 
         self.wheel_roll = False
@@ -628,6 +699,412 @@ class Canvas(FigureCanvas):
         self.graylist.append(v_max)
 
         self.new_page.emit()
+
+    def view_flip_image(self):
+
+        if self.mode == 1:
+            self.ax1.axis('off')
+            try:
+                img = np.swapaxes(self.image_array, 0, 1)
+                self.pltc = self.ax1.imshow(img,
+                                            cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0])
+            except:
+                img = np.swapaxes(self.image_array, 0, 1)
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0])
+            self.draw_idle()
+        elif self.mode == 2:
+            self.ax1.axis('off')
+            try:
+                img = np.swapaxes(self.image_array, 0, 1)
+                self.pltc = self.ax1.imshow(img,
+                                            cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+            except:
+                img = np.swapaxes(self.image_array, 0, 1)
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+            self.draw_idle()
+        elif self.mode == 3:
+            self.ax1.axis('off')
+            try:
+                img = np.swapaxes(self.image_array, 0, 1)
+                self.pltc = self.ax1.imshow(img,
+                                            cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+            except:
+                img = np.swapaxes(self.image_array, 0, 1)
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+            self.draw_idle()
+        elif self.mode == 4:
+            self.ax1.axis('off')
+            try:
+                if len(self.cmap) > 1:
+                    artists = []
+                    patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
+                    num_classes = patch_color_df['class'].count()
+                    labels = list(patch_color_df.iloc[0:num_classes]['class'])
+                    img = self.image_array
+                    self.pltc = self.ax1.imshow(img,
+                                                cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0])
+                    if not self.Y == []:
+                        mask_shape = list(self.voxel[self.time, self.depth, :, :, self.ind].shape)
+                        mask_shape.append(3)
+                        self.total_mask = np.zeros(mask_shape)
+                        for i in range(len(self.cmap)):
+                            mask = color.gray2rgb(self.Y[i][self.time, self.depth, :, :, self.ind])
+                            self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
+                            self.total_mask += mask * self.cmap[i]
+                        img = self.total_mask
+                        self.im2 = self.ax1.imshow(img, alpha=self.trans, aspect='auto',
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                    mask_shape = list(self.voxel[self.time, self.depth, :, :, self.ind].shape)
+                    mask_shape.append(3)
+                    self.total_mask = np.zeros(mask_shape)
+                    for i in range(len(self.cmap)):
+                        mask = color.gray2rgb(self.Z[i][self.time, self.depth, :, :, self.ind])
+                        self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
+                        self.total_mask += mask * self.cmap[i]
+                        artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
+                    img = self.total_mask
+                    self.im3 = self.ax1.imshow(img, alpha=self.trans, aspect='auto',
+                                               extent=[0, img.shape[1], img.shape[0], 0])
+                    if self.legendon:
+                        self.ax1.legend(handles=artists, fontsize='x-small')
+                else:
+                    img = self.image_array
+                    self.pltc = self.ax1.imshow(img, aspect='auto',
+                                                cmap='gray',
+                                                extent=[0, img.shape[1], img.shape[0], 0])
+                    local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
+                    if not self.Y == []:
+                        img = self.Y[0][self.time, self.depth, :, :, self.ind]
+                        self.im2 = self.ax1.imshow(img, aspect='auto',
+                                                   cmap=local_cmap, alpha=self.trans,
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                    img = self.Z[0][self.time, self.depth, :, :, self.ind]
+                    self.im3 = self.ax1.contourf(img, aspect='auto',
+                                                 cmap=local_cmap, alpha=self.trans,
+                                                 extent=[0, img.shape[1], 0, img.shape[0]])
+            except:
+                if len(self.cmap) > 1:
+                    artists = []
+                    patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
+                    num_classes = patch_color_df['class'].count()
+                    labels = list(patch_color_df.iloc[0:num_classes]['class'])
+                    img = self.image_array
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0])
+                    if not self.Y == []:
+                        mask_shape = list(self.voxel[:, :, self.ind].shape)
+                        mask_shape.append(3)
+                        self.total_mask = np.zeros(mask_shape)
+                        for i in range(len(self.cmap)):
+                            mask = color.gray2rgb(self.Y[i][:, :, self.ind])
+                            self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
+                            self.total_mask += mask * self.cmap[i]
+                        img = self.total_mask
+                        self.im2 = self.ax1.imshow(img, alpha=self.trans, aspect='auto',
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                    mask_shape = list(self.voxel[:, :, self.ind].shape)
+                    mask_shape.append(3)
+                    self.total_mask = np.zeros(mask_shape)
+                    for i in range(len(self.cmap)):
+                        mask = color.gray2rgb(self.Z[i][:, :, self.ind])
+                        self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
+                        self.total_mask += mask * self.cmap[i]
+                        artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
+                    img = self.total_mask
+                    self.im3 = self.ax1.imshow(img, alpha=self.trans, aspect='auto',
+                                               extent=[0, self.shape[-2], 0, self.shape[-3]])
+                    if self.legendon:
+                        self.ax1.legend(handles=artists, fontsize='x-small')
+                else:
+                    img = self.image_array
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0])
+                    local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
+                    if not self.Y == []:
+                        img = self.Y[0][:, :, self.ind]
+                        self.im2 = self.ax1.imshow(img, cmap=local_cmap, aspect='auto',
+                                                   alpha=self.trans,
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                    self.im3 = self.ax1.contourf(self.Z[0][:, :, self.ind], cmap=local_cmap,
+                                                 alpha=self.trans, aspect='auto',
+                                                 extent=[0, img.shape[1], 0, img.shape[0]])
+            self.draw_idle()
+        elif self.mode == 5:
+            self.ax1.axis('off')
+            try:
+                if len(self.cmap) > 1:
+                    artists = []
+                    patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
+                    num_classes = patch_color_df['class'].count()
+                    labels = list(patch_color_df.iloc[0:num_classes]['class'])
+                    img = self.image_array
+                    self.pltc = self.ax1.imshow(img, aspect='auto',
+                                                cmap='gray',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    if not self.Y == []:
+                        mask_shape = list(self.voxel[self.time, self.depth, self.ind, :, :].shape)
+                        mask_shape.append(3)
+                        self.total_mask = np.zeros(mask_shape)
+                        for i in range(len(self.cmap)):
+                            mask = color.gray2rgb(self.Y[i][self.time, self.depth, self.ind, :, :])
+                            self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
+                            self.total_mask += mask * self.cmap[i]
+                        img = self.total_mask
+                        self.im2 = self.ax1.imshow(img,  aspect='auto', extent=[0, img.shape[1], img.shape[0], 0], alpha=self.trans)
+                    mask_shape = list(self.voxel[self.time, self.depth, self.ind, :, :].shape)
+                    mask_shape.append(3)
+                    self.total_mask = np.zeros(mask_shape)
+                    for i in range(len(self.cmap)):
+                        mask = color.gray2rgb(self.Z[i][self.time, self.depth, self.ind, :, :])
+                        self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
+                        self.total_mask += mask * self.cmap[i]
+                        artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
+                    img = self.total_mask
+                    self.im3 = self.ax1.imshow(img, alpha=self.trans, aspect='auto',
+                                               extent=[0, self.shape[-2], 0, self.shape[-1]])
+                    if self.legendon:
+                        self.ax1.legend(handles=artists, fontsize='x-small')
+                else:
+                    img = self.image_array
+                    self.pltc = self.ax1.imshow(img, aspect='auto',
+                                                cmap='gray',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
+                    if not self.Y == []:
+                        img = self.Y[-1][self.time, self.depth, self.ind, :, :]
+                        self.im2 = self.ax1.imshow(img, aspect='auto',
+                                                   cmap=local_cmap, alpha=self.trans,
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                    img = self.Z[-1][self.time, self.depth, self.ind, :, :]
+                    self.im3 = self.ax1.contourf(img,
+                                                 cmap=local_cmap, aspect='auto',
+                                                 alpha=self.trans, extent=[0, img.shape[1], 0, img.shape[0]])
+            except:
+                if len(self.cmap) > 1:
+                    artists = []
+                    patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
+                    num_classes = patch_color_df['class'].count()
+                    labels = list(patch_color_df.iloc[0:num_classes]['class'])
+                    img = self.image_array
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    if not self.Y == []:
+                        mask_shape = list(self.voxel[self.ind, :, :].shape)
+                        mask_shape.append(3)
+                        self.total_mask = np.zeros(mask_shape)
+                        for i in range(len(self.cmap)):
+                            mask = color.gray2rgb(self.Y[i][self.ind, :, :])
+                            self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
+                            self.total_mask += mask * self.cmap[i]
+                        img = self.total_mask
+                        self.im2 = self.ax1.imshow(img, aspect='auto', extent=[0, img.shape[1], img.shape[0], 0], alpha=self.trans)
+                    mask_shape = list(self.voxel[self.ind, :, :].shape)
+                    mask_shape.append(3)
+                    self.total_mask = np.zeros(mask_shape)
+                    for i in range(len(self.cmap)):
+                        mask = color.gray2rgb(self.Z[i][self.ind, :, :])
+                        self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
+                        self.total_mask += mask * self.cmap[i]
+                        artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
+                    img = self.total_mask
+                    self.im3 = self.ax1.imshow(img, alpha=self.trans, aspect='auto',
+                                               extent=[0, img.shape[1], img.shape[0], 0])
+                    if self.legendon:
+                        self.ax1.legend(handles=artists, fontsize='x-small')
+                else:
+                    img = self.image_array
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
+                    if not self.Y == []:
+                        img = self.Y[-1][self.ind, :, :]
+                        self.im2 = self.ax1.imshow(img, cmap=local_cmap,
+                                                   alpha=self.trans, aspect='auto',
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                    img = self.Z[-1][self.ind, :, :]
+                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, alpha=self.trans,
+                                                 extent=[0, img.shape[1], 0, img.shape[0]])
+            self.draw_idle()
+        elif self.mode == 6:
+            self.ax1.axis('off')
+            try:
+                if len(self.cmap) > 1:
+                    artists = []
+                    patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
+                    num_classes = patch_color_df['class'].count()
+                    labels = list(patch_color_df.iloc[0:num_classes]['class'])
+                    img = self.image_array
+                    self.pltc = self.ax1.imshow(img, aspect='auto',
+                                                cmap='gray',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    if not self.Y == []:
+                        mask_shape = list(self.voxel[self.time, self.depth, :, self.ind, :].shape)
+                        mask_shape.append(3)
+                        self.total_mask = np.zeros(mask_shape)
+                        for i in range(len(self.cmap)):
+                            mask = color.gray2rgb(self.Y[i][self.time, self.depth, :, self.ind, :])
+                            self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
+                            self.total_mask += mask * self.cmap[i]
+                        img = self.total_mask
+                        self.im2 = self.ax1.imshow(img, extent=[0, img.shape[1], img.shape[0], 0], aspect='auto', alpha=self.trans)
+                    mask_shape = list(self.voxel[self.time, self.depth, :, self.ind, :].shape)
+                    mask_shape.append(3)
+                    self.total_mask = np.zeros(mask_shape)
+                    for i in range(len(self.cmap)):
+                        mask = color.gray2rgb(self.Z[i][self.time, self.depth, :, self.ind, :])
+                        self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
+                        self.total_mask += mask * self.cmap[i]
+                        artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
+                    img = self.total_mask
+                    self.im3 = self.ax1.imshow(img, alpha=self.trans, aspect='auto',
+                                               extent=[0, img.shape[1], img.shape[0], 0])
+                    if self.legendon:
+                        self.ax1.legend(handles=artists, fontsize='x-small')
+                else:
+                    img = self.image_array
+                    self.pltc = self.ax1.imshow(img,
+                                                cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
+                    if not self.Y == []:
+                        img = self.image_array
+                        self.im2 = self.ax1.imshow(img,
+                                                   cmap=local_cmap,
+                                                   alpha=self.trans, aspect='auto',
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                    img = self.Z[-1][self.time, self.depth, :, self.ind, :]
+                    self.im3 = self.ax1.contourf(img,
+                                                 cmap=local_cmap, aspect='auto',
+                                                 alpha=self.trans, extent=[0, img.shape[1], 0, img.shape[0]])
+            except:
+                if len(self.cmap) > 1:
+                    artists = []
+                    patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
+                    num_classes = patch_color_df['class'].count()
+                    labels = list(patch_color_df.iloc[0:num_classes]['class'])
+                    img = self.image_array
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    if not self.Y == []:
+                        mask_shape = list(self.voxel[:, self.ind, :].shape)
+                        mask_shape.append(3)
+                        self.total_mask = np.zeros(mask_shape)
+                        for i in range(len(self.cmap)):
+                            mask = color.gray2rgb(self.Y[i][:, self.ind, :])
+                            self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
+                            self.total_mask += mask * self.cmap[i]
+                        img = self.total_mask
+                        self.im2 = self.ax1.imshow(img,  aspect='auto', extent=[0, img.shape[1], img.shape[0], 0], alpha=self.trans)
+                    mask_shape = list(self.voxel[:, self.ind, :].shape)
+                    mask_shape.append(3)
+                    self.total_mask = np.zeros(mask_shape)
+                    for i in range(len(self.cmap)):
+                        mask = color.gray2rgb(self.Z[i][:, self.ind, :])
+                        self.cmap[i] = matplotlib.colors.to_rgb(self.cmap[i])
+                        self.total_mask += mask * self.cmap[i]
+                        artists.append(Patch(facecolor=self.cmap[i], label=labels[i]))
+                    img = self.total_mask
+                    self.im3 = self.ax1.imshow(img, alpha=self.trans, aspect='auto',
+                                               extent=[0, img.shape[1], img.shape[0], 0])
+                    if self.legendon:
+                        self.ax1.legend(handles=artists, fontsize='x-small')
+                else:
+                    img = self.image_array
+                    self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                                extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                    local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
+                    if not self.Y == []:
+                        img = self.Y[-1][:, self.ind, :]
+                        self.im2 = self.ax1.imshow(img, cmap=local_cmap,
+                                                   alpha=self.trans, aspect='auto',
+                                                   extent=[0, img.shape[1], img.shape[0], 0])
+                    img = self.Z[-1][:, self.ind, :]
+                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, alpha=self.trans, aspect='auto',
+                                                 extent=[0, img.shape[1], 0, img.shape[0]])
+            self.draw_idle()
+
+        elif self.mode == 7:
+            self.ax1.axis('off')
+            try:
+                img = self.image_array
+                self.pltc = self.ax1.imshow(img,
+                                            cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0])
+                if not self.Y == []:
+                    img = self.Y[self.time, self.depth, self.ind, :, :]
+                    self.im2 = self.ax1.imshow(img,
+                                               cmap=self.cmap, alpha=self.trans, aspect='auto',
+                                               extent=[0, img.shape[1], img.shape[0], 0])
+            except:
+                img = self.image_array
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0])
+                if not self.Y == []:
+                    img = self.Y[:, :, self.ind]
+                    self.im2 = self.ax1.imshow(img, cmap=self.cmap, aspect='auto',
+                                               alpha=self.trans,
+                                               extent=[0, img.shape[1], img.shape[0], 0])
+            self.draw_idle()
+        elif self.mode == 8:
+            self.ax1.axis('off')
+            try:
+                img = self.image_array
+                self.pltc = self.ax1.imshow(img,
+                                            cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0],  interpolation='sinc')
+                if not self.Y == []:
+                    img = self.Y[self.time, self.depth, self.ind, :, :]
+                    self.im2 = self.ax1.imshow(img,
+                                               cmap=self.cmap, alpha=self.trans, aspect='auto',
+                                               extent=[0, img.shape[1], img.shape[0], 0])
+            except:
+                img = self.image_array
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                if not self.Y == []:
+                    img = self.Y[self.ind, :, :]
+                    self.im2 = self.ax1.imshow(img, cmap=self.cmap, aspect='auto',
+                                               alpha=self.trans,
+                                               extent=[0, img.shape[1], img.shape[0], 0])
+            self.draw_idle()
+        elif self.mode == 9:
+            self.ax1.axis('off')
+            try:
+                img = self.image_array
+                self.pltc = self.ax1.imshow(img,
+                                            cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                if not self.Y == []:
+                    img = self.Y[self.time, self.depth, :, self.ind, :]
+                    self.im2 = self.ax1.imshow(img,
+                                               cmap=self.cmap, alpha=self.trans,
+                                               extent=[0, img.shape[1], img.shape[0], 0])
+            except:
+                img = self.image_array
+                self.pltc = self.ax1.imshow(img, cmap='gray', aspect='auto',
+                                            extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
+                if not self.Y == []:
+                    img = self.Y[:, self.ind, :, 0, 0]
+                    self.im2 = self.ax1.imshow(img, cmap=self.cmap, aspect='auto',
+                                               alpha=self.trans,
+                                               extent=[0, img.shape[1], img.shape[0], 0])
+            self.draw_idle()
+
+        self.wheel_roll = False
+
+    def get_image_array(self):
+        return self.image_array
+
+    def set_image_array(self, array):
+        self.image_array = array
+        self.view_flip_image()
 
     def set_selected(self, shape):
 
@@ -652,7 +1129,7 @@ class Canvas(FigureCanvas):
     def get_selected(self):
         return self.selectedShape
 
-    def selectShape(self,event):
+    def selectShape(self, event):
 
         self.deSelectShape()
         self.picked = True
@@ -683,8 +1160,8 @@ class Canvas(FigureCanvas):
         plist = ', '.join(str(x) for x in plist)
 
         self.df = pandas.read_csv('Markings/marking_records.csv')
-        if not self.df[self.df['artist']==str(self.selectedShape)].index.values.astype(int) == []:
-            self.selectind = self.df[self.df['artist']==str(self.selectedShape)].index.values.astype(int)[0]
+        if not self.df[self.df['artist'] == str(self.selectedShape)].index.values.astype(int) == []:
+            self.selectind = self.df[self.df['artist'] == str(self.selectedShape)].index.values.astype(int)[0]
         else:
             pass
         color = self.df.iloc[self.selectind]['labelcolor']
@@ -700,17 +1177,19 @@ class Canvas(FigureCanvas):
 
         self.selectionChanged.emit(True)
 
-        canvas = self.selectedShape.figure.canvas
-        axes = self.selectedShape.axes
-        self.background = canvas.copy_from_bbox(self.selectedShape.axes.bbox)
-        canvas.restore_region(self.background)
-
-        axes.draw_artist(self.selectedShape)
-        axes.draw_artist(self._corner_handles.artist)
-        axes.draw_artist(self._edge_handles.artist)
-        axes.draw_artist(self._center_handle.artist)
-        # blit just the redrawn area
-        canvas.blit(axes.bbox)
+        try:
+            canvas = self.selectedShape.get_figure().canvas
+            axes = self.selectedShape.axes
+            self.background = canvas.copy_from_bbox(self.selectedShape.axes.bbox)
+            canvas.restore_region(self.background)
+            axes.draw_artist(self.selectedShape)
+            axes.draw_artist(self._corner_handles.artist)
+            axes.draw_artist(self._edge_handles.artist)
+            axes.draw_artist(self._center_handle.artist)
+            # blit just the redrawn area
+            canvas.blit(axes.bbox)
+        except:
+            pass
 
     def deSelectShape(self):
         self.picked = False
@@ -728,11 +1207,13 @@ class Canvas(FigureCanvas):
         self.to_draw = artist
 
         xc, yc = self.get_corners()
-        self._corner_handles = ToolHandles(self.ax1, xc, yc, marker = 'o', marker_props=self.toggle_selector_RS.get_props(), useblit=True)
+        self._corner_handles = ToolHandles(self.ax1, xc, yc, marker='o',
+                                           marker_props=self.toggle_selector_RS.get_props(), useblit=True)
 
         self._corner_handles.set_visible(True)
         xe, ye = self.get_edge_centers()
-        self._edge_handles = ToolHandles(self.ax1, xe, ye, marker = 'o', marker_props=self.toggle_selector_RS.get_props(), useblit=True)
+        self._edge_handles = ToolHandles(self.ax1, xe, ye, marker='o', marker_props=self.toggle_selector_RS.get_props(),
+                                         useblit=True)
         self._edge_handles.set_visible(True)
 
         xc, yc = self.get_center()
@@ -818,16 +1299,19 @@ class Canvas(FigureCanvas):
         self._edge_handles.set_data(self.get_edge_centers())
         self._center_handle.set_data(self.get_center())
 
-        canvas = self.to_draw.figure.canvas
-        axes = self.to_draw.axes
-        canvas.restore_region(self.background)
+        try:
+            canvas = self.to_draw.get_figure().canvas
+            axes = self.to_draw.axes
+            canvas.restore_region(self.background)
 
-        axes.draw_artist(self.to_draw)
-        axes.draw_artist(self._corner_handles.artist)
-        axes.draw_artist(self._edge_handles.artist)
-        axes.draw_artist(self._center_handle.artist)
-        # blit just the redrawn area
-        canvas.blit(axes.bbox)
+            axes.draw_artist(self.to_draw)
+            axes.draw_artist(self._corner_handles.artist)
+            axes.draw_artist(self._edge_handles.artist)
+            axes.draw_artist(self._center_handle.artist)
+            # blit just the redrawn area
+            canvas.blit(axes.bbox)
+        except:
+            pass
 
         self.df = pandas.read_csv('Markings/marking_records.csv')
         if type(self.to_draw) is Rectangle or Ellipse:
@@ -880,7 +1364,8 @@ class Canvas(FigureCanvas):
             return np.array([x, y])
         else:
             return np.array(self.to_draw.get_data())
-##
+
+    ##
     def mouse_clicked(self, event):
         if event.button == 2:
             self.x_clicked = event.x
@@ -904,21 +1389,25 @@ class Canvas(FigureCanvas):
         if not contains: return
 
         # draw everything but the selected rectangle and store the pixel buffer
-        canvas = self.selectedShape.figure.canvas
-        axes = self.selectedShape.axes
-        self.to_draw.set_animated(True)
 
-        canvas.draw()
+        try:
+            canvas = self.selectedShape.get_figure().canvas
+            axes = self.selectedShape.axes
+            self.to_draw.set_animated(True)
 
-        self.background = canvas.copy_from_bbox(self.selectedShape.axes.bbox)
+            canvas.draw()
 
-        #canvas.restore_region(self.background)
-        axes.draw_artist(self.to_draw)
-        axes.draw_artist(self._corner_handles.artist)
-        axes.draw_artist(self._edge_handles.artist)
-        axes.draw_artist(self._center_handle.artist)
-        # blit just the redrawn area
-        canvas.blit(axes.bbox)
+            self.background = canvas.copy_from_bbox(self.selectedShape.axes.bbox)
+
+            # canvas.restore_region(self.background)
+            axes.draw_artist(self.to_draw)
+            axes.draw_artist(self._corner_handles.artist)
+            axes.draw_artist(self._edge_handles.artist)
+            axes.draw_artist(self._center_handle.artist)
+            # blit just the redrawn area
+            canvas.blit(axes.bbox)
+        except:
+            pass
 
         self.df = pandas.read_csv('Markings/marking_records.csv')
         if type(self.to_draw) is Rectangle or Ellipse:
@@ -957,7 +1446,7 @@ class Canvas(FigureCanvas):
             if v_min < v_max:
                 self.gchange[0] = __vmin
                 self.gchange[1] = __vmax
-                self.grey_link.emit(self.gchange)   ###
+                self.grey_link.emit(self.gchange)  ###
 
                 self.pltc.set_clim(vmin=v_min, vmax=v_max)
                 self.graylist[0] = v_min.round(2)
@@ -994,7 +1483,7 @@ class Canvas(FigureCanvas):
                 y2 = event.ydata
 
         # move existing shape
-        elif (self.active_handle == 'C'and self._extents_on_press is not None):
+        elif (self.active_handle == 'C' and self._extents_on_press is not None):
             x1, x2, y1, y2 = self._extents_on_press
             dx = event.xdata - self.pressEvent.xdata
             dy = event.ydata - self.pressEvent.ydata
@@ -1017,7 +1506,6 @@ class Canvas(FigureCanvas):
                               center[1] - dy, center[1] + dy)
 
         self.set_extents(extents=[x1, x2, y1, y2])
-
 
     def current_cursor(self):
         cursor = QApplication.overrideCursor()
@@ -1076,17 +1564,20 @@ class Canvas(FigureCanvas):
         self.set_state(1)
         # turn off the rect animation property and reset the background
         self.to_draw.set_animated(False)
-        canvas = self.to_draw.figure.canvas
-        axes = self.to_draw.axes
-        self.background = canvas.copy_from_bbox(self.selectedShape.axes.bbox)
-        canvas.restore_region(self.background)
+        try:
+            canvas = self.to_draw.get_figure().canvas
+            axes = self.to_draw.axes
+            self.background = canvas.copy_from_bbox(self.selectedShape.axes.bbox)
+            canvas.restore_region(self.background)
 
-        axes.draw_artist(self.to_draw)
-        axes.draw_artist(self._corner_handles.artist)
-        axes.draw_artist(self._edge_handles.artist)
-        axes.draw_artist(self._center_handle.artist)
-        # blit just the redrawn area
-        canvas.blit(axes.bbox)
+            axes.draw_artist(self.to_draw)
+            axes.draw_artist(self._corner_handles.artist)
+            axes.draw_artist(self._edge_handles.artist)
+            axes.draw_artist(self._center_handle.artist)
+            # blit just the redrawn area
+            canvas.blit(axes.bbox)
+        except:
+            pass
 
         self.df = pandas.read_csv('Markings/marking_records.csv')
         if type(self.to_draw) is Rectangle or Ellipse:
@@ -1104,18 +1595,18 @@ class Canvas(FigureCanvas):
         if self.labelon:
             self.setToolTip(name)
 
-    def set_cursor2D(self,cursoron):
+    def set_cursor2D(self, cursoron):
         self.cursor2D.set_visible(cursoron)
 
     def set_cursor_position(self, x, y):
         self.cursor2D.set_position(x, y)
 
-    def set_facecolor(self,color):
-        if self.label_shape()==1:
+    def set_facecolor(self, color):
+        if self.label_shape() == 1:
             self.toggle_selector_RS.set_facecolor(color)
-        elif self.label_shape()==2:
+        elif self.label_shape() == 2:
             self.toggle_selector_ES.set_facecolor(color)
-        elif self.label_shape()==3:
+        elif self.label_shape() == 3:
             self.toggle_selector_LS.set_facecolor(color)
 
     def drawing(self):
@@ -1141,7 +1632,6 @@ class Canvas(FigureCanvas):
         self.gray_data.emit(glist)
         self.figure.canvas.draw()
 
-
     def set_color(self):
 
         self.voxel = self.param.get('image')
@@ -1161,7 +1651,7 @@ class Canvas(FigureCanvas):
             self.view_image()
         else:
             for item in self.ax1.get_children():
-                if not type(item)== AxesImage:
+                if not type(item) == AxesImage:
                     self.artist_list.append(item)
             for artist in self.artist_list:
                 artist.set_alpha(value)
@@ -1251,7 +1741,6 @@ class Canvas(FigureCanvas):
         self.df.loc[df_rows, 'path'] = plist
         self.df.loc[df_rows, 'status'] = 0
         self.df.to_csv('Markings/marking_records.csv', index=False)
-        self.labelpath.emit(plist)
 
     def ell_onselect(self, eclick, erelease):
         x1, y1 = eclick.xdata, eclick.ydata
@@ -1278,7 +1767,6 @@ class Canvas(FigureCanvas):
         self.df.loc[df_rows, 'path'] = plist
         self.df.loc[df_rows, 'status'] = 0
         self.df.to_csv('Markings/marking_records.csv', index=False)
-        self.labelpath.emit( plist )
 
     def lasso_onselect(self, verts):
         self.pathlasso = path.Path(verts)
@@ -1286,11 +1774,11 @@ class Canvas(FigureCanvas):
         self.ax1.add_patch(patch)
         self.figure.canvas.draw()
         if self.mode == 1 or self.mode == 4 or self.mode == 7:
-            onslice = 'Z %s' % (self.ind+1)
+            onslice = 'Z %s' % (self.ind + 1)
         elif self.mode == 2 or self.mode == 5 or self.mode == 8:
-            onslice = 'X %s' % (self.ind+1)
+            onslice = 'X %s' % (self.ind + 1)
         elif self.mode == 3 or self.mode == 6 or self.mode == 9:
-            onslice = 'Y %s' % (self.ind+1)
+            onslice = 'Y %s' % (self.ind + 1)
         self.df = pandas.read_csv('Markings/marking_records.csv')
         df_size = pandas.DataFrame.count(self.df)
         df_rows = df_size['artist']
@@ -1298,11 +1786,10 @@ class Canvas(FigureCanvas):
         plist = np.ndarray.tolist(self.pathlasso.vertices)
         plist = ', '.join(str(x) for x in plist)
         self.df.loc[df_rows, 'labelshape'] = 'lasso'
-        self.df.loc[df_rows,'slice'] = onslice
-        self.df.loc[df_rows,'path'] = plist
+        self.df.loc[df_rows, 'slice'] = onslice
+        self.df.loc[df_rows, 'path'] = plist
         self.df.loc[df_rows, 'status'] = 0
         self.df.to_csv('Markings/marking_records.csv', index=False)
-        self.labelpath.emit( plist )
 
     def rec_toggle_selector_on(self):
         self.toggle_selector_RS.set_active(True)
@@ -1363,6 +1850,7 @@ class Canvas(FigureCanvas):
         else:
             return False
 
+
 class Cursor(AxesWidget):
 
     def __init__(self, ax, horizOn=True, vertOn=True, useblit=False,
@@ -1399,7 +1887,7 @@ class Cursor(AxesWidget):
 
         self._update()
 
-    def set_position(self,x,y):
+    def set_position(self, x, y):
         self.linev.set_xdata((x, x))
         self.lineh.set_ydata((y, y))
         self.linev.set_visible(self.visible and self.vertOn)
@@ -1457,6 +1945,7 @@ class Cursor(AxesWidget):
 
         return False
 
+
 class _SelectorWidget(AxesWidget):
 
     def __init__(self, ax, onselect, useblit=False, button=None,
@@ -1492,7 +1981,7 @@ class _SelectorWidget(AxesWidget):
             return self._active
 
         self.active = property(get_active, lambda self, active: self.set_active(active),
-                          doc="Is the widget active?")
+                               doc="Is the widget active?")
 
     def set_active(self, active):
         self._active = self.active
@@ -1700,8 +2189,8 @@ class _SelectorWidget(AxesWidget):
                 select.append(artist)
             return select
 
-class RectangleSelector(_SelectorWidget):
 
+class RectangleSelector(_SelectorWidget):
     _shape_klass = Rectangle
     new_shape = False
 
@@ -1710,7 +2199,6 @@ class RectangleSelector(_SelectorWidget):
                  lineprops=None, rectprops=None, spancoords='data',
                  button=None, maxdist=10, marker_props=None,
                  state_modifier_keys=None):
-
 
         _SelectorWidget.__init__(self, ax, onselect, useblit=useblit,
                                  button=button,
@@ -1723,12 +2211,12 @@ class RectangleSelector(_SelectorWidget):
         self.linev = ax.axvline(ax.get_xbound()[0], visible=False, color='blue', linestyle='dashed')
 
         if drawtype == 'none':
-            drawtype = 'line'                        # draw a line but make it
-            self.visible = False                     # invisible
+            drawtype = 'line'  # draw a line but make it
+            self.visible = False  # invisible
 
         if drawtype == 'box':
             if rectprops is None:
-                rectprops = dict(edgecolor=None,alpha=0.2, fill=True)
+                rectprops = dict(edgecolor=None, alpha=0.2, fill=True)
 
             rectprops['animated'] = self.useblit
             self.rectprops = rectprops
@@ -1780,8 +2268,8 @@ class RectangleSelector(_SelectorWidget):
 
         if self.active_handle is not None:
             self.artists = [self.to_draw, self._center_handle.artist,
-                        self._corner_handles.artist,
-                        self._edge_handles.artist]
+                            self._corner_handles.artist,
+                            self._edge_handles.artist]
         else:
             self.artists = [self.to_draw]
 
@@ -1877,7 +2365,7 @@ class RectangleSelector(_SelectorWidget):
                 y2 = event.ydata
 
         # move existing shape
-        elif (self.active_handle == 'C'and self._extents_on_press is not None):
+        elif (self.active_handle == 'C' and self._extents_on_press is not None):
             x1, x2, y1, y2 = self._extents_on_press
             dx = event.xdata - self.eventpress.xdata
             dy = event.ydata - self.eventpress.ydata
@@ -1941,7 +2429,7 @@ class RectangleSelector(_SelectorWidget):
     def get_props(self):
         return self.props
 
-    def set_facecolor(self,color):
+    def set_facecolor(self, color):
         self.to_draw.set_facecolor(color)
         self.update()
 
@@ -2039,8 +2527,8 @@ class RectangleSelector(_SelectorWidget):
         else:
             return np.array(self.to_draw.get_data())
 
-class EllipseSelector(RectangleSelector):
 
+class EllipseSelector(RectangleSelector):
     _shape_klass = Ellipse
     new_shape = False
 
@@ -2075,8 +2563,8 @@ class EllipseSelector(RectangleSelector):
             y0, y1 = min(y), max(y)
             return x0, y0, x1 - x0, y1 - y0
 
-class LassoSelector(_SelectorWidget):
 
+class LassoSelector(_SelectorWidget):
     new_shape = False
 
     def __init__(self, ax, onselect=None, useblit=True, lineprops=None,
