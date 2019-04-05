@@ -47,7 +47,7 @@ def fTrainInner(sOutPath, model, sModelName, patchSize=None, sInPaths=None, sInP
     model_all = model_name + '_model.h5'
     model_mat = model_name + '.mat'
 
-    if os.path.isfile(model_mat):  # no training if output file exists
+    if (os.path.isfile(model_mat)):  # no training if output file exists
         print('----------already trained->go to next----------')
         return
 
@@ -134,58 +134,92 @@ def fPredict(X, y, sModelPath, sOutPath, batchSize=64):
 
 def fCreateModel(patchSize, learningRate=1e-3, optimizer='SGD',
                  dr_rate=0.0, input_dr_rate=0.0, max_norm=5, iPReLU=0, l2_reg=1e-6):
-    # change to functional API
+    l2_reg = 1e-4
+    # using SGD lr 0.001
+    # motion_head:unkorrigierte Version 3steps with only type(1,1,1)(149K params)--> val_loss: 0.2157 - val_acc: 0.9230
+    # motion_head:korrigierte Version type(1,2,2)(266K params) --> val_loss: 0.2336 - val_acc: 0.9149 nach abbruch...
+    # double_#channels(type 122) (870,882 params)>
+    # functional api...
     input_t = Input(shape=(1, int(patchSize[0, 0]), int(patchSize[0, 1]), int(patchSize[0, 2])))
-    seq_t = Dropout(dr_rate)(input_t)
-    seq_t = Conv3D(32,  # numChans
-                   kernel_size=(14, 14, 5),
-                   kernel_initializer='he_normal',
-                   weights=None,
-                   padding='valid',
-                   strides=(1, 1, 1),
-                   kernel_regularizer=l2(l2_reg),
-                   input_shape=(1, int(patchSize[0, 0]), int(patchSize[0, 1]), int(patchSize[0, 2]))
-                   )(seq_t)
-    seq_t = fGetActivation(seq_t, iPReLU=iPReLU)
 
-    seq_t = Dropout(dr_rate)(seq_t)
-    seq_t = Conv3D(64,
-                   kernel_size=(7, 7, 3),
-                   kernel_initializer='he_normal',
-                   weights=None,
-                   padding='valid',
-                   strides=(1, 1, 1),
-                   kernel_regularizer=l2(l2_reg))(seq_t)
+    after_res1_t = fCreateVNet_Block(input_t, 32, type=2, iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+    after_DownConv1_t = fCreateVNet_DownConv_Block(after_res1_t, after_res1_t._keras_shape[1], (2, 2, 2),
+                                                   iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
 
-    seq_t = fGetActivation(seq_t, iPReLU=iPReLU)
+    after_res2_t = fCreateVNet_Block(after_DownConv1_t, 64, type=2, iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+    after_DownConv2_t = fCreateVNet_DownConv_Block(after_res2_t, after_res2_t._keras_shape[1], (2, 2, 1),
+                                                   iPReLU=iPReLU, l2_reg=l2_reg, dr_rate=dr_rate)
 
-    seq_t = Dropout(dr_rate)(seq_t)
-    seq_t = Conv3D(128,
-                   kernel_size=(3, 3, 2),
-                   kernel_initializer='he_normal',
-                   weights=None,
-                   padding='valid',
-                   strides=(1, 1, 1),
-                   kernel_regularizer=l2(l2_reg))(seq_t)
+    after_res3_t = fCreateVNet_Block(after_DownConv2_t, 128, type=2, iPReLU=iPReLU, dr_rate=dr_rate, l2_reg=l2_reg)
+    after_DownConv3_t = fCreateVNet_DownConv_Block(after_res3_t, after_res3_t._keras_shape[1], (2, 2, 1),
+                                                   iPReLU=iPReLU, l2_reg=l2_reg, dr_rate=dr_rate)
 
-    seq_t = fGetActivation(seq_t, iPReLU=iPReLU)
-
-    seq_t = Flatten()(seq_t)
-
-    seq_t = Dropout(dr_rate)(seq_t)
-    seq_t = Dense(units=2,
-                  kernel_initializer='normal',
-                  kernel_regularizer=l2(l2_reg))(seq_t)
-    output_t = Activation('softmax')(seq_t)
-
-    opti, loss = fGetOptimizerAndLoss(optimizer, learningRate=learningRate)  # loss cat_crosent default
+    after_flat_t = Flatten()(after_DownConv3_t)
+    after_dense_t = Dropout(dr_rate)(after_flat_t)
+    after_dense_t = Dense(units=2,
+                          kernel_initializer='normal',
+                          kernel_regularizer=l2(l2_reg))(after_dense_t)
+    output_t = Activation('softmax')(after_dense_t)
 
     cnn = Model(inputs=[input_t], outputs=[output_t])
-    cnn.compile(loss=loss, optimizer=opti, metrics=['accuracy'])
-    sArchiSpecs = '_l2{}'.format(l2_reg)
+
+    opti, loss = fGetOptimizerAndLoss(optimizer, learningRate=learningRate)  # loss cat_crosent default
+    cnn.compile(optimizer=opti, loss=loss, metrics=['accuracy'])
+    sArchiSpecs = '_t222_l2{}_dr{}'.format(l2_reg, dr_rate)
 
 
-####################################################################helpers#############################################
+def fGetActivation(input_t, iPReLU=0):
+    init = 0.25
+    if iPReLU == 1:  # one alpha for each channel
+        output_t = PReLU(alpha_initializer=Constant(value=init), shared_axes=[2, 3, 4])(input_t)
+    elif iPReLU == 2:  # just one alpha for each layer
+        output_t = PReLU(alpha_initializer=Constant(value=init), shared_axes=[2, 3, 4, 1])(input_t)
+    else:
+        output_t = Activation('relu')(input_t)
+    return output_t
+
+
+def fCreateVNet_DownConv_Block(input_t, channels, stride, l1_reg=0.0, l2_reg=1e-6, iPReLU=0, dr_rate=0):
+    output_t = Dropout(dr_rate)(input_t)
+    output_t = Conv3D(channels,
+                      kernel_size=stride,
+                      strides=stride,
+                      weights=None,
+                      padding='valid',
+                      kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                      kernel_initializer='he_normal'
+                      )(output_t)
+    output_t = fGetActivation(output_t, iPReLU=iPReLU)
+    return output_t
+
+
+def fCreateVNet_Block(input_t, channels, type=1, kernel_size=(3, 3, 3), l1_reg=0.0, l2_reg=1e-6, iPReLU=0, dr_rate=0):
+    tower_t = Dropout(dr_rate)(input_t)
+    tower_t = Conv3D(channels,
+                     kernel_size=kernel_size,
+                     kernel_initializer='he_normal',
+                     weights=None,
+                     padding='same',
+                     strides=(1, 1, 1),
+                     kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                     )(tower_t)
+
+    tower_t = fGetActivation(tower_t, iPReLU=iPReLU)
+    for counter in range(1, type):
+        tower_t = Dropout(dr_rate)(tower_t)
+        tower_t = Conv3D(channels,
+                         kernel_size=kernel_size,
+                         kernel_initializer='he_normal',
+                         weights=None,
+                         padding='same',
+                         strides=(1, 1, 1),
+                         kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                         )(tower_t)
+        tower_t = fGetActivation(tower_t, iPReLU=iPReLU)
+    tower_t = concatenate([tower_t, input_t], axis=1)
+    return tower_t
+
+
 def fGetOptimizerAndLoss(optimizer, learningRate=0.001, loss='categorical_crossentropy'):
     if optimizer not in ['Adam', 'SGD', 'Adamax', 'Adagrad', 'Adadelta', 'Nadam', 'RMSprop']:
         print('this optimizer does not exist!!!')
@@ -211,14 +245,3 @@ def fGetOptimizerAndLoss(optimizer, learningRate=0.001, loss='categorical_crosse
     elif optimizer == 'RMSprop':
         opti = keras.optimizers.RMSprop(lr=learningRate)
     return opti, loss
-
-
-def fGetActivation(input_t, iPReLU=0):
-    init = 0.25
-    if iPReLU == 1:  # one alpha for each channel
-        output_t = PReLU(alpha_initializer=Constant(value=init), shared_axes=[2, 3, 4])(input_t)
-    elif iPReLU == 2:  # just one alpha for each layer
-        output_t = PReLU(alpha_initializer=Constant(value=init), shared_axes=[2, 3, 4, 1])(input_t)
-    else:
-        output_t = Activation('relu')(input_t)
-    return output_t

@@ -4,7 +4,7 @@ import keras
 import keras.optimizers
 from keras.models import Sequential, Model
 from keras.layers import Input
-from keras.layers.core import Dense, Activation, Flatten, Dropout, Lambda, Reshape
+from keras.layers.core import Dense, Activation, Flatten, Dropout, Lambda, Reshape, Permute
 from keras.activations import relu, elu, softmax
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.initializers import Constant
@@ -47,7 +47,7 @@ def fTrainInner(sOutPath, model, sModelName, patchSize=None, sInPaths=None, sInP
     model_all = model_name + '_model.h5'
     model_mat = model_name + '.mat'
 
-    if os.path.isfile(model_mat):  # no training if output file exists
+    if (os.path.isfile(model_mat)):  # no training if output file exists
         print('----------already trained->go to next----------')
         return
 
@@ -134,58 +134,59 @@ def fPredict(X, y, sModelPath, sOutPath, batchSize=64):
 
 def fCreateModel(patchSize, learningRate=1e-3, optimizer='SGD',
                  dr_rate=0.0, input_dr_rate=0.0, max_norm=5, iPReLU=0, l2_reg=1e-6):
-    # change to functional API
+    l2_reg = 1e-4
+
+    # (4 stages-each 2 convs)(378,722 params)(for 40x40x10)
     input_t = Input(shape=(1, int(patchSize[0, 0]), int(patchSize[0, 1]), int(patchSize[0, 2])))
-    seq_t = Dropout(dr_rate)(input_t)
-    seq_t = Conv3D(32,  # numChans
-                   kernel_size=(14, 14, 5),
-                   kernel_initializer='he_normal',
-                   weights=None,
-                   padding='valid',
-                   strides=(1, 1, 1),
-                   kernel_regularizer=l2(l2_reg),
-                   input_shape=(1, int(patchSize[0, 0]), int(patchSize[0, 1]), int(patchSize[0, 2]))
-                   )(seq_t)
-    seq_t = fGetActivation(seq_t, iPReLU=iPReLU)
+    input2D_t = Permute((4, 1, 2, 3))(input_t)
+    input2D_t = Reshape(target_shape=(int(patchSize[0, 2]), int(patchSize[0, 0]), int(patchSize[0, 1])))(
+        input2D_t)
+    # use zDimension as number of channels
+    twoD_t = Conv2D(16,
+                    kernel_size=(7, 7),
+                    padding='same',
+                    kernel_initializer='he_normal',
+                    kernel_regularizer=l2(l2_reg),
+                    strides=(1, 1)
+                    )(input2D_t)
+    twoD_t = Activation('relu')(twoD_t)
 
-    seq_t = Dropout(dr_rate)(seq_t)
-    seq_t = Conv3D(64,
-                   kernel_size=(7, 7, 3),
-                   kernel_initializer='he_normal',
-                   weights=None,
-                   padding='valid',
-                   strides=(1, 1, 1),
-                   kernel_regularizer=l2(l2_reg))(seq_t)
+    l_w2_t = fCreateMaxPooling2D(twoD_t, stride=(2, 2))
+    l_w3_t = fCreateMaxPooling2D(l_w2_t, stride=(2, 2))
+    l_w4_t = fCreateMaxPooling2D(l_w3_t, stride=(2, 2))
 
-    seq_t = fGetActivation(seq_t, iPReLU=iPReLU)
+    stage1_res1_t = fCreateMNet_Block(twoD_t, 16, kernel_size=(3, 3), forwarding=True, l2_reg=l2_reg)
+    stage1_res2_t = fCreateMNet_Block(stage1_res1_t, 32, kernel_size=(3, 3), forwarding=False, l2_reg=l2_reg)
 
-    seq_t = Dropout(dr_rate)(seq_t)
-    seq_t = Conv3D(128,
-                   kernel_size=(3, 3, 2),
-                   kernel_initializer='he_normal',
-                   weights=None,
-                   padding='valid',
-                   strides=(1, 1, 1),
-                   kernel_regularizer=l2(l2_reg))(seq_t)
+    stage2_inp_t = fCreateMaxPooling2D(stage1_res2_t, stride=(2, 2))
+    stage2_inp_t = concatenate([stage2_inp_t, l_w2_t], axis=1)
+    stage2_res1_t = fCreateMNet_Block(stage2_inp_t, 32, l2_reg=l2_reg)
+    stage2_res2_t = fCreateMNet_Block(stage2_res1_t, 48, forwarding=False)
 
-    seq_t = fGetActivation(seq_t, iPReLU=iPReLU)
+    stage3_inp_t = fCreateMaxPooling2D(stage2_res2_t, stride=(2, 2))
+    stage3_inp_t = concatenate([stage3_inp_t, l_w3_t], axis=1)
+    stage3_res1_t = fCreateMNet_Block(stage3_inp_t, 48, l2_reg=l2_reg)
+    stage3_res2_t = fCreateMNet_Block(stage3_res1_t, 64, forwarding=False, l2_reg=l2_reg)
 
-    seq_t = Flatten()(seq_t)
+    stage4_inp_t = fCreateMaxPooling2D(stage3_res2_t, stride=(2, 2))
+    stage4_inp_t = concatenate([stage4_inp_t, l_w4_t], axis=1)
+    stage4_res1_t = fCreateMNet_Block(stage4_inp_t, 64, l2_reg=l2_reg)
+    stage4_res2_t = fCreateMNet_Block(stage4_res1_t, 128, forwarding=False, l2_reg=l2_reg)
 
-    seq_t = Dropout(dr_rate)(seq_t)
-    seq_t = Dense(units=2,
-                  kernel_initializer='normal',
-                  kernel_regularizer=l2(l2_reg))(seq_t)
-    output_t = Activation('softmax')(seq_t)
+    after_flat_t = Flatten()(stage4_res2_t)
 
-    opti, loss = fGetOptimizerAndLoss(optimizer, learningRate=learningRate)  # loss cat_crosent default
+    after_dense_t = Dense(units=2,
+                          kernel_initializer='he_normal',
+                          kernel_regularizer=l2(l2_reg))(after_flat_t)
+    output_t = Activation('softmax')(after_dense_t)
 
     cnn = Model(inputs=[input_t], outputs=[output_t])
-    cnn.compile(loss=loss, optimizer=opti, metrics=['accuracy'])
-    sArchiSpecs = '_l2{}'.format(l2_reg)
+
+    opti, loss = fGetOptimizerAndLoss(optimizer, learningRate=learningRate)
+    cnn.compile(optimizer=opti, loss=loss, metrics=['accuracy'])
+    sArchiSpecs = '3stages_l2{}'.format(l2_reg)
 
 
-####################################################################helpers#############################################
 def fGetOptimizerAndLoss(optimizer, learningRate=0.001, loss='categorical_crossentropy'):
     if optimizer not in ['Adam', 'SGD', 'Adamax', 'Adagrad', 'Adadelta', 'Nadam', 'RMSprop']:
         print('this optimizer does not exist!!!')
@@ -213,12 +214,33 @@ def fGetOptimizerAndLoss(optimizer, learningRate=0.001, loss='categorical_crosse
     return opti, loss
 
 
-def fGetActivation(input_t, iPReLU=0):
-    init = 0.25
-    if iPReLU == 1:  # one alpha for each channel
-        output_t = PReLU(alpha_initializer=Constant(value=init), shared_axes=[2, 3, 4])(input_t)
-    elif iPReLU == 2:  # just one alpha for each layer
-        output_t = PReLU(alpha_initializer=Constant(value=init), shared_axes=[2, 3, 4, 1])(input_t)
-    else:
-        output_t = Activation('relu')(input_t)
+def fCreateMaxPooling2D(input_t, stride=(2, 2)):
+    output_t = MaxPooling2D(pool_size=stride,
+                            strides=stride,
+                            padding='valid')(input_t)
     return output_t
+
+
+def fCreateMNet_Block(input_t, channels, kernel_size=(3, 3), type=1, forwarding=True, l1_reg=0.0, l2_reg=1e-6):
+    tower_t = Conv2D(channels,
+                     kernel_size=kernel_size,
+                     kernel_initializer='he_normal',
+                     weights=None,
+                     padding='same',
+                     strides=(1, 1),
+                     kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                     )(input_t)
+    tower_t = Activation('relu')(tower_t)
+    for counter in range(1, type):
+        tower_t = Conv2D(channels,
+                         kernel_size=kernel_size,
+                         kernel_initializer='he_normal',
+                         weights=None,
+                         padding='same',
+                         strides=(1, 1),
+                         kernel_regularizer=l1_l2(l1_reg, l2_reg),
+                         )(tower_t)
+        tower_t = Activation('relu')(tower_t)
+    if (forwarding):
+        tower_t = concatenate([tower_t, input_t], axis=1)
+    return tower_t

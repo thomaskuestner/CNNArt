@@ -1,10 +1,14 @@
 import os
-#os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
+# os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
+from keras.optimizers import Adadelta
+
 from DLart.Constants_DLart import *
+from utils.LivePlotCallback import LivePlotCallback
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from tensorflow.python.client import device_lib
+
 print(device_lib.list_local_devices)
 import tensorflow as tf
 
@@ -12,15 +16,15 @@ import os.path
 import scipy.io as sio
 import numpy as np
 import keras
-from keras.layers import Input
-from keras.layers import concatenate
+from keras.layers import Input, MaxPool3D
+from keras.layers import concatenate, Dropout
 from keras.layers.core import Flatten
 from keras.models import Model
 from keras.models import Sequential
 from keras.layers import UpSampling3D
 from keras.layers.convolutional import Convolution2D
 from keras.layers import Softmax
-from keras.callbacks import LearningRateScheduler
+from keras.callbacks import LearningRateScheduler, ModelCheckpoint, EarlyStopping
 from keras.models import model_from_json
 from keras.regularizers import l2  # , activity_l2
 
@@ -28,7 +32,6 @@ from networks.multiclass.SENets.deep_residual_learning_blocks import *
 
 
 def createModel(patchSize, numClasses, usingClassification=False):
-
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
     else:
@@ -49,16 +52,17 @@ def createModel(patchSize, numClasses, usingClassification=False):
 
     # first down convolution
     x_down_conv_1 = projection_block_3D(x_after_stage_1,
-                            filters=(32, 32),
-                            kernel_size=(2, 2, 2),
-                            stage=1,
-                            block=1,
-                            se_enabled=False,
-                            se_ratio=16)
+                                        filters=(32, 32),
+                                        kernel_size=(2, 2, 2),
+                                        stage=1,
+                                        block=1,
+                                        se_enabled=False,
+                                        se_ratio=16)
 
     # second stage
-    x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=False, se_ratio=16)
-    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=2, block=2, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=False,
+                          se_ratio=16)
+    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=2, se_enabled=False, se_ratio=16)
     x_after_stage_2 = x
 
     # second down convolution
@@ -71,9 +75,10 @@ def createModel(patchSize, numClasses, usingClassification=False):
                                         se_ratio=16)
 
     # third stage
-    x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=False,
+                          se_ratio=16)
     x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=2, se_enabled=False, se_ratio=16)
-    #x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=3, se_enabled=False, se_ratio=16)
+    # x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=3, se_enabled=False, se_ratio=16)
     x_after_stage_3 = x
 
     # third down convolution
@@ -86,9 +91,10 @@ def createModel(patchSize, numClasses, usingClassification=False):
                                         se_ratio=16)
 
     # fourth stage
-    x = identity_block_3D(x_down_conv_3, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x_down_conv_3, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=1, se_enabled=False,
+                          se_ratio=16)
     x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=2, se_enabled=False, se_ratio=16)
-    #x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=3, se_enabled=False, se_ratio=16)
+    # x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=3, se_enabled=False, se_ratio=16)
     x_after_stage_4 = x
 
     # fourth down convolution
@@ -101,7 +107,8 @@ def createModel(patchSize, numClasses, usingClassification=False):
                                         se_ratio=16)
 
     # fifth stage
-    x = identity_block_3D(x_down_conv_4, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x_down_conv_4, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=1, se_enabled=False,
+                          se_ratio=16)
     x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=2, se_enabled=False, se_ratio=16)
     # x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=3, se_enabled=False, se_ratio=16)
     x_after_stage_5 = x
@@ -111,16 +118,15 @@ def createModel(patchSize, numClasses, usingClassification=False):
     if usingClassification:
         # use x_after_stage_5 as quantification output
         # global average pooling
-        x_class = GlobalAveragePooling2D(data_format='channels_last')(x_after_stage_5)
+        x_class = GlobalAveragePooling3D(data_format='channels_last')(x_after_stage_1)
 
         # fully-connected layer
         classification_output = Dense(units=numClasses,
-                       activation='softmax',
-                       kernel_initializer='he_normal',
-                       name='classification_output')(x_class)
+                                      activation='softmax',
+                                      kernel_initializer='he_normal',
+                                      name='classification_output')(x_class)
 
     ### decoder path
-
 
     # first 3D upsampling
     x = UpSampling3D(size=(2, 2, 2), data_format=K.image_data_format())(x_after_stage_5)
@@ -175,7 +181,7 @@ def createModel(patchSize, numClasses, usingClassification=False):
     x = concatenate([x, x_after_stage_1], axis=bn_axis)
 
     # fourth decoder stage
-    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=9, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=9, block=1, se_enabled=False, se_ratio=16)
 
     ### End of decoder
 
@@ -192,7 +198,8 @@ def createModel(patchSize, numClasses, usingClassification=False):
 
     # create model
     if usingClassification:
-        cnn = Model(inputs =[input_tensor], outputs=[segmentation_output, classification_output], name='3D-VResFCN-Classification')
+        cnn = Model(inputs=[input_tensor], outputs=[segmentation_output, classification_output],
+                    name='3D-VResFCN-Classification')
         sModelName = cnn.name
     else:
         cnn = Model(inputs=[input_tensor], outputs=[segmentation_output], name='3D-VResFCN')
@@ -201,8 +208,9 @@ def createModel(patchSize, numClasses, usingClassification=False):
     return cnn, sModelName
 
 
-def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
-
+def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None,
+           X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSizes=None,
+           learningRates=None, iEpochs=None, dlart_handle=None):
     usingClassification = True
 
     # grid search on batch_sizes and learning rates
@@ -213,12 +221,12 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
     # change the shape of the dataset -> at color channel -> here one for grey scale
     X_train = np.expand_dims(X_train, axis=-1)
     Y_segMasks_train_foreground = np.expand_dims(Y_segMasks_train, axis=-1)
-    Y_segMasks_train_background = np.ones(Y_segMasks_train_foreground.shape)-Y_segMasks_train_foreground
+    Y_segMasks_train_background = np.ones(Y_segMasks_train_foreground.shape) - Y_segMasks_train_foreground
     Y_segMasks_train = np.concatenate((Y_segMasks_train_background, Y_segMasks_train_foreground), axis=-1)
 
     X_test = np.expand_dims(X_test, axis=-1)
     Y_segMasks_test_foreground = np.expand_dims(Y_segMasks_test, axis=-1)
-    Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape)-Y_segMasks_test_foreground
+    Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape) - Y_segMasks_test_foreground
     Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground), axis=-1)
 
     if X_valid.size == 0 and y_valid.size == 0:
@@ -233,13 +241,13 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
     #                           {'voxel_train': X_train, 'Y_segMasks_train': Y_segMasks_train,
     #                            'y_train': y_train})
 
-    #y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
-    #y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
+    # y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
+    # y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
 
     # number of classes
     numClasses = np.shape(y_train)[1]
 
-    #create cnn model
+    # create cnn model
     cnn, sModelName = createModel(patchSize=patchSize, numClasses=numClasses, usingClassification=usingClassification)
 
     fTrainInner(cnn,
@@ -349,7 +357,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
                     )
 
     # callbacks
-    #callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=12, verbose=1)
+    # callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=12, verbose=1)
 
     # callback_tensorBoard = keras.callbacks.TensorBoard(log_dir=dlart_handle.getLearningOutputPath() + '/logs',
     # histogram_freq=2,
@@ -361,20 +369,21 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     # embeddings_layer_names=None,
     #  embeddings_metadata=None)
 
-    #callbacks = [callback_earlyStopping]
-    callbacks = []
-    #callbacks.append(
-     #   ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0,
-      #                  period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
+    callbacks = [EarlyStopping(monitor='val_loss', patience=12, verbose=1),
+                 ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc',
+                                 verbose=0,
+                                 period=1, save_best_only=True),
+                 LearningRateScheduler(schedule=step_decay, verbose=1),
+                 LivePlotCallback(dlart_handle)]
     # callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
-    callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
 
     if X_valid.size == 0 and y_valid.size == 0:
         # using test set for validation
         if usingClassification:
             result = cnn.fit(X_train,
                              {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
-                             validation_split=0.15,
+                             validation_data=(
+                                 X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -382,7 +391,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         else:
             result = cnn.fit(X_train,
                              Y_segMasks_train,
-                             validation_split=0.15,
+                             validation_data=(X_test, Y_segMasks_test),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -392,7 +401,8 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         if usingClassification:
             result = cnn.fit(X_train,
                              {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
-                             validation_split=0.15,
+                             validation_data=(
+                                 X_valid, {'segmentation_output': Y_segMasks_valid, 'classification_output': y_valid}),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -400,7 +410,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         else:
             result = cnn.fit(X_train,
                              Y_segMasks_train,
-                             validation_split=0.15,
+                             validation_data=(X_valid, Y_segMasks_valid),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -410,7 +420,8 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     if usingClassification:
         model_metrics = cnn.metrics_names
         loss_test, segmentation_output_loss_test, classification_output_loss_test, segmentation_output_dice_coef_test, classification_output_acc_test \
-            = cnn.evaluate(X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}, batch_size=batchSize, verbose=1)
+            = cnn.evaluate(X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test},
+                           batch_size=batchSize, verbose=1)
     else:
         score_test, dice_coef_test = cnn.evaluate(X_test, Y_segMasks_test, batch_size=batchSize, verbose=1)
 
@@ -423,7 +434,10 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
 
     # wei = cnn.get_weights()
     cnn.save_weights(weight_name, overwrite=True)
-    # cnn.save(model_all) # keras > v0.7
+    cnn.save(model_all)  # keras > v0.7
+    model_png_dir = sOutPath + os.sep + "model.png"
+    from keras.utils import plot_model
+    plot_model(cnn, to_file=model_png_dir, show_shapes=True, show_layer_names=True)
 
     if not usingClassification:
         # matlab
@@ -478,29 +492,25 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
                                  'classification_predictions': prob_test[1]})
 
 
-
 def step_decay(epoch, lr):
-   drop = 0.1
-   epochs_drop = 10.0
-   print("Current Learning Rate: " + str(lr))
-   if epoch == epochs_drop or epoch == 2*epochs_drop or epoch == 3*epochs_drop or epoch == 4*epochs_drop:
-       lr = drop*lr
-       print("Reduce Learningrate by 0.1 to " + str(lr))
+    drop = 0.1
+    epochs_drop = 10.0
+    print("Current Learning Rate: " + str(lr))
+    if epoch == epochs_drop or epoch == 2 * epochs_drop or epoch == 3 * epochs_drop or epoch == 4 * epochs_drop:
+        lr = drop * lr
+        print("Reduce Learningrate by 0.1 to " + str(lr))
 
-   return lr
-
-
+    return lr
 
 
 def fPredict(X_test, y=None, Y_segMasks_test=None, sModelPath=None, sOutPath=None, batch_size=64):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
-        Input:
-            X: Samples to predict on. The shape of X should fit to the input shape of the model
-            y: Labels for the Samples. Number of Samples should be equal to the number of samples in X
-            sModelPath: (String) full path to a trained keras model. It should be *_json.txt file. there has to be a corresponding *_weights.h5 file in the same directory!
-            sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy stored.
-                        The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the suffix '_pred.mat'
-            batchSize: Batchsize, number of samples that are processed at once"""
+    Input: X: Samples to predict on. The shape of X should fit to the input shape of the model y: Labels for the
+    Samples. Number of Samples should be equal to the number of samples in X sModelPath: (String) full path to a
+    trained keras model. It should be *_json.txt file. there has to be a corresponding *_weights.h5 file in the same
+    directory! sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy
+    stored. The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the
+    suffix '_pred.mat' batchSize: Batchsize, number of samples that are processed at once """
 
     X_test = np.expand_dims(X_test, axis=-1)
     Y_segMasks_test_foreground = np.expand_dims(Y_segMasks_test, axis=-1)
@@ -513,10 +523,10 @@ def fPredict(X_test, y=None, Y_segMasks_test=None, sModelPath=None, sOutPath=Non
 
     listdir = os.listdir(sModelPath)
 
-    #sModelPath = sModelPath.replace("_json.txt", "")
-    #weight_name = sModelPath + '_weights.h5'
-    #model_json = sModelPath + '_json.txt'
-    #model_all = sModelPath + '_model.h5'
+    # sModelPath = sModelPath.replace("_json.txt", "")
+    # weight_name = sModelPath + '_weights.h5'
+    # model_json = sModelPath + '_json.txt'
+    # model_all = sModelPath + '_model.h5'
 
     # load weights and model (new way)
     with open(sModelPath + os.sep + sFilename + '.json', 'r') as fp:
@@ -527,7 +537,7 @@ def fPredict(X_test, y=None, Y_segMasks_test=None, sModelPath=None, sOutPath=Non
     model.summary()
 
     model.compile(loss=dice_coef_loss, optimizer=keras.optimizers.Adam(), metrics=[dice_coef])
-    model.load_weights(sModelPath+ os.sep + sFilename+'_weights.h5')
+    model.load_weights(sModelPath + os.sep + sFilename + '_weights.h5')
 
     score_test, acc_test = model.evaluate(X_test, Y_segMasks_test, batch_size=2)
     print('loss' + str(score_test) + '   acc:' + str(acc_test))
@@ -540,15 +550,15 @@ def fPredict(X_test, y=None, Y_segMasks_test=None, sModelPath=None, sOutPath=Non
 
 
 def dice_coef(y_true, y_pred, epsilon=1e-5):
-    dice_numerator = 2.0 * K.sum(y_true*y_pred, axis=[1,2,3,4])
-    dice_denominator = K.sum(K.square(y_true), axis=[1,2,3,4]) + K.sum(K.square(y_pred), axis=[1,2,3,4])
+    dice_numerator = 2.0 * K.sum(y_true * y_pred, axis=[1, 2, 3, 4])
+    dice_denominator = K.sum(K.square(y_true), axis=[1, 2, 3, 4]) + K.sum(K.square(y_pred), axis=[1, 2, 3, 4])
 
     dice_score = dice_numerator / (dice_denominator + epsilon)
     return K.mean(dice_score, axis=0)
 
 
 def dice_coef_loss(y_true, y_pred):
-    return 1-dice_coef(y_true, y_pred)
+    return 1 - dice_coef(y_true, y_pred)
 
 
 def dice_coef_2(ground_truth, prediction, weight_map=None):
@@ -597,9 +607,8 @@ def dice_coef_2(ground_truth, prediction, weight_map=None):
     # dice_score.set_shape([n_classes])
     # minimising (1 - dice_coefficients)
 
-    #return 1.0 - tf.reduce_mean(dice_score)
+    # return 1.0 - tf.reduce_mean(dice_score)
     return tf.reduce_mean(dice_score)
-
 
 
 def jaccard_distance_loss(y_true, y_pred):
@@ -680,8 +689,8 @@ def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
                   W_regularizer='l2'))
     cnn.add(Activation('softmax'))
 
-    #opti = SGD(lr={{choice([0.1, 0.01, 0.05, 0.005, 0.001])}}, momentum=1e-8, decay=0.1, nesterov=True)
-    #cnn.compile(loss='categorical_crossentropy', optimizer=opti)
+    # opti = SGD(lr={{choice([0.1, 0.01, 0.05, 0.005, 0.001])}}, momentum=1e-8, decay=0.1, nesterov=True)
+    # cnn.compile(loss='categorical_crossentropy', optimizer=opti)
 
     epochs = 300
 
@@ -693,7 +702,7 @@ def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
                      validation_data=(X_test, Y_test))
     score_test, acc_test = cnn.evaluate(X_test, Y_test, verbose=0)
 
-    #return {'loss': -acc_test, 'status': STATUS_OK, 'model': cnn, 'trainresult': result, 'score_test': score_test}
+    # return {'loss': -acc_test, 'status': STATUS_OK, 'model': cnn, 'trainresult': result, 'score_test': score_test}
 
 
 ## helper functions

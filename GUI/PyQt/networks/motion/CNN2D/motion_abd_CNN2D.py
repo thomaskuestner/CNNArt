@@ -5,7 +5,7 @@ Created on Thu Mar 02 15:59:36 2017
 @author: Thomas Kuestner
 """
 import os.path
-from random import choice
+from random import uniform, choice
 
 import scipy.io as sio
 import numpy as np  # for algebraic operations, matrices
@@ -18,119 +18,87 @@ from keras.models import model_from_json
 # from hyperas.distributions import choice, uniform, conditional
 # from hyperopt import Trials, STATUS_OK
 
-from keras.layers.convolutional import Convolution2D, Conv2D
+from keras.layers.convolutional import Convolution2D
 # from keras.layers.convolutional import MaxPooling2D as pool2
-from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 # from keras.layers.convolutional import ZeroPadding2D as zero2d
-from keras.regularizers import l1_l2, l2  # , activity_l2
+from keras.regularizers import l2  # , activity_l2
 # from theano import function
 
 from keras.optimizers import SGD
 
 
-def createModel(patchSize, architecture='new'):
-    if architecture == 'new':
-        l1_reg = 0
-        l2_reg = 1e-6
-        cnn = Sequential()
-        # Total params: 272,994
-        cnn.add(Conv2D(32,
-                       kernel_size=(14, 14),
-                       kernel_initializer='he_normal',
-                       weights=None,
-                       padding='valid',
-                       strides=(1, 1),
-                       kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                       input_shape=(1, int(patchSize[0]), int(patchSize[0]))))
-        # input shape : 1 means grayscale... richtig uebergeben...
-        cnn.add(Activation('relu'))
+def createModel(patchSize):
+    cnn = Sequential()
+    #    cnn.add(Convolution2D(32,
+    #                            14,
+    #                            14,
+    #                            init='normal',
+    #                           # activation='sigmoid',
+    #                            weights=None,
+    #                            border_mode='valid',
+    #                            subsample=(1, 1),
+    #                            W_regularizer=l2(1e-6),
+    #                            input_shape=(1, patchSize[0,0], patchSize[0,1])))
+    #    cnn.add(Activation('relu'))
 
-        cnn.add(Conv2D(64,  # learning rate: 0.1 -> 76%
-                       kernel_size=(7, 7),
-                       kernel_initializer='he_normal',
-                       weights=None,
-                       padding='valid',
-                       strides=(1, 1),
-                       kernel_regularizer=l1_l2(l1_reg, l2_reg),
-                       # data_format='channels_first'
-                       ))
-        cnn.add(Activation('relu'))
-        cnn.add(Conv2D(128,  # learning rate: 0.1 -> 76%
-                       kernel_size=(3, 3),
-                       kernel_initializer='he_normal',
-                       weights=None,
-                       padding='valid',
-                       strides=(1, 1),
-                       kernel_regularizer=l1_l2(l1_reg, l2_reg)))
-        cnn.add(Activation('relu'))
-        cnn.add(Flatten())
-        cnn.add(Dense(units=2,
-                      kernel_initializer='he_normal',
-                      kernel_regularizer='l2'))
-        cnn.add(Activation('softmax'))
+    cnn.add(Convolution2D(32,
+                          14,
+                          14,
+                          init='normal',
+                          # activation='sigmoid',
+                          weights=None,
+                          border_mode='valid',
+                          subsample=(1, 1),
+                          W_regularizer=l2(1e-6),
+                          input_shape=(1, patchSize[0, 0], patchSize[0, 1])))
+    cnn.add(Activation('relu'))
+    cnn.add(Convolution2D(64,  # learning rate: 0.1 -> 76%
+                          7,
+                          7,
+                          init='normal',
+                          # activation='sigmoid',
+                          weights=None,
+                          border_mode='valid',
+                          subsample=(1, 1),
+                          W_regularizer=l2(1e-6)))
+    cnn.add(Activation('relu'))
 
-    elif architecture == 'old':
-        cnn = Sequential()
-        cnn.add(Convolution2D(32,
-                              14,
-                              14,
-                              init='he_normal',
-                              # activation='sigmoid',
-                              weights=None,
-                              border_mode='valid',
-                              subsample=(1, 1),
-                              W_regularizer=l2(1e-6),
-                              input_shape=(1, patchSize[0, 0], patchSize[0, 1])))
-        cnn.add(Activation('relu'))
+    cnn.add(Convolution2D(128,  # learning rate: 0.1 -> 76%
+                          3,
+                          3,
+                          init='normal',
+                          # activation='sigmoid',
+                          weights=None,
+                          border_mode='valid',
+                          subsample=(1, 1),
+                          W_regularizer=l2(1e-6)))
+    cnn.add(Activation('relu'))
+    #    cnn.add(Convolution2D(256 ,                    #learning rate: 0.1 -> 76%
+    #                            3,
+    #                            3,
+    #                            init='normal',
+    #                           # activation='sigmoid',
+    #                            weights=None,
+    #                            border_mode='valid',
+    #                            subsample=(1, 1),
+    #                            W_regularizer=l2(1e-6)))
+    #    cnn.add(Activation('relu'))
 
-        #    cnn.add(Convolution2D(32,
-        #                            7,
-        #                            7,
-        #                            init='normal',
-        #                           # activation='sigmoid',
-        #                            weights=None,
-        #                            border_mode='valid',
-        #                            subsample=(1, 1),
-        #                            W_regularizer=l2(1e-6)))
-        #                            #input_shape=(1, patchSize[0,0], patchSize[0,1])))
-        #    cnn.add(Activation('relu'))
-        cnn.add(Convolution2D(64,  # learning rate: 0.1 -> 76%
-                              7,
-                              7,
-                              init='he_normal',
-                              # activation='sigmoid',
-                              weights=None,
-                              border_mode='valid',
-                              subsample=(1, 1),
-                              W_regularizer=l2(1e-6)))
-        cnn.add(Activation('relu'))
+    # cnn.add(pool2(pool_size=(2, 2), strides=None, border_mode='valid', dim_ordering='th'))
 
-        cnn.add(Convolution2D(128,  # learning rate: 0.1 -> 76%
-                              3,
-                              3,
-                              init='he_normal',
-                              # activation='sigmoid',
-                              weights=None,
-                              border_mode='valid',
-                              subsample=(1, 1),
-                              W_regularizer=l2(1e-6)))
-        cnn.add(Activation('relu'))
-
-        # cnn.add(pool2(pool_size=(2, 2), strides=None, border_mode='valid', dim_ordering='th'))
-
-        cnn.add(Flatten())
-        # cnn.add(Dense(input_dim= 100,
-        #              output_dim= 100,
-        #              init = 'normal',
-        #              #activation = 'sigmoid',
-        #              W_regularizer='l2'))
-        # cnn.add(Activation('sigmoid'))
-        cnn.add(Dense(output_dim=2,
-                      init='normal',
-                      # activation = 'sigmoid',
-                      W_regularizer='l2'))
-        cnn.add(Activation('softmax'))
-
+    cnn.add(Flatten())
+    # cnn.add(Dense(input_dim= 100,
+    #              output_dim= 100,
+    #              init = 'normal',
+    #              #activation = 'sigmoid',
+    #              W_regularizer='l2'))
+    # cnn.add(Activation('sigmoid'))
+    cnn.add(Dense(output_dim=2,
+                  init='normal',
+                  # activation = 'sigmoid',
+                  W_regularizer='l2'))
+    cnn.add(Activation('softmax'))
     return cnn
 
 
@@ -140,13 +108,6 @@ def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=Non
     batchSizes = [64] if batchSizes is None else batchSizes
     learningRates = [0.01] if learningRates is None else learningRates
     iEpochs = 300 if iEpochs is None else iEpochs
-
-    # change the shape of the dataset
-    X_train = np.expand_dims(X_train, axis=1)
-    X_test = np.expand_dims(X_test, axis=1)
-    y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
-    y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
-
     for iBatch in batchSizes:
         for iLearn in learningRates:
             fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs)
@@ -154,11 +115,11 @@ def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=Non
 
 def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None):
     # parse inputs
-    batchSize = [64] if batchSize is None else batchSize
-    learningRate = [0.01] if learningRate is None else learningRate
+    batchSize = 64 if batchSize is None else batchSize
+    learningRate = 0.01 if learningRate is None else learningRate
     iEpochs = 300 if iEpochs is None else iEpochs
 
-    print('Training 2D CNN')
+    print('Training CNN')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
     # save names
@@ -172,7 +133,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     model_all = model_name + '_model.h5'
     model_mat = model_name + '.mat'
 
-    if os.path.isfile(model_mat):  # no training if output file exists
+    if (os.path.isfile(model_mat)):  # no training if output file exists
         return
 
     # create model
@@ -180,18 +141,14 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 
     # opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
     opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+
+    cnn.compile(loss='categorical_crossentropy', optimizer=opti)
+
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1),
                  ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc',
                                  verbose=0,
                                  period=5, save_best_only=True),
                  ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1)]
-
-    cnn.compile(loss='categorical_crossentropy', optimizer=opti)
-    json_string = cnn.to_json()
-    open(model_json, 'w').write(json_string)
-    # wei = best_model.get_weights()
-    cnn.save_weights(weight_name)
-    cnn.save(model_all)
 
     result = cnn.fit(X_train,
                      y_train,
@@ -202,7 +159,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
                      callbacks=callbacks,
                      verbose=1)
 
-    loss_test, acc_test = cnn.evaluate(X_test, y_test, batch_size=batchSize, show_accuracy=True)
+    score_test, acc_test = cnn.evaluate(X_test, y_test, batch_size=batchSize, show_accuracy=True)
 
     prob_test = cnn.predict(X_test, batchSize, 0)
 
@@ -230,7 +187,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
                              'loss': loss,
                              'val_acc': val_acc,
                              'val_loss': val_loss,
-                             'loss_test': loss_test,
+                             'score_test': score_test,
                              'acc_test': acc_test,
                              'prob_test': prob_test})
 
@@ -273,9 +230,9 @@ def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
     # y_test = np.ones((len(X_test),1))
 
     score_test, acc_test = model.evaluate(X_test, y_test, batch_size=batchSize, show_accuracy=True)
+
     prob_pre = model.predict(X_test, batchSize, 0)
 
-    # modelSave = model_name[:-5] + '_pred.mat'
     modelSave = model_name[0] + '_pred.mat'
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
 
@@ -286,19 +243,19 @@ def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
 def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
     # explicitly stated here instead of cnn = createModel() to allow optimization
     cnn = Sequential()
-    #    cnn.add(Convolution2D(32,
-    #                            14,
-    #                            14,
-    #                            init='normal',
-    #                           # activation='sigmoid',
-    #                            weights=None,
-    #                            border_mode='valid',
-    #                            subsample=(1, 1),
-    #                            W_regularizer=l2(1e-6),
-    #                            input_shape=(1, patchSize[0,0], patchSize[0,1])))
-    #    cnn.add(Activation('relu'))
+    cnn.add(Convolution2D(32,
+                          14,
+                          14,
+                          init='normal',
+                          # activation='sigmoid',
+                          weights=None,
+                          border_mode='valid',
+                          subsample=(1, 1),
+                          W_regularizer=l2(1e-6),
+                          input_shape=(1, patchSize[0, 0], patchSize[0, 1])))
+    cnn.add(Activation('relu'))
 
-    cnn.add(Convolution2D(32,  # 64
+    cnn.add(Convolution2D(64,
                           7,
                           7,
                           init='normal',
@@ -346,14 +303,14 @@ def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
                   W_regularizer='l2'))
     cnn.add(Activation('softmax'))
 
-    opti = SGD(lr={{choice([0.1, 0.01, 0.05, 0.005, 0.001])}}, momentum=1e-8, decay=0.1, nesterov=True)
+    opti = SGD(lr={{uniform(0.001, 0.1)}}, momentum=1e-8, decay=0.1, nesterov=True)
     cnn.compile(loss='categorical_crossentropy',
                 optimizer=opti)
 
     epochs = 300
 
     result = cnn.fit(X_train, Y_train,
-                     batch_size=128,  # {{choice([64, 128])}}
+                     batch_size={{choice([64, 128])}},
                      nb_epoch=epochs,
                      show_accuracy=True,
                      verbose=2,
