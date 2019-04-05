@@ -17,6 +17,7 @@ import scipy.io as sio
 import seaborn as sn
 import tensorflow as tf
 import yaml
+import webbrowser
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import pyqtSlot, QStringListModel
 from PyQt5.QtWidgets import QAbstractItemView, QTableWidgetItem, QMdiSubWindow, QTreeWidgetItem, QFileDialog, \
@@ -81,7 +82,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.maingrids2 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents2)
         self.scrollArea2.setWidget(self.scrollAreaWidgetContents2)
         self.stackedWidget.setCurrentIndex(0)
-        self.tabWidget_2.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(0)
         # Main widgets and related state.
 
         self.itemsToShapes = {}
@@ -334,9 +335,9 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.infoButton.clicked.connect(self.show_variables)
         self.gridButton.clicked.connect(self.show_grids_selection)
+        self.fitButton.clicked.connect(self.fit_image)
 
         self.bselectoron.clicked.connect(self.selector_mode)
-        # self.bchoosemark.clicked.connect(self.chooseMark)
         self.roiButton.clicked.connect(self.select_roi_OnOff)
         self.inspectorButton.clicked.connect(self.mouse_tracking)
         icon = QtGui.QIcon()
@@ -361,9 +362,22 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.actionOpen_file.triggered.connect(self.load_MR)
         self.actionSave.triggered.connect(self.save_current)
         self.actionLoad.triggered.connect(self.load_old)
-        self.actionColor.triggered.connect(self.set_color)
+        self.actionColors.triggered.connect(self.set_color)
         self.actionLabels.triggered.connect(self.predefined_label)
         self.actionNetworks.triggered.connect(self.predefined_networks)
+        self.actionData_Viewing.setChecked(True)
+        self.actionNetwork_Training.setChecked(True)
+        self.actionAbout_Network_Visualization.setChecked(True)
+        self.actionNetwork_Interface.setChecked(True)
+        self.actionData_Viewing.triggered.connect(lambda: self.handle_window_view(0))
+        self.actionNetwork_Training.triggered.connect(lambda: self.handle_window_view(1))
+        self.actionNetwork_Visualization.triggered.connect(lambda: self.handle_window_view(2))
+        self.actionNetwork_Interface.triggered.connect(lambda: self.handle_window_view(3))
+        self.actionImage_and_Result_Showing.triggered.connect(lambda: self.handle_help(0))
+        self.actionAbout_Labeling.triggered.connect(lambda: self.handle_help(1))
+        self.actionAbout_Network_Training.triggered.connect(lambda: self.handle_help(2))
+        self.actionNetwork_Testing.triggered.connect(lambda: self.handle_help(3))
+        self.actionAbout_Network_Visualization.triggered.connect(lambda: self.handle_help(4))
 
         self.cursorCross.setChecked(False)
         self.cursorCross.toggled.connect(self.handle_crossline)
@@ -423,7 +437,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.deepLearningArtApp.setGUIHandle(self)
         self.network_interface = NetworkInterface(self.deepLearningArtApp.getParameters())
         self.deepLearningArtApp.network_interface_update.connect(self.update_network_interface)
-        self.network_interface.interfaceFinishUpdating.connect(self.deepLearningArtApp.setNetworkCanrun)
+        self.deepLearningArtApp._network_interface_update.connect(self._update_network_interface)
 
         # initiliaze patch output path
         self.Label_OutputPathPatching.setText(self.deepLearningArtApp.getOutputPathForPatching())
@@ -630,6 +644,32 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.lineEdit_2.textChanged[str].connect(self.textChangeGamma)
 
         self.valueChanged.connect(self.update_network_interface)
+
+    def handle_window_view(self, n):
+        if n == 3:
+            self.network_interface.window.show()
+        elif n == 0:
+            self.tabWidget.setTabEnabled(n, self.actionData_Viewing.isChecked())
+        elif n == 1:
+            self.tabWidget.setTabEnabled(n, self.actionNetwork_Training.isChecked())
+        elif n == 2:
+            self.tabWidget.setTabEnabled(n, self.actionNetwork_Visualization.isChecked())
+        else:
+            pass
+
+    def handle_help(self, n):
+        help = 'help' + os.sep
+        if n == 0:
+            help += 'image_result_viewing.html'
+        elif n == 2:
+            help += 'about_labeling.html'
+        elif n == 3:
+            help += 'about_network_training.html'
+        elif n == 4:
+            help += 'about_network_testing.html'
+        elif n == 5:
+            help += 'about_network_visualization.html'
+        webbrowser.open_new(help)
 
     def switchview(self):
         if self.vision == 2:
@@ -1270,12 +1310,22 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             pass
 
     def flip_image(self):
+        # to avoid for confusion with rotate dimension of image, use flip here to rotate image clockwise 90 degree
         for item in self.view_group_list:
             self.view_group = item
             self.canvasl = self.view_group.anewcanvas
             array = self.canvasl.get_image_array()
-            array = array[:, ::-1]
-            self.canvasl.set_image_array(array)
+            if array is not None:
+                array = np.rot90(array, axes=(-2, -1))
+                self.canvasl.set_image_array(array)
+
+    def fit_image(self):
+        for item in self.view_group_list:
+            self.view_group = item
+            self.canvasl = self.view_group.anewcanvas
+            aspect = self.canvasl.get_aspect()
+            aspect = 'auto' if aspect == 'equal' else 'equal'
+            self.canvasl.set_aspect(aspect)
 
     def set_color(self):
 
@@ -2259,7 +2309,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                             self.datasets_window.close()
                         except:
                             try:
-                                self.network_interface.win.close()
+                                self.network_interface.window.close()
                             except:
                                 pass
             QCloseEvent.accept()
@@ -2297,7 +2347,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             ###############################################################################################################################################################################
 
     ####### network training
-
 
     def button_selectModel_prediction_clicked(self):
         pathToModel = self.openFileNamesDialog(self.deepLearningArtApp.getLearningOutputPath())
@@ -2456,12 +2505,15 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def show_network_interface(self):
         self.network_interface = NetworkInterface(self.deepLearningArtApp.getParameters())
-        self.network_interface.win.show()
+        self.network_interface.window.show()
 
     def update_network_interface(self):
         self.deepLearningArtApp.setNetworkCanrun(False)
-        self.network_interface.updataParameter(self.deepLearningArtApp.getParameters())
-        #self.deepLearningArtApp.setNetworkCanrun(True)
+        self.network_interface.updataParameter(self.deepLearningArtApp.getParameters(), 0)
+
+    def _update_network_interface(self):
+        self.network_interface.updataParameter(self.deepLearningArtApp.getParameters(), 1)
+        self.deepLearningArtApp.setNetworkCanrun(True)
 
     def button_markingsPath_clicked(self):
         dir = self.openFileNamesDialog(self.deepLearningArtApp.getMarkingsPath())

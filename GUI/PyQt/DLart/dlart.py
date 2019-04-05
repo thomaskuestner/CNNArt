@@ -29,6 +29,7 @@ from DLart.Constants_DLart import *
 
 class DeepLearningArtApp(QWidget):
     network_interface_update = pyqtSignal()
+    _network_interface_update = pyqtSignal()  # used for activate network training
     datasetscsv = pandas.read_csv('config' + os.sep + DATASETS + '.csv')
     datasets = {}
     for i in range(pandas.DataFrame.count(datasetscsv)['pathdata']):
@@ -55,13 +56,15 @@ class DeepLearningArtApp(QWidget):
         self.selectedDatasets = ''
 
         self.pathDatabase, self.pathOutputPatching, self.markingsPath, self.learningOutputPath \
-            = DeepLearningArtApp.getOSPathes()  # for windows os=0, for linse server os=1. see method for pathes
+            = self.getOSPathes()  # for windows os=0, for linse server os=1. see method for pathes
 
         # attributes for patching
         self.patchSizeX = 40
         self.patchSizeY = 40
         self.patchSizeZ = 5
         self.patchOverlap = 0.6
+        self.patchSizePrediction = [48, 48, 16]
+        self.patchOverlapPrediction = 0.6
 
         self.usingSegmentationMasks = False
 
@@ -93,7 +96,6 @@ class DeepLearningArtApp(QWidget):
         else:
             self.strstoreMode = "store disabled"
 
-
         # attributes for splitting
         self.datasetName = 'none'
         self.splittingMode = SIMPLE_RANDOM_SAMPLE_SPLITTING
@@ -116,7 +118,9 @@ class DeepLearningArtApp(QWidget):
         # attributes for DNN and Training
         ################################################################################################################
         self.neuralNetworkModel = 'Multiclass DenseResNet'
+        self.neuralnetworkPath = self.deepNeuralNetworks[self.neuralNetworkModel].replace(".", "/") + '.py'
         self.batchSizes = [32]
+        self.batchSizePrediction = 32
         self.epochs = 10
         self.learningRates = np.array([0.01], dtype=np.float32)
 
@@ -152,6 +156,9 @@ class DeepLearningArtApp(QWidget):
         self.usingArtifacts = True
         self.usingBodyRegions = True
         self.usingTWeighting = True
+        self.usingArtifactsPrediction = True
+        self.usingBodyRegionsPrediction = True
+        self.usingTWeightingPrediction = True
 
         # train, validation, test dataset attributes
         self.X_train = None
@@ -181,8 +188,12 @@ class DeepLearningArtApp(QWidget):
         ################################################################################################################
         #### Stuff for prediction
         ################################################################################################################
-        self.datasetForPrediction = None
-        self.modelForPrediction = None
+        self.outPutFolderDataPath = self.pathOutputPatching
+        self.datasetForPrediction = self.pathOutputPatching
+        self.datasetOutputPath = self.pathOutputPatching
+        self.modelPathPrediction = self.learningOutputPath
+        self.modelPrediction = "FCN 3D-VResFCN-Unsampling"
+        self.modelPresictionSource = self.deepNeuralNetworks[self.neuralNetworkModel].replace(".", "/") + '.py'
         self.doUnpatching = False
 
         self.usingSegmentationMasksForPrediction = False
@@ -195,7 +206,6 @@ class DeepLearningArtApp(QWidget):
 
         self.predictions = None
         self.unpatched_slices = None
-
 
         ################################################################################################################
         self.params = [
@@ -222,13 +232,14 @@ class DeepLearningArtApp(QWidget):
                 {'name': 'Using Segmentation', 'type': 'bool', 'value': self.usingSegmentationMasks},
                 {'name': 'Random Shuffle', 'type': 'bool', 'value': self.isRandomShuffle},
                 {'name': 'Test/Train Ratio', 'type': 'float', 'value': self.trainTestDatasetRatio},
-                {'name': 'Validation/Train Ratio', 'type': 'float', 'value': self.trainValidationRatio}
+                {'name': 'Validation/Train Ratio', 'type': 'float', 'value': self.trainValidationRatio},
+                {'name': 'Number of folds', 'type': 'int', 'value': self.numFolds}
             ]},
             {'name': 'Training Options', 'type': 'group', 'children': [
                 {'name': 'neural Network', 'type': 'str', 'value': self.neuralNetworkModel},
                 {'name': 'Learning Output Path', 'type': 'str', 'value': self.learningOutputPath},
-                {'name': 'Learning Rate', 'type': 'float', 'value': self.learningRates},
-                {'name': 'Batch Size', 'type': 'int', 'value': self.batchSizes},
+                {'name': 'Learning Rate', 'type': 'float', 'value': self.learningRates[0]},
+                {'name': 'Batch Size', 'type': 'int', 'value': self.batchSizes[0]},
                 {'name': 'Optimizer', 'type': 'str', 'value': self.stroptimizer},
                 {'name': 'Epochs', 'type': 'int', 'value': self.epochs},
                 {'name': 'Weight Decay', 'type': 'float', 'value': self.weightDecay},
@@ -252,11 +263,29 @@ class DeepLearningArtApp(QWidget):
                 ]},
                 {'name': 'Current GPU', 'type': 'int', 'value': self.gpu_id},
             ]},
-            {'name': 'Save/Restore functionality', 'type': 'group', 'children': [
-                {'name': 'Save State', 'type': 'action'},
-                {'name': 'Restore State', 'type': 'action', 'children': [
-                    {'name': 'Add missing items', 'type': 'bool', 'value': True},
-                    {'name': 'Remove extra items', 'type': 'bool', 'value': True},
+            {'name': 'Testing Options', 'type': 'group', 'children': [
+                {'name': 'neural Network', 'type': 'str', 'value': self.modelPrediction},
+                {'name': 'Batch Size', 'type': 'int', 'value': self.batchSizePrediction},
+                {'name': 'Optimizer', 'type': 'str', 'value': self.stroptimizer},
+                {'name': 'Select Multiclasses', 'type': 'group', 'children': [
+                    {'name': 'Artifacts', 'type': 'bool', 'value': self.usingArtifactsPrediction},
+                    {'name': 'Body Region', 'type': 'bool', 'value': self.usingBodyRegionsPrediction},
+                    {'name': 'T Weighting', 'type': 'bool', 'value': self.usingTWeightingPrediction}
+                ]},
+                {'name': 'Patch Size', 'type': 'str', 'value': self.patchSizePrediction},
+                {'name': 'Overlap', 'type': 'float', 'value': self.patchOverlapPrediction},
+                {'name': 'Current GPU', 'type': 'int', 'value': self.gpu_prediction_id},
+            ]},
+            {'name': 'Learning Output', 'type': 'group', 'children': [
+                {'name': 'dataset output for training', 'type': 'str', 'value': self.datasetOutputPath},
+                {'name': 'network output for training', 'type': 'group', 'children': [
+                    {'name': 'network source for training', 'type': 'str', 'value': self.neuralnetworkPath},
+                    {'name': 'network output for training', 'type': 'str', 'value': self.outPutFolderDataPath},
+                ]},
+                {'name': 'dataset output for prediction', 'type': 'str', 'value': self.datasetForPrediction},
+                {'name': 'network output for prediction', 'type': 'group', 'children': [
+                    {'name': 'network source for prediction', 'type': 'str', 'value': self.modelPresictionSource},
+                    {'name': 'network output for prediction', 'type': 'str', 'value': self.modelPathPrediction},
                 ]},
             ]},
         ]
@@ -321,11 +350,29 @@ class DeepLearningArtApp(QWidget):
                 ]},
                 {'name': 'Current GPU', 'type': 'int', 'value': self.gpu_id},
             ]},
-            {'name': 'Save/Restore functionality', 'type': 'group', 'children': [
-                {'name': 'Save State', 'type': 'action'},
-                {'name': 'Restore State', 'type': 'action', 'children': [
-                    {'name': 'Add missing items', 'type': 'bool', 'value': True},
-                    {'name': 'Remove extra items', 'type': 'bool', 'value': True},
+            {'name': 'Testing Options', 'type': 'group', 'children': [
+                {'name': 'neural Network', 'type': 'str', 'value': self.modelPrediction},
+                {'name': 'Batch Size', 'type': 'int', 'value': self.batchSizePrediction},
+                {'name': 'Optimizer', 'type': 'str', 'value': self.stroptimizer},
+                {'name': 'Select Multiclasses', 'type': 'group', 'children': [
+                    {'name': 'Artifacts', 'type': 'bool', 'value': self.usingArtifactsPrediction},
+                    {'name': 'Body Region', 'type': 'bool', 'value': self.usingBodyRegionsPrediction},
+                    {'name': 'T Weighting', 'type': 'bool', 'value': self.usingTWeightingPrediction}
+                ]},
+                {'name': 'Patch Size', 'type': 'str', 'value': self.patchSizePrediction},
+                {'name': 'Overlap', 'type': 'float', 'value': self.patchOverlapPrediction},
+                {'name': 'Current GPU', 'type': 'int', 'value': self.gpu_prediction_id},
+            ]},
+            {'name': 'Learning Output', 'type': 'group', 'children': [
+                {'name': 'dataset output for training', 'type': 'str', 'value': self.datasetOutputPath},
+                {'name': 'network output for training', 'type': 'group', 'children': [
+                    {'name': 'network source for training', 'type': 'str', 'value': self.neuralnetworkPath},
+                    {'name': 'network output for training', 'type': 'str', 'value': self.outPutFolderDataPath},
+                ]},
+                {'name': 'dataset output for prediction', 'type': 'str', 'value': self.datasetForPrediction},
+                {'name': 'network output for prediction', 'type': 'group', 'children': [
+                    {'name': 'network source for prediction', 'type': 'str', 'value': self.modelPresictionSource},
+                    {'name': 'network output for prediction', 'type': 'str', 'value': self.modelPathPrediction},
                 ]},
             ]},
         ]
@@ -452,7 +499,7 @@ class DeepLearningArtApp(QWidget):
                                                                             [self.patchSizeX, self.patchSizeY],
                                                                             self.patchOverlap,
                                                                             labelMask_ndarray, 0.5,
-                                                                            DeepLearningArtApp.datasets[sequence])
+                                                                            self.datasets[sequence])
 
                             # convert to float32
                             dPatches = np.asarray(dPatches, dtype=np.float32)
@@ -465,7 +512,7 @@ class DeepLearningArtApp(QWidget):
                                                                                            self.patchSizeY],
                                                                                           self.patchOverlap,
                                                                                           labelMask_ndarray, 0.5,
-                                                                                          DeepLearningArtApp.datasets[
+                                                                                          self.datasets[
                                                                                               sequence])
 
                                 dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.float32)
@@ -475,7 +522,7 @@ class DeepLearningArtApp(QWidget):
 
                         elif self.labelingMode == PATCH_LABELING:
                             # get label
-                            datasetLabel = DeepLearningArtApp.datasets[dataset].getDatasetLabel()
+                            datasetLabel = self.datasets[dataset].getDatasetLabel()
 
                             # compute 2D patch labeling patching
                             dPatches, dLabels = fRigidPatching_patchLabeling(norm_voxel_ndarray,
@@ -503,7 +550,7 @@ class DeepLearningArtApp(QWidget):
                                                                               self.patchOverlap,
                                                                               labelMask_ndarray,
                                                                               0.5,
-                                                                              DeepLearningArtApp.datasets[sequence])
+                                                                              self.datasets[sequence])
 
                             # convert to float32
                             dPatches = np.asarray(dPatches, dtype=np.float32)
@@ -517,7 +564,7 @@ class DeepLearningArtApp(QWidget):
                                                                                              self.patchSizeZ],
                                                                                             self.patchOverlap,
                                                                                             labelMask_ndarray, 0.5,
-                                                                                            DeepLearningArtApp.datasets[
+                                                                                            self.datasets[
                                                                                                 sequence])
                                 dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.byte)
                             ############################################################################################
@@ -584,7 +631,7 @@ class DeepLearningArtApp(QWidget):
                                                  allSegmentationMasks=dAllSegmentationMaskPatches)
 
                         # store datasets with h5py
-                        self.datasetForPrediction = outputFolderPath + 'datasets.hdf5'
+                        self.datasetOutputPath = outputFolderPath
                         with h5py.File(outputFolderPath + os.sep + 'datasets.hdf5', 'w') as hf:
                             hf.create_dataset('X_train', data=self.X_train)
                             hf.create_dataset('Y_train', data=self.Y_train)
@@ -614,7 +661,7 @@ class DeepLearningArtApp(QWidget):
                                                  allSegmentationMasks=dAllSegmentationMaskPatches)
 
                         # store datasets with h5py
-                        self.datasetForPrediction = outputFolderPath + 'datasets.hdf5'
+                        self.datasetOutputPath = outputFolderPath
                         with h5py.File(outputFolderPath + os.sep + 'datasets.hdf5', 'w') as hf:
                             hf.create_dataset('X_train', data=self.X_train)
                             hf.create_dataset('Y_train', data=self.Y_train)
@@ -622,7 +669,7 @@ class DeepLearningArtApp(QWidget):
                                 hf.create_dataset('Y_segMasks_train', data=self.Y_segMasks_train)
 
                 elif self.storeMode == STORE_PATCH_BASED:
-                    self.datasetForPrediction = outputFolderPath + "labels.json"
+                    self.datasetOutputPath = outputFolderPath
                     with open(outputFolderPath + os.sep + "labels.json", 'w') as fp:
                         json.dump(labelDict, fp)
             else:
@@ -724,7 +771,7 @@ class DeepLearningArtApp(QWidget):
                                                                             [self.patchSizeX, self.patchSizeY],
                                                                             self.patchOverlap,
                                                                             labelMask_ndarray, 0.5,
-                                                                            DeepLearningArtApp.datasets[sequence])
+                                                                            self.datasets[sequence])
 
                             # convert to float32
                             dPatches = np.asarray(dPatches, dtype=np.float32)
@@ -737,7 +784,7 @@ class DeepLearningArtApp(QWidget):
                                                                                            self.patchSizeY],
                                                                                           self.patchOverlap,
                                                                                           labelMask_ndarray, 0.5,
-                                                                                          DeepLearningArtApp.datasets[
+                                                                                          self.datasets[
                                                                                               sequence])
 
                                 dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.float32)
@@ -747,7 +794,7 @@ class DeepLearningArtApp(QWidget):
 
                         elif self.labelingMode == PATCH_LABELING:
                             # get label
-                            datasetLabel = DeepLearningArtApp.datasets[dataset].getDatasetLabel()
+                            datasetLabel = self.datasets[dataset].getDatasetLabel()
 
                             # compute 2D patch labeling patching
                             dPatches, dLabels = fRigidPatching_patchLabeling(norm_voxel_ndarray,
@@ -775,7 +822,7 @@ class DeepLearningArtApp(QWidget):
                                                                               self.patchOverlap,
                                                                               labelMask_ndarray,
                                                                               0.5,
-                                                                              DeepLearningArtApp.datasets[sequence])
+                                                                              self.datasets[sequence])
 
                             # convert to float32
                             dPatches = np.asarray(dPatches, dtype=np.float32)
@@ -789,7 +836,7 @@ class DeepLearningArtApp(QWidget):
                                                                                              self.patchSizeZ],
                                                                                             self.patchOverlap,
                                                                                             labelMask_ndarray, 0.5,
-                                                                                            DeepLearningArtApp.datasets[
+                                                                                            self.datasets[
                                                                                                 sequence])
                                 dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.byte)
                             ############################################################################################
@@ -839,7 +886,7 @@ class DeepLearningArtApp(QWidget):
                         if not self.usingSegmentationMasks:
                             [self.X_validation], [self.Y_validation] = TransformDataset(dAllPatches, dAllLabels,
                                                                                         patchSize=[self.patchSizeX,
-                                                                                         self.patchSizeY],
+                                                                                                   self.patchSizeY],
                                                                                         patchOverlap=self.patchOverlap,
                                                                                         isRandomShuffle=self.isRandomShuffle,
                                                                                         isUsingSegmentation=False,
@@ -856,7 +903,7 @@ class DeepLearningArtApp(QWidget):
                                                  allSegmentationMasks=dAllSegmentationMaskPatches)
 
                         # store datasets with h5py
-                        self.datasetForPrediction = outputFolderPath + 'datasets.hdf5'
+                        self.datasetOutputPath = outputFolderPath
                         with h5py.File(outputFolderPath + os.sep + 'datasets.hdf5', 'w') as hf:
                             hf.create_dataset('X_validation', data=self.X_validation)
                             hf.create_dataset('Y_validation', data=self.Y_validation)
@@ -867,8 +914,8 @@ class DeepLearningArtApp(QWidget):
                         if not self.usingSegmentationMasks:
                             [self.X_validation], [self.Y_validation] = TransformDataset(dAllPatches, dAllLabels,
                                                                                         patchSize=[self.patchSizeX,
-                                                                                         self.patchSizeY,
-                                                                                         self.patchSizeZ],
+                                                                                                   self.patchSizeY,
+                                                                                                   self.patchSizeZ],
                                                                                         patchOverlap=self.patchOverlap,
                                                                                         isRandomShuffle=self.isRandomShuffle,
                                                                                         isUsingSegmentation=False,
@@ -886,7 +933,7 @@ class DeepLearningArtApp(QWidget):
                                                  allSegmentationMasks=dAllSegmentationMaskPatches)
 
                         # store datasets with h5py
-                        self.datasetForPrediction = outputFolderPath + 'datasets.hdf5'
+                        self.datasetOutputPath = outputFolderPath
                         with h5py.File(outputFolderPath + os.sep + 'datasets.hdf5', 'w') as hf:
                             hf.create_dataset('X_validation', data=self.X_validation)
                             hf.create_dataset('Y_validation', data=self.Y_validation)
@@ -894,7 +941,7 @@ class DeepLearningArtApp(QWidget):
                                 hf.create_dataset('Y_segMasks_validation', data=self.Y_segMasks_validation)
 
                 elif self.storeMode == STORE_PATCH_BASED:
-                    self.datasetForPrediction = outputFolderPath + "labels.json"
+                    self.datasetOutputPath = outputFolderPath
                     with open(outputFolderPath + os.sep + "labels.json", 'w') as fp:
                         json.dump(labelDict, fp)
             else:
@@ -903,7 +950,7 @@ class DeepLearningArtApp(QWidget):
                     if not self.usingSegmentationMasks:
                         [self.X_validation], [self.Y_validation] = TransformDataset(dAllPatches, dAllLabels,
                                                                                     patchSize=[self.patchSizeX,
-                                                                                     self.patchSizeY],
+                                                                                               self.patchSizeY],
                                                                                     patchOverlap=self.patchOverlap,
                                                                                     isRandomShuffle=self.isRandomShuffle,
                                                                                     isUsingSegmentation=False,
@@ -923,8 +970,8 @@ class DeepLearningArtApp(QWidget):
                     if not self.usingSegmentationMasks:
                         [self.X_validation], [self.Y_validation] = TransformDataset(dAllPatches, dAllLabels,
                                                                                     patchSize=[self.patchSizeX,
-                                                                                     self.patchSizeY,
-                                                                                     self.patchSizeZ],
+                                                                                               self.patchSizeY,
+                                                                                               self.patchSizeZ],
                                                                                     patchOverlap=self.patchOverlap,
                                                                                     isRandomShuffle=self.isRandomShuffle,
                                                                                     isUsingSegmentation=False,
@@ -996,7 +1043,7 @@ class DeepLearningArtApp(QWidget):
                                                                             [self.patchSizeX, self.patchSizeY],
                                                                             self.patchOverlap,
                                                                             labelMask_ndarray, 0.5,
-                                                                            DeepLearningArtApp.datasets[sequence])
+                                                                            self.datasets[sequence])
 
                             # convert to float32
                             dPatches = np.asarray(dPatches, dtype=np.float32)
@@ -1009,7 +1056,7 @@ class DeepLearningArtApp(QWidget):
                                                                                            self.patchSizeY],
                                                                                           self.patchOverlap,
                                                                                           labelMask_ndarray, 0.5,
-                                                                                          DeepLearningArtApp.datasets[
+                                                                                          self.datasets[
                                                                                               sequence])
 
                                 dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.float32)
@@ -1019,7 +1066,7 @@ class DeepLearningArtApp(QWidget):
 
                         elif self.labelingMode == PATCH_LABELING:
                             # get label
-                            datasetLabel = DeepLearningArtApp.datasets[dataset].getDatasetLabel()
+                            datasetLabel = self.datasets[dataset].getDatasetLabel()
 
                             # compute 2D patch labeling patching
                             dPatches, dLabels = fRigidPatching_patchLabeling(norm_voxel_ndarray,
@@ -1047,7 +1094,7 @@ class DeepLearningArtApp(QWidget):
                                                                               self.patchOverlap,
                                                                               labelMask_ndarray,
                                                                               0.5,
-                                                                              DeepLearningArtApp.datasets[sequence])
+                                                                              self.datasets[sequence])
 
                             # convert to float32
                             dPatches = np.asarray(dPatches, dtype=np.float32)
@@ -1061,7 +1108,7 @@ class DeepLearningArtApp(QWidget):
                                                                                              self.patchSizeZ],
                                                                                             self.patchOverlap,
                                                                                             labelMask_ndarray, 0.5,
-                                                                                            DeepLearningArtApp.datasets[
+                                                                                            self.datasets[
                                                                                                 sequence])
                                 dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.byte)
                             ############################################################################################
@@ -1128,7 +1175,7 @@ class DeepLearningArtApp(QWidget):
                                                  allSegmentationMasks=dAllSegmentationMaskPatches)
 
                         # store datasets with h5py
-                        self.datasetForPrediction = outputFolderPath + 'datasets.hdf5'
+                        self.datasetOutputPath = outputFolderPath
                         with h5py.File(outputFolderPath + os.sep + 'datasets.hdf5', 'w') as hf:
                             hf.create_dataset('X_test', data=self.X_test)
                             hf.create_dataset('Y_test', data=self.Y_test)
@@ -1158,7 +1205,7 @@ class DeepLearningArtApp(QWidget):
                                                  allSegmentationMasks=dAllSegmentationMaskPatches)
 
                         # store datasets with h5py
-                        self.datasetForPrediction = outputFolderPath + 'datasets.hdf5'
+                        self.datasetOutputPath = outputFolderPath
                         with h5py.File(outputFolderPath + os.sep + 'datasets.hdf5', 'w') as hf:
                             hf.create_dataset('X_test', data=self.X_test)
                             hf.create_dataset('Y_test', data=self.Y_test)
@@ -1166,7 +1213,7 @@ class DeepLearningArtApp(QWidget):
                                 hf.create_dataset('Y_segMasks_test', data=self.Y_segMasks_test)
 
                 elif self.storeMode == STORE_PATCH_BASED:
-                    self.datasetForPrediction = outputFolderPath + "labels.json"
+                    self.datasetOutputPath = outputFolderPath
                     with open(outputFolderPath + os.sep + "labels.json", 'w') as fp:
                         json.dump(labelDict, fp)
             else:
@@ -1267,7 +1314,7 @@ class DeepLearningArtApp(QWidget):
                                                                                 [self.patchSizeX, self.patchSizeY],
                                                                                 self.patchOverlap,
                                                                                 labelMask_ndarray, 0.5,
-                                                                                DeepLearningArtApp.datasets[dataset])
+                                                                                self.datasets[dataset])
 
                                 # convert to float32
                                 dPatches = np.asarray(dPatches, dtype=np.float32)
@@ -1280,7 +1327,7 @@ class DeepLearningArtApp(QWidget):
                                                                                                self.patchSizeY],
                                                                                               self.patchOverlap,
                                                                                               labelMask_ndarray, 0.5,
-                                                                                              DeepLearningArtApp.datasets[
+                                                                                              self.datasets[
                                                                                                   dataset])
 
                                     dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.float32)
@@ -1290,7 +1337,7 @@ class DeepLearningArtApp(QWidget):
 
                             elif self.labelingMode == PATCH_LABELING:
                                 # get label
-                                datasetLabel = DeepLearningArtApp.datasets[dataset].getDatasetLabel()
+                                datasetLabel = self.datasets[dataset].getDatasetLabel()
 
                                 # compute 2D patch labeling patching
                                 dPatches, dLabels = fRigidPatching_patchLabeling(norm_voxel_ndarray,
@@ -1318,7 +1365,7 @@ class DeepLearningArtApp(QWidget):
                                                                                   self.patchOverlap,
                                                                                   labelMask_ndarray,
                                                                                   0.5,
-                                                                                  DeepLearningArtApp.datasets[dataset])
+                                                                                  self.datasets[dataset])
 
                                 # convert to float32
                                 dPatches = np.asarray(dPatches, dtype=np.float32)
@@ -1332,7 +1379,7 @@ class DeepLearningArtApp(QWidget):
                                                                                                  self.patchSizeZ],
                                                                                                 self.patchOverlap,
                                                                                                 labelMask_ndarray, 0.5,
-                                                                                                DeepLearningArtApp.datasets[
+                                                                                                self.datasets[
                                                                                                     dataset])
                                     dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.byte)
                                 ############################################################################################
@@ -1409,7 +1456,7 @@ class DeepLearningArtApp(QWidget):
                                                             nfolds=0, isRandomShuffle=self.isRandomShuffle)
 
                         # store datasets with h5py
-                        self.datasetForPrediction = outputFolderPath + 'datasets.hdf5'
+                        self.datasetOutputPath = outputFolderPath
                         with h5py.File(outputFolderPath + os.sep + 'datasets.hdf5', 'w') as hf:
                             hf.create_dataset('X_train', data=self.X_train)
                             hf.create_dataset('X_validation', data=self.X_validation)
@@ -1452,7 +1499,7 @@ class DeepLearningArtApp(QWidget):
                                                             nfolds=0, isRandomShuffle=self.isRandomShuffle)
 
                         # store datasets with h5py
-                        self.datasetForPrediction = outputFolderPath + 'datasets.hdf5'
+                        self.datasetOutputPath = outputFolderPath
                         with h5py.File(outputFolderPath + os.sep + 'datasets.hdf5', 'w') as hf:
                             hf.create_dataset('X_train', data=self.X_train)
                             hf.create_dataset('X_validation', data=self.X_validation)
@@ -1466,7 +1513,7 @@ class DeepLearningArtApp(QWidget):
                                 hf.create_dataset('Y_segMasks_test', data=self.Y_segMasks_test)
 
                 elif self.storeMode == STORE_PATCH_BASED:
-                    self.datasetForPrediction = outputFolderPath + "labels.json"
+                    self.datasetOutputPath = outputFolderPath
                     with open(outputFolderPath + os.sep + "labels.json", 'w') as fp:
                         json.dump(labelDict, fp)
             else:
@@ -1697,15 +1744,15 @@ class DeepLearningArtApp(QWidget):
             self.Y_validation_shape = Y_validation.shape
             self.X_test_shape = self.X_test.shape
             self.Y_test_shape = Y_test.shape
+            self.neuralnetworkPath = self.deepNeuralNetworks[self.neuralNetworkModel].replace(".", "/") + '.py'
             self.updateParameters()
-            self.network_interface_update.emit()
+            self._network_interface_update.emit()
 
             if self.network_canrun:
-
                 fRunCNN(dData={'X_train': self.X_train, 'y_train': Y_train, 'X_valid': self.X_validation,
                                'y_valid': Y_validation, 'X_test': self.X_test, 'y_test': Y_test,
                                'patchSize': [self.patchSizeX, self.patchSizeY, self.patchSizeZ]},
-                        sModelIn=DeepLearningArtApp.deepNeuralNetworks[self.neuralNetworkModel],
+                        sModelIn=self.deepNeuralNetworks[self.neuralNetworkModel],
                         lTrain=RUN_CNN_TRAIN_TEST_VALIDATION,
                         sParaOptim='',
                         sOutPath=self.outPutFolderDataPath,
@@ -1724,11 +1771,11 @@ class DeepLearningArtApp(QWidget):
             self.Y_segMasks_train_shape = self.Y_segMasks_train.shape
             self.Y_segMasks_validation_shape = self.Y_segMasks_validation.shape
             self.Y_segMasks_test_shape = self.Y_segMasks_test.shape
+            self.neuralnetworkPath = self.deepNeuralNetworks[self.neuralNetworkModel].replace(".", "/") + '.py'
             self.updateParameters()
-            self.network_interface_update.emit()
+            self._network_interface_update.emit()
 
             if self.network_canrun:
-
                 fRunCNN(dData={'X_train': self.X_train,
                                'y_train': Y_train,
                                'Y_segMasks_train': self.Y_segMasks_train,
@@ -1739,7 +1786,7 @@ class DeepLearningArtApp(QWidget):
                                'y_test': Y_test,
                                'Y_segMasks_test': self.Y_segMasks_test,
                                'patchSize': [self.patchSizeX, self.patchSizeY, self.patchSizeZ]},
-                        sModelIn=DeepLearningArtApp.deepNeuralNetworks[self.neuralNetworkModel],
+                        sModelIn=self.deepNeuralNetworks[self.neuralNetworkModel],
                         lTrain=RUN_CNN_TRAIN_TEST_VALIDATION,
                         sParaOptim='',
                         sOutPath=self.outPutFolderDataPath,
@@ -2019,6 +2066,7 @@ class DeepLearningArtApp(QWidget):
 
     def setNeuralNetworkModel(self, model):
         self.neuralNetworkModel = model
+        self.network_interface_update.emit()
 
     def getNeuralNetworkModel(self):
         return self.neuralNetworkModel
@@ -2308,12 +2356,14 @@ class DeepLearningArtApp(QWidget):
 
     def setDatasetForPrediction(self, d):
         self.datasetForPrediction = d
+        self.network_interface_update.emit()
 
     def getModelForPrediction(self):
-        return self.modelForPrediction
+        return self.modelPathPrediction
 
     def setModelForPrediction(self, m):
-        self.modelForPrediction = m
+        self.modelPathPrediction = m
+        self.network_interface_update.emit()
 
     def getClassificationReport(self):
         return self.classificationReport
@@ -2371,7 +2421,7 @@ class DeepLearningArtApp(QWidget):
             with open(self.datasetForPrediction + os.sep + "dataset_info.json", 'r') as fp:
                 dataset_info = json.load(fp)
 
-            patchOverlap = dataset_info['PatchOverlap']
+            self.patchOverlapPrediction = dataset_info['PatchOverlap']
             patientsOfDataset = dataset_info['Patients']
 
             if self.doUnpatching:
@@ -2379,6 +2429,7 @@ class DeepLearningArtApp(QWidget):
                 datasetForUnpatching = datasetForUnpatching[0]
 
             # hd5f or patch based?
+            self.storeModePrediction = dataset_info['StoreMode']
             if dataset_info['StoreMode'] == STORE_HDF5:
                 # loading hdf5
                 try:
@@ -2407,15 +2458,18 @@ class DeepLearningArtApp(QWidget):
             print('Using current data as test data for prediction')
 
         # dynamic loading of corresponding model
-        with open(self.modelForPrediction + os.sep + "cnn_training_info.json", 'r') as fp:
+        with open(self.modelPathPrediction + os.sep + "cnn_training_info.json", 'r') as fp:
             cnn_info = json.load(fp)
 
-        sModel = DeepLearningArtApp.deepNeuralNetworks[cnn_info['Name']]
-        batchSize = int(cnn_info['BatchSize'])
-        usingArtifacts = cnn_info['Artifacts']
-        usingBodyRegions = cnn_info['BodyRegions']
-        usingTWeighting = cnn_info['TWeightings']
-        self.usingClassification = cnn_info['UsingClassification']
+        self.modelPrediction = cnn_info['Name']
+        self.modelPathPrediction = self.deepNeuralNetworks[self.modelPrediction]
+        self.batchSizePrediction = int(cnn_info['BatchSize'])
+        self.usingArtifactsPrediction = cnn_info['Artifacts']
+        self.usingBodyRegionsPrediction = cnn_info['BodyRegions']
+        self.usingTWeightingPrediction = cnn_info['TWeightings']
+        self.usingClassificationPrediction = cnn_info['UsingClassification']
+
+        self.network_interface_update.emit()
 
         # preprocess y
         if 'ClassMappings' in cnn_info:
@@ -2436,12 +2490,12 @@ class DeepLearningArtApp(QWidget):
 
             classes = np.asarray(np.unique(Y_train_original, ), dtype=int)
             self.classMappingsForPrediction = Label.mapClassesToOutputVector(classes=classes,
-                                                                             usingArtefacts=usingArtifacts,
-                                                                             usingBodyRegion=usingBodyRegions,
-                                                                             usingTWeightings=usingTWeighting)
+                                                                             usingArtefacts=self.usingArtifactsPredictiongArtifacts,
+                                                                             usingBodyRegion=self.usingBodyRegionsPrediction,
+                                                                             usingTWeightings=self.usingTWeightingPrediction)
 
         if self.doUnpatching:
-            classLabel = int(DeepLearningArtApp.datasets[datasetForUnpatching].getDatasetLabel())
+            classLabel = int(self.datasets[datasetForUnpatching].getDatasetLabel())
 
         if self.usingSegmentationMasksForPrediction:
             Y_train = []
@@ -2471,22 +2525,29 @@ class DeepLearningArtApp(QWidget):
                 Y_test.append([1, 0] if y_labels_test[i].all() == 0 else [0, 1])
             Y_test = np.asarray(Y_test)
 
+            self.X_test_shape = self.X_test.shape
+            self.Y_test_shape = Y_test.shape
+            self.Y_segMasks_test_shape = self.Y_segMasks_test.shape
+            self.neuralnetworkPath = self.deepNeuralNetworks[self.neuralNetworkModel].replace(".", "/") + '.py'
+            self.updateParameters()
+            self._network_interface_update.emit()
+
             predictions = predict_segmentation_model(self.X_test,
                                                      Y_test,
                                                      self.Y_segMasks_test,
-                                                     sModelPath=self.modelForPrediction,
-                                                     batch_size=batchSize,
-                                                     usingClassification=self.usingClassification,
+                                                     sModelPath=self.modelPathPrediction,
+                                                     batch_size=self.batchSizePrediction,
+                                                     usingClassification=self.usingClassificationPrediction,
                                                      dlart_handle=self)
 
             # do unpatching if is enabled
             if self.doUnpatching:
 
-                patchSize = [self.X_test.shape[1], self.X_test.shape[2], self.X_test.shape[3]]
+                self.patchSizePrediction = [self.X_test.shape[1], self.X_test.shape[2], self.X_test.shape[3]]
 
                 # load corresponding original dataset
-                for i in DeepLearningArtApp.datasets:
-                    set = DeepLearningArtApp.datasets[i]
+                for i in self.datasets:
+                    set = self.datasets[i]
                     if set.getDatasetLabel() == classLabel:
                         originalDatasetName = set.getPathdata()
 
@@ -2529,13 +2590,13 @@ class DeepLearningArtApp(QWidget):
                 allPreds = predictions['prob_pre']
 
                 unpatched_img_foreground = fUnpatchSegmentation(allPreds[0],
-                                                                patchSize=patchSize,
-                                                                patchOverlap=patchOverlap,
+                                                                patchSize=self.patchSizePredictionSize,
+                                                                patchOverlap=self.patchOverlapPrediction,
                                                                 actualSize=dicom_size,
                                                                 iClass=1)
                 unpatched_img_background = fUnpatchSegmentation(allPreds[0],
-                                                                patchSize=patchSize,
-                                                                patchOverlap=patchOverlap,
+                                                                patchSize=self.patchSizePrediction,
+                                                                patchOverlap=self.patchOverlapPrediction,
                                                                 actualSize=dicom_size,
                                                                 iClass=0)
 
@@ -2549,12 +2610,6 @@ class DeepLearningArtApp(QWidget):
                                                unpatched_img_background.shape[2]))
                 unpatched_img_mask[preds] = unpatched_img_mask[preds] + 1
 
-                # unpatched_img_mask = fUnpatchSegmentation(preds,
-                #                                           patchSize=patchSize,
-                #                                           patchOverlap=patchOverlap,
-                #                                           actualSize=dicom_size,
-                #                                           iClass=1000)
-
                 self.unpatched_slices = {
                     'probability_mask_foreground': unpatched_img_foreground,
                     'probability_mask_background': unpatched_img_background,
@@ -2564,9 +2619,9 @@ class DeepLearningArtApp(QWidget):
 
                 }
 
-            if self.usingClassification:
+            if self.usingClassificationPrediction:
                 # save prediction into .mat file
-                modelSave = self.modelForPrediction + os.sep + 'model_predictions.mat'
+                modelSave = self.modelPathPrediction + os.sep + 'model_predictions.mat'
                 print('saving Model:{}'.format(modelSave))
 
                 if not self.doUnpatching:
@@ -2602,18 +2657,18 @@ class DeepLearningArtApp(QWidget):
                 self.result_WorkSpace = modelSave
 
                 # load training results
-                _, sPath = os.path.splitdrive(self.modelForPrediction)
+                _, sPath = os.path.splitdrive(self.modelPathPrediction)
                 sPath, sFilename = os.path.split(sPath)
                 sFilename, sExt = os.path.splitext(sFilename)
 
-                training_results = sio.loadmat(self.modelForPrediction + os.sep + sFilename + ".mat")
+                training_results = sio.loadmat(self.modelPathPrediction + os.sep + sFilename + ".mat")
                 self.acc_training = training_results['segmentation_output_dice_coef_training']
                 self.acc_validation = training_results['segmentation_output_dice_coef_val']
                 self.acc_test = training_results['segmentation_output_dice_coef_test']
 
             else:
                 # save prediction into .mat file
-                modelSave = self.modelForPrediction + os.sep + 'model_predictions.mat'
+                modelSave = self.modelPathPrediction + os.sep + 'model_predictions.mat'
                 print('saving Model:{}'.format(modelSave))
                 if not self.doUnpatching:
                     sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
@@ -2629,15 +2684,14 @@ class DeepLearningArtApp(QWidget):
                 self.result_WorkSpace = modelSave
 
                 # load training results
-                _, sPath = os.path.splitdrive(self.modelForPrediction)
+                _, sPath = os.path.splitdrive(self.modelPathPrediction)
                 sPath, sFilename = os.path.split(sPath)
                 sFilename, sExt = os.path.splitext(sFilename)
 
-                training_results = sio.loadmat(self.modelForPrediction + os.sep + sFilename + ".mat")
+                training_results = sio.loadmat(self.modelPathPrediction + os.sep + sFilename + ".mat")
                 self.acc_training = training_results['dice_coef']
                 self.acc_validation = training_results['val_dice_coef']
                 self.acc_test = training_results['dice_coef_test']
-
 
         else:
 
@@ -2646,10 +2700,16 @@ class DeepLearningArtApp(QWidget):
                 Y_test.append(self.classMappingsForPrediction[self.Y_test[i]])
             Y_test = np.asarray(Y_test)
 
+            self.X_test_shape = self.X_test.shape
+            self.Y_test_shape = Y_test.shape
+            self.neuralnetworkPath = self.deepNeuralNetworks[self.neuralNetworkModel].replace(".", "/") + '.py'
+            self.updateParameters()
+            self._network_interface_update.emit()
+
             prediction = predict_model(self.X_test,
                                        Y_test,
-                                       sModelPath=self.modelForPrediction,
-                                       batch_size=batchSize,
+                                       sModelPath=self.modelPathPrediction,
+                                       batch_size=self.batchSizePrediction,
                                        dlart_handle=self)
 
             self.predictions = prediction['predictions']
@@ -2668,15 +2728,15 @@ class DeepLearningArtApp(QWidget):
             # do unpatching if is enabled
             if self.doUnpatching:
 
-                patchSize = [self.X_test.shape[1], self.X_test.shape[2], self.X_test.shape[3]]
+                self.patchSizePrediction = [self.X_test.shape[1], self.X_test.shape[2], self.X_test.shape[3]]
                 classVec = self.classMappingsForPrediction[classLabel]
                 classVec = np.asarray(classVec, dtype=np.int32)
                 iClass = np.where(classVec == 1)
                 iClass = iClass[0]
 
                 # load corresponding original dataset
-                for i in DeepLearningArtApp.datasets:
-                    set = DeepLearningArtApp.datasets[i]
+                for i in self.datasets:
+                    set = self.datasets[i]
                     if set.getDatasetLabel() == classLabel:
                         originalDatasetName = set.getPathdata()
 
@@ -2716,22 +2776,16 @@ class DeepLearningArtApp(QWidget):
 
                 dicom_size = [voxel_ndarray.shape[0], voxel_ndarray.shape[1], voxel_ndarray.shape[2]]
 
-                # multiclass_probability_masks = fUnpatch2D(self.predictions,
-                #                               patchSize,
-                #                               patchOverlap,
-                #                               dicom_size,
-                #                               iClass=iClass)
-
-                if len(patchSize) == 2:
+                if len(self.patchOverlapPrediction) == 2:
                     multiclass_probability_masks = fMulticlassUnpatch2D(self.predictions,
-                                                                        patchSize,
-                                                                        patchOverlap,
+                                                                        self.patchSizePrediction,
+                                                                        self.patchOverlapPrediction,
                                                                         dicom_size)
 
-                if len(patchSize) == 3:
+                if len(self.patchSizePrediction) == 3:
                     multiclass_probability_masks = fUnpatch3D(self.predictions,
-                                                              patchSize,
-                                                              patchOverlap,
+                                                              self.patchSizePrediction,
+                                                              self.patchOverlapPrediction,
                                                               dicom_size)
 
                 ########################################################################################################
@@ -2760,9 +2814,11 @@ class DeepLearningArtApp(QWidget):
                     PNew = np.concatenate((PType, PArte), axis=1)
                     IndexArte = np.argmax(PNew, 1)
 
-                    IType = UnpatchType(IndexType, domain, patchSize, patchOverlap, dicom_size)
+                    IType = UnpatchType(IndexType, domain, self.patchSizePrediction, self.patchOverlapPrediction,
+                                        dicom_size)
 
-                    IArte = UnpatchArte(IndexArte, patchSize, patchOverlap, dicom_size, 11)
+                    IArte = UnpatchArte(IndexArte, self.patchSizePrediction, self.patchOverlapPrediction, dicom_size,
+                                        11)
 
                 if prob_test.shape[1] == 3:
                     IndexType = np.argmax(prob_test, 1)
@@ -2780,9 +2836,10 @@ class DeepLearningArtApp(QWidget):
                     PNew = np.concatenate((PType, PArte), axis=1)
                     IndexArte = np.argmax(PNew, 1)
 
-                    IType = UnpatchType(IndexType, domain, patchSize, patchOverlap, dicom_size)
+                    IType = UnpatchType(IndexType, domain, self.patchSizePrediction, self.patchOverlapPrediction,
+                                        dicom_size)
 
-                    IArte = UnpatchArte(IndexArte, patchSize, patchOverlap, dicom_size, 3)
+                    IArte = UnpatchArte(IndexArte, self.patchSizePrediction, self.patchOverlapPrediction, dicom_size, 3)
 
                 if prob_test.shape[1] == 8:
                     IndexType = np.argmax(prob_test, 1)
@@ -2801,9 +2858,10 @@ class DeepLearningArtApp(QWidget):
                     PNew = np.concatenate((PType, PArte), axis=1)
                     IndexArte = np.argmax(PNew, 1)
 
-                    IType = UnpatchType(IndexType, domain, patchSize, patchOverlap, dicom_size)
+                    IType = UnpatchType(IndexType, domain, self.patchSizePrediction, self.patchOverlapPrediction,
+                                        dicom_size)
 
-                    IArte = UnpatchArte(IndexArte, patchSize, patchOverlap, dicom_size, 8)
+                    IArte = UnpatchArte(IndexArte, self.patchSizePrediction, self.patchOverlapPrediction, dicom_size, 8)
 
                 ########################################################################################################
 
@@ -2817,7 +2875,7 @@ class DeepLearningArtApp(QWidget):
                 }
 
             # save prediction into .mat file
-            modelSave = self.modelForPrediction + os.sep + 'model_predictions.mat'
+            modelSave = self.modelPathPrediction + os.sep + 'model_predictions.mat'
             print('saving Model:{}'.format(modelSave))
             if not self.doUnpatching:
                 sio.savemat(modelSave, {'prob_pre': prediction['predictions'],
@@ -2839,13 +2897,13 @@ class DeepLearningArtApp(QWidget):
             self.result_WorkSpace = modelSave
 
             # load training results
-            _, sPath = os.path.splitdrive(self.modelForPrediction)
+            _, sPath = os.path.splitdrive(self.modelPathPrediction)
             sPath, sFilename = os.path.split(sPath)
             sFilename, sExt = os.path.splitext(sFilename)
 
-            print(self.modelForPrediction + os.sep + sFilename + ".mat")
+            print(self.modelPathPrediction + os.sep + sFilename + ".mat")
 
-            training_results = sio.loadmat(self.modelForPrediction + os.sep + sFilename + ".mat")
+            training_results = sio.loadmat(self.modelPathPrediction + os.sep + sFilename + ".mat")
             self.acc_training = training_results['acc']
             self.acc_validation = training_results['val_acc']
             self.acc_test = training_results['acc_test']

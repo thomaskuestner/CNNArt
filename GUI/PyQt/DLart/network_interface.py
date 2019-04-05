@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import yaml
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QTableWidget
 from PyQt5.QtWidgets import (QTableWidgetItem)
 from PyQt5.QtWidgets import QWidget
@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import QWidget
 with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
     subdir = cfg['subdirs'][1]
+
 
 class DataSetsWindow(QWidget):
     def __init__(self, patients, sequences, parent=None):
@@ -56,6 +57,7 @@ class DataSetsWindow(QWidget):
         self.setLayout(self.layout)
 
         self.setWindowTitle("Select Data Sets for Training & Test Network")
+        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
 
     def updateRecord(self):
 
@@ -66,6 +68,7 @@ class DataSetsWindow(QWidget):
         df.to_csv('DLart/network_interface_datasets.csv', index=False)
         return df
 
+
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel
 
@@ -73,86 +76,44 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 
 
 class NetworkInterface(QWidget):
-    interfaceFinishUpdating = pyqtSignal(bool)
 
     def __init__(self, params):
         super().__init__()
 
-        self.p = Parameter.create(name='params', type='group', children=params)
-        self.p.sigTreeStateChanged.connect(self.change)
+        self.param = Parameter.create(name='params', type='group', children=params)
 
-        for child in self.p.children():
-            child.sigValueChanging.connect(self.valueChanging)
-            for ch2 in child.children():
-                ch2.sigValueChanging.connect(self.valueChanging)
+        self.tree = ParameterTree()
+        self.tree.setParameters(self.param, showTop=False)
+        self.tree.setWindowTitle('Network Interface')
 
-        self.p.param('Save/Restore functionality', 'Save State').sigActivated.connect(self.save)
-        self.p.param('Save/Restore functionality', 'Restore State').sigActivated.connect(self.restore)
-
-        self.t = ParameterTree()
-        self.t.setParameters(self.p, showTop=False)
-        self.t.setWindowTitle('Network Interface')
-
-        self.win = QWidget()
+        self.window = QWidget()
         self.layout = QGridLayout()
-        self.win.setLayout(self.layout)
+        self.window.setLayout(self.layout)
         l = QLabel("Network Interface")
         l.setAlignment(QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter)
         self.layout.addWidget(l)
-        self.layout.addWidget(self.t)
-        self.win.setGeometry(500, 800, 500, 800)
+        self.layout.addWidget(self.tree)
+        self.window.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        self.network_interface.window.setGeometry(500, 800, 800, 500)
 
-        ## test save/restore
-        s = self.p.saveState()
-        self.p.restoreState(s)
+    def updataParameter(self, params, opt):
 
-    def change(self, param, changes):
-        print("tree changes:")
-        for param, change, data in changes:
-            path = self.p.childPath(param)
-            if path is not None:
-                childName = '.'.join(path)
-            else:
-                childName = param.name()
+        self.param = Parameter.create(name='params', type='group', children=params)
+        self.tree.setParameters(self.param, showTop=False)
+        self.layout.addWidget(self.tree)
 
-    def valueChanging(self, param, value):
-        newparam = {}
-        newparam[param.name()] = value
+        if opt == 1:
+            print('Please wait for a moment, I am working in progress')
+        else:
+            print('interface updated')
+        QtWidgets.QApplication.processEvents()
 
-    def save(self):
-        global state
-        state = self.p.saveState()
+    def closeEvent(self, closeEvent):
+        reply = QtWidgets.QMessageBox.question(self, 'Warning', 'Are you sure to exit?',
+                                               QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                                               QtWidgets.QMessageBox.No)
+        if reply == QtWidgets.QMessageBox.Yes:
 
-    def restore(self):
-        global state
-        add = self.p['Save/Restore functionality', 'Restore State', 'Add missing items']
-        rem = self.p['Save/Restore functionality', 'Restore State', 'Remove extra items']
-        self.p.restoreState(state, addChildren=add, removeChildren=rem)
-
-    def updataParameter(self, params):
-
-        self.interfaceFinishUpdating.emit(False)
-
-        self.p = Parameter.create(name='params', type='group', children=params)
-        self.p.sigTreeStateChanged.connect(self.change)
-
-        for child in self.p.children():
-            child.sigValueChanging.connect(self.valueChanging)
-            for ch2 in child.children():
-                ch2.sigValueChanging.connect(self.valueChanging)
-
-        self.p.param('Save/Restore functionality', 'Save State').sigActivated.connect(self.save)
-        self.p.param('Save/Restore functionality', 'Restore State').sigActivated.connect(self.restore)
-
-        self.t.setParameters(self.p, showTop=False)
-        self.t.setWindowTitle('Network Interface')
-
-        self.layout.addWidget(self.t)
-
-        ## test save/restore
-        s = self.p.saveState()
-        self.p.restoreState(s)
-
-        self.interfaceFinishUpdating.emit(True)
-
-
+            QCloseEvent.accept()
+        else:
+            QCloseEvent.ignore()
