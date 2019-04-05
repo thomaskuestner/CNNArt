@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QTableWidget
 from PyQt5.QtWidgets import (QTableWidgetItem)
 from PyQt5.QtWidgets import QWidget
 
-with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
+with open('config' + os.sep + 'param_GUI.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
     subdir = cfg['subdirs'][1]
 
@@ -94,7 +94,7 @@ class NetworkInterface(QWidget):
         self.layout.addWidget(l)
         self.layout.addWidget(self.tree)
         self.window.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-        self.network_interface.window.setGeometry(500, 800, 800, 500)
+        self.window.setGeometry(500, 800, 800, 500)
 
     def updataParameter(self, params, opt):
 
