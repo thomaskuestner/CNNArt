@@ -2,6 +2,8 @@ import yaml
 with open('config/param.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
 
+DATASETS = cfg['MRdatabase']
+
 PATH_OUT = cfg['pathout']
 
 PREDICT_IMG_PATH = cfg['lPredictImg']
