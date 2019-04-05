@@ -1,8 +1,9 @@
 import os
-#os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
-#os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from tensorflow.python.client import device_lib
+
 print(device_lib.list_local_devices)
 
 import os.path
@@ -37,7 +38,6 @@ from networks.multiclass.SENets.densely_connected_cnn_blocks import *
 
 
 def createModel(patchSize, numClasses):
-
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
     else:
@@ -49,22 +49,25 @@ def createModel(patchSize, numClasses):
     input_tensor = Input(shape=(patchSize[0], patchSize[1], 1))
 
     # first conv layer
-    x = Conv2D(16, (3,3), strides=(1,1), padding='same', kernel_initializer='he_normal')(input_tensor)
+    x = Conv2D(16, (3, 3), strides=(1, 1), padding='same', kernel_initializer='he_normal')(input_tensor)
 
     # 1. Dense Block
-    x, numFilters = dense_block(x, numInputFilters=16, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=False)
+    x, numFilters = dense_block(x, numInputFilters=16, numLayers=10, growthRate_k=growthRate_k,
+                                bottleneck_enabled=False)
 
     # Transition Layer
     x, numFilters = transition_SE_layer(x, numFilters, compressionFactor=compressionFactor, se_ratio=16)
 
     # 2. Dense Block
-    x, numFilters = dense_block(x, numInputFilters=numFilters, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=False)
+    x, numFilters = dense_block(x, numInputFilters=numFilters, numLayers=10, growthRate_k=growthRate_k,
+                                bottleneck_enabled=False)
 
-    #Transition Layer
+    # Transition Layer
     x, numFilters = transition_SE_layer(x, numFilters, compressionFactor=compressionFactor, se_ratio=16)
 
-    #3. Dense Block
-    x, numFilters = dense_block(x, numInputFilters=numFilters, numLayers=10, growthRate_k=growthRate_k, bottleneck_enabled=False)
+    # 3. Dense Block
+    x, numFilters = dense_block(x, numInputFilters=numFilters, numLayers=10, growthRate_k=growthRate_k,
+                                bottleneck_enabled=False)
 
     # SE Block
     x = squeeze_excitation_block(x, ratio=16)
@@ -88,7 +91,8 @@ def createModel(patchSize, numClasses):
     return cnn, sModelName
 
 
-def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
+def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None, patchSize=0,
+           batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
     # grid search on batch_sizes and learning rates
     # parse inputs
     batchSize = batchSizes[0]
@@ -101,13 +105,13 @@ def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, 
     if X_valid is not None and y_valid is not None:
         X_valid = np.expand_dims(X_valid, axis=-1)
 
-    #y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
-    #y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
+    # y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
+    # y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
 
     # number of classes
     numClasses = np.shape(y_train)[-1]
 
-    #create cnn model
+    # create cnn model
     cnn, sModelName = createModel(patchSize=patchSize, numClasses=numClasses)
 
     fTrainInner(cnn,
@@ -144,7 +148,9 @@ def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, 
     #                     iEpochs=iEpochs,
     #                     dlart_handle=dlart_handle)
 
-def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None):
+
+def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None,
+                sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None):
     print('Training CNN')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
@@ -162,7 +168,6 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
     if (os.path.isfile(model_mat)):  # no training if output file exists
         print('------- already trained -> go to next')
         return
-
 
     # create optimizer
     if dlart_handle != None:
@@ -194,22 +199,23 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
     # callbacks
     callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=25, verbose=1)
-    #callback_tensorBoard = keras.callbacks.TensorBoard(log_dir=dlart_handle.getLearningOutputPath() + '/logs',
-                                                       #histogram_freq=2,
-                                                       #batch_size=batchSize,
-                                                       #write_graph=True,
-                                                      # write_grads=True,
-                                                      # write_images=True,
-                                                      # embeddings_freq=0,
-                                                      # embeddings_layer_names=None,
-                                                     #  embeddings_metadata=None)
+    # callback_tensorBoard = keras.callbacks.TensorBoard(log_dir=dlart_handle.getLearningOutputPath() + '/logs',
+    # histogram_freq=2,
+    # batch_size=batchSize,
+    # write_graph=True,
+    # write_grads=True,
+    # write_images=True,
+    # embeddings_freq=0,
+    # embeddings_layer_names=None,
+    #  embeddings_metadata=None)
 
     callbacks = [callback_earlyStopping]
-    callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints/checker.hdf5', monitor='val_acc', verbose=0, period=5, save_best_only=True))  # overrides the last checkpoint, its just for security
-    #callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
+    callbacks.append(
+        ModelCheckpoint(sOutPath + os.sep + 'checkpoints/checker.hdf5', monitor='val_acc', verbose=0, period=5,
+                        save_best_only=True))  # overrides the last checkpoint, its just for security
+    # callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
     callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
     callbacks.append(LivePlotCallback(dlart_handle))
-
 
     # data augmentation
     if dlart_handle.getDataAugmentationEnabled() == True:
@@ -264,27 +270,27 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                                          data_format=K.image_data_format())
 
         datagen_test = ImageDataGenerator(featurewise_center=False,
-                                         samplewise_center=False,
-                                         featurewise_std_normalization=False,
-                                         samplewise_std_normalization=False,
-                                         zca_whitening=dlart_handle.getZCA_Whitening(),
-                                         zca_epsilon=1e-6,
-                                         rotation_range=0.,
-                                         width_shift_range=0.,
-                                         height_shift_range=0.,
-                                         shear_range=0.,
-                                         zoom_range=0.,
-                                         channel_shift_range=0.,
-                                         fill_mode='constant',
-                                         cval=0.,
-                                         horizontal_flip=False,
-                                         vertical_flip=False,
-                                         rescale=None,
-                                         histogram_equalization=dlart_handle.getHistogramEqualization(),
-                                         contrast_stretching=dlart_handle.getContrastStretching(),
-                                         adaptive_equalization=dlart_handle.getAdaptiveEqualization(),
-                                         preprocessing_function=None,
-                                         data_format=K.image_data_format())
+                                          samplewise_center=False,
+                                          featurewise_std_normalization=False,
+                                          samplewise_std_normalization=False,
+                                          zca_whitening=dlart_handle.getZCA_Whitening(),
+                                          zca_epsilon=1e-6,
+                                          rotation_range=0.,
+                                          width_shift_range=0.,
+                                          height_shift_range=0.,
+                                          shear_range=0.,
+                                          zoom_range=0.,
+                                          channel_shift_range=0.,
+                                          fill_mode='constant',
+                                          cval=0.,
+                                          horizontal_flip=False,
+                                          vertical_flip=False,
+                                          rescale=None,
+                                          histogram_equalization=dlart_handle.getHistogramEqualization(),
+                                          contrast_stretching=dlart_handle.getContrastStretching(),
+                                          adaptive_equalization=dlart_handle.getAdaptiveEqualization(),
+                                          preprocessing_function=None,
+                                          data_format=K.image_data_format())
 
         # fit parameters from dataset
         datagen.fit(X_train)
@@ -294,7 +300,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
         for x_batch, y_batch in datagen.flow(X_train, y_train, batch_size=9):
             # display first 9 images
             for i in range(0, 9):
-                plt.subplot(330+1+i)
+                plt.subplot(330 + 1 + i)
                 plt.imshow(x_batch[i].reshape(x_batch.shape[1], x_batch.shape[2]), cmap='gray')
             plt.show()
             break
@@ -304,7 +310,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
             # use validation/test split
             datagen_val.fit(X_valid)
             result = cnn.fit_generator(datagen.flow(X_train, y_train, batch_size=batchSize),
-                                       steps_per_epoch=X_train.shape[0]//batchSize,
+                                       steps_per_epoch=X_train.shape[0] // batchSize,
                                        epochs=iEpochs,
                                        validation_data=datagen_val.flow(X_valid, y_valid, batch_size=batchSize),
                                        callbacks=callbacks,
@@ -331,11 +337,11 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                                                       use_multiprocessing=False)
 
         prob_test = cnn.predict_generator(datagen_test.flow(X_test, y_test, batch_size=batchSize),
-                                          steps = None,
-                                          max_queue_size = 10,
-                                          workers = 1,
-                                          use_multiprocessing = False,
-                                          verbose = 1)
+                                          steps=None,
+                                          max_queue_size=10,
+                                          workers=1,
+                                          use_multiprocessing=False,
+                                          verbose=1)
 
     else:
         if X_valid is not None and y_valid is not None:
@@ -362,7 +368,6 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
         prob_test = cnn.predict(X_test, batchSize, 0)
 
-
     # save model
     json_string = cnn.to_json()
     with open(model_json, 'w') as jsonFile:
@@ -370,7 +375,10 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
     # wei = cnn.get_weights()
     cnn.save_weights(weight_name, overwrite=True)
-    # cnn.save(model_all) # keras > v0.7
+    cnn.save(model_all)  # keras > v0.7
+    model_png_dir = sOutPath + os.sep + "model.png"
+    from keras.utils import plot_model
+    plot_model(cnn, to_file=model_png_dir, show_shapes=True, show_layer_names=True)
 
     # matlab
     acc = result.history['acc']
@@ -392,17 +400,17 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
 
 def step_decay(epoch, lr):
-   drop = 0.1
-   epochs_drop = 10.0
-   print("Current Learning Rate: " + str(lr))
-   if epoch == epochs_drop or epoch == 2*epochs_drop or epoch == 3*epochs_drop or epoch == 4*epochs_drop:
-       lr = drop*lr
-       print("Reduce Learningrate by 0.1 to " + str(lr))
+    drop = 0.1
+    epochs_drop = 10.0
+    print("Current Learning Rate: " + str(lr))
+    if epoch == epochs_drop or epoch == 2 * epochs_drop or epoch == 3 * epochs_drop or epoch == 4 * epochs_drop:
+        lr = drop * lr
+        print("Reduce Learningrate by 0.1 to " + str(lr))
 
-   return lr
+    return lr
 
 
-def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
+def fPredict(X, y, sModelPath, sOutPath, batchSize=64):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
         Input:
             X: Samples to predict on. The shape of X should fit to the input shape of the model
@@ -502,8 +510,8 @@ def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
                   W_regularizer='l2'))
     cnn.add(Activation('softmax'))
 
-    #opti = SGD(lr={{choice([0.1, 0.01, 0.05, 0.005, 0.001])}}, momentum=1e-8, decay=0.1, nesterov=True)
-    #cnn.compile(loss='categorical_crossentropy', optimizer=opti)
+    # opti = SGD(lr={{choice([0.1, 0.01, 0.05, 0.005, 0.001])}}, momentum=1e-8, decay=0.1, nesterov=True)
+    # cnn.compile(loss='categorical_crossentropy', optimizer=opti)
 
     epochs = 300
 
@@ -515,7 +523,7 @@ def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
                      validation_data=(X_test, Y_test))
     score_test, acc_test = cnn.evaluate(X_test, Y_test, verbose=0)
 
-    #return {'loss': -acc_test, 'status': STATUS_OK, 'model': cnn, 'trainresult': result, 'score_test': score_test}
+    # return {'loss': -acc_test, 'status': STATUS_OK, 'model': cnn, 'trainresult': result, 'score_test': score_test}
 
 
 ## helper functions
