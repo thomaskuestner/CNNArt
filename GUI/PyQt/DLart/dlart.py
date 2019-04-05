@@ -30,7 +30,7 @@ from DLart.Constants_DLart import *
 class DeepLearningArtApp(QWidget):
     network_interface_update = pyqtSignal()
     _network_interface_update = pyqtSignal()  # used for activate network training
-    datasetscsv = pandas.read_csv('config' + os.sep + DATASETS + '.csv')
+    datasetscsv = pandas.read_csv('config' + os.sep + 'database' + os.sep + DATASETS + '.csv')
     datasets = {}
     for i in range(pandas.DataFrame.count(datasetscsv)['pathdata']):
         datasets[datasetscsv['pathdata'][i]] = Dataset(datasetscsv['pathdata'][i], datasetscsv['pathlabel'][i],
