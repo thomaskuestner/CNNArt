@@ -36,6 +36,7 @@ from configGUI.canvas import Canvas
 from configGUI.gridTable import TableWidget
 from configGUI.labelDialog import LabelDialog
 from configGUI.labelTable import LabelTable
+from utils.label import Label
 
 matplotlib.use('Qt5Agg')
 from matplotlib import colors
@@ -77,7 +78,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.scrollAreaWidgetContents1 = QtWidgets.QWidget()
         self.maingrids1 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents1)
         self.scrollArea1.setWidget(self.scrollAreaWidgetContents1)
-        # self.scrollArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.scrollAreaWidgetContents2 = QtWidgets.QWidget()
         self.maingrids2 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents2)
         self.scrollArea2.setWidget(self.scrollAreaWidgetContents2)
@@ -278,6 +278,9 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.legendon = True
         self.label_mode = False
 
+        self.selectedPatients = None
+        self.selectedDatasets = None
+
         self.number = 0
         self.ind = 0
         self.ind2 = 0
@@ -328,7 +331,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.openResult.addItem('from workspace', 2)
         self.openResult.setCurrentIndex(0)
         self.openResult.activated.connect(self.load_patch)
-        self.bsetcolor.clicked.connect(self.set_color)
+
         self.horizontalSlider.setMaximum(80)
         self.horizontalSlider.setMinimum(20)
         self.horizontalSlider.valueChanged.connect(self.set_transparency)
@@ -464,7 +467,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         # initialize combox box for DNN selection
         self.ComboBox_DNNs.addItem("Select Deep Neural Network Model...")
         self.ComboBox_DNNs.addItems(DeepLearningArtApp.deepNeuralNetworks.keys())
-        self.ComboBox_DNNs.addItem("add new architechture")
+        self.ComboBox_DNNs.addItem("add new architecture")
         self.ComboBox_DNNs.setCurrentIndex(1)
         self.deepLearningArtApp.setNeuralNetworkModel(self.ComboBox_DNNs.currentText())
 
@@ -489,7 +492,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.training_live_performance_figure = Figure(figsize=(10, 10))
         self.canvas_training_live_performance_figure = FigureCanvas(self.training_live_performance_figure)
-        self.verticalLayout_training_performance.addWidget(self.canvas_training_live_performance_figure)
 
         # confusion matrix
         self.confusion_matrix_figure = Figure(figsize=(10, 10))
@@ -505,12 +507,11 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/Icons/brush.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.wyPlot.addItem(icon, '', 0)
+        self.wyPlot.addItem(icon, 'Showing Test Result', 0)
         self.wyPlot.setIconSize(QtCore.QSize(35, 35))
-        self.wyPlot.addItem('show layer weights', 1)
-        self.wyPlot.addItem('plot segmentation predictions', 2)
-        self.wyPlot.addItem('plot segmentation artifact maps', 3)
-        self.wyPlot.addItem('plot confusion matrix', 4)
+        self.wyPlot.addItem('plot segmentation predictions', 1)
+        self.wyPlot.addItem('plot segmentation artifact maps', 2)
+        self.wyPlot.addItem('plot confusion matrix', 3)
         self.wyPlot.setCurrentIndex(0)
         self.wyPlot.activated.connect(self.on_wyPlot_clicked)
 
@@ -558,8 +559,8 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         icon.addPixmap(QtGui.QPixmap(":/icons/Icons/folder.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.wyChooseFile.addItem(icon, '', 0)
         self.wyChooseFile.setIconSize(QtCore.QSize(35, 35))
-        self.wyChooseFile.addItem('open a directory', 1)
-        self.wyChooseFile.addItem('load from workspace', 2)
+        self.wyChooseFile.addItem('from path', 1)
+        self.wyChooseFile.addItem('from workspace', 2)
         self.wyChooseFile.setCurrentIndex(0)
         self.wyChooseFile.activated.connect(self.on_wyChooseFile_clicked)
 
@@ -573,8 +574,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.wyInputData.activated.connect(self.on_wyInputData_clicked)
 
         self.matplotlibwidget_static.show()
-        # self.matplotlibwidget_static_2.hide()
-        self.scrollArea.show()
         self.horizontalSliderPatch.hide()
         self.horizontalSliderSlice.hide()
 
@@ -1012,7 +1011,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
         if not index == 4:
             # load images directly
-            with open('config' + os.sep + 'param.yml', 'r') as ymlfile:
+            with open('config' + os.sep + 'param_GUI.yml', 'r') as ymlfile:
                 cfg = yaml.safe_load(ymlfile)
             MRPath = PATH_OUT + os.sep + DATASETS + os.sep + cfg['subdirs'][0] + os.sep
             options = QtWidgets.QFileDialog.Options()
@@ -1070,7 +1069,10 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         # self.overlay.show()
 
         self.newMR.start()
-        self.NS = self.newMR.new_shape
+        try:
+            self.NS = self.newMR.new_shape
+        except:
+            raise ValueError("File is not supported!")
         pathlist.append(self.PathDicom)
         shapelist.append(self.NS)
         self.mrinmain = self.newMR.voxel_ndarray
@@ -1464,7 +1466,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.bdswitch.setDisabled(True)
             self.openImage.setDisabled(True)
             self.openResult.setDisabled(True)
-            self.bsetcolor.setDisabled(True)
             self.view_group.setlinkoff(True)
             self.actionOpen_file.setEnabled(False)
             self.actionSave.setEnabled(True)
@@ -1494,7 +1495,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.bdswitch.setDisabled(False)
             self.openImage.setDisabled(False)
             self.openResult.setDisabled(False)
-            self.bsetcolor.setDisabled(False)
             self.view_group.setlinkoff(False)
             self.actionOpen_file.setEnabled(True)
             self.actionSave.setEnabled(True)
@@ -2348,11 +2348,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
     ####### network training
 
-    def button_selectModel_prediction_clicked(self):
-        pathToModel = self.openFileNamesDialog(self.deepLearningArtApp.getLearningOutputPath())
-        self.deepLearningArtApp.setModelForPrediction(pathToModel)
-        self.Label_currentModel_prediction.setText(pathToModel)
-
     def button_selectDataset_prediction_clicked(self):
         pathToDataset = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
         self.deepLearningArtApp.setDatasetForPrediction(pathToDataset)
@@ -2501,6 +2496,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.valueChanged.emit(self.deepLearningArtApp.params)
         # start training process
         self.show_network_interface()
+        self.verticalLayout_training_performance.addWidget(self.canvas_training_live_performance_figure)
         self.deepLearningArtApp.performTraining()
 
     def show_network_interface(self):
@@ -2658,7 +2654,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.valueChanged.emit(self.deepLearningArtApp.params)
 
     def selectedDNN_changed(self):
-        if self.ComboBox_DNNs.currentText() == "add new architechture":
+        if self.ComboBox_DNNs.currentText() == "add new architecture":
             self.addNeuralNetworkModel()
         else:
             self.deepLearningArtApp.setNeuralNetworkModel(self.ComboBox_DNNs.currentText())
@@ -2837,13 +2833,14 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 ax2.set_title('Predicted Segmentation Mask')
 
                 self.segmentation_masks_figure.tight_layout()
-                self.segmentation_masks_figure.savefig(DLART_OUT_PATH + str(index) + "_disc" + '.png')
+                self.segmentation_masks_figure.savefig(self.deepLearningArtApp.getModelForPrediction()
+                                                       + os.sep + str(index) + "_segmentation_masks_figure" + '.png')
                 self.canvas_segmentation_masks_figure.draw()
-                for w in self.matplotlibwidget_static.layout.widget():
-                    self.matplotlibwidget_static.layout.removeWidget(w)
-                self.matplotlibwidget_static.layout.addWidget(self.canvas_segmentation_masks_figure)
+                for w in self.verticalLayout_showing.widget():
+                    self.verticalLayout_showing.removeWidget(w)
+                self.verticalLayout_showing.addWidget(self.canvas_segmentation_masks_figure)
                 self.toolbar_segmentation_masks_figure = NavigationToolbar(self.canvas_segmentation_masks_figure, self)
-                self.matplotlibwidget_static.layout.addWidget(self.toolbar_segmentation_masks_figure)
+                self.verticalLayout_showing.addWidget(self.toolbar_segmentation_masks_figure)
 
     def plotSegmentationArtifactMaps(self):
         unpatched_slices = self.deepLearningArtApp.getUnpatchedSlices()
@@ -2888,35 +2885,59 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.artifact_map_figure.colorbar(mappable=map, ax=ax3)
                 self.artifact_map_figure.tight_layout()
 
-                self.artifact_map_figure.savefig(DLART_OUT_PATH + str(index) + '_cont' + '.png')
+                self.artifact_map_figure.savefig(self.deepLearningArtApp.getModelForPrediction()
+                                                       + os.sep + str(index) + "_artifact_map_figure" + '.png')
 
                 self.canvas_artifact_map_figure.draw()
-                for w in self.matplotlibwidget_static.layout.widget():
-                    self.matplotlibwidget_static.layout.removeWidget(w)
-                self.matplotlibwidget_static.layout.addWidget(self.canvas_artifact_map_figure)
+                for w in self.verticalLayout_showing.widget():
+                    self.verticalLayout_showing.removeWidget(w)
+                self.verticalLayout_showing.addWidget(self.canvas_artifact_map_figure)
                 self.toolbar_artifact_map_figure = NavigationToolbar(self.canvas_artifact_map_figure, self)
-                self.matplotlibwidget_static.layout.addWidget(self.toolbar_artifact_map_figure)
+                self.verticalLayout_showing.addWidget(self.toolbar_artifact_map_figure)
 
-    def plotConfusionMatrix(self, confusion_matrix, target_names):
-        df_cm = pandas.DataFrame(confusion_matrix,
-                                 index=[i for i in target_names],
-                                 columns=[i for i in target_names], )
+    def plotConfusionMatrix(self):
+        confusion_matrix = self.deepLearningArtApp.getConfusionMatrix()
+        if confusion_matrix is not None:
+            target_names = []
+            classMappings = self.deepLearningArtApp.getClassMappingsForPrediction()
+            if len(classMappings[list(classMappings.keys())[0]]) == 3:
+                for i in sorted(classMappings):
+                    i = i%100
+                    i = i%10
+                    if Label.LABEL_STRINGS[i] not in target_names:
+                        target_names.append(Label.LABEL_STRINGS[i])
+            elif len(classMappings[list(classMappings.keys())[0]]) == 8:
+                for i in sorted(classMappings):
+                    i = i%100
+                    if Label.LABEL_STRINGS[i] not in target_names:
+                        target_names.append(Label.LABEL_STRINGS[i])
+            else:
+                for i in sorted(self.deepLearningArtApp.getClassMappingsForPrediction()):
+                    target_names.append(Label.LABEL_STRINGS[i])
+            df_cm = pandas.DataFrame(confusion_matrix,
+                                     index=[i for i in target_names],
+                                     columns=[i for i in target_names], )
 
-        axes_confmat = self.confusion_matrix_figure.add_subplot(111)
-        axes_confmat.clear()
+            axes_confmat = self.confusion_matrix_figure.add_subplot(111)
+            axes_confmat.clear()
 
-        sn.heatmap(df_cm, annot=True, fmt='.3f', annot_kws={"size": 8}, ax=axes_confmat, linewidths=.2)
-        axes_confmat.set_xlabel('Predicted Label')
-        axes_confmat.set_ylabel('True Label')
-        self.confusion_matrix_figure.tight_layout()
+            sn.heatmap(df_cm, annot=True, fmt='.3f', annot_kws={"size": 8}, ax=axes_confmat, linewidths=.2)
+            axes_confmat.set_xlabel('Predicted Label')
+            axes_confmat.set_ylabel('True Label')
+            self.confusion_matrix_figure.tight_layout()
+            self.canvas_confusion_matrix_figure.savefig(self.deepLearningArtApp.getModelForPrediction()
+                                             + os.sep + str(len(target_names)) + "_canvas_confusion_matrix_figure" + '.png')
 
-        self.canvas_confusion_matrix_figure.draw()
-        for w in self.matplotlibwidget_static.layout.widget():
-            self.matplotlibwidget_static.layout.removeWidget(w)
+            self.canvas_confusion_matrix_figure.draw()
+            for w in self.verticalLayout_showing.widget():
+                self.verticalLayout_showing.removeWidget(w)
 
-        self.matplotlibwidget_static.layout.addWidget(self.canvas_confusion_matrix_figure)
-        self.toolbar_confusion_matrix_figure = NavigationToolbar(self.canvas_confusion_matrix_figure, self)
-        self.matplotlibwidget_static.layout.addWidget(self.toolbar_confusion_matrix_figure)
+            self.verticalLayout_showing.addWidget(self.canvas_confusion_matrix_figure)
+            self.toolbar_confusion_matrix_figure = NavigationToolbar(self.canvas_confusion_matrix_figure, self)
+            self.verticalLayout_showing.addWidget(self.toolbar_confusion_matrix_figure)
+
+        else:
+            raise ValueError('There is no confusion matrix for segmentation')
 
     def textChangeAlpha(self, text):
         self.inputalpha = text
@@ -2954,6 +2975,178 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
     def clickList(self, qModelIndex):
 
         self.chosenLayerName = self.qList[qModelIndex.row()]
+
+        if self.radioButton.isChecked() == True:
+            if len(self.chosenLayerName) != 0:
+
+                self.W_F = 'w'
+                # show the weights
+                if self.modelDimension == '2D':
+                    if hasattr(self.LayerWeights[self.chosenLayerName], "ndim"):
+
+                        if self.LayerWeights[self.chosenLayerName].ndim == 4:
+                            self.lcdNumberPatch.hide()
+                            self.lcdNumberSlice.hide()
+                            self.horizontalSliderPatch.hide()
+                            self.horizontalSliderSlice.hide()
+                            self.labelPatch.hide()
+                            self.labelSlice.hide()
+
+                            # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                            # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                            # self.overlay.show()
+
+                            self.matplotlibwidget_static.mpl.getLayersWeights(self.LayerWeights)
+                            self.wyPlot.setDisabled(True)
+                            self.newW2D = loadImage_weights_plot_2D(self.matplotlibwidget_static,
+                                                                    self.chosenLayerName)
+                            self.newW2D.trigger.connect(self.loadEnd2)
+                            self.newW2D.start()
+
+                            # self.matplotlibwidget_static.mpl.weights_plot_2D(self.chosenLayerName)
+                            self.matplotlibwidget_static.show()
+                        # elif self.LayerWeights[self.chosenLayerName].ndim==0:
+                        #     self.showNoWeights()
+                        else:
+                            self.showWeightsDimensionError()
+
+                    elif self.LayerWeights[self.chosenLayerName] == 0:
+                        self.showNoWeights()
+
+
+                elif self.modelDimension == '3D':
+                    if hasattr(self.LayerWeights[self.chosenLayerName], "ndim"):
+
+                        if self.LayerWeights[self.chosenLayerName].ndim == 5:
+
+                            self.w = self.LayerWeights[self.chosenLayerName]
+                            self.totalWeights = self.w.shape[0]
+                            # self.totalWeightsSlices=self.w.shape[2]
+                            self.horizontalSliderPatch.setMinimum(1)
+                            self.horizontalSliderPatch.setMaximum(self.totalWeights)
+                            # self.horizontalSliderSlice.setMinimum(1)
+                            # self.horizontalSliderSlice.setMaximum(self.totalWeightsSlices)
+                            self.chosenWeightNumber = 1
+                            self.horizontalSliderPatch.setValue(self.chosenWeightNumber)
+
+                            # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                            # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                            # self.overlay.show()
+
+                            self.wyPlot.setDisabled(True)
+                            self.newW3D = loadImage_weights_plot_3D(self.matplotlibwidget_static, self.w,
+                                                                    self.chosenWeightNumber, self.totalWeights,
+                                                                    self.totalWeightsSlices)
+                            self.newW3D.trigger.connect(self.loadEnd2)
+                            self.newW3D.start()
+
+                            # self.matplotlibwidget_static.mpl.weights_plot_3D(self.w,self.chosenWeightNumber,self.totalWeights,self.totalWeightsSlices)
+
+                            self.matplotlibwidget_static.show()
+                            self.horizontalSliderSlice.hide()
+                            self.horizontalSliderPatch.show()
+                            self.labelPatch.show()
+                            self.labelSlice.hide()
+                            self.lcdNumberSlice.hide()
+                            self.lcdNumberPatch.show()
+                        # elif self.LayerWeights[self.chosenLayerName].ndim==0:
+                        #     self.showNoWeights()
+                        else:
+                            self.showWeightsDimensionError3D()
+
+                    elif self.LayerWeights[self.chosenLayerName] == 0:
+                        self.showNoWeights()
+
+                else:
+                    print('the dimesnion should be 2D or 3D')
+
+            else:
+                self.showChooseLayerDialog()
+
+        elif self.radioButton_2.isChecked() == True:
+            if len(self.chosenLayerName) != 0:
+                self.W_F = 'f'
+                if self.modelDimension == '2D':
+                    if self.act[self.chosenLayerName].ndim == 4:
+                        self.activations = self.act[self.chosenLayerName]
+                        self.totalPatches = self.activations.shape[0]
+
+                        self.matplotlibwidget_static.mpl.getLayersFeatures(self.activations, self.totalPatches)
+
+                        # show the features
+                        self.chosenPatchNumber = 1
+                        self.horizontalSliderPatch.setMinimum(1)
+                        self.horizontalSliderPatch.setMaximum(self.totalPatches)
+                        self.horizontalSliderPatch.setValue(self.chosenPatchNumber)
+
+                        # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                        # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                        # self.overlay.show()
+                        self.wyPlot.setDisabled(True)
+                        self.newf = loadImage_features_plot(self.matplotlibwidget_static,
+                                                            self.chosenPatchNumber)
+                        self.newf.trigger.connect(self.loadEnd2)
+                        self.newf.start()
+
+                        # self.matplotlibwidget_static.mpl.features_plot(self.chosenPatchNumber)
+                        self.matplotlibwidget_static.show()
+                        self.horizontalSliderSlice.hide()
+                        self.horizontalSliderPatch.show()
+                        self.labelPatch.show()
+                        self.labelSlice.hide()
+                        self.lcdNumberPatch.show()
+                        self.lcdNumberSlice.hide()
+                    else:
+                        self.showNoFeatures()
+
+                elif self.modelDimension == '3D':
+                    a = self.act[self.chosenLayerName]
+                    if self.act[self.chosenLayerName].ndim == 5:
+                        self.activations = self.act[self.chosenLayerName]
+                        self.totalPatches = self.activations.shape[0]
+                        self.totalPatchesSlices = self.activations.shape[1]
+
+                        self.matplotlibwidget_static.mpl.getLayersFeatures_3D(self.activations,
+                                                                              self.totalPatches,
+                                                                              self.totalPatchesSlices)
+
+                        self.chosenPatchNumber = 1
+                        self.chosenPatchSliceNumber = 1
+                        self.horizontalSliderPatch.setMinimum(1)
+                        self.horizontalSliderPatch.setMaximum(self.totalPatches)
+                        self.horizontalSliderPatch.setValue(self.chosenPatchNumber)
+                        self.horizontalSliderSlice.setMinimum(1)
+                        self.horizontalSliderSlice.setMaximum(self.totalPatchesSlices)
+                        self.horizontalSliderSlice.setValue(self.chosenPatchSliceNumber)
+
+                        # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                        # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                        # self.overlay.show()
+                        self.wyPlot.setDisabled(True)
+                        self.newf = loadImage_features_plot_3D(self.matplotlibwidget_static,
+                                                               self.chosenPatchNumber,
+                                                               self.chosenPatchSliceNumber)
+                        self.newf.trigger.connect(self.loadEnd2)
+                        self.newf.start()
+
+                        # self.matplotlibwidget_static.mpl.features_plot_3D(self.chosenPatchNumber,self.chosenPatchSliceNumber)
+                        self.horizontalSliderSlice.show()
+                        self.horizontalSliderPatch.show()
+                        self.labelPatch.show()
+                        self.labelSlice.show()
+                        self.lcdNumberPatch.show()
+                        self.lcdNumberSlice.show()
+                        self.matplotlibwidget_static.show()
+                    else:
+                        self.showNoFeatures()
+
+                else:
+                    print('the dimesnion should be 2D or 3D')
+
+            else:
+                self.showChooseLayerDialog()
+
+
 
     def simpleName(self, inpName):
         if "/" in inpName:
@@ -3075,9 +3268,9 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         if index == 1:
             pathToDataset = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
             self.inputData_name = pathToDataset + os.sep + 'datasets.hdf5'
-            self.deepLearningArtApp.setDatasetForPrediction(self.inputData_name)
+            self.deepLearningArtApp.setDatasetForPrediction(pathToDataset)
         elif index == 2:
-            self.inputData_name = self.deepLearningArtApp.getDatasetForPrediction()
+            self.inputData_name = self.deepLearningArtApp.getDatasetForPrediction() + os.sep + 'datasets.hdf5'
 
         if len(self.openmodel_path) != 0:
             self.horizontalSliderPatch.hide()
@@ -3370,19 +3563,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         # Show the structure of the model and plot the weights
         if len(self.openmodel_path) != 0:
 
-            self.canvasStructure = MyMplCanvas()
-            try:
-                self.canvasStructure.loadImage(self.model_png_dir)
-            except:
-                pass
-            self.graphicscene = QtWidgets.QGraphicsScene()
-            self.graphicscene.addWidget(self.canvasStructure)
-            self.graphicview = Activeview()
-            self.scrollAreaWidgetContents = QtWidgets.QWidget()
-            self.maingrids = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
-            self.scrollArea.setWidget(self.scrollAreaWidgetContents)
-            self.maingrids.addWidget(self.graphicview)
-            self.graphicview.setScene(self.graphicscene)
+            webbrowser.open_new(self.model_png_dir)
 
         else:
             self.showChooseFileDialog()
@@ -3392,184 +3573,12 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # Show the structure of the model and plot the weights
         if len(self.openmodel_path) != 0:
+
             if index == 1:
-                if self.radioButton.isChecked() == True:
-                    if len(self.chosenLayerName) != 0:
-
-                        self.W_F = 'w'
-                        # show the weights
-                        if self.modelDimension == '2D':
-                            if hasattr(self.LayerWeights[self.chosenLayerName], "ndim"):
-
-                                if self.LayerWeights[self.chosenLayerName].ndim == 4:
-                                    self.lcdNumberPatch.hide()
-                                    self.lcdNumberSlice.hide()
-                                    self.horizontalSliderPatch.hide()
-                                    self.horizontalSliderSlice.hide()
-                                    self.labelPatch.hide()
-                                    self.labelSlice.hide()
-
-                                    # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
-                                    # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
-                                    # self.overlay.show()
-
-                                    self.matplotlibwidget_static.mpl.getLayersWeights(self.LayerWeights)
-                                    self.wyPlot.setDisabled(True)
-                                    self.newW2D = loadImage_weights_plot_2D(self.matplotlibwidget_static,
-                                                                            self.chosenLayerName)
-                                    self.newW2D.trigger.connect(self.loadEnd2)
-                                    self.newW2D.start()
-
-                                    # self.matplotlibwidget_static.mpl.weights_plot_2D(self.chosenLayerName)
-                                    self.matplotlibwidget_static.show()
-                                # elif self.LayerWeights[self.chosenLayerName].ndim==0:
-                                #     self.showNoWeights()
-                                else:
-                                    self.showWeightsDimensionError()
-
-                            elif self.LayerWeights[self.chosenLayerName] == 0:
-                                self.showNoWeights()
-
-
-                        elif self.modelDimension == '3D':
-                            if hasattr(self.LayerWeights[self.chosenLayerName], "ndim"):
-
-                                if self.LayerWeights[self.chosenLayerName].ndim == 5:
-
-                                    self.w = self.LayerWeights[self.chosenLayerName]
-                                    self.totalWeights = self.w.shape[0]
-                                    # self.totalWeightsSlices=self.w.shape[2]
-                                    self.horizontalSliderPatch.setMinimum(1)
-                                    self.horizontalSliderPatch.setMaximum(self.totalWeights)
-                                    # self.horizontalSliderSlice.setMinimum(1)
-                                    # self.horizontalSliderSlice.setMaximum(self.totalWeightsSlices)
-                                    self.chosenWeightNumber = 1
-                                    self.horizontalSliderPatch.setValue(self.chosenWeightNumber)
-
-                                    # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
-                                    # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
-                                    # self.overlay.show()
-
-                                    self.wyPlot.setDisabled(True)
-                                    self.newW3D = loadImage_weights_plot_3D(self.matplotlibwidget_static, self.w,
-                                                                            self.chosenWeightNumber, self.totalWeights,
-                                                                            self.totalWeightsSlices)
-                                    self.newW3D.trigger.connect(self.loadEnd2)
-                                    self.newW3D.start()
-
-                                    # self.matplotlibwidget_static.mpl.weights_plot_3D(self.w,self.chosenWeightNumber,self.totalWeights,self.totalWeightsSlices)
-
-                                    self.matplotlibwidget_static.show()
-                                    self.horizontalSliderSlice.hide()
-                                    self.horizontalSliderPatch.show()
-                                    self.labelPatch.show()
-                                    self.labelSlice.hide()
-                                    self.lcdNumberSlice.hide()
-                                    self.lcdNumberPatch.show()
-                                # elif self.LayerWeights[self.chosenLayerName].ndim==0:
-                                #     self.showNoWeights()
-                                else:
-                                    self.showWeightsDimensionError3D()
-
-                            elif self.LayerWeights[self.chosenLayerName] == 0:
-                                self.showNoWeights()
-
-                        else:
-                            print('the dimesnion should be 2D or 3D')
-
-                    else:
-                        self.showChooseLayerDialog()
-
-                elif self.radioButton_2.isChecked() == True:
-                    if len(self.chosenLayerName) != 0:
-                        self.W_F = 'f'
-                        if self.modelDimension == '2D':
-                            if self.act[self.chosenLayerName].ndim == 4:
-                                self.activations = self.act[self.chosenLayerName]
-                                self.totalPatches = self.activations.shape[0]
-
-                                self.matplotlibwidget_static.mpl.getLayersFeatures(self.activations, self.totalPatches)
-
-                                # show the features
-                                self.chosenPatchNumber = 1
-                                self.horizontalSliderPatch.setMinimum(1)
-                                self.horizontalSliderPatch.setMaximum(self.totalPatches)
-                                self.horizontalSliderPatch.setValue(self.chosenPatchNumber)
-
-                                # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
-                                # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
-                                # self.overlay.show()
-                                self.wyPlot.setDisabled(True)
-                                self.newf = loadImage_features_plot(self.matplotlibwidget_static,
-                                                                    self.chosenPatchNumber)
-                                self.newf.trigger.connect(self.loadEnd2)
-                                self.newf.start()
-
-                                # self.matplotlibwidget_static.mpl.features_plot(self.chosenPatchNumber)
-                                self.matplotlibwidget_static.show()
-                                self.horizontalSliderSlice.hide()
-                                self.horizontalSliderPatch.show()
-                                self.labelPatch.show()
-                                self.labelSlice.hide()
-                                self.lcdNumberPatch.show()
-                                self.lcdNumberSlice.hide()
-                            else:
-                                self.showNoFeatures()
-
-                        elif self.modelDimension == '3D':
-                            a = self.act[self.chosenLayerName]
-                            if self.act[self.chosenLayerName].ndim == 5:
-                                self.activations = self.act[self.chosenLayerName]
-                                self.totalPatches = self.activations.shape[0]
-                                self.totalPatchesSlices = self.activations.shape[1]
-
-                                self.matplotlibwidget_static.mpl.getLayersFeatures_3D(self.activations,
-                                                                                      self.totalPatches,
-                                                                                      self.totalPatchesSlices)
-
-                                self.chosenPatchNumber = 1
-                                self.chosenPatchSliceNumber = 1
-                                self.horizontalSliderPatch.setMinimum(1)
-                                self.horizontalSliderPatch.setMaximum(self.totalPatches)
-                                self.horizontalSliderPatch.setValue(self.chosenPatchNumber)
-                                self.horizontalSliderSlice.setMinimum(1)
-                                self.horizontalSliderSlice.setMaximum(self.totalPatchesSlices)
-                                self.horizontalSliderSlice.setValue(self.chosenPatchSliceNumber)
-
-                                # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
-                                # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
-                                # self.overlay.show()
-                                self.wyPlot.setDisabled(True)
-                                self.newf = loadImage_features_plot_3D(self.matplotlibwidget_static,
-                                                                       self.chosenPatchNumber,
-                                                                       self.chosenPatchSliceNumber)
-                                self.newf.trigger.connect(self.loadEnd2)
-                                self.newf.start()
-
-                                # self.matplotlibwidget_static.mpl.features_plot_3D(self.chosenPatchNumber,self.chosenPatchSliceNumber)
-                                self.horizontalSliderSlice.show()
-                                self.horizontalSliderPatch.show()
-                                self.labelPatch.show()
-                                self.labelSlice.show()
-                                self.lcdNumberPatch.show()
-                                self.lcdNumberSlice.show()
-                                self.matplotlibwidget_static.show()
-                            else:
-                                self.showNoFeatures()
-
-                        else:
-                            print('the dimesnion should be 2D or 3D')
-
-                    else:
-                        self.showChooseLayerDialog()
-
-                else:
-                    self.showChooseButtonDialog()
-            elif index == 2:
                 self.plotSegmentationPredictions()
-            elif index == 3:
+            elif index == 2:
                 self.plotSegmentationArtifactMaps()
-            elif index == 4:
+            elif index == 3:
                 self.plotConfusionMatrix()
         else:
             self.showChooseFileDialog()
@@ -3578,8 +3587,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
     def on_wySubsetSelection_clicked(self):
         # Show the Subset Selection
         if len(self.openmodel_path) != 0:
-            # show the weights
-            # self.scrollArea.hide()
             self.W_F = 's'
             self.chosenSSNumber = 1
             self.horizontalSliderPatch.setMinimum(1)
