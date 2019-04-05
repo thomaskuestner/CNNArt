@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1654</width>
-    <height>943</height>
+    <width>1203</width>
+    <height>813</height>
    </rect>
   </property>
   <property name="acceptDrops">
@@ -37,7 +37,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <property name="elideMode">
        <enum>Qt::ElideNone</enum>
@@ -261,32 +261,6 @@ wheel change slice</string>
                 </property>
                </widget>
               </item>
-              <item row="7" column="1">
-               <widget class="QPushButton" name="bsetcolor">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>Change Color</string>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="resrc.qrc">
-                  <normaloff>:/icons/Icons/palette.png</normaloff>:/icons/Icons/palette.png</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>35</width>
-                  <height>35</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
               <item row="13" column="1" colspan="2">
                <widget class="QCheckBox" name="useDefaultLabelCheckbox">
                 <property name="toolTip">
@@ -294,6 +268,45 @@ wheel change slice</string>
                 </property>
                 <property name="text">
                  <string>Default Label</string>
+                </property>
+               </widget>
+              </item>
+              <item row="14" column="1" colspan="2">
+               <widget class="QLineEdit" name="defaultLabelTextLine">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>Write the  Label Name</string>
+                </property>
+               </widget>
+              </item>
+              <item row="11" column="2">
+               <widget class="QRadioButton" name="brectangle">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>Rectangular</string>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="resrc.qrc">
+                  <normaloff>:/icons/Icons/rectangle.png</normaloff>:/icons/Icons/rectangle.png</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>35</width>
+                  <height>35</height>
+                 </size>
                 </property>
                </widget>
               </item>
@@ -328,8 +341,33 @@ wheel change slice</string>
                 </property>
                </widget>
               </item>
-              <item row="11" column="2">
-               <widget class="QRadioButton" name="brectangle">
+              <item row="9" column="1" colspan="2" alignment="Qt::AlignHCenter">
+               <widget class="QLabel" name="labelLabel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="frameShape">
+                 <enum>QFrame::Panel</enum>
+                </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Raised</enum>
+                </property>
+                <property name="text">
+                 <string>Labeling</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="2">
+               <widget class="QPushButton" name="bdswitch">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -337,14 +375,16 @@ wheel change slice</string>
                  </sizepolicy>
                 </property>
                 <property name="toolTip">
-                 <string>Rectangular</string>
+                 <string>2D/3D Switch
+after change of dimension
+switch on Overlay</string>
                 </property>
                 <property name="text">
                  <string/>
                 </property>
                 <property name="icon">
                  <iconset resource="resrc.qrc">
-                  <normaloff>:/icons/Icons/rectangle.png</normaloff>:/icons/Icons/rectangle.png</iconset>
+                  <normaloff>:/icons/Icons/switch.png</normaloff>:/icons/Icons/switch.png</iconset>
                 </property>
                 <property name="iconSize">
                  <size>
@@ -378,72 +418,6 @@ Label List</string>
                   <width>35</width>
                   <height>35</height>
                  </size>
-                </property>
-               </widget>
-              </item>
-              <item row="9" column="1" colspan="2" alignment="Qt::AlignHCenter">
-               <widget class="QLabel" name="labelLabel">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="font">
-                 <font>
-                  <weight>75</weight>
-                  <bold>true</bold>
-                 </font>
-                </property>
-                <property name="frameShape">
-                 <enum>QFrame::Panel</enum>
-                </property>
-                <property name="frameShadow">
-                 <enum>QFrame::Raised</enum>
-                </property>
-                <property name="text">
-                 <string>labeling</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="2">
-               <widget class="QPushButton" name="bdswitch">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>2D/3D Switch
-after change of dimension
-switch on Overlay</string>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="resrc.qrc">
-                  <normaloff>:/icons/Icons/switch.png</normaloff>:/icons/Icons/switch.png</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>35</width>
-                  <height>35</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="14" column="1" colspan="2">
-               <widget class="QLineEdit" name="defaultLabelTextLine">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>Write the  Label Name</string>
                 </property>
                </widget>
               </item>
@@ -615,6 +589,19 @@ in the Region of Interest</string>
                 </property>
                </widget>
               </item>
+              <item row="7" column="2">
+               <widget class="QComboBox" name="labelButton">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>show class name</string>
+                </property>
+               </widget>
+              </item>
               <item row="0" column="2">
                <widget class="QComboBox" name="openResult">
                 <property name="sizePolicy">
@@ -637,45 +624,6 @@ in the Region of Interest</string>
                   <width>16</width>
                   <height>16</height>
                  </size>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="2">
-               <widget class="QCheckBox" name="inspectorButton">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>cursor inspector</string>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="icon">
-                 <iconset resource="resrc.qrc">
-                  <normaloff>:/icons/Icons/isymbol_location_position.png</normaloff>:/icons/Icons/isymbol_location_position.png</iconset>
-                </property>
-                <property name="iconSize">
-                 <size>
-                  <width>35</width>
-                  <height>35</height>
-                 </size>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="2">
-               <widget class="QComboBox" name="labelButton">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>show class name</string>
                 </property>
                </widget>
               </item>
@@ -705,7 +653,33 @@ in the Region of Interest</string>
                 </property>
                </widget>
               </item>
-              <item row="1" column="2">
+              <item row="7" column="1">
+               <widget class="QCheckBox" name="inspectorButton">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>cursor inspector</string>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="resrc.qrc">
+                  <normaloff>:/icons/Icons/isymbol_location_position.png</normaloff>:/icons/Icons/isymbol_location_position.png</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>35</width>
+                  <height>35</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="2">
                <widget class="QPushButton" name="fitButton">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
@@ -769,8 +743,8 @@ in the Region of Interest</string>
                     <rect>
                      <x>0</x>
                      <y>0</y>
-                     <width>1438</width>
-                     <height>808</height>
+                     <width>987</width>
+                     <height>678</height>
                     </rect>
                    </property>
                    <property name="autoFillBackground">
@@ -809,8 +783,8 @@ in the Region of Interest</string>
                     <rect>
                      <x>0</x>
                      <y>0</y>
-                     <width>98</width>
-                     <height>28</height>
+                     <width>78</width>
+                     <height>16</height>
                     </rect>
                    </property>
                    <property name="autoFillBackground">
@@ -1667,7 +1641,7 @@ in the Region of Interest</string>
                     <item>
                      <widget class="QRadioButton" name="RadioButton_DataAug_adaptiveEq">
                       <property name="text">
-                       <string>Adaptive Eq</string>
+                       <string>Adaptive E&amp;q</string>
                       </property>
                      </widget>
                     </item>
@@ -1820,7 +1794,7 @@ in the Region of Interest</string>
        </attribute>
        <layout class="QHBoxLayout" name="horizontalLayout_9">
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,0,5">
+         <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,5">
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_10">
             <item>
@@ -1945,19 +1919,9 @@ in the Region of Interest</string>
             <item>
              <layout class="QVBoxLayout" name="verticalLayout_12">
               <item>
-               <widget class="QComboBox" name="wyPlot">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QRadioButton" name="radioButton_3">
                 <property name="text">
-                 <string>Plot 1. Input</string>
+                 <string>Plot &amp;1. Input</string>
                 </property>
                 <property name="icon">
                  <iconset resource="resrc.qrc">
@@ -1974,7 +1938,7 @@ in the Region of Interest</string>
               <item>
                <widget class="QRadioButton" name="radioButton_4">
                 <property name="text">
-                 <string>Plot 2. Input</string>
+                 <string>Plot &amp;2. Input</string>
                 </property>
                 <property name="icon">
                  <iconset resource="resrc.qrc">
@@ -2095,29 +2059,22 @@ in the Region of Interest</string>
                 </property>
                </widget>
               </item>
+              <item>
+               <widget class="QComboBox" name="wyPlot">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+               </widget>
+              </item>
              </layout>
             </item>
            </layout>
           </item>
           <item>
-           <widget class="QScrollArea" name="scrollArea">
-            <property name="widgetResizable">
-             <bool>true</bool>
-            </property>
-            <widget class="QWidget" name="scrollAreaWidgetContents_3">
-             <property name="geometry">
-              <rect>
-               <x>0</x>
-               <y>0</y>
-               <width>98</width>
-               <height>28</height>
-              </rect>
-             </property>
-            </widget>
-           </widget>
-          </item>
-          <item>
-           <layout class="QVBoxLayout" name="verticalLayout_13">
+           <layout class="QVBoxLayout" name="verticalLayout_showing">
             <item>
              <widget class="MatplotlibWidget" name="matplotlibwidget_static" native="true">
               <property name="sizePolicy">
@@ -2254,13 +2211,13 @@ in the Region of Interest</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1654</width>
+     <width>1203</width>
      <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>File</string>
+     <string>Fi&amp;le</string>
     </property>
     <addaction name="actionOpen_file"/>
     <addaction name="actionSave"/>
@@ -2268,7 +2225,7 @@ in the Region of Interest</string>
    </widget>
    <widget class="QMenu" name="menuSetting">
     <property name="title">
-     <string>Setting</string>
+     <string>Setti&amp;ng</string>
     </property>
     <addaction name="actionColors"/>
     <addaction name="actionLabels"/>
@@ -2300,27 +2257,27 @@ in the Region of Interest</string>
   </widget>
   <action name="actionOpen_file">
    <property name="text">
-    <string>Open file</string>
+    <string>&amp;Open file</string>
    </property>
   </action>
   <action name="actionSave">
    <property name="text">
-    <string>Save current</string>
+    <string>&amp;Save current</string>
    </property>
   </action>
   <action name="actionColors">
    <property name="text">
-    <string>Colors</string>
+    <string>&amp;Colors</string>
    </property>
   </action>
   <action name="actionLoad">
    <property name="text">
-    <string>Load previous</string>
+    <string>&amp;Load previous</string>
    </property>
   </action>
   <action name="actionLabels">
    <property name="text">
-    <string>Labels</string>
+    <string>&amp;Labels</string>
    </property>
   </action>
   <action name="actionCross">
@@ -2348,7 +2305,7 @@ in the Region of Interest</string>
   </action>
   <action name="actionNetworks">
    <property name="text">
-    <string>Networks</string>
+    <string>&amp;Networks</string>
    </property>
   </action>
   <action name="actionData_Viewing">
@@ -2359,7 +2316,7 @@ in the Region of Interest</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Data Viewing</string>
+    <string>&amp;Data Viewing</string>
    </property>
   </action>
   <action name="actionNetwork_Training">
@@ -2370,7 +2327,7 @@ in the Region of Interest</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Network Training</string>
+    <string>&amp;Network Training</string>
    </property>
   </action>
   <action name="actionNetwork_Visualization">
@@ -2381,7 +2338,7 @@ in the Region of Interest</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Network Visualization</string>
+    <string>Network &amp;Visualization</string>
    </property>
   </action>
   <action name="actionNetwork_Interface">
@@ -2389,7 +2346,7 @@ in the Region of Interest</string>
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Network Interface</string>
+    <string>Network &amp;Interface</string>
    </property>
   </action>
   <action name="actionlabeling">
@@ -2409,27 +2366,27 @@ in the Region of Interest</string>
   </action>
   <action name="actionNetwork_Testing">
    <property name="text">
-    <string>About Network Testing</string>
+    <string>A&amp;bout Network Testing</string>
    </property>
   </action>
   <action name="actionAbout_Network_Training">
    <property name="text">
-    <string>About Network Training</string>
+    <string>About &amp;Network Training</string>
    </property>
   </action>
   <action name="actionAbout_Network_Visualization">
    <property name="text">
-    <string>About Network Visualization</string>
+    <string>About Network &amp;Visualization</string>
    </property>
   </action>
   <action name="actionImage_and_Result_Showing">
    <property name="text">
-    <string>Image and Result Showing</string>
+    <string>&amp;Image and Result Showing</string>
    </property>
   </action>
   <action name="actionAbout_Labeling">
    <property name="text">
-    <string>About Labeling</string>
+    <string>&amp;About Labeling</string>
    </property>
   </action>
  </widget>

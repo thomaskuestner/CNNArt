@@ -30,7 +30,7 @@ class loadImage(QtCore.QThread):
     def run(self):
 
         if type(self.PathDicom) is str:
-            if os.path.isdir(self.PathDicom):
+            if self.isDicomFile(self.PathDicom):
                 try:
                     self.sscan = self.load_scan(self.PathDicom)
                     if self.sscan:
@@ -67,6 +67,9 @@ class loadImage(QtCore.QThread):
             elif len(self.new_shape) == 4:
                 self.new_shape.insert(0, 1)
             self.voxel_ndarray = self.PathDicom.reshape(self.new_shape)
+
+        else:
+            raise ValueError("File is not supported!")
 
         self.trigger.emit()
 
@@ -168,4 +171,14 @@ class loadImage(QtCore.QThread):
             self.new_shape.append(1)
         elif len(self.new_shape) == 4:
             self.new_shape.insert(0, 1)
+
+    def isDicomFile(self, file):
+        is_dicom_file = True
+        if os.path.isdir(file):
+            listoffile = os.listdir(file)
+            for entry in listoffile:
+                fullpath = os.path.join(file, entry)
+                if os.path.isdir(fullpath):
+                    is_dicom_file = False
+        return is_dicom_file
 
