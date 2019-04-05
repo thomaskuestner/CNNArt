@@ -32,12 +32,12 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_5">
     <item>
-     <widget class="QTabWidget" name="tabWidget_2">
+     <widget class="QTabWidget" name="tabWidget">
       <property name="tabShape">
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <property name="elideMode">
        <enum>Qt::ElideNone</enum>
@@ -696,6 +696,32 @@ in the Region of Interest</string>
                 <property name="icon">
                  <iconset resource="resrc.qrc">
                   <normaloff>:/icons/Icons/flip.png</normaloff>:/icons/Icons/flip.png</iconset>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>35</width>
+                  <height>35</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QPushButton" name="fitButton">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>Fit imgae view</string>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="icon">
+                 <iconset resource="resrc.qrc">
+                  <normaloff>:/icons/Icons/fitsize.png</normaloff>:/icons/Icons/fitsize.png</iconset>
                 </property>
                 <property name="iconSize">
                  <size>
@@ -2083,8 +2109,8 @@ in the Region of Interest</string>
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>68</width>
-               <height>828</height>
+               <width>98</width>
+               <height>28</height>
               </rect>
              </property>
             </widget>
@@ -2244,7 +2270,7 @@ in the Region of Interest</string>
     <property name="title">
      <string>Setting</string>
     </property>
-    <addaction name="actionColor"/>
+    <addaction name="actionColors"/>
     <addaction name="actionLabels"/>
     <addaction name="actionNetworks"/>
    </widget>
@@ -2252,10 +2278,24 @@ in the Region of Interest</string>
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionLabeling"/>
+    <addaction name="actionImage_and_Result_Showing"/>
+    <addaction name="actionAbout_Labeling"/>
+    <addaction name="actionAbout_Network_Training"/>
+    <addaction name="actionNetwork_Testing"/>
+    <addaction name="actionAbout_Network_Visualization"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionData_Viewing"/>
+    <addaction name="actionNetwork_Training"/>
+    <addaction name="actionNetwork_Visualization"/>
+    <addaction name="actionNetwork_Interface"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuSetting"/>
+   <addaction name="menuView"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionOpen_file">
@@ -2268,7 +2308,7 @@ in the Region of Interest</string>
     <string>Save current</string>
    </property>
   </action>
-  <action name="actionColor">
+  <action name="actionColors">
    <property name="text">
     <string>Colors</string>
    </property>
@@ -2303,12 +2343,93 @@ in the Region of Interest</string>
   </action>
   <action name="actionLabeling">
    <property name="text">
-    <string>Labeling</string>
+    <string>Image and result showing</string>
    </property>
   </action>
   <action name="actionNetworks">
    <property name="text">
     <string>Networks</string>
+   </property>
+  </action>
+  <action name="actionData_Viewing">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Data Viewing</string>
+   </property>
+  </action>
+  <action name="actionNetwork_Training">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Network Training</string>
+   </property>
+  </action>
+  <action name="actionNetwork_Visualization">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Network Visualization</string>
+   </property>
+  </action>
+  <action name="actionNetwork_Interface">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Network Interface</string>
+   </property>
+  </action>
+  <action name="actionlabeling">
+   <property name="text">
+    <string>About Labeling</string>
+   </property>
+  </action>
+  <action name="actionNetwork_Training_2">
+   <property name="text">
+    <string>About Network Training</string>
+   </property>
+  </action>
+  <action name="actionNetwork_Visulization_2">
+   <property name="text">
+    <string>About Network Visulization</string>
+   </property>
+  </action>
+  <action name="actionNetwork_Testing">
+   <property name="text">
+    <string>About Network Testing</string>
+   </property>
+  </action>
+  <action name="actionAbout_Network_Training">
+   <property name="text">
+    <string>About Network Training</string>
+   </property>
+  </action>
+  <action name="actionAbout_Network_Visualization">
+   <property name="text">
+    <string>About Network Visualization</string>
+   </property>
+  </action>
+  <action name="actionImage_and_Result_Showing">
+   <property name="text">
+    <string>Image and Result Showing</string>
+   </property>
+  </action>
+  <action name="actionAbout_Labeling">
+   <property name="text">
+    <string>About Labeling</string>
    </property>
   </action>
  </widget>

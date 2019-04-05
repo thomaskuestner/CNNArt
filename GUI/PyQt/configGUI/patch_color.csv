@@ -1,5 +1,2 @@
 class,color
-P_BG,#800080
-P_LT,#0000ff
-P_AT,#ffff00
-P_VAT,#008000
+mask,#800080
