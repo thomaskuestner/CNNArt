@@ -27,20 +27,32 @@ Call methods <br/>
 - network visualization: architecture, feature maps, kernel weights, deep visualization
 
 ### Data viewing
-#### Image Viewing
+#### Image and result viewing
 - flexible layout, 2D/3D mode, images can be loaded from python workspace
 - prediction overlay: colors and hatches can be modified
-#### Result Showing
-#### labeling
-- 3 selector(rectangle, ellipse, lasso), the name and color of the labels can be modified
-
+- assistant tools: ROI selector, cursor inspector
+#### Labeling
+- 3 selector(rectangle, ellipse, lasso), feasible labeling and editing
+- the name and color of the labels can be modified
+- connected label list: showing label name, show on/off label, sorting label names
 ### Network training
-#### data preprocessing, parameter setting
+#### Data preprocessing, parameter setting
+- perform patching datasets with different splitting methods, labeling methods, storage modes, using segmentation masks.
+- setting data path and edtting patch size, overlay, datasets splitting ratio, number of folds for cross validation
+- select datasets for training/validation/test
+#### Network training
+- choose hyperparameters: batch size, learning rate, weight decay, (Nestrov) momentum, number of epochs
+- using data augumentation with all kinds of methods
 - accuracy/loss curves can be dynamically plotted
-#### network training
-#### network test
-
+- setting learning output and save network model, model weights, and training information
+- comprehensive network interface 
 ### Network visualization 
+#### Network visualization
 - network structure: the network structure can be loaded from h5 file
-- view_image feature maps and kernels
-- envoke deep visualization from a test data image
+- show feature maps and kernels of each layer
+- show subsection
+#### Network testing
+- load test datasets from workspace or path
+- load model from workspace or path
+- showing test evaluation
+- show segmentation mask, artifacts

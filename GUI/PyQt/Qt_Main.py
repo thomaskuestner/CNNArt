@@ -16,7 +16,6 @@ import pandas
 import scipy.io as sio
 import seaborn as sn
 import tensorflow as tf
-import yaml
 import webbrowser
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import pyqtSlot, QStringListModel
@@ -31,7 +30,7 @@ from matplotlib.figure import Figure
 from matplotlib.path import Path
 
 from DLart.network_interface import DataSetsWindow, NetworkInterface
-from config.PATH import DLART_OUT_PATH, PATH_OUT, MARKING_PATH, DATASETS
+from config.PATH import DLART_OUT_PATH, PATH_OUT, MARKING_PATH, DATASETS, SUBDIRS
 from configGUI.canvas import Canvas
 from configGUI.gridTable import TableWidget
 from configGUI.labelDialog import LabelDialog
@@ -130,9 +129,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         with open('configGUI/colors0.json', 'r') as json_data:
             self.dcolors = json.load(json_data)
             cmap1 = self.dcolors['class2']['colors']
-            cmap1 = ListedColormap(cmap1)
             cmap3 = self.dcolors['class11']['colors']
-            cmap3 = ListedColormap(cmap3)
             hmap1 = self.dcolors['class8']['hatches']
             hmap2 = self.dcolors['class11']['hatches']
             vtr1 = self.dcolors['class2']['trans'][0]
@@ -280,6 +277,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.selectedPatients = None
         self.selectedDatasets = None
+        self.datasets_window = DataSetsWindow([], [])
 
         self.number = 0
         self.ind = 0
@@ -323,6 +321,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.openImage.setCurrentIndex(0)
         self.openImage.activated.connect(self.load_MR)
         self.bdswitch.clicked.connect(self.switchview)
+
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/Icons/results.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.openResult.addItem(icon, '', 0)
@@ -362,7 +361,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.blasso.toggled.connect(lambda: self.stop_view(1))
         self.bnoselect.toggled.connect(lambda: self.stop_view(0))
 
-        self.actionOpen_file.triggered.connect(self.load_MR)
         self.actionSave.triggered.connect(self.save_current)
         self.actionLoad.triggered.connect(self.load_old)
         self.actionColors.triggered.connect(self.set_color)
@@ -375,7 +373,8 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.actionData_Viewing.triggered.connect(lambda: self.handle_window_view(0))
         self.actionNetwork_Training.triggered.connect(lambda: self.handle_window_view(1))
         self.actionNetwork_Visualization.triggered.connect(lambda: self.handle_window_view(2))
-        self.actionNetwork_Interface.triggered.connect(lambda: self.handle_window_view(3))
+        self.actionDatasets_Window.triggered.connect(lambda: self.handle_window_view(3))
+        self.actionNetwork_Interface.triggered.connect(lambda: self.handle_window_view(4))
         self.actionImage_and_Result_Showing.triggered.connect(lambda: self.handle_help(0))
         self.actionAbout_Labeling.triggered.connect(lambda: self.handle_help(1))
         self.actionAbout_Network_Training.triggered.connect(lambda: self.handle_help(2))
@@ -416,8 +415,10 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.layoutlines = 1
         self.layoutcolumns = 1
         self.num_image = 0
-
+        self.PathDicom = ''
         self.loadPatch = False
+        self.resultfile = None
+        self.pathDatabase = PATH_OUT + os.sep + DATASETS + os.sep + SUBDIRS[0]
 
         #####directly load image in imagine(*args)
 
@@ -587,6 +588,8 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.radioButton_3.hide()
         self.radioButton_4.hide()
 
+        self.predictButton.setDisabled(True)
+
         self.resetW = False
         self.resetF = False
         self.resetS = False
@@ -645,29 +648,30 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.valueChanged.connect(self.update_network_interface)
 
     def handle_window_view(self, n):
-        if n == 3:
-            self.network_interface.window.show()
-        elif n == 0:
+        if n == 0:
             self.tabWidget.setTabEnabled(n, self.actionData_Viewing.isChecked())
         elif n == 1:
             self.tabWidget.setTabEnabled(n, self.actionNetwork_Training.isChecked())
         elif n == 2:
             self.tabWidget.setTabEnabled(n, self.actionNetwork_Visualization.isChecked())
-        else:
-            pass
+        elif n == 3:
+            self.datasets_window.show()
+        elif n == 4:
+            self.network_interface.window.show()
 
     def handle_help(self, n):
         help = 'help' + os.sep
         if n == 0:
-            help += 'image_result_viewing.html'
+            item = 'help_image_and_result_viewing'
+        elif n == 1:
+            item = 'help_about_labeling'
         elif n == 2:
-            help += 'about_labeling.html'
+            item = 'help_about_network_training'
         elif n == 3:
-            help += 'about_network_training.html'
+            item = 'help_about_network_testing'
         elif n == 4:
-            help += 'about_network_testing.html'
-        elif n == 5:
-            help += 'about_network_visualization.html'
+            item = 'help_about_network_visualization'
+        help += item + os.sep + item + '.html'
         webbrowser.open_new(help)
 
     def switchview(self):
@@ -1008,51 +1012,49 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                         self.maingrids1.itemAtPosition(i, j).anewcanvas.linked_slice(data)
 
     def load_MR(self, index):
-
+        nothing2show = False
         if not index == 4:
-            # load images directly
-            with open('config' + os.sep + 'param_GUI.yml', 'r') as ymlfile:
-                cfg = yaml.safe_load(ymlfile)
-            MRPath = PATH_OUT + os.sep + DATASETS + os.sep + cfg['subdirs'][0] + os.sep
+
+            MRPath = PATH_OUT + os.sep + DATASETS + os.sep + SUBDIRS[0] + os.sep
             options = QtWidgets.QFileDialog.Options()
             options |= QtWidgets.QFileDialog.Directory
             options |= QtWidgets.QFileDialog.ExistingFile
             options |= QtWidgets.QFileDialog.DontUseNativeDialog
             self.file_dialog = QtWidgets.QFileDialog()
             self.file_dialog.setOptions(options)
-            if index == 2:
-                try:
-                    self.PathDicom = \
+
+            if index == 1:
+                self.PathDicom = self.file_dialog.getExistingDirectory(self, 'open a directory', MRPath)
+            elif index == 2:
+                self.PathDicom = \
                         self.file_dialog.getOpenFileName(self, 'open an image', MRPath, 'All Files(*.*)')[
                             0]
-                except:
-                    QtWidgets.QMessageBox.information(self, 'Warning', 'This format is not supported!')
             elif index == 3:
-                if self.selectedDatasets is not None and self.selectedPatients is not None:
-                    imagefilelist = []
-                    for patient in self.selectedPatients:
-                        for dataset in self.selectedDatasets:
-                            imagefilelist.append(
-                                self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset)
-                    if len(imagefilelist) > 0:
-                        self.layoutcolumns = len(imagefilelist)
-                        self.image_pathlist = list(imagefilelist)
-                        self.num_image = 0
-                        while self.isnotfinished:
-                            self.PathDicom = self.image_pathlist[self.num_image]
-                            self.load_MR(4)
-                            self.num_image = self.num_image + 1
-                            if self.num_image >= self.layoutcolumns:
-                                self.isnotfinished = False
-
-            elif index == 1:
-                try:
-                    self.PathDicom = self.file_dialog.getExistingDirectory(self, 'open a directory', MRPath)
-                except:
-                    QtWidgets.QMessageBox.information(self, 'Warning', 'Please choose a DICOM image file!')
+                imagefilelist = []
+                if self.datasets_window.getCurrentRow() is not None:
+                     imagefilelist.append(self.pathDatabase + os.sep +self.datasets_window.getCurrentRow())
+                else:
+                    if self.selectedDatasets is not None and self.selectedPatients is not None:
+                        for patient in self.selectedPatients:
+                            for dataset in self.selectedDatasets:
+                                imagefilelist.append(
+                                    self.pathDatabase + os.sep + patient + os.sep + SUBDIRS[1] + os.sep + dataset)
+                    else:
+                        nothing2show = True
+                        QtWidgets.QMessageBox.information(self, 'Warning', 'No datasets to show!')
+                if len(imagefilelist) > 0:
+                    self.layoutlines = 1
+                    self.layoutcolumns = len(imagefilelist)
+                    self.image_pathlist = list(imagefilelist)
+                    self.num_image = 0
+                    while self.isnotfinished:
+                        self.PathDicom = self.image_pathlist[self.num_image]
+                        self.load_MR(4)
+                        self.num_image = self.num_image + 1
+                        if self.num_image >= self.layoutcolumns:
+                            self.isnotfinished = False
             else:
                 pass
-
         if type(self.PathDicom) is str:
             self.selectorPath = self.PathDicom
             self.newMR = loadImage(self.PathDicom)
@@ -1062,56 +1064,59 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.selectorPath = self.PathDicom
             self.newMR = loadImage(self.array)
         else:
-            pass
+            if not nothing2show:
+                QtWidgets.QMessageBox.information(self, 'Warning', 'This format is not supported!')
+
         self.openImage.setDisabled(True)
-        # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
-        # self.overlay.setGeometry(QtCore.QRect(950, 400, 171, 141))
-        # self.overlay.show()
-
         self.newMR.start()
-        try:
+        if not self.newMR.new_shape == []:
             self.NS = self.newMR.new_shape
-        except:
-            raise ValueError("File is not supported!")
-        pathlist.append(self.PathDicom)
-        shapelist.append(self.NS)
-        self.mrinmain = self.newMR.voxel_ndarray
-        list1.append(self.mrinmain)
-        self.slices = self.mrinmain.shape[-1]
-        self.ind = self.slices // 2
-        # 40
-        self.slices2 = self.mrinmain.shape[-3]
-        self.ind2 = self.slices2 // 2
-        self.slices3 = self.mrinmain.shape[-2]
-        self.ind3 = self.slices3 // 2
-        try:
-            self.slices4 = self.mrinmain.shape[-5]
-            self.slices5 = self.mrinmain.shape[-4]
-        except:
-            self.slices4 = 0
-            self.slices5 = 0
-        indlist.clear()
-        indlist.append(self.ind)
-        ind2list.clear()
-        ind2list.append(self.ind2)
-        ind3list.clear()
-        ind3list.append(self.ind3)
-        self.newMR.trigger.connect(self.load_end)
-        self.set_layout()
+            pathlist.append(self.PathDicom)
+            shapelist.append(self.NS)
+            self.mrinmain = self.newMR.voxel_ndarray
+            list1.append(self.mrinmain)
+            self.slices = self.mrinmain.shape[-1]
+            self.ind = self.slices // 2
+            # 40
+            self.slices2 = self.mrinmain.shape[-3]
+            self.ind2 = self.slices2 // 2
+            self.slices3 = self.mrinmain.shape[-2]
+            self.ind3 = self.slices3 // 2
+            try:
+                self.slices4 = self.mrinmain.shape[-5]
+                self.slices5 = self.mrinmain.shape[-4]
+            except:
+                self.slices4 = 0
+                self.slices5 = 0
+            indlist.clear()
+            indlist.append(self.ind)
+            ind2list.clear()
+            ind2list.append(self.ind2)
+            ind3list.clear()
+            ind3list.append(self.ind3)
+            self.newMR.trigger.connect(self.load_end)
+            self.set_layout()
 
-        if not self.loadPatch:
-            self.openImage.setCurrentIndex(0)
+            if not self.loadPatch:
+                self.openImage.setCurrentIndex(0)
+            else:
+                self.load_patch_end()
         else:
-            self.load_patch_end()
+            self.openImage.setDisabled(False)
+            self.openImage.setCurrentIndex(0)
+            if not nothing2show:
+                QtWidgets.QMessageBox.information(self, 'Warning', 'This format is not supported!')
+
+        try:
+            self.imgdialog.close()
+        except:
+            pass
 
     def load_end(self):
 
-        # self.overlay.killTimer(self.overlay.timer)
-        # self.overlay.hide()
-        # self.plot_3d(self.newMR.svoxel, 200)
-        if self.selectoron == False:
+        if not self.selectoron:
             self.openImage.setDisabled(False)
-            if self.gridson == True:
+            if self.gridson:
                 if self.gridsnr == 2:
                     for i in range(self.layoutlines):
                         for j in range(self.layoutcolumns):
@@ -1196,116 +1201,138 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         elif ind == 2:
             self.resultfile = self.deepLearningArtApp.getResultWorkSpace()
 
-        if self.resultfile:
+        if self.resultfile is not None:
             if self.resultfile.upper().endswith('.MAT'):
                 self.conten = sio.loadmat(self.resultfile)
             elif self.resultfile.upper().endswith(('.NPY', '.NPZ')):
                 self.conten = np.load(self.resultfile)
-
-            if 'img' in self.conten:
-                self.PathDicom = self.resultfile
-                self.load_MR(4)
-            elif 'img_path' in self.conten:
-                self.PathDicom = self.conten['img_path']
-                self.load_MR(4)
             else:
-                dialog = QtWidgets.QDialog()
-                dialog.setWindowTitle('open an image')
-                layout = QtWidgets.QVBoxLayout()
-                icon = QtGui.QIcon()
-                icon.addPixmap(QtGui.QPixmap(":/icons/Icons/folder.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-                self.openimg = QtWidgets.QComboBox()
-                self.openimg.addItem(icon, '', 0)
-                self.openimg.setIconSize(QtCore.QSize(35, 35))
-                self.openimg.addItem('open a directory', 1)
-                self.openimg.addItem('open a file', 2)
-                self.openimg.addItem('load from workspace', 3)
-                self.openimg.setCurrentIndex(0)
-                self.openimg.activated.connect(self.load_MR)
-                layout.addWidget(self.openimg)
-                dialog.setLayout(layout)
-                dialog.setMinimumWidth(180)
-                dialog.show()
+                pass
+
+            if self.conten is not None:
+                if 'img' in self.conten:
+                    self.PathDicom = self.resultfile
+                    self.load_MR(4)
+                elif 'img_path' in self.conten:
+                    self.PathDicom = self.conten['img_path']
+                    self.load_MR(4)
+                else:
+                    self.imgdialog = QtWidgets.QDialog()
+                    self.imgdialog.setWindowTitle('open an image')
+                    self.imgdialog.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint | QtCore.Qt.FramelessWindowHint)
+                    layout = QtWidgets.QVBoxLayout()
+                    icon = QtGui.QIcon()
+                    icon.addPixmap(QtGui.QPixmap(":/icons/Icons/folder.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+                    self.openimg = QtWidgets.QComboBox()
+                    self.openimg.addItem(icon, 'open image', 0)
+                    self.openimg.setIconSize(QtCore.QSize(35, 35))
+                    self.openimg.addItem('open a directory', 1)
+                    self.openimg.addItem('open a file', 2)
+                    self.openimg.addItem('load from workspace', 3)
+                    self.openimg.setCurrentIndex(0)
+                    self.openimg.activated.connect(self.load_MR)
+                    layout.addWidget(self.openimg)
+                    self.imgdialog.setLayout(layout)
+                    self.imgdialog.setMinimumWidth(180)
+                    self.imgdialog.show()
+            else:
+                QtWidgets.QMessageBox.information(self, 'Warning', 'This format is not supported!')
+                return
+        else:
+            QtWidgets.QMessageBox.information(self, 'Warning', 'No result file!')
 
     def load_patch_end(self):
-
-        self.patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
-        if 'prob_pre' in self.conten:
-            self.patch_color_df = self.patch_color_df.drop(self.patch_color_df.index[:])
-            cnum = np.array(self.conten['prob_pre'])
-            IType, IArte = self.unpatching11(self.conten['prob_pre'], list1[-1])
-            # if IType[0] - list1[n][0] <= PatchSize/2 and IType[1] - list1[n][1] <= PatchSize/2:
-            # else:
-            #     QtWidgets.QMessageBox.information(self, 'Warning', 'Please choose the right file!')
-            #     break
-            problist.append(IType)
-            hatchlist.append(IArte)
-            count = 11
-            cnrlist.append(count)
-
-        elif 'prob_test' in self.conten:
-            self.patch_color_df = self.patch_color_df.drop(self.patch_color_df.index[:])
-            pred = self.conten['prob_test']
-            pred = pred[0:4320, :]
-            cnum = np.array(pred)
-            if cnum.shape[1] == 2:
-                IType = self.unpatching2(pred, list1[-1])
-                problist.append(IType)
-                hatchlist.append(empty1)
-                count = 2
+        try:
+            self.patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
+            if 'prob_pre' in self.conten:
+                self.patch_color_df = self.patch_color_df.drop(self.patch_color_df.index[:])
+                cnum = np.array(self.conten['prob_pre'])
+                IType, IArte = self.unpatching11(self.conten['prob_pre'], list1[-1])
+                # if IType[0] - list1[n][0] <= PatchSize/2 and IType[1] - list1[n][1] <= PatchSize/2:
+                # else:
+                #     QtWidgets.QMessageBox.information(self, 'Warning', 'Please choose the right file!')
+                #     break
+                problist.append([IType])
+                hatchlist.append([IArte])
+                count = 11
                 cnrlist.append(count)
-            # elif cnum.shape[1] == 8:
-        else:
-            self.patch_color_df = self.patch_color_df.drop(self.patch_color_df.index[:])
-            mask_set = []
-            class_set = []
-            color_set = []
-            if 'color' in self.conten:
-                default_patch_color = self.conten['color']
-                self.dcolors['classes']['colors'] = default_patch_color
-                with open('configGUI/colors0.json', 'w') as json_data:
-                    json_data.write(json.dumps(self.dcolors))
+                default_patch_color = cmap3
+                for c in range(len(cmap3)):
+                    self.patch_color_df.loc[count, 'class'] = 'class' + ' %s'%c
+                    self.patch_color_df.loc[count, 'color'] = default_patch_color[c]
+                colormaplist.append(default_patch_color)
+
+            elif 'prob_test' in self.conten:
+                self.patch_color_df = self.patch_color_df.drop(self.patch_color_df.index[:])
+                pred = self.conten['prob_test']
+                pred = pred[0:4320, :]
+                cnum = np.array(pred)
+                if cnum.shape[1] == 2:
+                    IType = self.unpatching2(pred, list1[-1])
+                    problist.append([IType])
+                    hatchlist.append(empty1)
+                    count = 2
+                    cnrlist.append(count)
+                    default_patch_color = cmap1
+                    for c in range(len(cmap1)):
+                        self.patch_color_df.loc[count, 'class'] = 'class' + ' %s'%c
+                        self.patch_color_df.loc[count, 'color'] = default_patch_color[c]
+                    colormaplist.append(default_patch_color)
             else:
-                default_patch_color = self.dcolors['classes']['colors']
-            count = 0
-            for item in self.conten:
-                if '__' not in item and 'readme' not in item and 'img' not in item and 'info' not in item:
-                    if '_' or 'mask' in item:
-                        mask = self.conten[item]
-                        condition = np.sort(list(mask.shape)) == np.sort(self.NS)
-                        if type(condition) is not bool:
-                            condition = condition.all()
-                        if condition:
-                            mask_set.append(mask)
-                            class_set.append(item)
-                            color_set.append(default_patch_color[count])
-                            self.patch_color_df.loc[count, 'class'] = item
-                            self.patch_color_df.loc[count, 'color'] = default_patch_color[count]
-                            count = count + 1
-            hatchlist.append(mask_set)
-            classlist.append(class_set)
-            colormaplist.append(color_set)
-            problist.append(empty1)
-            cnrlist.append(count)
+                self.patch_color_df = self.patch_color_df.drop(self.patch_color_df.index[:])
+                mask_set = []
+                class_set = []
+                color_set = []
+                if 'color' in self.conten:
+                    default_patch_color = self.conten['color']
+                    self.dcolors['classes']['colors'] = default_patch_color
+                    with open('configGUI/colors0.json', 'w') as json_data:
+                        json_data.write(json.dumps(self.dcolors))
+                else:
+                    default_patch_color = self.dcolors['classes']['colors']
+                count = 0
+                for item in self.conten:
+                    if '__' not in item and 'readme' not in item and 'img' not in item and 'info' not in item:
+                        if '_' or 'mask' in item:
+                            mask = self.conten[item]
+                            condition = np.sort(list(mask.shape)) == np.sort(self.NS)
+                            if type(condition) is not bool:
+                                condition = condition.all()
+                            if condition:
+                                mask_set.append(mask)
+                                class_set.append(item)
+                                color_set.append(default_patch_color[count])
+                                self.patch_color_df.loc[count, 'class'] = item
+                                self.patch_color_df.loc[count, 'color'] = default_patch_color[count]
+                                count = count + 1
+                hatchlist.append(mask_set)
+                classlist.append(class_set)
+                colormaplist.append(color_set)
+                problist.append(empty1)
+                cnrlist.append(count)
             self.patch_color_df.to_csv('configGUI/patch_color.csv', index=False)
 
-        pnamelist.append(self.resultfile)
-        if self.gridsnr == 3:  #############
-            for i in range(self.layout3D):
-                view_lines = self.maingrids1.itemAtPosition(i, 0)
-                resultItems = [view_lines.refbox.itemText(item) for item in range(view_lines.refbox.count())]
-                if self.resultfile not in resultItems:
-                    view_lines.addPathre(self.resultfile)
-        else:
-            for i in range(self.layoutlines):
-                for j in range(self.layoutcolumns):
-                    view_group = self.maingrids1.itemAtPosition(i, j)
-                    resultItems = [view_group.refbox.itemText(item) for item in range(view_group.refbox.count())]
+            pnamelist.append(self.resultfile)
+            if self.gridsnr == 3:  #############
+                for i in range(self.layout3D):
+                    view_lines = self.maingrids1.itemAtPosition(i, 0)
+                    resultItems = [view_lines.refbox.itemText(item) for item in range(view_lines.refbox.count())]
                     if self.resultfile not in resultItems:
-                        view_group.addPathre(self.resultfile)
+                        view_lines.addPathre(self.resultfile)
+            else:
+                for i in range(self.layoutlines):
+                    for j in range(self.layoutcolumns):
+                        view_group = self.maingrids1.itemAtPosition(i, j)
+                        resultItems = [view_group.refbox.itemText(item) for item in range(view_group.refbox.count())]
+                        if self.resultfile not in resultItems:
+                            view_group.addPathre(self.resultfile)
 
-        self.openResult.setCurrentIndex(0)
-        self.loadPatch = False
+            self.openResult.setCurrentIndex(0)
+            self.loadPatch = False
+        except:
+            self.openResult.setCurrentIndex(0)
+            self.loadPatch = False
+            raise QMessageBox.warning(self, 'Error', 'File is not supported!')
         try:
             self.openimg.close()
         except:
@@ -1320,6 +1347,23 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             if array is not None:
                 array = np.rot90(array, axes=(-2, -1))
                 self.canvasl.set_image_array(array)
+        for item in self.view_line_list:
+            self.view_line = item
+            self.canvas1 = self.view_line.newcanvas1
+            array = self.canvas1.get_image_array()
+            if array is not None:
+                array = np.rot90(array, axes=(-2, -1))
+                self.canvas1.set_image_array(array)
+            self.canvas2 = self.view_line.newcanvas2
+            array = self.canvas2.get_image_array()
+            if array is not None:
+                array = np.rot90(array, axes=(-2, -1))
+                self.canvas2.set_image_array(array)
+            self.canvas3 = self.view_line.newcanvas3
+            array = self.canvas3.get_image_array()
+            if array is not None:
+                array = np.rot90(array, axes=(-2, -1))
+                self.canvas3.set_image_array(array)
 
     def fit_image(self):
         for item in self.view_group_list:
@@ -1328,6 +1372,20 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             aspect = self.canvasl.get_aspect()
             aspect = 'auto' if aspect == 'equal' else 'equal'
             self.canvasl.set_aspect(aspect)
+        for item in self.view_line_list:
+            self.view_line = item
+            self.canvas1 = self.view_line.newcanvas1
+            aspect = self.canvas1.get_aspect()
+            aspect = 'auto' if aspect == 'equal' else 'equal'
+            self.canvas1.set_aspect(aspect)
+            self.canvas2 = self.view_line.newcanvas2
+            aspect = self.canvas2.get_aspect()
+            aspect = 'auto' if aspect == 'equal' else 'equal'
+            self.canvas2.set_aspect(aspect)
+            self.canvas3 = self.view_line.newcanvas3
+            aspect = self.canvas3.get_aspect()
+            aspect = 'auto' if aspect == 'equal' else 'equal'
+            self.canvas3.set_aspect(aspect)
 
     def set_color(self):
 
@@ -1337,15 +1395,14 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             c1, c3, h1, h2, v1, v3, cm, vs, ok = Patches_window.getData()
             if ok:
                 global cmap1, cmap3, hmap1, hmap2, vtr1, vtr3, cmaps, vtrs, colormaplist
-                cmap1 = ListedColormap(c1)
-                cmap3 = ListedColormap(c3)
+                cmap1 = c1
+                cmap3 = c3
                 hmap1 = h1
                 hmap2 = h2
                 vtr1 = v1
                 vtr3 = v3
                 cmaps = cm
                 vtrs = vs
-                colormaplist[resultnum[0]] = cmaps
                 for item in self.view_group_list:
                     self.view_group = item
                     self.view_group.loadScene_result(self.view_group.refbox.currentIndex())
@@ -1467,7 +1524,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.openImage.setDisabled(True)
             self.openResult.setDisabled(True)
             self.view_group.setlinkoff(True)
-            self.actionOpen_file.setEnabled(False)
             self.actionSave.setEnabled(True)
             self.actionLoad.setEnabled(False)
             self.save_file()
@@ -1496,7 +1552,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.openImage.setDisabled(False)
             self.openResult.setDisabled(False)
             self.view_group.setlinkoff(False)
-            self.actionOpen_file.setEnabled(True)
             self.actionSave.setEnabled(True)
             self.actionLoad.setEnabled(True)
             self.save_file()
@@ -1879,7 +1934,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.canvasl = self.view_group.anewcanvas
             state = self.cursorCross.isChecked()
 
-            if self.selectoron == True:
+            if self.selectoron:
 
                 if n == 0:
                     self.canvasl.set_state(2)
@@ -2311,7 +2366,10 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                             try:
                                 self.network_interface.window.close()
                             except:
-                                pass
+                                try:
+                                    self.imgdialog.close()
+                                except:
+                                    pass
             QCloseEvent.accept()
         else:
             QCloseEvent.ignore()
@@ -2649,7 +2707,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.selectedDatasets = self.deepLearningArtApp.getSelectedDatasets()
         if self.selectedPatients is not None:
             self.datasets_window = DataSetsWindow(self.selectedPatients, self.selectedDatasets)
-            self.datasets_window.setGeometry(800, 200, 550, 200)
             self.datasets_window.show()
         self.valueChanged.emit(self.deepLearningArtApp.params)
 
@@ -2670,9 +2727,10 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             model_path = model_path + item + '.'
         model_path += model
         dnn = self.deepLearningArtApp.getDeepNeuralNetworks()
-        dnn.append({model: model_path})
+        dnn[model] = model_path
         self.deepLearningArtApp.setDeepNeuralNetworks(dnn)
         self.deepLearningArtApp.setNeuralNetworkModel(model)
+        self.ComboBox_DNNs.addItem(model, -2)
         self.ComboBox_DNNs.setCurrentText(model)
         networkcsv = pandas.read_csv('DLart/networks.csv')
         networkcsv_size = pandas.DataFrame.count(networkcsv)['name']
@@ -2886,7 +2944,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.artifact_map_figure.tight_layout()
 
                 self.artifact_map_figure.savefig(self.deepLearningArtApp.getModelForPrediction()
-                                                       + os.sep + str(index) + "_artifact_map_figure" + '.png')
+                                                 + os.sep + str(index) + "_artifact_map_figure" + '.png')
 
                 self.canvas_artifact_map_figure.draw()
                 for w in self.verticalLayout_showing.widget():
@@ -2902,39 +2960,43 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             classMappings = self.deepLearningArtApp.getClassMappingsForPrediction()
             if len(classMappings[list(classMappings.keys())[0]]) == 3:
                 for i in sorted(classMappings):
-                    i = i%100
-                    i = i%10
+                    i = int(i) % 100
+                    i = int(i) % 10
                     if Label.LABEL_STRINGS[i] not in target_names:
                         target_names.append(Label.LABEL_STRINGS[i])
             elif len(classMappings[list(classMappings.keys())[0]]) == 8:
                 for i in sorted(classMappings):
-                    i = i%100
+                    i = int(i) % 100
                     if Label.LABEL_STRINGS[i] not in target_names:
                         target_names.append(Label.LABEL_STRINGS[i])
             else:
                 for i in sorted(self.deepLearningArtApp.getClassMappingsForPrediction()):
-                    target_names.append(Label.LABEL_STRINGS[i])
-            df_cm = pandas.DataFrame(confusion_matrix,
-                                     index=[i for i in target_names],
-                                     columns=[i for i in target_names], )
+                    target_names.append(Label.LABEL_STRINGS[int(i)])
+            if confusion_matrix.shape == (len(target_names), len(target_names)):
+                df_cm = pandas.DataFrame(confusion_matrix,
+                                         index=[i for i in target_names],
+                                         columns=[i for i in target_names], )
 
-            axes_confmat = self.confusion_matrix_figure.add_subplot(111)
-            axes_confmat.clear()
+                axes_confmat = self.confusion_matrix_figure.add_subplot(111)
+                axes_confmat.clear()
 
-            sn.heatmap(df_cm, annot=True, fmt='.3f', annot_kws={"size": 8}, ax=axes_confmat, linewidths=.2)
-            axes_confmat.set_xlabel('Predicted Label')
-            axes_confmat.set_ylabel('True Label')
-            self.confusion_matrix_figure.tight_layout()
-            self.canvas_confusion_matrix_figure.savefig(self.deepLearningArtApp.getModelForPrediction()
-                                             + os.sep + str(len(target_names)) + "_canvas_confusion_matrix_figure" + '.png')
+                sn.heatmap(df_cm, annot=True, fmt='.3f', annot_kws={"size": 8}, ax=axes_confmat, linewidths=.2)
+                axes_confmat.set_xlabel('Predicted Label')
+                axes_confmat.set_ylabel('True Label')
+                self.confusion_matrix_figure.tight_layout()
+                self.confusion_matrix_figure.savefig(self.deepLearningArtApp.getModelForPrediction()
+                                                            + os.sep + str(
+                    len(target_names)) + "_canvas_confusion_matrix_figure" + '.png')
 
-            self.canvas_confusion_matrix_figure.draw()
-            for w in self.verticalLayout_showing.widget():
-                self.verticalLayout_showing.removeWidget(w)
+                self.canvas_confusion_matrix_figure.draw()
+                for w in self.verticalLayout_showing.widget():
+                    self.verticalLayout_showing.removeWidget(w)
 
-            self.verticalLayout_showing.addWidget(self.canvas_confusion_matrix_figure)
-            self.toolbar_confusion_matrix_figure = NavigationToolbar(self.canvas_confusion_matrix_figure, self)
-            self.verticalLayout_showing.addWidget(self.toolbar_confusion_matrix_figure)
+                self.verticalLayout_showing.addWidget(self.canvas_confusion_matrix_figure)
+                self.toolbar_confusion_matrix_figure = NavigationToolbar(self.canvas_confusion_matrix_figure, self)
+                self.verticalLayout_showing.addWidget(self.toolbar_confusion_matrix_figure)
+            else:
+                raise ValueError('Confusion matrix shape does not match to target names')
 
         else:
             raise ValueError('There is no confusion matrix for segmentation')
@@ -3146,8 +3208,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             else:
                 self.showChooseLayerDialog()
 
-
-
     def simpleName(self, inpName):
         if "/" in inpName:
             inpName = inpName.split("/")[0]
@@ -3231,6 +3291,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 QtWidgets.QFileDialog.getOpenFileName(self, 'Choose model', DLART_OUT_PATH, 'H5 files(*.h5)')[0]
         elif index == 2:
             self.openmodel_path = self.deepLearningArtApp.getCurrentModelPath()
+            print('Using current model')
         if self.openmodel_path is not None:
             self.horizontalSliderPatch.hide()
             self.horizontalSliderSlice.hide()
@@ -3260,17 +3321,23 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.model = load_model(self.openmodel_path,
                                         custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef})
 
-            QMessageBox.information(self, "Working in Progress", "Finish loading model")
+            QMessageBox.information(self, "Finish Progress", "Finish loading model")
             print("Finish loading model")
+            self.wyChooseFile.setCurrentIndex(0)
             self.model_png_dir = os.path.split(self.openmodel_path)[0] + os.sep + "model.png"
 
     def on_wyInputData_clicked(self, index):
         if index == 1:
             pathToDataset = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
-            self.inputData_name = pathToDataset + os.sep + 'datasets.hdf5'
+            FL = os.listdir(pathToDataset)
+            for fl in FL:
+                if fl == pathToDataset + os.sep + 'datasets.hdf5':
+                    self.inputData_name = fl
+                    print(self.inputData_name)
             self.deepLearningArtApp.setDatasetForPrediction(pathToDataset)
         elif index == 2:
             self.inputData_name = self.deepLearningArtApp.getDatasetForPrediction() + os.sep + 'datasets.hdf5'
+            print('using current datasets for prediction')
 
         if len(self.openmodel_path) != 0:
             self.horizontalSliderPatch.hide()
@@ -3281,7 +3348,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.lcdNumberPatch.hide()
             self.matplotlibwidget_static.mpl.fig.clf()
 
-            if self.inputData_name is not None:
+            if self.inputData_name is not None and os.path.splitext(self.inputData_name)[-1] == 'hdf5':
 
                 self.inputData = h5py.File(self.inputData_name, 'r')
                 # the number of the input
@@ -3322,235 +3389,240 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                     self.modelInput2 = self.model.input[1]
                 else:
                     self.modelInput = self.model.input
+                QMessageBox.information(self, "Working in Progress", "Loading datasets")
+                self.show_layer_list()
+                QMessageBox.information(self, "Finish Progress", "Finish loading datasets")
             else:
-                pass
-                print('using current datasets for prediction')
-
-            self.layer_index_name = {}
-
-            for i, layer in enumerate(self.model.input_layers):
-                get_activations = K.function([layer.input, K.learning_phase()],
-                                             [layer.output, ])
-                if i == 0:
-                    self.act[self.simpleName(layer.name)] = get_activations([self.subset_selection, 0])[0]
-                    self.num_inputlayer = 1
-                elif i == 1:
-                    self.act[self.simpleName(layer.name)] = get_activations([self.subset_selection_2, 0])[0]
-                    self.num_inputlayer = 2
-                else:
-                    print('no output of the input layer is created')
-            for i, layer in enumerate(self.model.layers):
-                self.layer_index_name[i] = self.simpleName(layer.name)
-                if i < self.num_inputlayer:
-                    pass
-                else:
-                    if not type(layer.input) == list:
-                        inputLayerNameList = [self.simpleName(layer.input.name)[0:-2]]
-                        get_activations = K.function([layer.input, K.learning_phase()],
-                                                     [layer.output, ])
-                        self.act[self.simpleName(layer.name)] = \
-                            get_activations([self.act[inputLayerNameList[0]], 0])[0]
-                    else:
-                        if len(layer.input) == 2:
-                            inputLayerNameList = []
-                            for ind_li, layerInput in enumerate(layer.input):
-                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
-                            get_activations = K.function([layer.input[0], layer.input[1], K.learning_phase()],
-                                                         [layer.output, ])
-                            self.act[self.simpleName(layer.name)] = \
-                                get_activations([self.act[inputLayerNameList[0]],
-                                                 self.act[inputLayerNameList[1]],
-                                                 0])[0]
-                        elif len(layer.input) == 3:
-                            inputLayerNameList = []
-                            for ind_li, layerInput in enumerate(layer.input):
-                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
-
-                            get_activations = K.function(
-                                [layer.input[0], layer.input[1], layer.input[2], K.learning_phase()],
-                                [layer.output, ])
-                            self.act[self.simpleName(layer.name)] = \
-                                get_activations([self.act[inputLayerNameList[0]],
-                                                 self.act[inputLayerNameList[1]],
-                                                 self.act[inputLayerNameList[2]],
-                                                 0])[0]
-
-                        elif len(layer.input) == 4:
-                            inputLayerNameList = []
-                            for ind_li, layerInput in enumerate(layer.input):
-                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
-
-                            get_activations = K.function(
-                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3],
-                                 K.learning_phase()],
-                                [layer.output, ])
-                            self.act[self.simpleName(layer.name)] = \
-                                get_activations([self.act[inputLayerNameList[0]],
-                                                 self.act[inputLayerNameList[1]],
-                                                 self.act[inputLayerNameList[2]],
-                                                 self.act[inputLayerNameList[3]],
-                                                 0])[0]
-
-                        elif len(layer.input) == 5:
-                            inputLayerNameList = []
-                            for ind_li, layerInput in enumerate(layer.input):
-                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
-
-                            get_activations = K.function(
-                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
-                                 K.learning_phase()],
-                                [layer.output, ])
-                            self.act[self.simpleName(layer.name)] = \
-                                get_activations([self.act[inputLayerNameList[0]],
-                                                 self.act[inputLayerNameList[1]],
-                                                 self.act[inputLayerNameList[2]],
-                                                 self.act[inputLayerNameList[3]],
-                                                 self.act[inputLayerNameList[4]],
-                                                 0])[0]
-                        elif len(layer.input) == 6:
-                            inputLayerNameList = []
-                            for ind_li, layerInput in enumerate(layer.input):
-                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
-
-                            get_activations = K.function(
-                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
-                                 layer.input[5],
-                                 K.learning_phase()],
-                                [layer.output, ])
-                            self.act[self.simpleName(layer.name)] = \
-                                get_activations([self.act[inputLayerNameList[0]],
-                                                 self.act[inputLayerNameList[1]],
-                                                 self.act[inputLayerNameList[2]],
-                                                 self.act[inputLayerNameList[3]],
-                                                 self.act[inputLayerNameList[4]],
-                                                 self.act[inputLayerNameList[5]],
-                                                 0])[0]
-
-                        elif len(layer.input) == 7:
-                            inputLayerNameList = []
-                            for ind_li, layerInput in enumerate(layer.input):
-                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
-
-                            get_activations = K.function(
-                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
-                                 layer.input[5], layer.input[6],
-                                 K.learning_phase()],
-                                [layer.output, ])
-                            self.act[self.simpleName(layer.name)] = \
-                                get_activations([self.act[inputLayerNameList[0]],
-                                                 self.act[inputLayerNameList[1]],
-                                                 self.act[inputLayerNameList[2]],
-                                                 self.act[inputLayerNameList[3]],
-                                                 self.act[inputLayerNameList[4]],
-                                                 self.act[inputLayerNameList[5]],
-                                                 self.act[inputLayerNameList[6]],
-                                                 0])[0]
-                        elif len(layer.input) == 8:
-                            inputLayerNameList = []
-                            for ind_li, layerInput in enumerate(layer.input):
-                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
-
-                            get_activations = K.function(
-                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
-                                 layer.input[5], layer.input[6], layer.input[7],
-                                 K.learning_phase()],
-                                [layer.output, ])
-                            self.act[self.simpleName(layer.name)] = \
-                                get_activations([self.act[inputLayerNameList[0]],
-                                                 self.act[inputLayerNameList[1]],
-                                                 self.act[inputLayerNameList[2]],
-                                                 self.act[inputLayerNameList[3]],
-                                                 self.act[inputLayerNameList[4]],
-                                                 self.act[inputLayerNameList[5]],
-                                                 self.act[inputLayerNameList[6]],
-                                                 self.act[inputLayerNameList[7]],
-                                                 0])[0]
-
-                        elif len(layer.input) == 9:
-                            inputLayerNameList = []
-                            for ind_li, layerInput in enumerate(layer.input):
-                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
-
-                            get_activations = K.function(
-                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
-                                 layer.input[5], layer.input[6], layer.input[7], layer.input[8],
-                                 K.learning_phase()],
-                                [layer.output, ])
-                            self.act[self.simpleName(layer.name)] = \
-                                get_activations([self.act[inputLayerNameList[0]],
-                                                 self.act[inputLayerNameList[1]],
-                                                 self.act[inputLayerNameList[2]],
-                                                 self.act[inputLayerNameList[3]],
-                                                 self.act[inputLayerNameList[4]],
-                                                 self.act[inputLayerNameList[5]],
-                                                 self.act[inputLayerNameList[6]],
-                                                 self.act[inputLayerNameList[7]],
-                                                 self.act[inputLayerNameList[8]],
-                                                 0])[0]
-                        else:
-                            print('the number of input is more than 9')
-
-            dot = model_to_dot(self.model, show_shapes=False, show_layer_names=True, rankdir='TB')
-            if hasattr(self.model, "layers_by_depth"):
-                self.layers_by_depth = self.model.layers_by_depth
-            elif hasattr(self.model.model, "layers_by_depth"):
-                self.layers_by_depth = self.model.model.layers_by_depth
-            else:
-                print('the model or model.model should contain parameter layers_by_depth')
-
-            maxCol = 0
-
-            for i in range(len(self.layers_by_depth)):
-
-                for ind, layer in enumerate(self.layers_by_depth[i]):  # the layers in No i layer in the model
-                    if maxCol < ind:
-                        maxCow = ind
-
-                    if len(layer.weights) == 0:
-                        w = 0
-                    else:
-
-                        w = layer.weights[0]
-                        init = tf.global_variables_initializer()
-                        with tf.Session() as sess_i:
-                            sess_i.run(init)
-                            # print(sess_i.run(w))
-                            w = sess_i.run(w)
-
-                    self.weights[layer.name] = w
-
-            if self.modelDimension == '3D':
-                for i in self.weights:
-                    # a=self.weights[i]
-                    # b=a.ndim
-                    if hasattr(self.weights[i], "ndim"):
-                        if self.weights[i].ndim == 5:
-                            self.LayerWeights[i] = np.transpose(self.weights[i], (4, 3, 2, 0, 1))
-                    else:
-                        self.LayerWeights[i] = self.weights[i]
-            elif self.modelDimension == '2D':
-                for i in self.weights:
-                    if hasattr(self.weights[i], "ndim"):
-
-                        if self.weights[i].ndim == 4:
-                            self.LayerWeights[i] = np.transpose(self.weights[i], (3, 2, 0, 1))
-                    else:
-                        self.LayerWeights[i] = self.weights[i]
-            else:
-                print('the dimesnion of the weights should be 2D or 3D')
-
-            self.show_layer_name()
-
-            self.totalSS = len(self.subset_selection)
-
-            # show the activations' name in the List
-            slm = QStringListModel()
-            slm.setStringList(self.qList)
-            self.listView.setModel(slm)
-            self.listView.update()
-
+                QtWidgets.QMessageBox.information(self, 'Warning', 'This format is not supported!')
+            self.wyInputData.setCurrentIndex(0)
+            self.predictButton.setDisabled(False)
         else:
             self.showChooseFileDialog()
+
+    def show_layer_list(self):
+
+        self.layer_index_name = {}
+
+        for i, layer in enumerate(self.model.input_layers):
+            get_activations = K.function([layer.input, K.learning_phase()],
+                                         [layer.output, ])
+            if i == 0:
+                self.act[self.simpleName(layer.name)] = get_activations([self.subset_selection, 0])[0]
+                self.num_inputlayer = 1
+            elif i == 1:
+                self.act[self.simpleName(layer.name)] = get_activations([self.subset_selection_2, 0])[0]
+                self.num_inputlayer = 2
+            else:
+                print('no output of the input layer is created')
+        for i, layer in enumerate(self.model.layers):
+            self.layer_index_name[i] = self.simpleName(layer.name)
+            if i < self.num_inputlayer:
+                pass
+            else:
+                if not type(layer.input) == list:
+                    inputLayerNameList = [self.simpleName(layer.input.name)[0:-2]]
+                    get_activations = K.function([layer.input, K.learning_phase()],
+                                                 [layer.output, ])
+                    self.act[self.simpleName(layer.name)] = \
+                        get_activations([self.act[inputLayerNameList[0]], 0])[0]
+                else:
+                    if len(layer.input) == 2:
+                        inputLayerNameList = []
+                        for ind_li, layerInput in enumerate(layer.input):
+                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+                        get_activations = K.function([layer.input[0], layer.input[1], K.learning_phase()],
+                                                     [layer.output, ])
+                        self.act[self.simpleName(layer.name)] = \
+                            get_activations([self.act[inputLayerNameList[0]],
+                                             self.act[inputLayerNameList[1]],
+                                             0])[0]
+                    elif len(layer.input) == 3:
+                        inputLayerNameList = []
+                        for ind_li, layerInput in enumerate(layer.input):
+                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                        get_activations = K.function(
+                            [layer.input[0], layer.input[1], layer.input[2], K.learning_phase()],
+                            [layer.output, ])
+                        self.act[self.simpleName(layer.name)] = \
+                            get_activations([self.act[inputLayerNameList[0]],
+                                             self.act[inputLayerNameList[1]],
+                                             self.act[inputLayerNameList[2]],
+                                             0])[0]
+
+                    elif len(layer.input) == 4:
+                        inputLayerNameList = []
+                        for ind_li, layerInput in enumerate(layer.input):
+                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                        get_activations = K.function(
+                            [layer.input[0], layer.input[1], layer.input[2], layer.input[3],
+                             K.learning_phase()],
+                            [layer.output, ])
+                        self.act[self.simpleName(layer.name)] = \
+                            get_activations([self.act[inputLayerNameList[0]],
+                                             self.act[inputLayerNameList[1]],
+                                             self.act[inputLayerNameList[2]],
+                                             self.act[inputLayerNameList[3]],
+                                             0])[0]
+
+                    elif len(layer.input) == 5:
+                        inputLayerNameList = []
+                        for ind_li, layerInput in enumerate(layer.input):
+                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                        get_activations = K.function(
+                            [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                             K.learning_phase()],
+                            [layer.output, ])
+                        self.act[self.simpleName(layer.name)] = \
+                            get_activations([self.act[inputLayerNameList[0]],
+                                             self.act[inputLayerNameList[1]],
+                                             self.act[inputLayerNameList[2]],
+                                             self.act[inputLayerNameList[3]],
+                                             self.act[inputLayerNameList[4]],
+                                             0])[0]
+                    elif len(layer.input) == 6:
+                        inputLayerNameList = []
+                        for ind_li, layerInput in enumerate(layer.input):
+                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                        get_activations = K.function(
+                            [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                             layer.input[5],
+                             K.learning_phase()],
+                            [layer.output, ])
+                        self.act[self.simpleName(layer.name)] = \
+                            get_activations([self.act[inputLayerNameList[0]],
+                                             self.act[inputLayerNameList[1]],
+                                             self.act[inputLayerNameList[2]],
+                                             self.act[inputLayerNameList[3]],
+                                             self.act[inputLayerNameList[4]],
+                                             self.act[inputLayerNameList[5]],
+                                             0])[0]
+
+                    elif len(layer.input) == 7:
+                        inputLayerNameList = []
+                        for ind_li, layerInput in enumerate(layer.input):
+                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                        get_activations = K.function(
+                            [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                             layer.input[5], layer.input[6],
+                             K.learning_phase()],
+                            [layer.output, ])
+                        self.act[self.simpleName(layer.name)] = \
+                            get_activations([self.act[inputLayerNameList[0]],
+                                             self.act[inputLayerNameList[1]],
+                                             self.act[inputLayerNameList[2]],
+                                             self.act[inputLayerNameList[3]],
+                                             self.act[inputLayerNameList[4]],
+                                             self.act[inputLayerNameList[5]],
+                                             self.act[inputLayerNameList[6]],
+                                             0])[0]
+                    elif len(layer.input) == 8:
+                        inputLayerNameList = []
+                        for ind_li, layerInput in enumerate(layer.input):
+                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                        get_activations = K.function(
+                            [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                             layer.input[5], layer.input[6], layer.input[7],
+                             K.learning_phase()],
+                            [layer.output, ])
+                        self.act[self.simpleName(layer.name)] = \
+                            get_activations([self.act[inputLayerNameList[0]],
+                                             self.act[inputLayerNameList[1]],
+                                             self.act[inputLayerNameList[2]],
+                                             self.act[inputLayerNameList[3]],
+                                             self.act[inputLayerNameList[4]],
+                                             self.act[inputLayerNameList[5]],
+                                             self.act[inputLayerNameList[6]],
+                                             self.act[inputLayerNameList[7]],
+                                             0])[0]
+
+                    elif len(layer.input) == 9:
+                        inputLayerNameList = []
+                        for ind_li, layerInput in enumerate(layer.input):
+                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                        get_activations = K.function(
+                            [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                             layer.input[5], layer.input[6], layer.input[7], layer.input[8],
+                             K.learning_phase()],
+                            [layer.output, ])
+                        self.act[self.simpleName(layer.name)] = \
+                            get_activations([self.act[inputLayerNameList[0]],
+                                             self.act[inputLayerNameList[1]],
+                                             self.act[inputLayerNameList[2]],
+                                             self.act[inputLayerNameList[3]],
+                                             self.act[inputLayerNameList[4]],
+                                             self.act[inputLayerNameList[5]],
+                                             self.act[inputLayerNameList[6]],
+                                             self.act[inputLayerNameList[7]],
+                                             self.act[inputLayerNameList[8]],
+                                             0])[0]
+                    else:
+                        print('the number of input is more than 9')
+
+        dot = model_to_dot(self.model, show_shapes=False, show_layer_names=True, rankdir='TB')
+        if hasattr(self.model, "layers_by_depth"):
+            self.layers_by_depth = self.model.layers_by_depth
+        elif hasattr(self.model.model, "layers_by_depth"):
+            self.layers_by_depth = self.model.model.layers_by_depth
+        else:
+            print('the model or model.model should contain parameter layers_by_depth')
+
+        maxCol = 0
+
+        for i in range(len(self.layers_by_depth)):
+
+            for ind, layer in enumerate(self.layers_by_depth[i]):  # the layers in No i layer in the model
+                if maxCol < ind:
+                    maxCow = ind
+
+                if len(layer.weights) == 0:
+                    w = 0
+                else:
+
+                    w = layer.weights[0]
+                    init = tf.global_variables_initializer()
+                    with tf.Session() as sess_i:
+                        sess_i.run(init)
+                        # print(sess_i.run(w))
+                        w = sess_i.run(w)
+
+                self.weights[layer.name] = w
+
+        if self.modelDimension == '3D':
+            for i in self.weights:
+                # a=self.weights[i]
+                # b=a.ndim
+                if hasattr(self.weights[i], "ndim"):
+                    if self.weights[i].ndim == 5:
+                        self.LayerWeights[i] = np.transpose(self.weights[i], (4, 3, 2, 0, 1))
+                else:
+                    self.LayerWeights[i] = self.weights[i]
+        elif self.modelDimension == '2D':
+            for i in self.weights:
+                if hasattr(self.weights[i], "ndim"):
+
+                    if self.weights[i].ndim == 4:
+                        self.LayerWeights[i] = np.transpose(self.weights[i], (3, 2, 0, 1))
+                else:
+                    self.LayerWeights[i] = self.weights[i]
+        else:
+            print('the dimesnion of the weights should be 2D or 3D')
+
+        self.show_layer_name()
+
+        self.totalSS = len(self.subset_selection)
+
+        # show the activations' name in the List
+        slm = QStringListModel()
+        slm.setStringList(self.qList)
+        self.listView.setModel(slm)
+        self.listView.update()
 
     @pyqtSlot()
     def on_predictButton_clicked(self):
@@ -3877,6 +3949,7 @@ class Viewgroup(QtWidgets.QGridLayout):
 
             else:
                 if cnrlist[resultnum[0]] == 11:
+                    cmap3 = colormaplist[resultnum[0]]
                     if self.viewnr2 == 1:
                         self.viewnr2 = 2
                         param2 = {'image': list1[imagenum[0]], 'mode': 5,
@@ -3900,6 +3973,7 @@ class Viewgroup(QtWidgets.QGridLayout):
                         self.anewcanvas = Canvas(param1)
 
                 elif cnrlist[resultnum[0]] == 2:
+                    cmap1 = colormaplist[resultnum[0]]
                     if self.viewnr2 == 1:
                         self.viewnr2 = 2
                         param2 = {'image': list1[imagenum[0]], 'mode': 8,
@@ -4056,11 +4130,13 @@ class Viewgroup(QtWidgets.QGridLayout):
         self.viewnr2 = 1
         if i != 0:
             if cnrlist[i - 1] == 11:
+                cmap3 = colormaplist[resultnum[0]]
                 param1 = {'image': list1[imagenum[0]], 'mode': 4, 'color': problist[resultnum[0]],
                           'hatch': hatchlist[resultnum[0]], 'cmap': cmap3, 'hmap': hmap2, 'trans': vtr3,
                           'shape': shapelist[imagenum[0]]}
                 self.anewcanvas = Canvas(param1)
             elif cnrlist[i - 1] == 2:
+                cmap1 = colormaplist[resultnum[0]]
                 param1 = {'image': list1[imagenum[0]], 'mode': 7, 'color': problist[resultnum[0]],
                           'cmap': cmap1, 'trans': vtr1, 'shape': shapelist[imagenum[0]]}
                 self.anewcanvas = Canvas(param1)
@@ -4395,6 +4471,7 @@ class Viewline(QtWidgets.QGridLayout):
         imagenum.append(self.oldindex - 1)
         if i != 0:
             if cnrlist[i - 1] == 11:
+                cmap3 = colormaplist[resultnum[0]]
                 param1 = {'image': list1[imagenum[0]], 'mode': 4, 'color': problist[resultnum[0]],
                           'hatch': hatchlist[resultnum[0]], 'cmap': cmap3, 'hmap': hmap2, 'trans': vtr3,
                           'shape': shapelist[imagenum[0]]}
@@ -4408,6 +4485,7 @@ class Viewline(QtWidgets.QGridLayout):
                           'shape': shapelist[imagenum[0]]}
                 self.newcanvas3 = Canvas(param3)
             elif cnrlist[i - 1] == 2:
+                cmap1 = colormaplist[resultnum[0]]
                 param1 = {'image': list1[imagenum[0]], 'mode': 7, 'color': problist[resultnum[0]],
                           'cmap': cmap1, 'trans': vtr1, 'shape': shapelist[imagenum[0]]}
                 self.newcanvas1 = Canvas(param1)
@@ -4800,23 +4878,6 @@ def main(*args):
     mainWindow.show()
     # exceptionHandler.errorSignal.connect(something)
     sys.exit(app.exec_())
-
-
-# class ExceptionHandler(QtCore.QObject):
-#     errorSignal = QtCore.pyqtSignal()
-#
-#     def __init__(self):
-#         super(ExceptionHandler, self).__init__()
-#
-#     def handler(self, exctype, value, traceback):
-#         self.errorSignal.emit()
-#         sys._excepthook(exctype, value, traceback)
-# exceptionHandler = ExceptionHandler()
-# sys._excepthook = sys.excepthook
-# sys.excepthook = exceptionHandler.handler
-#
-# def something():
-#     QtWidgets.QMessageBox.information('Warning', 'File error!')
 
 
 if __name__ == '__main__':
