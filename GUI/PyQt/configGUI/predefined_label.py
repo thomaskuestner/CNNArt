@@ -71,7 +71,6 @@ class Window(QWidget):
             self.table.setItem(i, 1, colorItem)
 
         self.table.resizeColumnToContents(0)
-        self.table.horizontalHeader().setStretchLastSection(True)
 
         self.layout = QGridLayout()
         self.layout.addWidget(self.table, 0, 0)

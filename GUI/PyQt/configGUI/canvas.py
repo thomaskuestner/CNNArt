@@ -400,15 +400,16 @@ class Canvas(FigureCanvas):
                                                 extent=[0, img.shape[1], img.shape[0], 0])
                     local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
                     if not self.Y == []:
-                        img = self.Y[0][self.time, self.depth, :, :, self.ind]
+                        img = self.Y[-1][self.time, self.depth, :, :, self.ind]
                         self.im2 = self.ax1.imshow(img, aspect=self.aspect,
                                                    cmap=local_cmap, alpha=self.trans,
                                                    extent=[0, img.shape[1], img.shape[0], 0])
-                    img = self.Z[0][self.time, self.depth, :, :, self.ind]
-                    self.im3 = self.ax1.contourf(img, aspect=self.aspect,
+                    img = self.Z[-1][self.time, self.depth, :, :, self.ind]
+                    self.im3 = self.ax1.contourf(img,
                                                  cmap=local_cmap, alpha=self.trans,
                                                  extent=[0, img.shape[1], 0, img.shape[0]])
             except:
+                print(self.cmap)
                 if len(self.cmap) > 1:
                     artists = []
                     patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
@@ -445,11 +446,11 @@ class Canvas(FigureCanvas):
                                                 extent=[0, img.shape[1], img.shape[0], 0])
                     local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
                     if not self.Y == []:
-                        img = self.Y[0][:, :, self.ind]
+                        img = self.Y[-1][:, :, self.ind]
                         self.im2 = self.ax1.imshow(img, cmap=local_cmap, alpha=self.trans, aspect=self.aspect,
                                                    extent=[0, img.shape[1], img.shape[0], 0])
-                    img = self.Z[0][:, :, self.ind]
-                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, alpha=self.trans, aspect=self.aspect,
+                    img = self.Z[-1][:, :, self.ind]
+                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, alpha=self.trans,
                                                  extent=[0, img.shape[1], 0, img.shape[0]])
             self.draw_idle()
         elif self.mode == 5:
@@ -497,7 +498,7 @@ class Canvas(FigureCanvas):
                         self.im2 = self.ax1.imshow(img, cmap=local_cmap, alpha=self.trans, aspect=self.aspect,
                                                    extent=[0, img.shape[1], img.shape[0], 0])
                     img = self.Z[-1][self.time, self.depth, self.ind, :, :]
-                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, aspect=self.aspect,
+                    self.im3 = self.ax1.contourf(img, cmap=local_cmap,
                                                  alpha=self.trans, extent=[0, img.shape[1], 0, img.shape[0]])
             except:
                 if len(self.cmap) > 1:
@@ -543,7 +544,7 @@ class Canvas(FigureCanvas):
                                                    alpha=self.trans, aspect=self.aspect,
                                                    extent=[0, img.shape[1], img.shape[0], 0])
                     img = self.Z[-1][self.ind, :, :]
-                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, alpha=self.trans, aspect=self.aspect,
+                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, alpha=self.trans,
                                                  extent=[0, img.shape[1], 0, img.shape[0]])
             self.draw_idle()
         elif self.mode == 6:
@@ -592,7 +593,7 @@ class Canvas(FigureCanvas):
                                                    alpha=self.trans,
                                                    extent=[0, img.shape[1], img.shape[0], 0])
                     img = self.Z[-1][self.time, self.depth, :, self.ind, :]
-                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, aspect=self.aspect,
+                    self.im3 = self.ax1.contourf(img, cmap=local_cmap,
                                                  alpha=self.trans, extent=[0, img.shape[1], 0, img.shape[0]])
             except:
                 if len(self.cmap) > 1:
@@ -638,7 +639,7 @@ class Canvas(FigureCanvas):
                                                    alpha=self.trans,
                                                    extent=[0, img.shape[1], img.shape[0], 0])
                         img = self.Z[-1][:, self.ind, :]
-                        self.im3 = self.ax1.contourf(img, cmap=local_cmap, alpha=self.trans, aspect=self.aspect,
+                        self.im3 = self.ax1.contourf(img, cmap=local_cmap, alpha=self.trans,
                                                      extent=[0, img.shape[1], 0, img.shape[0]])
                         self.draw_idle()
         elif self.mode == 7:
@@ -648,7 +649,7 @@ class Canvas(FigureCanvas):
                 self.pltc = self.ax1.imshow(img, cmap='gray', aspect=self.aspect,
                                             extent=[0, img.shape[1], img.shape[0], 0])
                 if not self.Y == []:
-                    img = self.Y[self.time, self.depth, self.ind, :, :]
+                    img = self.Y[-1][self.time, self.depth, self.ind, :, :]
                     self.im2 = self.ax1.imshow(img, cmap=self.cmap, aspect=self.aspect, alpha=self.trans,
                                                extent=[0, img.shape[1], img.shape[0], 0])
             except:
@@ -656,7 +657,7 @@ class Canvas(FigureCanvas):
                 self.pltc = self.ax1.imshow(img, cmap='gray', aspect=self.aspect,
                                             extent=[0, img.shape[1], img.shape[0], 0])
                 if not self.Y == []:
-                    img = self.Y[:, :, self.ind]
+                    img = self.Y[-1][:, :, self.ind]
                     self.im2 = self.ax1.imshow(img, cmap=self.cmap, alpha=self.trans, aspect=self.aspect,
                                                extent=[0, img.shape[1], img.shape[0], 0])
             self.draw_idle()
@@ -667,7 +668,7 @@ class Canvas(FigureCanvas):
                 self.pltc = self.ax1.imshow(img, cmap='gray', aspect=self.aspect,
                                             extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
                 if not self.Y == []:
-                    img = self.Y[self.time, self.depth, self.ind, :, :]
+                    img = self.Y[-1][self.time, self.depth, self.ind, :, :]
                     self.im2 = self.ax1.imshow(img, cmap=self.cmap, alpha=self.trans, aspect=self.aspect,
                                                extent=[0, img.shape[1], img.shape[0], 0])
             except:
@@ -675,7 +676,7 @@ class Canvas(FigureCanvas):
                 self.pltc = self.ax1.imshow(img, cmap='gray', aspect=self.aspect,
                                             extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
                 if not self.Y == []:
-                    img = self.Y[self.ind, :, :]
+                    img = self.Y[-1][self.ind, :, :]
                     self.im2 = self.ax1.imshow(img, cmap=self.cmap, alpha=self.trans, aspect=self.aspect,
                                                extent=[0, img.shape[1], img.shape[0], 0])
             self.draw_idle()
@@ -686,7 +687,7 @@ class Canvas(FigureCanvas):
                 self.pltc = self.ax1.imshow(img, cmap='gray', aspect=self.aspect,
                                             extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
                 if not self.Y == []:
-                    img = self.Y[self.time, self.depth, :, self.ind, :]
+                    img = self.Y[-1][self.time, self.depth, :, self.ind, :]
                     self.im2 = self.ax1.imshow(img, cmap=self.cmap, alpha=self.trans, aspect=self.aspect,
                                                extent=[0, img.shape[1], img.shape[0], 0])
             except:
@@ -694,7 +695,7 @@ class Canvas(FigureCanvas):
                 self.pltc = self.ax1.imshow(img, cmap='gray', aspect=self.aspect,
                                             extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
                 if not self.Y == []:
-                    img = self.Y[:, self.ind, :, 0, 0]
+                    img = self.Y[-1][:, self.ind, :, 0, 0]
                     self.im2 = self.ax1.imshow(img, cmap=self.cmap, alpha=self.trans, aspect=self.aspect,
                                                extent=[0, img.shape[1], img.shape[0], 0])
             self.draw_idle()
@@ -789,12 +790,12 @@ class Canvas(FigureCanvas):
                                                 extent=[0, img.shape[1], img.shape[0], 0])
                     local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
                     if not self.Y == []:
-                        img = self.Y[0][self.time, self.depth, :, :, self.ind]
+                        img = self.Y[-1][self.time, self.depth, :, :, self.ind]
                         self.im2 = self.ax1.imshow(img, aspect=self.aspect,
                                                    cmap=local_cmap, alpha=self.trans,
                                                    extent=[0, img.shape[1], img.shape[0], 0])
-                    img = self.Z[0][self.time, self.depth, :, :, self.ind]
-                    self.im3 = self.ax1.contourf(img, aspect=self.aspect,
+                    img = self.Z[-1][self.time, self.depth, :, :, self.ind]
+                    self.im3 = self.ax1.contourf(img,
                                                  cmap=local_cmap, alpha=self.trans,
                                                  extent=[0, img.shape[1], 0, img.shape[0]])
             except:
@@ -836,12 +837,12 @@ class Canvas(FigureCanvas):
                                                 extent=[0, img.shape[1], img.shape[0], 0])
                     local_cmap = matplotlib.colors.ListedColormap(self.cmap[0])
                     if not self.Y == []:
-                        img = self.Y[0][:, :, self.ind]
+                        img = self.Y[-1][:, :, self.ind]
                         self.im2 = self.ax1.imshow(img, cmap=local_cmap, aspect=self.aspect,
                                                    alpha=self.trans,
                                                    extent=[0, img.shape[1], img.shape[0], 0])
-                    self.im3 = self.ax1.contourf(self.Z[0][:, :, self.ind], cmap=local_cmap,
-                                                 alpha=self.trans, aspect=self.aspect,
+                    self.im3 = self.ax1.contourf(self.Z[-1][:, :, self.ind], cmap=local_cmap,
+                                                 alpha=self.trans,
                                                  extent=[0, img.shape[1], 0, img.shape[0]])
             self.draw_idle()
         elif self.mode == 5:
@@ -892,7 +893,7 @@ class Canvas(FigureCanvas):
                                                    extent=[0, img.shape[1], img.shape[0], 0])
                     img = self.Z[-1][self.time, self.depth, self.ind, :, :]
                     self.im3 = self.ax1.contourf(img,
-                                                 cmap=local_cmap, aspect=self.aspect,
+                                                 cmap=local_cmap,
                                                  alpha=self.trans, extent=[0, img.shape[1], 0, img.shape[0]])
             except:
                 if len(self.cmap) > 1:
@@ -989,7 +990,7 @@ class Canvas(FigureCanvas):
                                                    extent=[0, img.shape[1], img.shape[0], 0])
                     img = self.Z[-1][self.time, self.depth, :, self.ind, :]
                     self.im3 = self.ax1.contourf(img,
-                                                 cmap=local_cmap, aspect=self.aspect,
+                                                 cmap=local_cmap,
                                                  alpha=self.trans, extent=[0, img.shape[1], 0, img.shape[0]])
             except:
                 if len(self.cmap) > 1:
@@ -1034,7 +1035,7 @@ class Canvas(FigureCanvas):
                                                    alpha=self.trans, aspect=self.aspect,
                                                    extent=[0, img.shape[1], img.shape[0], 0])
                     img = self.Z[-1][:, self.ind, :]
-                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, alpha=self.trans, aspect=self.aspect,
+                    self.im3 = self.ax1.contourf(img, cmap=local_cmap, alpha=self.trans,
                                                  extent=[0, img.shape[1], 0, img.shape[0]])
             self.draw_idle()
 
@@ -1046,7 +1047,7 @@ class Canvas(FigureCanvas):
                                             cmap='gray', aspect=self.aspect,
                                             extent=[0, img.shape[1], img.shape[0], 0])
                 if not self.Y == []:
-                    img = self.Y[self.time, self.depth, self.ind, :, :]
+                    img = self.Y[-1][self.time, self.depth, self.ind, :, :]
                     self.im2 = self.ax1.imshow(img,
                                                cmap=self.cmap, alpha=self.trans, aspect=self.aspect,
                                                extent=[0, img.shape[1], img.shape[0], 0])
@@ -1055,7 +1056,7 @@ class Canvas(FigureCanvas):
                 self.pltc = self.ax1.imshow(img, cmap='gray', aspect=self.aspect,
                                             extent=[0, img.shape[1], img.shape[0], 0])
                 if not self.Y == []:
-                    img = self.Y[:, :, self.ind]
+                    img = self.Y[-1][:, :, self.ind]
                     self.im2 = self.ax1.imshow(img, cmap=self.cmap, aspect=self.aspect,
                                                alpha=self.trans,
                                                extent=[0, img.shape[1], img.shape[0], 0])
@@ -1068,7 +1069,7 @@ class Canvas(FigureCanvas):
                                             cmap='gray', aspect=self.aspect,
                                             extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
                 if not self.Y == []:
-                    img = self.Y[self.time, self.depth, self.ind, :, :]
+                    img = self.Y[-1][self.time, self.depth, self.ind, :, :]
                     self.im2 = self.ax1.imshow(img,
                                                cmap=self.cmap, alpha=self.trans, aspect=self.aspect,
                                                extent=[0, img.shape[1], img.shape[0], 0])
@@ -1077,7 +1078,7 @@ class Canvas(FigureCanvas):
                 self.pltc = self.ax1.imshow(img, cmap='gray', aspect=self.aspect,
                                             extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
                 if not self.Y == []:
-                    img = self.Y[self.ind, :, :]
+                    img = self.Y[-1][self.ind, :, :]
                     self.im2 = self.ax1.imshow(img, cmap=self.cmap, aspect=self.aspect,
                                                alpha=self.trans,
                                                extent=[0, img.shape[1], img.shape[0], 0])
@@ -1090,7 +1091,7 @@ class Canvas(FigureCanvas):
                                             cmap='gray', aspect=self.aspect,
                                             extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
                 if not self.Y == []:
-                    img = self.Y[self.time, self.depth, :, self.ind, :]
+                    img = self.Y[-1][self.time, self.depth, :, self.ind, :]
                     self.im2 = self.ax1.imshow(img,
                                                cmap=self.cmap, alpha=self.trans,
                                                extent=[0, img.shape[1], img.shape[0], 0])
@@ -1099,7 +1100,7 @@ class Canvas(FigureCanvas):
                 self.pltc = self.ax1.imshow(img, cmap='gray', aspect=self.aspect,
                                             extent=[0, img.shape[1], img.shape[0], 0], interpolation='sinc')
                 if not self.Y == []:
-                    img = self.Y[:, self.ind, :, 0, 0]
+                    img = self.Y[-1][:, self.ind, :, 0, 0]
                     self.im2 = self.ax1.imshow(img, cmap=self.cmap, aspect=self.aspect,
                                                alpha=self.trans,
                                                extent=[0, img.shape[1], img.shape[0], 0])
@@ -1153,10 +1154,7 @@ class Canvas(FigureCanvas):
             self.selectedShape.set_edgecolor('black')
             self.draw_idle()
             self.set_state(2)
-            try:
-                self.edit_selectedShape(self.selectedShape)
-            except:
-                pass
+            self.edit_selectedShape(self.selectedShape)
         elif type(self.selectedShape) is PathPatch:
             self.selectedShape.set_edgecolor('black')
             self.draw_idle()
@@ -1173,7 +1171,10 @@ class Canvas(FigureCanvas):
 
         self.df = pandas.read_csv('Markings/marking_records.csv')
         if not self.df[self.df['artist'] == str(self.selectedShape)].index.values.astype(int) == []:
-            self.selectind = self.df[self.df['artist'] == str(self.selectedShape)].index.values.astype(int)[0]
+            try:
+                self.selectind = self.df[self.df['artist'] == str(self.selectedShape)].index.values.astype(int)[0]
+            except:
+                self.selectind = 0
         else:
             pass
         color = self.df.iloc[self.selectind]['labelcolor']
@@ -1261,6 +1262,7 @@ class Canvas(FigureCanvas):
         if self.selectedShape is not None:
             self.update_selectedShape()
 
+    @property
     def _rect_bbox(self):
         if type(self.selectedShape) is Rectangle:
             x0 = self.to_draw.get_x()
@@ -1276,14 +1278,14 @@ class Canvas(FigureCanvas):
 
     def get_corners(self):
         """Corners of rectangle from lower left, moving clockwise."""
-        x0, y0, width, height = self._rect_bbox()
+        x0, y0, width, height = self._rect_bbox
         xc = x0, x0 + width, x0 + width, x0
         yc = y0, y0, y0 + height, y0 + height
         return xc, yc
 
     def get_edge_centers(self):
         """Midpoint of rectangle edges from left, moving clockwise."""
-        x0, y0, width, height = self._rect_bbox()
+        x0, y0, width, height = self._rect_bbox
         w = width / 2.
         h = height / 2.
         xe = x0, x0 + w, x0 + width, x0 + w
@@ -1292,13 +1294,13 @@ class Canvas(FigureCanvas):
 
     def get_center(self):
         """Center of rectangle"""
-        x0, y0, width, height = self._rect_bbox()
+        x0, y0, width, height = self._rect_bbox
         return x0 + width / 2., y0 + height / 2.
 
     @property
     def extents(self):
         """Return (xmin, xmax, ymin, ymax)."""
-        x0, y0, width, height = self._rect_bbox()
+        x0, y0, width, height = self._rect_bbox
         xmin, xmax = sorted([x0, x0 + width])
         ymin, ymax = sorted([y0, y0 + height])
         return xmin, xmax, ymin, ymax
@@ -1534,27 +1536,28 @@ class Canvas(FigureCanvas):
 
     def mouse_release(self, event):
         if event.button == 1:
-            x = int(event.xdata)
-            y = int(event.ydata)
+            if event.xdata is not None and event.ydata is not None:
+                x = int(event.xdata)
+                y = int(event.ydata)
 
-            if self.mode > 3 and self.mode <= 6:
-                try:
-                    pixel = self.total_mask[x, y, :]
-                except:
-                    pixel = [0, 0, 0]
-                pixel_color = matplotlib.colors.to_hex(pixel)
-                color_hex = []
-                patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
-                count = patch_color_df['color'].count()
-                for i in range(count):
-                    color_hex.append(matplotlib.colors.to_hex(patch_color_df.iloc[i]['color']))
-                try:
-                    ind = color_hex.index(str(pixel_color))
-                    self.mask_class = patch_color_df.iloc[ind]['class']
-                except:
-                    pass
-                if self.mask_class is not None and self.labelon:
-                    self.setToolTip(self.mask_class)
+                if self.mode > 3 and self.mode <= 6:
+                    try:
+                        pixel = self.total_mask[x, y, :]
+                    except:
+                        pixel = [0, 0, 0]
+                    pixel_color = matplotlib.colors.to_hex(pixel)
+                    color_hex = []
+                    patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
+                    count = patch_color_df['color'].count()
+                    for i in range(count):
+                        color_hex.append(matplotlib.colors.to_hex(patch_color_df.iloc[i]['color']))
+                    try:
+                        ind = color_hex.index(str(pixel_color))
+                        self.mask_class = patch_color_df.iloc[ind]['class']
+                    except:
+                        pass
+                    if self.mask_class is not None and self.labelon:
+                        self.setToolTip(self.mask_class)
 
             if not self.labelon:
                 self.setToolTip(

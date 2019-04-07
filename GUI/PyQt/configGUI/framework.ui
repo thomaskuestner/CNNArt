@@ -783,8 +783,8 @@ in the Region of Interest</string>
                     <rect>
                      <x>0</x>
                      <y>0</y>
-                     <width>78</width>
-                     <height>16</height>
+                     <width>98</width>
+                     <height>28</height>
                     </rect>
                    </property>
                    <property name="autoFillBackground">
@@ -1876,6 +1876,9 @@ in the Region of Interest</string>
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
+                <property name="toolTip">
+                 <string>Excecution</string>
+                </property>
                 <property name="statusTip">
                  <string>perform prediction</string>
                 </property>
@@ -2219,7 +2222,6 @@ in the Region of Interest</string>
     <property name="title">
      <string>Fi&amp;le</string>
     </property>
-    <addaction name="actionOpen_file"/>
     <addaction name="actionSave"/>
     <addaction name="actionLoad"/>
    </widget>
@@ -2248,6 +2250,7 @@ in the Region of Interest</string>
     <addaction name="actionData_Viewing"/>
     <addaction name="actionNetwork_Training"/>
     <addaction name="actionNetwork_Visualization"/>
+    <addaction name="actionDatasets_Window"/>
     <addaction name="actionNetwork_Interface"/>
    </widget>
    <addaction name="menuFile"/>
@@ -2387,6 +2390,16 @@ in the Region of Interest</string>
   <action name="actionAbout_Labeling">
    <property name="text">
     <string>&amp;About Labeling</string>
+   </property>
+  </action>
+  <action name="actionDaatests_Window">
+   <property name="text">
+    <string>Datests Window</string>
+   </property>
+  </action>
+  <action name="actionDatasets_Window">
+   <property name="text">
+    <string>Datasets Window</string>
    </property>
   </action>
  </widget>
