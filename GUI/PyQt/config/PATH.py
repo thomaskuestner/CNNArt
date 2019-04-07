@@ -1,8 +1,10 @@
 import yaml
-with open('config/param.yml', 'r') as ymlfile:
+with open('config/param_GUI.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
 
 DATASETS = cfg['MRdatabase']
+
+SUBDIRS = cfg['subdirs']
 
 PATH_OUT = cfg['pathout']
 
