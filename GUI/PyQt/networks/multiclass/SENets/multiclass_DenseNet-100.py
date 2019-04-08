@@ -14,7 +14,7 @@ from keras.layers.core import Flatten
 from keras.models import Model
 from keras.models import Sequential
 from keras.layers.convolutional import Convolution2D
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.regularizers import l2  # , activity_l2
 from networks.multiclass.SENets.densely_connected_cnn_blocks import *
 
@@ -117,7 +117,11 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 
     # opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
     opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-    callbacks = [EarlyStopping(monitor='val_loss', patience=5, verbose=1)]
+    callbacks = []
+    callbacks.append(
+        ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0,
+                        period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
+    callbacks.append(EarlyStopping(monitor='val_loss', patience=5, verbose=1))
 
     cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
 
@@ -139,7 +143,10 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 
     # wei = cnn.get_weights()
     cnn.save_weights(weight_name, overwrite=True)
-    # cnn.save(model_all) # keras > v0.7
+    cnn.save(model_all) # keras > v0.7
+    model_png_dir = sOutPath + os.sep + "model.png"
+    from keras.utils import plot_model
+    plot_model(cnn, to_file=model_png_dir, show_shapes=True, show_layer_names=True)
 
     # matlab
     acc = result.history['acc']

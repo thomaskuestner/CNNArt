@@ -34,10 +34,12 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
             self.dev2 = self.colors['class11']['trans'][0]
             self.trans = self.colors['classes']['trans'][0]
             self.colormaps = []
+            self.classes = []
         self.patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
         count = self.patch_color_df['class'].count()
         for i in range(count):
             self.colormaps.append(self.patch_color_df.iloc[i]['color'])
+            self.classes.append(self.patch_color_df.iloc[i]['class'])
 
         for n, i in enumerate(self.hmap1):
             if i == '\\\\':
@@ -65,7 +67,7 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
         if count>0:
             self.listWidget.insertItem(0, '%d classes' % count)
             for i in range(count):
-                label = QtWidgets.QRadioButton('class: %s' % self.colormaps[i])
+                label = QtWidgets.QRadioButton('class: %s' % self.classes[i])
                 self.labellist.append(label)
                 button = QtWidgets.QPushButton()
                 button.setText("")

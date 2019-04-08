@@ -2,7 +2,6 @@ from scipy.optimize import fmin_l_bfgs_b
 
 import numpy as np
 
-from configGUI import proximal_alg
 from configGUI.proximal_alg import ProximalGradSolver
 
 
@@ -15,9 +14,9 @@ class Visualizer():
         
         Parameters:
         -----------
-	  calcCost : function handle that computes the cost function for a given input
-	  calcGrad : function handle that computes the gradient of the cost function
-	  input : an input image (used for regularization or just to get the shape of the input)
+          calcCost : function handle that computes the cost function for a given input
+          calcGrad : function handle that computes the gradient of the cost function
+          input : an input image (used for regularization or just to get the shape of the input)
         """
         self.calcGrad = calcGrad
         self.calcCost = calcCost
@@ -40,10 +39,10 @@ class DeepVisualizer(Visualizer):
         
         Parameters:
         -----------
-	  calcCost : function handle that computes the cost function for a given input
-	  calcGrad : function handle that computes the gradient of the cost function
-	  input : an input image (used for regularization or just to get the shape of the input)
-	  alpha : l2-regularization on the wanted input image to obtain feasible results
+          calcCost : function handle that computes the cost function for a given input
+          calcGrad : function handle that computes the gradient of the cost function
+          input : an input image (used for regularization or just to get the shape of the input)
+          alpha : l2-regularization on the wanted input image to obtain feasible results
         """
 
         Visualizer.__init__(self, calcGrad, calcCost, input)
@@ -52,24 +51,24 @@ class DeepVisualizer(Visualizer):
 
     def costFun(self, x):
         """
-	Function that computes the cost value for a given x
-	
-	Parameters:
-	-----------
-	  x : input data
-	"""
+        Function that computes the cost value for a given x
+
+        Parameters:
+        -----------
+          x : input data
+        """
         tmp = x.reshape(self.inp_shape)
         c = np.float64(self.calcCost(np.asarray(tmp, dtype=np.float32))) + self.alpha * np.dot(x.T, x)
         return c
 
     def gradFun(self, x):
         """
-	Function that computes the gradient of the cost function at x
-	
-	Parameters:
-	-----------
-	  x : input data
-	"""
+        Function that computes the gradient of the cost function at x
+
+        Parameters:
+        -----------
+          x : input data
+        """
         tmp = x.reshape(self.inp_shape)
         g = np.ravel(
             np.asarray(self.calcGrad(np.asarray(tmp, dtype=np.float32)), dtype=np.float64)) + 2 * self.alpha * x
@@ -81,7 +80,7 @@ class DeepVisualizer(Visualizer):
         
         Parameters:
         -----------
-	  x0 : initial solution
+          x0 : initial solution
         """
         (result, f, d) = fmin_l_bfgs_b(lambda x: self.costFun(x), np.ravel(x0), lambda x: self.gradFun(x))
         print("optimization completed with cost: " + str(f))
@@ -97,34 +96,32 @@ class SubsetSelection(Visualizer):
         
         Parameters:
         -----------
-	  calcCost : function handle that computes the cost function for a given input
-	  calcGrad : function handle that computes the gradient of the cost function
-	  input : an input image (used for regularization or just to get the shape of the input)
-	  alpha : l2-regularization on the wanted input image to obtain feasible results
-	  gamma : step size for the proximal gradient algorithm
+          calcCost : function handle that computes the cost function for a given input
+          calcGrad : function handle that computes the gradient of the cost function
+          input : an input image (used for regularization or just to get the shape of the input)
+          alpha : l2-regularization on the wanted input image to obtain feasible results
+          gamma : step size for the proximal gradient algorithm
         """
         Visualizer.__init__(self, calcGrad, calcCost, input)
         self.alpha = alpha
         self.gamma = gamma
 
     def costFun(self, S, x):
-        """
-	Function that computes the cost value for a given x
-	
-	Parameters:
-	-----------
-	  x : input data
-	"""
+        """Function that computes the cost value for a given x
+
+        Parameters:
+        -----------
+          x : input data"""
+
         return self.calcCost(S * x)
 
     def gradFun(self, S, x):
-        """
-	Function that computes the gradient of the cost function at x
-	
-	Parameters:
-	-----------
-	  x : input data
-	"""
+        """Function that computes the gradient of the cost function at x
+
+            Parameters:
+            -----------
+              x : input data"""
+
         return self.calcGrad(S * x) * x  # todo: sum over the dimensions of x which are not present in s!
 
     def optimize(self, x0, n_iter=50):
@@ -133,12 +130,13 @@ class SubsetSelection(Visualizer):
         
         Parameters:
         -----------
-	  x0 : initial solution
-	  n_iter : number of proximal gradient steps used for optimization
+          x0 : initial solution
+          n_iter : number of proximal gradient steps used for optimization
         """
         x0 = np.asarray(x0, dtype=np.float32)
         opt = ProximalGradSolver(self.gamma, self.alpha, lambda x: self.costFun(x, self.input),
                                  lambda x: np.sum(np.abs(x)), lambda x: self.gradFun(x, self.input),
                                  proximal_alg.prox_l1_01)
         result = opt.minimize(x0, n_iter=n_iter)
+
         return result

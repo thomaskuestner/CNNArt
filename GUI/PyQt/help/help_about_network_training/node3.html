@@ -1,0 +1,88 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<!--Converted with LaTeX2HTML 2018 (Released Feb 1, 2018) -->
+<HTML>
+<HEAD>
+<TITLE>Patching images</TITLE>
+<META NAME="description" CONTENT="Patching images">
+<META NAME="keywords" CONTENT="help_about_network_training">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+
+<META NAME="Generator" CONTENT="LaTeX2HTML v2018">
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+
+<LINK REL="STYLESHEET" HREF="help_about_network_training.css">
+
+<LINK REL="next" HREF="node4.html">
+<LINK REL="previous" HREF="node2.html">
+<LINK REL="up" HREF="node1.html">
+<LINK REL="next" HREF="node4.html">
+</HEAD>
+
+<BODY >
+
+<DIV CLASS="navigation"><!--Navigation Panel-->
+<A NAME="tex2html45"
+  HREF="node4.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
+<A NAME="tex2html43"
+  HREF="node1.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
+<A NAME="tex2html37"
+  HREF="node2.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html46"
+  HREF="node4.html">Training neural network</A>
+<B> Up:</B> <A NAME="tex2html44"
+  HREF="node1.html">About Network Training</A>
+<B> Previous:</B> <A NAME="tex2html38"
+  HREF="node2.html">Select datasets</A>
+<BR>
+<BR></DIV>
+<!--End of Navigation Panel-->
+
+<H2><A NAME="SECTION00012000000000000000">
+Patching images</A>
+</H2>
+There are several options for generating datasets by patching. At first, you should set the <SPAN  CLASS="textit">Output Path</SPAN> correctly, where you want to save the datasets. Then, you can select 2D/3D patching with matching patch sizes to the neural network you want to train later on. If you select 2D patching, the third patch size will be ignored. And If you select the labeling mode as mask labeling or 2D patch labeling, you should also set a suitable overlap. Besides, you can select the methods of sample splitting mode, if you do not split datasets by yourself. There are three methods provided, simple random sample splitting, cross validation splitting and patient cross validation splitting. For simple random sample splitting, the training/validation/test datasets will be split by corresponding ratio, which you can set manually; For cross validation sample splitting, you can choose split ratio and number of folds; And it is similar for patient cross validation splitting. If you use the segmentation masks of datasets, please check <SPAN  CLASS="textit">Using Segmentation Mask</SPAN>. In the mean while, you need to set the exact <SPAN  CLASS="textit">Markings Path</SPAN>. And if you want to shuffle the datasets randomly, please check on <SPAN  CLASS="textit">Random Shuffle</SPAN>. The datasets will be not stored, if necessary, you can store the datasets in HDF5. Or if you use patch labeling, you can select patch based storage. After everything is prepared, you can perform patching by clicking <SPAN  CLASS="textit">Perform Patching</SPAN>.
+
+<DIV ALIGN="CENTER"><A NAME="fig:perform_patching"></A><A NAME="29"></A>
+<TABLE>
+<CAPTION ALIGN="BOTTOM"><STRONG>Figure:</STRONG>
+Perform Patching</CAPTION>
+<TR><TD>
+<DIV ALIGN="CENTER">
+
+</DIV>	<IMG
+  WIDTH="873" HEIGHT="235" ALIGN="BOTTOM" BORDER="0"
+ SRC="./perform_patching.png"
+ ALT="Image perform_patching"></TD></TR>
+</TABLE>
+</DIV>
+
+<P>
+
+<DIV CLASS="navigation"><HR>
+<!--Navigation Panel-->
+<A NAME="tex2html45"
+  HREF="node4.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
+<A NAME="tex2html43"
+  HREF="node1.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
+<A NAME="tex2html37"
+  HREF="node2.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A>   
+<BR>
+<B> Next:</B> <A NAME="tex2html46"
+  HREF="node4.html">Training neural network</A>
+<B> Up:</B> <A NAME="tex2html44"
+  HREF="node1.html">About Network Training</A>
+<B> Previous:</B> <A NAME="tex2html38"
+  HREF="node2.html">Select datasets</A></DIV>
+<!--End of Navigation Panel-->
+
+</BODY>
+</HTML>

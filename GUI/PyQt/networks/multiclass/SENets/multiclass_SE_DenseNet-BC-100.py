@@ -19,7 +19,7 @@ from keras.layers.core import Dense, Activation, Flatten
 from keras.models import Model
 from keras.models import Sequential
 from keras.layers.convolutional import Convolution2D
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.regularizers import l2  # , activity_l2
 
 from networks.multiclass.SENets.densely_connected_cnn_blocks import *
@@ -152,7 +152,10 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 
     # wei = cnn.get_weights()
     cnn.save_weights(weight_name, overwrite=True)
-    # cnn.save(model_all) # keras > v0.7
+    cnn.save(model_all) # keras > v0.7
+    model_png_dir = sOutPath + os.sep + "model.png"
+    from keras.utils import plot_model
+    plot_model(cnn, to_file=model_png_dir, show_shapes=True, show_layer_names=True)
 
     # matlab
     acc = result.history['acc']
@@ -199,7 +202,11 @@ def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
     # model = model_from_json(model_json)
     model = createModel(patchSize)
     opti = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-    callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1)]
+    callbacks = []
+    callbacks.append(
+        ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0,
+                        period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
+    callbacks.append(EarlyStopping(monitor='val_loss', patience=10, verbose=1))
 
     model.compile(loss='categorical_crossentropy', optimizer=opti)
     model.load_weights(weight_name)

@@ -73,19 +73,16 @@ def fRigidPatching(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array,
                 elif move_artefact == True and shim_artefact == True and noise_artefact == True:
                     label = 7
 
-                with open("configGUI/Output.txt", "w") as text_file:
-                    text_file.writelines('label: ' + str(label) + '\n')
-                    text_file.close()
+                print(label)
                 dLabels[idxPatch] = label
                 idxPatch += 1
 
                 move_artefact = False
                 shim_artefact = False
                 noise_artefact = False
-        with open("configGUI/Output.txt", "w") as text_file:
-            text_file.writelines("Rigid done!")
-            text_file.writelines('dLabels: ' + str(dLabels) + '\n')
-            text_file.close()
+
+    print("Rigid done!")
+    print(dLabels)
     return dPatches, dLabels, nbPatches
 
 
@@ -109,46 +106,41 @@ def fRigidPatching3D(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_arra
     shim_artefact = False
     noise_artefact = False
     #dLabels = []
+    print(patchSize)
     dOverlap = np.round(np.multiply(patchSize, patchOverlap))
     dNotOverlap = np.round(np.multiply(patchSize, (1 - patchOverlap)))
+    print(dOverlap, dNotOverlap)
     size_zero_pad = np.array(([math.ceil((dicom_numpy_array.shape[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[
         0], math.ceil((dicom_numpy_array.shape[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1], math.ceil((dicom_numpy_array.shape[2] - dOverlap[2]) / (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2]]))
+    print(size_zero_pad.shape)
     zero_pad = np.array(([int(size_zero_pad[0]) - dicom_numpy_array.shape[0], int(size_zero_pad[1]) - dicom_numpy_array.shape[1], int(size_zero_pad[2]) - dicom_numpy_array.shape[2]]))
+    print(zero_pad.shape)
     zero_pad_part = np.array(([int(math.ceil(zero_pad[0] / 2)), int(math.ceil(zero_pad[1] / 2)), int(math.ceil(zero_pad[2] / 2))]))
+    print(zero_pad_part.shape)
     Img_zero_pad = np.lib.pad(dicom_numpy_array, (
     (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (zero_pad_part[2], zero_pad[2] - zero_pad_part[2])),
                               mode='constant')
+    print(Img_zero_pad.shape)
     Mask_zero_pad = np.lib.pad(mask_numpy_array, (
     (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (zero_pad_part[2], zero_pad[2] - zero_pad_part[2])),
                               mode='constant')
+    print(Mask_zero_pad.shape)
+    print(size_zero_pad[2])
+    print(np.round((1-patchOverlap)*patchSize[2]))
+    print(((size_zero_pad[2]-patchSize[2])/(np.round((1-patchOverlap)*patchSize[2]))+1))
     nbPatches = ((size_zero_pad[0]-patchSize[0])/((1-patchOverlap)*patchSize[0])+1)*((size_zero_pad[1]-patchSize[1])/((1-patchOverlap)*patchSize[1])+1)*((size_zero_pad[2]-patchSize[2])/(np.round((1-patchOverlap)*patchSize[2]))+1)
+    print(nbPatches)
     dPatches = np.zeros((patchSize[0], patchSize[1], patchSize[2], int(nbPatches)), dtype=float)
     dLabels = np.zeros((int(nbPatches)), dtype = int) #float
     idxPatch = 0
-    with open("configGUI/Output.txt", "w") as text_file:
-        text_file.writelines('Patch Size is: ' + str(patchSize) + '\n')
-        text_file.writelines('dOverlap is: ' + str(dOverlap) + '\n')
-        text_file.writelines('dNotOverlap is: ' + str(dNotOverlap) + '\n')
-        text_file.writelines('size_zero_pad shape is: ' + str(size_zero_pad.shape) + '\n')
-        text_file.writelines('zero_pad shape is: ' + str(zero_pad.shape) + '\n')
-        text_file.writelines('zero_pad_part shape is: ' + str(zero_pad_part.shape) + '\n')
-        text_file.writelines('Img_zero_pad shape is: ' + str(Img_zero_pad.shape) + '\n')
-        text_file.writelines('Mask_zero_pad shape is: ' + str(Mask_zero_pad.shape) + '\n')
-        text_file.writelines('zero_pad Size is: ' + str(size_zero_pad[2]) + '\n')
-        text_file.writelines(np.round((1 - patchOverlap) * patchSize[2]) + '\n')
-        text_file.writelines((size_zero_pad[2] - patchSize[2]) / (np.round((1 - patchOverlap) * patchSize[2])) + 1)
-        text_file.writelines('nbPatches is :' + str(nbPatches) + '\n')
-        text_file.close()
-
     for iZ in range(0, int(size_zero_pad[2] - dOverlap[2]), int(dNotOverlap[2])):
         for iY in range(0, int(size_zero_pad[0] - dOverlap[0]), int(dNotOverlap[0])):
             for iX in range(0, int(size_zero_pad[1] - dOverlap[1]), int(dNotOverlap[1])):
                 dPatch = Img_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ:iZ + patchSize[2]]
-                with open("configGUI/Output.txt", "w") as text_file:
-                    text_file.writelines('dPatch shape is: ' + str(dPatch.shape) + '\n')
-                    text_file.writelines('dPatches shape is: ' + str(dPatches[:,:,:,idxPatch].shape) + '\n')
-                    text_file.close()
+                print(dPatch.shape)
+                print(dPatches[:,:,:,idxPatch].shape)
                 dPatches[:,:,:,idxPatch] = dPatch
+
                 dPatch_mask = Mask_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ:iZ + patchSize[2]]
                 patch_number_value = patchSize[0] * patchSize[1]*patchSize[2]
 
@@ -176,9 +168,7 @@ def fRigidPatching3D(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_arra
                 elif move_artefact == True and shim_artefact == True and noise_artefact == True:
                     label = 7
 
-                with open("configGUI/Output.txt", "w") as text_file:
-                    text_file.writelines('label is: ' + str(label) + '\n')
-                    text_file.close()
+                print(label)
                 dLabels[idxPatch] = label
                 idxPatch += 1
 
@@ -186,10 +176,84 @@ def fRigidPatching3D(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_arra
                 shim_artefact = False
                 noise_artefact = False
 
-    with open("configGUI/Output.txt", "w") as text_file:
-        text_file.writelines("Rigid done!")
-        text_file.writelines('dLabels: ' + str(dLabels.dtype) + '\n')
-        text_file.close()
+    print("Rigid done!")
+    print(dLabels.dtype)
+    return dPatches, dLabels, nbPatches
+
+
+def fRigidPatching3DN(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling):
+    move_artefact = False
+    shim_artefact = False
+    noise_artefact = False
+    #dLabels = []
+
+    dOverlap = np.multiply(patchSize, patchOverlap)
+    dNotOverlap = np.round(np.multiply(patchSize, (1 - patchOverlap)))
+    print(dOverlap,dNotOverlap)
+    size_zero_pad = np.array(([math.ceil((dicom_numpy_array.shape[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[
+        0], math.ceil((dicom_numpy_array.shape[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1], math.ceil((dicom_numpy_array.shape[2] - dOverlap[2]) / (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2]]))
+    zero_pad = np.array(([int(size_zero_pad[0]) - dicom_numpy_array.shape[0], int(size_zero_pad[1]) - dicom_numpy_array.shape[1], int(size_zero_pad[2]) - dicom_numpy_array.shape[2]]))
+    zero_pad_part = np.array(([int(math.ceil(zero_pad[0] / 2)), int(math.ceil(zero_pad[1] / 2)), int(math.ceil(zero_pad[2] / 2))]))
+    Img_zero_pad = np.lib.pad(dicom_numpy_array, (
+    (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (zero_pad_part[2], zero_pad[2] - zero_pad_part[2])),
+                              mode='constant')
+    print(Img_zero_pad.shape)
+    Mask_zero_pad = np.lib.pad(mask_numpy_array, (
+    (zero_pad_part[0], zero_pad[0] - zero_pad_part[0]), (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]), (zero_pad_part[2], zero_pad[2] - zero_pad_part[2])),
+                              mode='constant')
+    nbPatches = ((size_zero_pad[0]-patchSize[0])/((1-patchOverlap)*patchSize[0])+1)*((size_zero_pad[1]-patchSize[1])/((1-patchOverlap)*patchSize[1])+1)*((size_zero_pad[2]-patchSize[2])/((1-patchOverlap)*patchSize[2])+1)
+    print(((size_zero_pad[0]-patchSize[0])/((1-patchOverlap)*patchSize[0])+1))
+    print(((size_zero_pad[1]-patchSize[1])/((1-patchOverlap)*patchSize[1])+1))
+    print(((size_zero_pad[2]-patchSize[2])/((1-patchOverlap)*patchSize[2])+1))
+    print(int(patchSize[0]), int(patchSize[1]), int(patchSize[2]), int(nbPatches))
+    dPatches = np.zeros((int(patchSize[0]), int(patchSize[1]), int(patchSize[2]), int(nbPatches)), dtype=float)
+    dLabels = np.zeros((int(nbPatches)), dtype = float)
+    idxPatch = 0
+    for iZ in range(0, dicom_numpy_array.shape[2], int(dNotOverlap[2])):
+        for iY in range(0, int(size_zero_pad[0] - dOverlap[0]), int(dNotOverlap[0])):
+            for iX in range(0, int(size_zero_pad[1] - dOverlap[1]), int(dNotOverlap[1])):
+                print(iX, iY, iZ)
+                dPatch = Img_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ:iZ + patchSize[2]]
+                print(idxPatch)
+                print(dPatch.shape)
+                dPatches[:,:,:,idxPatch] = dPatch
+
+                dPatch_mask = Mask_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ:iZ + patchSize[2]]
+                patch_number_value = patchSize[0] * patchSize[1]*patchSize[2]
+
+                if np.count_nonzero((dPatch_mask==1).astype(np.int)) > int(ratio_labeling*patch_number_value):
+                    move_artefact = True
+                if np.count_nonzero((dPatch_mask==2).astype(np.int)) > int(ratio_labeling*patch_number_value):
+                    shim_artefact = True
+                if np.count_nonzero((dPatch_mask==3).astype(np.int)) > int(ratio_labeling*patch_number_value):
+                    noise_artefact = True
+
+                label = 0
+
+                if move_artefact == True and shim_artefact != True and noise_artefact != True:
+                    label = 1
+                elif move_artefact != True and shim_artefact == True and noise_artefact != True:
+                    label = 2
+                elif move_artefact != True and shim_artefact != True and noise_artefact == True:
+                    label = 3
+                elif move_artefact == True and shim_artefact == True and noise_artefact != True:
+                    label = 4
+                elif move_artefact == True and shim_artefact != True and noise_artefact == True:
+                    label = 5
+                elif move_artefact != True and shim_artefact == True and noise_artefact == True:
+                    label = 6
+                elif move_artefact == True and shim_artefact == True and noise_artefact == True:
+                    label = 7
+
+                dLabels[idxPatch] = label
+                idxPatch += 1
+
+                move_artefact = False
+                shim_artefact = False
+                noise_artefact = False
+
+    print("Rigid done!")
+    print(dLabels)
     return dPatches, dLabels, nbPatches
 
 
@@ -287,10 +351,8 @@ def fRigidPatching_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, mask
                 shim_artefact = False
                 noise_artefact = False
 
-    with open("configGUI/Output.txt", "w") as text_file:
-        text_file.writelines("Rigid done!")
-        text_file.writelines('dLabels: ' + str(dLabels) + '\n')
-        text_file.close()
+    print("Rigid done!")
+    print(dLabels)
     #return dPatches, dLabels, nbPatches
     return dPatches, dLabels
 
@@ -437,8 +499,6 @@ def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, ma
                 shim_artefact = False
                 noise_artefact = False
 
-    with open("configGUI/Output.txt", "w") as text_file:
-        text_file.writelines("Rigid done!")
-        text_file.writelines('dLabels: ' + str(dLabels.dtype) + '\n')
-        text_file.close()
+    print("Rigid done!")
+    print(dLabels)
     return dPatches, dLabels#, nbPatches

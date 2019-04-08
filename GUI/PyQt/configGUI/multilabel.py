@@ -5,6 +5,7 @@
 """
 import numpy as np
 
+
 class Label:
     '''
     class Label has a static method getLabel(bodyRegion, artefact) to return the specific label for
@@ -32,11 +33,11 @@ class Label:
     T2 = 200
 
     @staticmethod
-    def getLabel(bodyRegion, artefact, tWeighting = 0):
-        if bodyRegion==Label.HEAD or bodyRegion == Label.ABDOMEN or bodyRegion == Label.PELVIS:
-            if artefact<=7 and artefact>=0:
+    def getLabel(bodyRegion, artefact, tWeighting=0):
+        if bodyRegion == Label.HEAD or bodyRegion == Label.ABDOMEN or bodyRegion == Label.PELVIS:
+            if artefact <= 7 and artefact >= 0:
                 if tWeighting == 0:
-                    #no MRI weighting
+                    # no MRI weighting
                     return bodyRegion + artefact
                 elif tWeighting == Label.T1 or Label.T2:
                     return bodyRegion + artefact + tWeighting
@@ -46,7 +47,6 @@ class Label:
                 raise ValueError('No valid Artefact!')
         else:
             raise ValueError('No valid Body Region!')
-
 
     @staticmethod
     def mapClassesToOutputVector(classes, usingArtefacts=True, usingBodyRegion=True, usingTWeightings=True):
@@ -81,7 +81,7 @@ class Label:
 
         if usingArtefacts == True and usingBodyRegion == True and usingTWeightings == False:
             # MRI t weighting is not considered
-            classesReduced = classes%100
+            classesReduced = classes % 100
             uniqueClassesReduced = np.asarray(np.unique(classesReduced), dtype=int)
 
             subMappings = {}
@@ -90,7 +90,7 @@ class Label:
                 reducedOutputVec = np.zeros([len(uniqueClassesReduced)])
                 reducedOutputVec[j] = 1
                 subMappings[uniqueClassReduced] = reducedOutputVec
-                j+=1
+                j += 1
 
             classMappings = {}
             i = 0
@@ -100,17 +100,17 @@ class Label:
 
         if usingArtefacts == True and usingBodyRegion == False and usingTWeightings == False:
             # MRI t weighting and body regions are not considered
-            classesReduced = classes%100
-            classesReduced = classesReduced%10
+            classesReduced = classes % 100
+            classesReduced = classesReduced % 10
             uniqueClassesReduced = np.asarray(np.unique(classesReduced), dtype=int)
 
             subMappings = {}
-            j=0
+            j = 0
             for uniqueClassReduced in uniqueClassesReduced:
                 reducedOutputVec = np.zeros([len(uniqueClassesReduced)])
                 reducedOutputVec[j] = 1
                 subMappings[uniqueClassReduced] = reducedOutputVec
-                j+=1
+                j += 1
 
             classMappings = {}
             i = 0
