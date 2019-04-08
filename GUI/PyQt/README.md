@@ -7,12 +7,9 @@ https://github.com/thomaskuestner/CNNArt
 This GUI is designed with PyQt5 and works for Python >3.5.
 
 ## GUI calling
-run `Qt_main.py` to open the GUI. <br/>
+run `Qt_Main.py` to open the GUI. <br/>
 This GUI can be run independent from CNNArt. <br/>
-Before running, please change path in param.yml. <br/>
-Call methods <br/>
-`from Qt_main import imagine`<br/>
-`imagine.main()`<br/>
+Before running, please change path in param_GUI.py
 `imagine.main('pathOfImageFile','pathOfImageDirectory', ...)`<br/>
 `imagine.main(image array)`<br/>
 
@@ -56,3 +53,30 @@ Call methods <br/>
 - load model from workspace or path
 - showing test evaluation
 - show segmentation mask, artifacts
+## File Format
+### Image file format
+The GUI supports a wide range of image formats to view, including 
+- normal image formats .CUR, .ICNS, .SVG, .TGA, .BMP, .WEBP, .GIF,.JPG, .JPEG, .PNG, .PBM, .PGM, .PPM,.TIFF,.XBM; 
+- a single DICOM image, including .IMA, .DCM; 
+- a folder with all DICOM images;
+- a single file in .NII;
+- a single file in.MAT, .NPY where stores image array; for 5D array, channel-last
+- image arrays with multi-dimensions from 2D to 5D
+### Result file format
+- in .MAT, .NPY or .NPZ
+- in the result file, masking shape should be in the same shape as original image
+- the original image array should be saved with the item key 'img', or image path with the key 'img_path'
+### Network format
+network model in HDF5
+### Datasets format
+datasets in HDF5
+
+## Configuration
+- In the file configuration/predefined_classes.txt, it is able to edit frequently used classes for manual labeling.
+- The file networks/network_generic.py, it is a template for creating a network suitable for this GUI. After that, it should be saved with proper name in the path networks/SUBDIRS/...                   
+- In the config/database_generic.py, it is a template for creating a database information in .CSV and saving in the path config/database/..., which is used in GUI. 
+- In the file config/param_GUI.yml
+  - change datasets, masking, output path   
+  - change datasets information
+  - directory separation symbol should be '/' independent of OS   
+                                                                                                                             
