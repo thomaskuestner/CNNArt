@@ -121,11 +121,11 @@ class Window(QWidget):
             if table.item(r, 0) is not None:
                 tableData.loc[r,'label name'] = table.item(r,0).text()
             else:
-                pass
+                tableData.loc[r,'label name'] = None
             if table.item(r, 1) is not None:
                 tableData.loc[r,'label color'] = table.item(r,1).text()
             else:
-                pass
+                tableData.loc[r, 'label color'] = None
             tableData.to_csv('configGUI/predefined_label.csv',index=False)
         return tableData
 

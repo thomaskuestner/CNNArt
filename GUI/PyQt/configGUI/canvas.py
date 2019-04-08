@@ -145,7 +145,7 @@ class Canvas(FigureCanvas):
         self.labelon = False
         self.legendon = True
         self.selectedshape_name = None
-        self.aspect = 'auto' # auto or equal
+        self.aspect = 'equal' # auto or equal
         self.image_array = None
         self.view_image()
 

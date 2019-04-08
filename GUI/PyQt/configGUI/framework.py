@@ -381,7 +381,7 @@ class Ui_MainWindow(object):
         self.scrollArea1.setWidgetResizable(True)
         self.scrollArea1.setObjectName("scrollArea1")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 987, 678))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 98, 28))
         self.scrollAreaWidgetContents.setAutoFillBackground(True)
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.scrollArea1.setWidget(self.scrollAreaWidgetContents)
@@ -1196,7 +1196,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "Deep Learning for Medical Image"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Medical Deep Learning GUI"))
         self.labelResult.setText(_translate("MainWindow", "Viewing"))
         self.bnoselect.setToolTip(_translate("MainWindow", "No selection\n"
 "left mouse move image\n"
