@@ -1,5 +1,8 @@
-import datetime
-from collections import Counter
+'''
+@author: Yannick Wilhelm
+@email: yannick.wilhelm@gmx.de
+@date: January 2018
+'''
 
 import pandas
 from PyQt5.QtCore import pyqtSignal
@@ -184,6 +187,28 @@ class DeepLearningArtApp(QWidget):
         self.X_test_shape = (0, 0, 0)
         self.Y_test_shape = (0, 0, 0)
         self.Y_segMasks_test_shape = (0, 0, 0)
+
+
+        ####################
+        ### ArtGAN Stuff ###
+        ####################
+        self.patients_ArtGAN = None
+        self.datasets_ArtGAN = None
+        self.datasets_ArtGAN_Pairs = None
+
+        self.patchSizeX_ArtGAN = 40
+        self.patchSizeY_ArtGAN = 40
+        self.patchSizeZ_ArtGAN = 5
+        self.patchOverlap_ArtGAN = 0.5
+
+        self.lscaleFactor_ArtGAN = [0.5, 1, 2]
+
+        self.storeMode_ArtGAN = DeepLearningArtApp.STORE_DISABLED
+        self.splittingMode_ArtGAN = DeepLearningArtApp.SIMPLE_RANDOM_SAMPLE_SPLITTING
+
+        self.trainTestDatasetRatio_ArtGAN = 0.2  # part of test data
+        self.trainValidationRatio_ArtGAN = 0.0  # part of Validation data in traindata
+        ####################
 
         ################################################################################################################
         #### Stuff for prediction

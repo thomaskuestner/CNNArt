@@ -12,7 +12,7 @@ import keras
 from keras.callbacks import EarlyStopping, ModelCheckpoint,ReduceLROnPlateau
 from keras.models import model_from_json
 from keras.utils import plot_model
-import MSnetworks
+from . import MSnetworks
 from utils.Unpatching import fUnpatchLabel, fPatchToImage
 from matplotlib import pyplot as plt
 import matplotlib as mpl

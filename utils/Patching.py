@@ -5,6 +5,7 @@ import numpy as np
 import math
 import random
 from utils.scaling import fScaleOnePatch
+import tensorflow as tf
 
 #########################################################################################################################################
 #Function: fRigidPatching                                                                                                               #

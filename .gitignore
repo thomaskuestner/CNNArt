@@ -238,3 +238,4 @@ config/paraml9.yml
 *.py-base
 *.py-ours
 *.py-theirs
+.vscode/settings.json
