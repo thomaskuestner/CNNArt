@@ -28,7 +28,7 @@ if sys.argv[-1] == 'test':
           zip_safe=False,
           install_requires=['jsonschema', 'pickleshare', 'h5py', 'keras', 'matplotlib',
                             'pandas', 'scipy', 'protobuf', 'tensorflow', 'pyYAML', 'PyQt5-stubs', 'PyQt5',
-                            'numpy', 'pandas', 'argparse', 'hyperas', 'hyperopt','dicom', 'pydicom', 'dicom-numpy',
-                            'pyqtgraph', 'python-csv', 'gtabview', 'pyqtdeploy', 'nibabel', 'Pillow', 'pydot',
-                            'xtract', 'scikit-image', 'scikit-learn', 'seaborn'])
+                            'numpy', 'pandas', 'argparse', 'hyperas', 'hyperopt', 'graphviz', 'dicom',
+                            'pydicom', 'dicom-numpy', 'pyqtgraph', 'python-csv', 'gtabview', 'pyqtdeploy',
+                            'nibabel', 'Pillow', 'pydot', 'xtract', 'scikit-image', 'scikit-learn', 'seaborn'])
     sys.exit()

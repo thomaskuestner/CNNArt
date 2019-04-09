@@ -32,6 +32,8 @@ from matplotlib.patches import Rectangle, Ellipse, PathPatch
 
 
 from config.PATH import DLART_OUT_PATH, PATH_OUT, MARKING_PATH, DATASETS, SUBDIRS
+from configGUI.matplotlibwidget import MatplotlibWidget, MyMplCanvas
+from configGUI.network_visualization import ann_viz
 from utils.label import Label
 from utils.tftheanoFunction import TensorFlowTheanoFunction
 from configGUI.canvas import Canvas
@@ -493,6 +495,10 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.training_live_performance_figure = Figure(figsize=(10, 10))
         self.canvas_training_live_performance_figure = FigureCanvas(self.training_live_performance_figure)
 
+        # network architecture
+        self.network_architecture_figure = Figure(figsize=(10, 10))
+        self.canvas_network_architecture_figure = FigureCanvas(self.network_architecture_figure)
+
         # confusion matrix
         self.confusion_matrix_figure = Figure(figsize=(10, 10))
         self.canvas_confusion_matrix_figure = FigureCanvas(self.confusion_matrix_figure)
@@ -573,7 +579,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.wyInputData.setCurrentIndex(0)
         self.wyInputData.activated.connect(self.on_wyInputData_clicked)
 
-        self.matplotlibwidget_static.show()
         self.horizontalSliderPatch.hide()
         self.horizontalSliderSlice.hide()
 
@@ -1119,7 +1124,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                     for i in range(self.layoutlines):
                         for j in range(self.layoutcolumns):
                             self.maingrids1.itemAtPosition(i, j).addPathd(self.PathDicom, 0)
-                    # self.maingrids1.itemAtPosition(i, j).addPathd(self.PathDicom, 1)
                     for i in range(self.layoutlines):
                         for j in range(self.layoutcolumns):
                             if self.maingrids1.itemAtPosition(i, j).mode == 1 and \
@@ -1339,60 +1343,64 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def flip_image(self):
         # to avoid for confusion with rotate dimension of image, use flip here to rotate image clockwise 90 degree
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            if self.canvasl is not None:
-                array = self.canvasl.get_image_array()
-                if array is not None:
-                    array = np.rot90(array, axes=(-2, -1))
-                    self.canvasl.set_image_array(array)
-        for item in self.view_line_list:
-            self.view_line = item
-            self.canvas1 = self.view_line.newcanvas1
-            if self.canvas1 is not None:
-                array = self.canvas1.get_image_array()
-                if array is not None:
-                    array = np.rot90(array, axes=(-2, -1))
-                    self.canvas1.set_image_array(array)
-            self.canvas2 = self.view_line.newcanvas2
-            if self.canvas2 is not None:
-                array = self.canvas2.get_image_array()
-                if array is not None:
-                    array = np.rot90(array, axes=(-2, -1))
-                    self.canvas2.set_image_array(array)
-            self.canvas3 = self.view_line.newcanvas3
-            if self.canvas3 is not None:
-                array = self.canvas3.get_image_array()
-                if array is not None:
-                    array = np.rot90(array, axes=(-2, -1))
-                    self.canvas3.set_image_array(array)
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    array = self.canvasl.get_image_array()
+                    if array is not None:
+                        array = np.rot90(array, axes=(-2, -1))
+                        self.canvasl.set_image_array(array)
+        elif self.vision == 3:
+            for item in self.view_line_list:
+                self.view_line = item
+                self.canvas1 = self.view_line.newcanvas1
+                if self.canvas1 is not None:
+                    array = self.canvas1.get_image_array()
+                    if array is not None:
+                        array = np.rot90(array, axes=(-2, -1))
+                        self.canvas1.set_image_array(array)
+                self.canvas2 = self.view_line.newcanvas2
+                if self.canvas2 is not None:
+                    array = self.canvas2.get_image_array()
+                    if array is not None:
+                        array = np.rot90(array, axes=(-2, -1))
+                        self.canvas2.set_image_array(array)
+                self.canvas3 = self.view_line.newcanvas3
+                if self.canvas3 is not None:
+                    array = self.canvas3.get_image_array()
+                    if array is not None:
+                        array = np.rot90(array, axes=(-2, -1))
+                        self.canvas3.set_image_array(array)
 
     def fit_image(self):
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            if self.canvasl is not None:
-                aspect = self.canvasl.get_aspect()
-                aspect = 'auto' if aspect == 'equal' else 'equal'
-                self.canvasl.set_aspect(aspect)
-        for item in self.view_line_list:
-            self.view_line = item
-            self.canvas1 = self.view_line.newcanvas1
-            if self.canvas1 is not None:
-                aspect = self.canvas1.get_aspect()
-                aspect = 'auto' if aspect == 'equal' else 'equal'
-                self.canvas1.set_aspect(aspect)
-            self.canvas2 = self.view_line.newcanvas2
-            if self.canvas2 is not None:
-                aspect = self.canvas2.get_aspect()
-                aspect = 'auto' if aspect == 'equal' else 'equal'
-                self.canvas2.set_aspect(aspect)
-            self.canvas3 = self.view_line.newcanvas3
-            if self.canvas3 is not None:
-                aspect = self.canvas3.get_aspect()
-                aspect = 'auto' if aspect == 'equal' else 'equal'
-                self.canvas3.set_aspect(aspect)
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    aspect = self.canvasl.get_aspect()
+                    aspect = 'auto' if aspect == 'equal' else 'equal'
+                    self.canvasl.set_aspect(aspect)
+        elif self.vision == 3:
+            for item in self.view_line_list:
+                self.view_line = item
+                self.canvas1 = self.view_line.newcanvas1
+                if self.canvas1 is not None:
+                    aspect = self.canvas1.get_aspect()
+                    aspect = 'auto' if aspect == 'equal' else 'equal'
+                    self.canvas1.set_aspect(aspect)
+                self.canvas2 = self.view_line.newcanvas2
+                if self.canvas2 is not None:
+                    aspect = self.canvas2.get_aspect()
+                    aspect = 'auto' if aspect == 'equal' else 'equal'
+                    self.canvas2.set_aspect(aspect)
+                self.canvas3 = self.view_line.newcanvas3
+                if self.canvas3 is not None:
+                    aspect = self.canvas3.get_aspect()
+                    aspect = 'auto' if aspect == 'equal' else 'equal'
+                    self.canvas3.set_aspect(aspect)
 
     def set_color(self):
 
@@ -1410,11 +1418,22 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 vtr3 = v3
                 cmaps = cm
                 vtrs = vs
-                for item in self.view_group_list:
-                    self.view_group = item
-                    self.view_group.loadScene_result(self.view_group.refbox.currentIndex())
-                    if self.view_group.anewcanvas is not None:
+                if 'prob_pre' in self.conten:
+                    colormaplist[self.view_group.refbox.currentIndex()-1] = cmap3
+                elif 'prob_test' in self.conten:
+                    colormaplist[self.view_group.refbox.currentIndex()-1] = cmap1
+                else:
+                    colormaplist[self.view_group.refbox.currentIndex()-1] = cmaps
+                if self.vision == 2:
+                    for item in self.view_group_list:
+                        self.view_group = item
+                        self.view_group.loadScene_result(self.view_group.refbox.currentIndex())
                         self.view_group.anewcanvas.set_color()
+                elif self.vision == 3:
+                    for item in self.view_line_list:
+                        self.view_line = item
+                        self.view_line.loadScene_result(self.view_line.refbox.currentIndex())
+
 
     def set_transparency(self, value):
 
@@ -1430,86 +1449,99 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.colors['classes']['trans'][0] = vtrs
         with open('configGUI/colors1.json', 'w') as json_data:
             json_data.write(json.dumps(self.colors))
-        for item in self.view_group_list:
-            self.view_group = item
-            if  self.view_group.anewcanvas is not None:
-                self.view_group.anewcanvas.set_transparency(vtrs)
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                if self.view_group.anewcanvas is not None:
+                    self.view_group.anewcanvas.set_transparency(vtrs)
+        elif self.vision == 3:
+            for item in self.view_line_list:
+                self.view_line = item
+                if self.view_line.newcanvas1 is not None:
+                    self.view_line.newcanvas1.set_transparency(vtrs)
+                if self.view_line.newcanvas2 is not None:
+                    self.view_line.newcanvas2.set_transparency(vtrs)
+                if self.view_line.newcanvas3 is not None:
+                    self.view_line.newcanvas3.set_transparency(vtrs)
+
 
     def newShape(self):
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            if self.view_group.anewcanvas is not None:
-                if self.canvasl.get_open_dialog():
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    if self.canvasl.get_open_dialog():
 
-                    color = colors.to_hex('b', keep_alpha=True)
+                        color = colors.to_hex('b', keep_alpha=True)
 
-                    if not self.useDefaultLabelCheckbox.isChecked() or not self.defaultLabelTextLine.text():
-                        self.labelDialog = LabelDialog(parent=self, listItem=self.labelHist)
-                        text = self.labelDialog.popUp(text=self.prevLabelText)
-                        self.canvasl.set_open_dialog(False)
-                        self.prevLabelText = text
+                        if not self.useDefaultLabelCheckbox.isChecked() or not self.defaultLabelTextLine.text():
+                            self.labelDialog = LabelDialog(parent=self, listItem=self.labelHist)
+                            text = self.labelDialog.popUp(text=self.prevLabelText)
+                            self.canvasl.set_open_dialog(False)
+                            self.prevLabelText = text
 
-                        if text is not None:
+                            if text is not None:
+                                if text not in self.labelHist:
+                                    self.labelHist.append(text)
+                                else:
+                                    pass
+
+                                self.df = pandas.read_csv(self.labelfile)
+                                df_size = pandas.DataFrame.count(self.df)
+                                df_rows = df_size['labelshape'] - 1
+                                self.number = df_rows
+                                self.df.loc[df_rows, 'image'] = self.view_group.current_image()
+                                self.df.loc[df_rows, 'labelname'] = self.prevLabelText
+                                if self.labelDialog.getColor():
+                                    color = self.labelDialog.getColor()
+                                    self.df.loc[df_rows, 'labelcolor'] = color
+                                else:
+                                    self.df.loc[df_rows, 'labelcolor'] = color
+                                self.df.to_csv(self.labelfile, index=False)
+
+                        else:
+                            text = self.defaultLabelTextLine.text()
+                            self.prevLabelText = text
                             if text not in self.labelHist:
                                 self.labelHist.append(text)
-                            else:
-                                pass
-
-                            self.df = pandas.read_csv(self.labelfile)
-                            df_size = pandas.DataFrame.count(self.df)
-                            df_rows = df_size['labelshape'] - 1
-                            self.number = df_rows
-                            self.df.loc[df_rows, 'image'] = self.view_group.current_image()
-                            self.df.loc[df_rows, 'labelname'] = self.prevLabelText
-                            if self.labelDialog.getColor():
-                                color = self.labelDialog.getColor()
+                            if text is not None:
+                                self.df = pandas.read_csv(self.labelfile)
+                                df_size = pandas.DataFrame.count(self.df)
+                                df_rows = df_size['labelshape'] - 1
+                                self.number = df_rows
+                                self.df.loc[df_rows, 'image'] = self.view_group.current_image()
+                                self.df.loc[df_rows, 'labelname'] = self.prevLabelText
+                                dfcolor = pandas.read_csv('configGUI/predefined_label.csv')
+                                if not dfcolor[dfcolor['label name'] == str(self.prevLabelText)].index.values.astype(
+                                        int) == []:
+                                    colorind = \
+                                        dfcolor[dfcolor['label name'] == str(self.prevLabelText)].index.values.astype(int)[0]
+                                    color = dfcolor.at[colorind, 'label color']
+                                else:
+                                    pass
                                 self.df.loc[df_rows, 'labelcolor'] = color
-                            else:
-                                self.df.loc[df_rows, 'labelcolor'] = color
-                            self.df.to_csv(self.labelfile, index=False)
+                                self.df.to_csv(self.labelfile, index=False)
 
-                    else:
-                        text = self.defaultLabelTextLine.text()
-                        self.prevLabelText = text
-                        if text not in self.labelHist:
-                            self.labelHist.append(text)
-                        if text is not None:
-                            self.df = pandas.read_csv(self.labelfile)
-                            df_size = pandas.DataFrame.count(self.df)
-                            df_rows = df_size['labelshape'] - 1
-                            self.number = df_rows
-                            self.df.loc[df_rows, 'image'] = self.view_group.current_image()
-                            self.df.loc[df_rows, 'labelname'] = self.prevLabelText
-                            dfcolor = pandas.read_csv('configGUI/predefined_label.csv')
-                            if not dfcolor[dfcolor['label name'] == str(self.prevLabelText)].index.values.astype(
-                                    int) == []:
-                                colorind = \
-                                    dfcolor[dfcolor['label name'] == str(self.prevLabelText)].index.values.astype(int)[0]
-                                color = dfcolor.at[colorind, 'label color']
-                            else:
-                                pass
-                            self.df.loc[df_rows, 'labelcolor'] = color
-                            self.df.to_csv(self.labelfile, index=False)
-
-                    self.canvasl.set_facecolor(color)
-                self.updateList()
+                        self.canvasl.set_facecolor(color)
+                    self.updateList()
 
     def shapeSelectionChanged(self, selected):
         # selected shape changed --> selected item changes at the same time
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            if self.view_group.anewcanvas is not None:
-                if selected:
-                    for i in range(len(self.labelList.get_list())):
-                        if self.labelList.get_list()[i][0] == str(self.canvasl.get_selected()):
-                            selectedRow = i
-                            if selectedRow is not None:
-                                self.selectedshape_name = self.labelList.get_list()[selectedRow][6]
-                                self.canvasl.set_labelon(True)
-                                self.canvasl.set_toolTip(self.selectedshape_name)
-                                self.labelList.selectRow(selectedRow)
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    if selected:
+                        for i in range(len(self.labelList.get_list())):
+                            if self.labelList.get_list()[i][0] == str(self.canvasl.get_selected()):
+                                selectedRow = i
+                                if selectedRow is not None:
+                                    self.selectedshape_name = self.labelList.get_list()[selectedRow][6]
+                                    self.canvasl.set_labelon(True)
+                                    self.canvasl.set_toolTip(self.selectedshape_name)
+                                    self.labelList.selectRow(selectedRow)
 
     def selector_mode(self):
 
@@ -1570,9 +1602,10 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.labelListView.close()
 
     def stop_view(self, n):
-        for item in self.view_group_list:
-            self.view_group = item
-            self.view_group.Viewpanel.stopMove(n)
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.view_group.Viewpanel.stopMove(n)
 
     def show_variables(self):
         dirlist = list(dir(self))
@@ -1625,52 +1658,54 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def edit_label(self, ind):
 
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            if self.view_group.anewcanvas is not None:
-                self.labelDialog = LabelDialog(parent=self, listItem=self.labelHist)
-                text = self.labelDialog.popUp(text=self.prevLabelText)
-                self.canvasl.set_open_dialog(False)
-                self.prevLabelText = text
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    self.labelDialog = LabelDialog(parent=self, listItem=self.labelHist)
+                    text = self.labelDialog.popUp(text=self.prevLabelText)
+                    self.canvasl.set_open_dialog(False)
+                    self.prevLabelText = text
 
-                if text is not None:
-                    if text not in self.labelHist:
-                        self.labelHist.append(text)
-                    else:
-                        pass
-                    self.selectind = ind.row()
-                    self.number = self.selectind
-                    self.df = pandas.read_csv(self.labelfile)
-                    self.df.loc[self.selectind, 'labelname'] = self.prevLabelText
-                    if self.labelDialog.getColor():
-                        color = self.labelDialog.getColor()
-                        self.df.loc[self.selectind, 'labelcolor'] = color
-                    else:
-                        color = self.df.loc[self.selectind, 'labelcolor']
-                    self.df.to_csv(self.labelfile, index=False)
-                    self.canvasl.set_facecolor(color)
+                    if text is not None:
+                        if text not in self.labelHist:
+                            self.labelHist.append(text)
+                        else:
+                            pass
+                        self.selectind = ind.row()
+                        self.number = self.selectind
+                        self.df = pandas.read_csv(self.labelfile)
+                        self.df.loc[self.selectind, 'labelname'] = self.prevLabelText
+                        if self.labelDialog.getColor():
+                            color = self.labelDialog.getColor()
+                            self.df.loc[self.selectind, 'labelcolor'] = color
+                        else:
+                            color = self.df.loc[self.selectind, 'labelcolor']
+                        self.df.to_csv(self.labelfile, index=False)
+                        self.canvasl.set_facecolor(color)
 
-                self.updateList()
+                    self.updateList()
 
     def show_label_name(self, index):
-        if index == 1:
-            for item in self.view_group_list:
-                self.view_group = item
-                self.canvasl = self.view_group.anewcanvas
-                if self.view_group.anewcanvas is not None:
-                    if self.selectoron or self.view_group.mode == 2:
-                        self.labelon = not self.labelon
-                        self.canvasl.set_labelon(self.labelon)
-        elif index == 2:
-            for item in self.view_group_list:
-                self.view_group = item
-                self.canvasl = self.view_group.anewcanvas
-                if  self.view_group.anewcanvas is not None:
-                    if self.selectoron or self.view_group.mode == 2:
-                        self.legendon = not self.legendon
-                        self.canvasl.set_legendon(self.legendon)
-        self.labelButton.setCurrentIndex(0)
+        if self.vision == 2:
+            if index == 1:
+                for item in self.view_group_list:
+                    self.view_group = item
+                    self.canvasl = self.view_group.anewcanvas
+                    if self.canvasl is not None:
+                        if self.selectoron or self.view_group.mode == 2:
+                            self.labelon = not self.labelon
+                            self.canvasl.set_labelon(self.labelon)
+            elif index == 2:
+                for item in self.view_group_list:
+                    self.view_group = item
+                    self.canvasl = self.view_group.anewcanvas
+                    if self.canvasl is not None:
+                        if self.selectoron or self.view_group.mode == 2:
+                            self.legendon = not self.legendon
+                            self.canvasl.set_legendon(self.legendon)
+            self.labelButton.setCurrentIndex(0)
 
     def show_labelList(self):
 
@@ -1845,15 +1880,17 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                         n += 1
                     else:
                         break
-        for item in self.view_group_list:
-            self.view_group = item
-            self.updateList()
-            self.load_markings(self.view_group.current_slice())
-            self.view_group.rotateSignal.connect(self.load_markings)
-            self.view_group.scrollSignal.connect(self.load_markings)
-            self.view_group.rotateSignal.connect(self.changeSelector)
-            self.view_group.scrollSignal.connect(self.changeSelector)
-            self.view_group.zoomSignal.connect(self.changeSelector)
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                if self.view_group.anewcanvas is not None:
+                    self.updateList()
+                    self.load_markings(self.view_group.current_slice())
+                    self.view_group.rotateSignal.connect(self.load_markings)
+                    self.view_group.scrollSignal.connect(self.load_markings)
+                    self.view_group.rotateSignal.connect(self.changeSelector)
+                    self.view_group.scrollSignal.connect(self.changeSelector)
+                    self.view_group.zoomSignal.connect(self.changeSelector)
 
     def changeSelector(self, val):
         self.bnoselect.setChecked(True)
@@ -1868,129 +1905,135 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         num2 = df[df['slice'] == slice].index.values.astype(int)
         num = list(set(num1).intersection(num2))
         self.markings = []
-        for item in self.view_group_list:
-            self.view_group = item
-            if self.view_group.anewcanvas is not None:
-                for i in range(0, len(num)):
-                    status = df['status'][num[i]]
-                    df.select_dtypes(include='object')
-                    if df['labelshape'][num[i]] == 'lasso':
-                        path = Path(np.asarray(eval(df['path'][num[i]])))
-                        newItem = PathPatch(path, fill=True, alpha=.2, edgecolor=None)
-                    else:
-                        newItem = eval(df['artist'][num[i]])
-                    color = df['labelcolor'][num[i]]
-                    self.markings.append(newItem)
-                    if status == 0:
-                        newItem.set_visible(True)
-                        if type(newItem) is Rectangle or Ellipse:
-                            newItem.set_picker(True)
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                if self.view_group.anewcanvas is not None:
+                    for i in range(0, len(num)):
+                        status = df['status'][num[i]]
+                        df.select_dtypes(include='object')
+                        if df['labelshape'][num[i]] == 'lasso':
+                            path = Path(np.asarray(eval(df['path'][num[i]])))
+                            newItem = PathPatch(path, fill=True, alpha=.2, edgecolor=None)
                         else:
-                            newItem.set_picker(False)
-                        newItem.set_facecolor(color)
-                        newItem.set_alpha(0.5)
-                    else:
-                        newItem.set_visible(False)
-                    self.view_group.anewcanvas.ax1.add_artist(newItem)
+                            newItem = eval(df['artist'][num[i]])
+                        color = df['labelcolor'][num[i]]
+                        self.markings.append(newItem)
+                        if status == 0:
+                            newItem.set_visible(True)
+                            if type(newItem) is Rectangle or Ellipse:
+                                newItem.set_picker(True)
+                            else:
+                                newItem.set_picker(False)
+                            newItem.set_facecolor(color)
+                            newItem.set_alpha(0.5)
+                        else:
+                            newItem.set_visible(False)
+                        self.view_group.anewcanvas.ax1.add_artist(newItem)
 
-                self.view_group.anewcanvas.blit(self.view_group.anewcanvas.ax1.bbox)
+                    self.view_group.anewcanvas.blit(self.view_group.anewcanvas.ax1.bbox)
 
     def label_on_off(self, status):
 
         for item in self.markings:
             item.remove()
         self.newcanvasview()
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            if self.canvasl is not None:
-                self.canvasl.draw_idle()
-                df = pandas.read_csv(self.labelfile)
-                num1 = df[df['image'] == self.view_group.current_image()].index.values.astype(int)
-                num2 = df[df['slice'] == self.view_group.current_slice()].index.values.astype(int)
-                num = list(set(num1).intersection(num2))
-                self.markings = []
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    self.canvasl.draw_idle()
+                    df = pandas.read_csv(self.labelfile)
+                    num1 = df[df['image'] == self.view_group.current_image()].index.values.astype(int)
+                    num2 = df[df['slice'] == self.view_group.current_slice()].index.values.astype(int)
+                    num = list(set(num1).intersection(num2))
+                    self.markings = []
 
-                for i in range(0, len(num)):
-                    status = df['status'][num[i]]
-                    df.select_dtypes(include='object')
-                    if df['labelshape'][num[i]] == 'lasso':
-                        path = Path(np.asarray(eval(df['path'][num[i]])))
-                        newItem = PathPatch(path, fill=True, alpha=.2, edgecolor=None)
-                    else:
-                        newItem = eval(df['artist'][num[i]])
-                    color = df['labelcolor'][num[i]]
-                    self.markings.append(newItem)
-
-                    if not status:
-                        newItem.set_visible(True)
-                        if type(newItem) is Rectangle or Ellipse:
-                            newItem.set_picker(True)
+                    for i in range(0, len(num)):
+                        status = df['status'][num[i]]
+                        df.select_dtypes(include='object')
+                        if df['labelshape'][num[i]] == 'lasso':
+                            path = Path(np.asarray(eval(df['path'][num[i]])))
+                            newItem = PathPatch(path, fill=True, alpha=.2, edgecolor=None)
                         else:
-                            newItem.set_picker(False)
-                        newItem.set_facecolor(color)
-                        newItem.set_alpha(0.5)
-                    else:
-                        newItem.set_visible(False)
+                            newItem = eval(df['artist'][num[i]])
+                        color = df['labelcolor'][num[i]]
+                        self.markings.append(newItem)
 
-                    self.canvasl.ax1.add_artist(newItem)
+                        if not status:
+                            newItem.set_visible(True)
+                            if type(newItem) is Rectangle or Ellipse:
+                                newItem.set_picker(True)
+                            else:
+                                newItem.set_picker(False)
+                            newItem.set_facecolor(color)
+                            newItem.set_alpha(0.5)
+                        else:
+                            newItem.set_visible(False)
 
-                self.canvasl.blit(self.canvasl.ax1.bbox)
+                        self.canvasl.ax1.add_artist(newItem)
+
+                    self.canvasl.blit(self.canvasl.ax1.bbox)
 
     def clear_markings(self):
 
         self.load_old()
 
     def marking_shape(self, n):
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            if self.canvasl is not None:
-                state = self.cursorCross.isChecked()
+        # for labeling
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    state = self.cursorCross.isChecked()
 
-                if self.selectoron:
+                    if self.selectoron:
 
-                    if n == 0:
-                        self.canvasl.set_state(2)
-                        self.canvasl.rec_toggle_selector_off()
-                        self.canvasl.ell_toggle_selector_off()
-                        self.canvasl.lasso_toggle_selector_off()
+                        if n == 0:
+                            self.canvasl.set_state(2)
+                            self.canvasl.rec_toggle_selector_off()
+                            self.canvasl.ell_toggle_selector_off()
+                            self.canvasl.lasso_toggle_selector_off()
 
-                    elif n == 1:
-                        self.canvasl.set_state(1)
-                        self.canvasl.rec_toggle_selector_on()
-                        self.canvasl.set_cursor(state)
-                        self.canvasl.ell_toggle_selector_off()
-                        self.canvasl.lasso_toggle_selector_off()
+                        elif n == 1:
+                            self.canvasl.set_state(1)
+                            self.canvasl.rec_toggle_selector_on()
+                            self.canvasl.set_cursor(state)
+                            self.canvasl.ell_toggle_selector_off()
+                            self.canvasl.lasso_toggle_selector_off()
 
-                    elif n == 2:
-                        self.canvasl.set_state(1)
-                        self.canvasl.rec_toggle_selector_off()
-                        self.canvasl.ell_toggle_selector_on()
-                        self.canvasl.set_cursor(state)
-                        self.canvasl.lasso_toggle_selector_off()
+                        elif n == 2:
+                            self.canvasl.set_state(1)
+                            self.canvasl.rec_toggle_selector_off()
+                            self.canvasl.ell_toggle_selector_on()
+                            self.canvasl.set_cursor(state)
+                            self.canvasl.lasso_toggle_selector_off()
 
-                    elif n == 3:
-                        self.canvasl.set_state(1)
-                        self.canvasl.rec_toggle_selector_off()
-                        self.canvasl.ell_toggle_selector_off()
-                        self.canvasl.lasso_toggle_selector_on()
-                        self.canvasl.set_cursor(state)
+                        elif n == 3:
+                            self.canvasl.set_state(1)
+                            self.canvasl.rec_toggle_selector_off()
+                            self.canvasl.ell_toggle_selector_off()
+                            self.canvasl.lasso_toggle_selector_on()
+                            self.canvasl.set_cursor(state)
 
-                else:
-                    pass
+                    else:
+                        pass
 
-                self.canvasl.newShape.connect(self.newShape)
-                self.canvasl.deleteEvent.connect(self.updateList)
-                self.canvasl.selectionChanged.connect(self.shapeSelectionChanged)
+                    self.canvasl.newShape.connect(self.newShape)
+                    self.canvasl.deleteEvent.connect(self.updateList)
+                    self.canvasl.selectionChanged.connect(self.shapeSelectionChanged)
 
     def handle_crossline(self):
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            if self.canvasl is not None:
-                state = self.cursorCross.isChecked()
-                self.canvasl.set_cursor(state)
+        # cursor inspector for labeling
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    state = self.cursorCross.isChecked()
+                    self.canvasl.set_cursor(state)
 
     def loadPredefinedClasses(self, predefClassesFile):
         if os.path.exists(predefClassesFile) is True:
@@ -2264,11 +2307,13 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         if self.vision == 2:
             for item in self.view_group_list:
                 self.view_group = item
-                self.view_group.mouse_tracking(self.cursor_on)
+                if self.view_group.anewcanvas is not None:
+                    self.view_group.mouse_tracking(self.cursor_on)
         elif self.vision == 3:
             for item in self.view_line_list:
-                self.view_line = item
-                self.view_line.mouse_tracking(self.cursor_on)
+                if self.view_line.newcanvas1 is not None:
+                    self.view_line = item
+                    self.view_line.mouse_tracking(self.cursor_on)
 
     def newSliceview(self):
         self.graylabel.setText('G %s' % (self.graylist))
@@ -2908,11 +2953,12 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.segmentation_masks_figure.savefig(self.deepLearningArtApp.getModelForPrediction()
                                                        + os.sep + str(index) + "_segmentation_masks_figure" + '.png')
                 self.canvas_segmentation_masks_figure.draw()
-                for w in self.verticalLayout_showing.widget():
-                    self.verticalLayout_showing.removeWidget(w)
-                self.verticalLayout_showing.addWidget(self.canvas_segmentation_masks_figure)
+                if self.showResultArea.widget() is not None:
+                    for w in self.showResultArea.widget():
+                        self.showResultArea.removeWidget(w)
+                self.showResultArea.addWidget(self.canvas_segmentation_masks_figure)
                 self.toolbar_segmentation_masks_figure = NavigationToolbar(self.canvas_segmentation_masks_figure, self)
-                self.verticalLayout_showing.addWidget(self.toolbar_segmentation_masks_figure)
+                self.showResultArea.addWidget(self.toolbar_segmentation_masks_figure)
 
     def plotSegmentationArtifactMaps(self):
         unpatched_slices = self.deepLearningArtApp.getUnpatchedSlices()
@@ -2961,11 +3007,12 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                                                  + os.sep + str(index) + "_artifact_map_figure" + '.png')
 
                 self.canvas_artifact_map_figure.draw()
-                for w in self.verticalLayout_showing.widget():
-                    self.verticalLayout_showing.removeWidget(w)
-                self.verticalLayout_showing.addWidget(self.canvas_artifact_map_figure)
+                if self.showResultArea.widget() is not None:
+                    for w in self.showResultArea.widget():
+                        self.showResultArea.removeWidget(w)
+                self.showResultArea.addWidget(self.canvas_artifact_map_figure)
                 self.toolbar_artifact_map_figure = NavigationToolbar(self.canvas_artifact_map_figure, self)
-                self.verticalLayout_showing.addWidget(self.toolbar_artifact_map_figure)
+                self.showResultArea.addWidget(self.toolbar_artifact_map_figure)
 
     def plotConfusionMatrix(self):
         confusion_matrix = self.deepLearningArtApp.getConfusionMatrix()
@@ -3003,17 +3050,42 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                     len(target_names)) + "_canvas_confusion_matrix_figure" + '.png')
 
                 self.canvas_confusion_matrix_figure.draw()
-                for w in self.verticalLayout_showing.widget():
-                    self.verticalLayout_showing.removeWidget(w)
-
-                self.verticalLayout_showing.addWidget(self.canvas_confusion_matrix_figure)
+                if self.showResultArea.widget() is not None:
+                    for w in self.showResultArea.widget():
+                        self.showResultArea.removeWidget(w)
+                self.showResultArea.addWidget(self.canvas_confusion_matrix_figure)
                 self.toolbar_confusion_matrix_figure = NavigationToolbar(self.canvas_confusion_matrix_figure, self)
-                self.verticalLayout_showing.addWidget(self.toolbar_confusion_matrix_figure)
+                self.showResultArea.addWidget(self.toolbar_confusion_matrix_figure)
             else:
                 raise ValueError('Confusion matrix shape does not match to target names')
 
         else:
             raise ValueError('There is no confusion matrix for segmentation')
+
+    def plotNetworkArchitecture(self, path=None):
+
+        if path is not None:
+            filename = os.path.splitext(path)[0]
+        else:
+            modelpath = os.path.split(self.openmodel_path)[0]
+            filename = modelpath + os.sep + 'architecture'
+            ann_viz(self.model, title='', filename=filename)
+        self.network_architecture_figure.clear()
+        ax1 = self.network_architecture_figure.add_subplot(111)
+        ax1.clear()
+        image = plt.imread(filename + '.png')
+        ax1.imshow(image)
+        ax1.set_title('architecture')
+
+        self.canvas_network_architecture_figure.draw()
+        if self.showResultArea.widget() is not None:
+            for w in self.showResultArea.widget():
+                print(w)
+                self.showResultArea.removeWidget(w)
+        self.showResultArea.addWidget(self.canvas_network_architecture_figure)
+        self.toolbar_network_architecture_figure = NavigationToolbar(self.canvas_network_architecture_figure, self)
+        self.showResultArea.addWidget(self.toolbar_network_architecture_figure)
+
 
     def textChangeAlpha(self, text):
         self.inputalpha = text
@@ -3236,6 +3308,20 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         return inpName
 
     def show_layer_name(self):
+        if self.showResultArea.widget() is not None:
+            for w in self.showResultArea.widget():
+                print(w)
+                self.showResultArea.removeWidget(w)
+        self.matplotlibwidget_static = MatplotlibWidget(self.NetworkVisualization)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.matplotlibwidget_static.sizePolicy().hasHeightForWidth())
+        self.matplotlibwidget_static.setSizePolicy(sizePolicy)
+        self.matplotlibwidget_static.setMouseTracking(True)
+        self.matplotlibwidget_static.setObjectName("matplotlibwidget_static")
+        self.showResultArea.addWidget(self.matplotlibwidget_static)
+        self.matplotlibwidget_static.show()
         qList = []
 
         for i in self.act:
@@ -3651,13 +3737,32 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
     @pyqtSlot()
     def on_wyShowArchitecture_clicked(self):
-        # Show the structure of the model and plot the weights
-        if len(self.openmodel_path) != 0:
 
-            webbrowser.open_new(self.model_png_dir)
+        # Show the structure of the model
+        # if len(self.openmodel_path) != 0:
+        self.model_png_dir = '/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/output/Output_Learning/FCN 3D-VResFCN-Upsampling_3D_48x48x16_2019-04-05_03-19/model.png'
+        self.canvasStructure = MyMplCanvas()
+        try:
+            self.canvasStructure.loadImage(self.model_png_dir)
+        except:
+            raise ValueError('No model image exits')
+        self.graphicscene = QtWidgets.QGraphicsScene()
+        self.graphicscene.addWidget(self.canvasStructure)
+        self.graphicview = Activeview()
+        self.scrollAreaWidgetContents = QtWidgets.QWidget()
+        self.maingrids = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
+        self.showArchitectureArea.setWidget(self.scrollAreaWidgetContents)
+        self.maingrids.addWidget(self.graphicview)
+        self.graphicview.setScene(self.graphicscene)
+        try:
+            # # for a simple 2DCNN network
+            self.plotNetworkArchitecture()
 
-        else:
-            self.showChooseFileDialog()
+        except:
+            raise ValueError('Network contains layer not supported to visualize')
+
+        # else:
+        #     self.showChooseFileDialog()
 
     def on_wyPlot_clicked(self, index):
         # self.matplotlibwidget_static_2.hide()
@@ -4769,9 +4874,10 @@ class Viewline(QtWidgets.QGridLayout):
         #     self.newcanvas3.ax1.draw_artist(line)
         self.newcanvas3.blit(self.newcanvas3.figure.bbox)
         self.newcanvas3.draw()
-        self.newcanvas1.set_cursor_position(event.xdata, event.ydata)
-        self.newcanvas2.set_cursor_position(event.ydata, self.ind1 * 3.3)
-        self.newcanvas3.set_cursor_position(event.xdata, self.ind1 * 3.3)
+        if self.cursor_on:
+            self.newcanvas1.set_cursor_position(event.xdata, event.ydata)
+            self.newcanvas2.set_cursor_position(event.ydata, self.ind1 * 3.3)
+            self.newcanvas3.set_cursor_position(event.xdata, self.ind1 * 3.3)
 
     def mouse_clicked2(self, event):
 
@@ -4803,9 +4909,10 @@ class Viewline(QtWidgets.QGridLayout):
         #     self.newcanvas3.ax1.draw_artist(line)
         self.newcanvas3.blit(self.newcanvas3.figure.bbox)
         self.newcanvas3.draw()
-        self.newcanvas1.set_cursor_position(self.ind2, event.xdata)
-        self.newcanvas2.set_cursor_position(event.xdata, event.ydata)
-        self.newcanvas3.set_cursor_position(self.ind2, event.ydata)
+        if self.cursor_on:
+            self.newcanvas1.set_cursor_position(self.ind2, event.xdata)
+            self.newcanvas2.set_cursor_position(event.xdata, event.ydata)
+            self.newcanvas3.set_cursor_position(self.ind2, event.ydata)
 
     def mouse_clicked3(self, event):
 
@@ -4836,12 +4943,12 @@ class Viewline(QtWidgets.QGridLayout):
         #     self.newcanvas3.ax1.draw_artist(line)
         self.newcanvas3.blit(self.newcanvas3.figure.bbox)
         self.newcanvas3.draw()
-        self.newcanvas1.set_cursor_position(event.xdata, self.ind3)
-        self.newcanvas2.set_cursor_position(self.ind3, event.ydata)
-        self.newcanvas3.set_cursor_position(event.xdata, event.ydata)
+        if self.cursor_on:
+            self.newcanvas1.set_cursor_position(event.xdata, self.ind3)
+            self.newcanvas2.set_cursor_position(self.ind3, event.ydata)
+            self.newcanvas3.set_cursor_position(event.xdata, event.ydata)
 
     def mouse_tracking(self, cursor):
-
         self.cursor_on = cursor
         if self.newcanvas1 is not None:
             self.newcanvas1.set_cursor2D(self.cursor_on)

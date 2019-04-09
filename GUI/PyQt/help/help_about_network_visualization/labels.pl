@@ -17,5 +17,13 @@ $noresave{$key} = "$nosave";
 # labels from external_latex_labels array.
 
 
+$key = q/fig:visualization_in/;
+$external_latex_labels{$key} = q|1|; 
+$noresave{$key} = "$nosave";
+
+$key = q/fig:visualization_out/;
+$external_latex_labels{$key} = q|2|; 
+$noresave{$key} = "$nosave";
+
 1;
 

@@ -14,7 +14,7 @@ Before running, please change path in param_GUI.py
 `imagine.main(image array)`<br/>
 
 ## Requirements
-`python3.6 -m pip install jsonschema pickleshare h5py keras matplotlib pandas scipy protobuf tensorflow pyYAML PyQt5-stubs PyQt5 numpy pandas argparse hyperas hyperopt dicom pydicom dicom-numpy pydot pyqtgraph python-csv gtabview pyqtdeploy nibabel Pillow xtract scikit-learn scikit-image seaborn`
+`python3.6 -m pip install jsonschema pickleshare h5py keras matplotlib pandas scipy protobuf tensorflow pyYAML PyQt5-stubs PyQt5 numpy pandas argparse hyperas hyperopt graphviz dicom pydicom dicom-numpy pydot pyqtgraph python-csv gtabview pyqtdeploy nibabel Pillow xtract scikit-learn scikit-image seaborn`
 
 ## GUI features
 - data viewing (DICOM, natural scene images)
@@ -66,6 +66,7 @@ The GUI supports a wide range of image formats to view, including
 - in .MAT, .NPY or .NPZ
 - in the result file, masking shape should be in the same shape as original image
 - the original image array should be saved with the item key 'img', or image path with the key 'img_path'
+- the preferred colors for each class in thr key 'color'
 ### Network format
 network model in HDF5
 ### Datasets format

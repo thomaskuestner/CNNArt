@@ -1,12 +1,3 @@
 No implementation found for style `gensymb'
 
-The help_image_and_result_viewing.aux file was not found, so sections will not be numbered 
-and cross-references will be shown as icons.
-
-No number for "ShowResult"
-
-No number for "SetResultColor"
-
-No number for "SelectROI"
-
-No number for "CursorInspector"
+help_image_and_result_viewing.tex is newer than help_image_and_result_viewing.aux: Please rerun latex.
