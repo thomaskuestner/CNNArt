@@ -147,7 +147,11 @@ class Canvas(FigureCanvas):
         self.selectedshape_name = None
         self.aspect = 'equal' # auto or equal
         self.image_array = None
-        self.view_image()
+        self.flipimage = 0
+        if bool(self.flipimage % 4):
+            self.view_flip_image()
+        else:
+            self.view_image()
 
     def set_open_dialog(self, value):
         self.is_open_dialog = value
@@ -175,7 +179,10 @@ class Canvas(FigureCanvas):
         self.shapeList.clear()
         self.emitlist[0] = self.ind
         self.update_data.emit(self.emitlist)
-        self.view_image()
+        if bool(self.flipimage % 4):
+            self.view_flip_image()
+        else:
+            self.view_image()
 
     def timechange(self):
 
@@ -185,7 +192,10 @@ class Canvas(FigureCanvas):
             self.time = self.timemax - 1
         self.emitlist[2] = self.time
         self.update_data.emit(self.emitlist)
-        self.view_image()
+        if bool(self.flipimage % 4):
+            self.view_flip_image()
+        else:
+            self.view_image()
 
     def depthchange(self):
 
@@ -195,7 +205,10 @@ class Canvas(FigureCanvas):
             self.depth = self.depthmax - 1
         self.emitlist[4] = self.depth
         self.update_data.emit(self.emitlist)
-        self.view_image()
+        if bool(self.flipimage % 4):
+            self.view_flip_image()
+        else:
+            self.view_image()
 
     def press_event(self, event):
         self.v_min, self.v_max = self.pltc.get_clim()
@@ -312,7 +325,10 @@ class Canvas(FigureCanvas):
 
     def set_aspect(self, aspect):
         self.aspect = aspect
-        self.view_image()
+        if bool(self.flipimage % 4):
+            self.view_flip_image()
+        else:
+            self.view_image()
 
     def get_aspect(self):
         return self.aspect
@@ -409,7 +425,6 @@ class Canvas(FigureCanvas):
                                                  cmap=local_cmap, alpha=self.trans,
                                                  extent=[0, img.shape[1], 0, img.shape[0]])
             except:
-                print(self.cmap)
                 if len(self.cmap) > 1:
                     artists = []
                     patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
@@ -1113,10 +1128,11 @@ class Canvas(FigureCanvas):
             return self.image_array
 
     def set_image_array(self, array):
+        self.flipimage += 1
         self.image_array = array
-        try:
+        if bool(self.flipimage % 4):
             self.view_flip_image()
-        except:
+        else:
             self.view_image()
 
     def set_selected(self, shape):
@@ -1604,7 +1620,10 @@ class Canvas(FigureCanvas):
 
     def set_legendon(self, legendon):
         self.legendon = legendon
-        self.view_image()
+        if bool(self.flipimage % 4):
+            self.view_flip_image()
+        else:
+            self.view_image()
 
     def set_toolTip(self, name):
         if self.labelon:
@@ -1657,13 +1676,19 @@ class Canvas(FigureCanvas):
         self.cmap = self.param.get('cmap')
         self.hmap = self.param.get('hmap')
         self.trans = self.param.get('trans')
-        self.view_image()
+        if bool(self.flipimage % 4):
+            self.view_flip_image()
+        else:
+            self.view_image()
 
     def set_transparency(self, value):
 
         if self.mode > 3:
             self.trans = value
-            self.view_image()
+            if bool(self.flipimage % 4):
+                self.view_flip_image()
+            else:
+                self.view_image()
         else:
             for item in self.ax1.get_children():
                 if not type(item) == AxesImage:
@@ -1685,7 +1710,10 @@ class Canvas(FigureCanvas):
             self.ax1.clear()
             self.emitlist[0] = self.ind
             self.update_data.emit(self.emitlist)
-            self.view_image()
+            if bool(self.flipimage % 4):
+                self.view_flip_image()
+            else:
+                self.view_image()
 
         else:
             pass
