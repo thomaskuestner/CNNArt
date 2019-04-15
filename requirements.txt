@@ -3,3 +3,4 @@ keras
 tensorflow
 pyyaml
 scikit-image
+pyqt5
