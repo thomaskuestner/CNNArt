@@ -43,7 +43,7 @@ from matplotlib import pyplot as plt
 import scipy.io as sio
 
 
-def createModel(patchSize, numClasses, usingClassification=False):
+def createModel(patchSize, numClasses):
 
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
@@ -109,7 +109,7 @@ def createModel(patchSize, numClasses, usingClassification=False):
 
 
     ### end of encoder path
-
+    usingClassification = True
     if usingClassification:
         # use x_after_stage_4 as quantification output
         # global average pooling
@@ -202,7 +202,6 @@ def createModel(patchSize, numClasses, usingClassification=False):
 
 
 def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
-
     usingClassification = True
 
     # grid search on batch_sizes and learning rates
@@ -210,23 +209,37 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
     batchSize = batchSizes[0]
     learningRate = learningRates[0]
 
+    # change the shape of the dataset -> at color channel -> here one for grey scale
+    X_train = np.expand_dims(X_train, axis=-1)
+    Y_segMasks_train_foreground = np.expand_dims(Y_segMasks_train, axis=-1)
+    Y_segMasks_train_background = np.ones(Y_segMasks_train_foreground.shape) - Y_segMasks_train_foreground
+    Y_segMasks_train = np.concatenate((Y_segMasks_train_background, Y_segMasks_train_foreground), axis=-1)
 
+    X_test = np.expand_dims(X_test, axis=-1)
+    Y_segMasks_test_foreground = np.expand_dims(Y_segMasks_test, axis=-1)
+    Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape) - Y_segMasks_test_foreground
+    Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground), axis=-1)
 
     if X_valid.size == 0 and y_valid.size == 0:
         print("No Validation Dataset.")
+    else:
+        X_valid = np.expand_dims(X_valid, axis=-1)
+        Y_segMasks_valid_foreground = np.expand_dims(Y_segMasks_valid, axis=-1)
+        Y_segMasks_valid_background = np.ones(Y_segMasks_valid_foreground.shape) - Y_segMasks_valid_foreground
+        Y_segMasks_valid = np.concatenate((Y_segMasks_valid_background, Y_segMasks_valid_foreground), axis=-1)
 
     # sio.savemat('D:med_data/voxel_and_masks.mat',
     #                           {'voxel_train': X_train, 'Y_segMasks_train': Y_segMasks_train,
     #                            'y_train': y_train})
 
-    #y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
-    #y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
+    # y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
+    # y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
 
     # number of classes
     numClasses = np.shape(y_train)[1]
 
     #create cnn model
-    cnn, sModelName = createModel(patchSize=patchSize, numClasses=numClasses, usingClassification=usingClassification)
+    cnn, sModelName = createModel(patchSize=patchSize, numClasses=numClasses)
 
     fTrainInner(cnn,
                 sModelName,
@@ -244,7 +257,7 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
                 batchSize=batchSize,
                 learningRate=learningRate,
                 iEpochs=iEpochs,
-                dlart_handle=dlart_handle, usingClassification=usingClassification)
+                dlart_handle=dlart_handle)
 
     K.clear_session()
 
@@ -268,7 +281,7 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
 
 def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None,
                 Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0,
-                batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None, usingClassification=False):
+                batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None):
     print('Training CNN')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
@@ -286,6 +299,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     model_name = sOutPath + os.sep + sFilename
     weight_name = model_name + '_weights.h5'
     model_json = model_name + '.json'
+    global model_all
     model_all = model_name + '_model.h5'
     model_mat = model_name + '.mat'
 
@@ -321,7 +335,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 
     cnn.summary()
-
+    usingClassification = True
     # compile model
     if usingClassification:
         cnn.compile(
@@ -347,20 +361,22 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     # embeddings_layer_names=None,
     #  embeddings_metadata=None)
 
-    #callbacks = [callback_earlyStopping]
-    callbacks = []
-    #callbacks.append(
-     #   ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0,
-      #                  period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
+    from utils.LivePlotCallback import LivePlotCallback
+    callbacks = [EarlyStopping(monitor='val_loss', patience=12, verbose=1),
+                 ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc',
+                                 verbose=0,
+                                 period=1, save_best_only=True),
+                 LearningRateScheduler(schedule=step_decay, verbose=1),
+                 LivePlotCallback(dlart_handle)]
     # callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
-    callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
 
     if X_valid.size == 0 and y_valid.size == 0:
         # using test set for validation
         if usingClassification:
             result = cnn.fit(X_train,
                              {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
-                             validation_split=0.15,
+                             validation_data=(
+                                 X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -368,7 +384,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         else:
             result = cnn.fit(X_train,
                              Y_segMasks_train,
-                             validation_split=0.15,
+                             validation_data=(X_test, Y_segMasks_test),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -378,7 +394,8 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         if usingClassification:
             result = cnn.fit(X_train,
                              {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
-                             validation_split=0.15,
+                             validation_data=(
+                                 X_valid, {'segmentation_output': Y_segMasks_valid, 'classification_output': y_valid}),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -386,7 +403,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         else:
             result = cnn.fit(X_train,
                              Y_segMasks_train,
-                             validation_split=0.15,
+                             validation_data=(X_valid, Y_segMasks_valid),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -409,7 +426,10 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
 
     # wei = cnn.get_weights()
     cnn.save_weights(weight_name, overwrite=True)
-    # cnn.save(model_all) # keras > v0.7
+    cnn.save(model_all) # keras > v0.7
+    model_png_dir = sOutPath + os.sep + "model.png"
+    from keras.utils import plot_model
+    plot_model(cnn, to_file=model_png_dir, show_shapes=True, show_layer_names=True)
 
     if not usingClassification:
         # matlab
@@ -688,3 +708,8 @@ def drange(start, stop, step):
     while r < stop:
         yield r
     r += step
+
+def load_best_model():
+    from tensorflow.python.keras.models import load_model
+    model = load_model(model_all, custom_objects={'loss_function': dice_coef_loss})
+    return model

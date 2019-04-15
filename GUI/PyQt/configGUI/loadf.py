@@ -6,14 +6,13 @@ from PIL import Image
 import nibabel as nib
 import scipy.io as sio
 
-
 VALID_IMG_FORMAT = ('.CUR', '.ICNS', '.SVG', '.TGA', '.BMP', '.WEBP', '.GIF',
-                '.JPG', '.JPEG', '.PNG', '.PBM', '.PGM', '.PPM', '.TIFF',
-                '.XBM') # Image formats supported by Qt
-VALID_DCM_FORMAT = ('.IMA', '.DCM') # Image formats supported by dicom reading
+                    '.JPG', '.JPEG', '.PNG', '.PBM', '.PGM', '.PPM', '.TIFF',
+                    '.XBM')  # Image formats supported by Qt
+VALID_DCM_FORMAT = ('.IMA', '.DCM')  # Image formats supported by dicom reading
+
 
 class loadImage(QtCore.QThread):
-
     trigger = QtCore.pyqtSignal()
 
     def __init__(self, pathDicom):
@@ -25,19 +24,18 @@ class loadImage(QtCore.QThread):
         # every image will be stored in self.voxel_ndarray
         super(loadImage, self).__init__()
         self.PathDicom = pathDicom
-        self.voxel_ndarray = []
+        self.new_shape = []
         self.run()
 
     def run(self):
 
         if type(self.PathDicom) is str:
-            if os.path.isdir(self.PathDicom):
+            if self.isDicomFile(self.PathDicom):
                 try:
                     self.sscan = self.load_scan(self.PathDicom)
                     if self.sscan:
                         self.simage = np.stack([s.pixel_array for s in self.sscan])
                         self.voxel_ndarray = np.swapaxes(self.simage, 0, 2)
-                        self.voxel_ndarray = np.swapaxes(self.voxel_ndarray, 0, 1)
                         spacing = map(float, ([self.sscan[0].SliceThickness] + self.sscan[0].PixelSpacing))
                         spacing = np.array(list(spacing))
                         new_spacing = [1, 1, 1]
@@ -45,7 +43,6 @@ class loadImage(QtCore.QThread):
                         new_real_shape = self.simage.shape * resize_factor
                         self.new_shape = np.round(new_real_shape)
                         self.new_shape[0], self.new_shape[2] = self.new_shape[2], self.new_shape[0]
-                        self.new_shape[0], self.new_shape[1] = self.new_shape[1], self.new_shape[0]
                         self.new_shape = list(self.new_shape)
                 except:
                     pass
@@ -75,7 +72,13 @@ class loadImage(QtCore.QThread):
 
     def load_scan(self, path):
         if path:
-            slices = [dicom.read_file(path + '/' + s) for s in os.listdir(path)]
+            slices = []
+            for s in os.listdir(path):
+                if '.directory' in s:
+                    pass
+                else:
+                    slice = dicom.read_file(path + '/' + s, force=True)
+                    slices.append(slice)
             slices.sort(key=lambda x: int(x.InstanceNumber))
             try:
                 slice_thickness = np.abs(slices[0].ImagePositionPatient[2] - slices[1].ImagePositionPatient[2])
@@ -96,7 +99,7 @@ class loadImage(QtCore.QThread):
         self.voxel_ndarray = np.swapaxes(self.voxel_ndarray, 0, 1)
 
     def load_dcm(self, dcmImg):
-        self.voxel_ndarray = dicom.read_file(dcmImg).pixel_array
+        self.voxel_ndarray = np.asarray(dicom.read_file(dcmImg).pixel_array, dtype="int32")
         self.new_shape = list(self.voxel_ndarray.shape)
         if len(self.new_shape) < 3:
             self.new_shape.append(1)
@@ -105,7 +108,7 @@ class loadImage(QtCore.QThread):
 
     def load_nii(self, nii):
         nibImg = nib.load(nii)
-        self.voxel_ndarray = nibImg.get_data()
+        self.voxel_ndarray = np.asarray(nibImg.get_data(), dtype="int32")
         self.new_shape = list(self.voxel_ndarray.shape)
         if len(self.new_shape) < 3:
             self.new_shape.append(1)
@@ -125,6 +128,7 @@ class loadImage(QtCore.QThread):
 
     def load_mat(self, mat):
         matImg = sio.loadmat(mat)
+
         ashapelist = []
         self.voxel_ndarray = []
         for item in matImg:
@@ -135,13 +139,13 @@ class loadImage(QtCore.QThread):
             for item in matImg:
                 if not '__' in item and not 'readme' in item:
                     arrays = matImg[item]
-                    if len(list(arrays.shape))>=3:
+                    if len(list(arrays.shape)) >= 3:
                         try:
-                            self.voxel_ndarray.append([np.expand_dims(array, axis=0) for array in arrays])
-                            self.voxel_ndarray = np.concatenate(self.voxel_ndarray)
+                            self.voxel_ndarray.append([np.expand_dims(array, axis=-1) for array in arrays])
+                            self.voxel_ndarray = np.concatenate(self.voxel_ndarray, axis=-1)
                         except:
-                            self.voxel_ndarray = ([np.expand_dims(array, axis=0) for array in arrays])
-                            self.voxel_ndarray = np.concatenate(self.voxel_ndarray)
+                            self.voxel_ndarray = ([np.expand_dims(array, axis=-1) for array in arrays])
+                            self.voxel_ndarray = np.concatenate(self.voxel_ndarray, axis=-1)
         elif max(ashapelist) == 2:
             for item in matImg:
                 if not '__' in item and not 'readme' in item:
@@ -150,15 +154,30 @@ class loadImage(QtCore.QThread):
                     if len(list(arrays.shape)) == 2:
                         arrays = arrays.reshape(ashape)
                         try:
-                            self.voxel_ndarray.append([np.expand_dims(array, axis=0) for array in arrays])
-                            self.voxel_ndarray = np.concatenate(self.voxel_ndarray)
+                            self.voxel_ndarray.append([np.expand_dims(array, axis=-1) for array in arrays])
+                            self.voxel_ndarray = np.concatenate(self.voxel_ndarray, axis=-1)
                         except:
-                            self.voxel_ndarray = ([np.expand_dims(array, axis=0) for array in arrays])
-                            self.voxel_ndarray = np.concatenate(self.voxel_ndarray)
-        # self.voxel_ndarray = np.swapaxes(self.voxel_ndarray, 0, 2)
-        # self.voxel_ndarray = np.swapaxes(self.voxel_ndarray, 0, 1)
+                            self.voxel_ndarray = ([np.expand_dims(array, axis=-1) for array in arrays])
+                            self.voxel_ndarray = np.concatenate(self.voxel_ndarray, axis=-1)
+
+        self.voxel_ndarray = np.swapaxes(self.voxel_ndarray, 0, 2)
+        self.voxel_ndarray = np.swapaxes(self.voxel_ndarray, 1, 2)
+
         self.new_shape = list(self.voxel_ndarray.shape)
         if len(self.new_shape) < 3:
             self.new_shape.append(1)
         elif len(self.new_shape) == 4:
             self.new_shape.insert(0, 1)
+
+    def isDicomFile(self, file):
+        is_dicom_file = True
+        if os.path.isdir(file):
+            listoffile = os.listdir(file)
+            for entry in listoffile:
+                fullpath = os.path.join(file, entry)
+                if os.path.isdir(fullpath):
+                    is_dicom_file = False
+        else:
+            is_dicom_file = False
+        return is_dicom_file
+

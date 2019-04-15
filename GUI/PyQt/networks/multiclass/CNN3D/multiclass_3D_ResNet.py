@@ -1,6 +1,6 @@
 import os
-#os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
-#os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from tensorflow.python.client import device_lib
 
@@ -37,11 +37,7 @@ from utils.LivePlotCallback import LivePlotCallback
 from matplotlib import pyplot as plt
 
 
-
-
 def createModel(patchSize, numClasses):
-
-
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
     else:
@@ -63,16 +59,17 @@ def createModel(patchSize, numClasses):
 
     # first down convolution
     x_down_conv_1 = projection_block_3D(x_after_stage_1,
-                            filters=(32, 32),
-                            kernel_size=(3, 3, 3),
-                            stage=1,
-                            block=1,
-                            se_enabled=False,
-                            se_ratio=4)
+                                        filters=(32, 32),
+                                        kernel_size=(3, 3, 3),
+                                        stage=1,
+                                        block=1,
+                                        se_enabled=False,
+                                        se_ratio=4)
 
     # second stage
-    x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=False, se_ratio=16)
-    #x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=2, block=2, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=False,
+                          se_ratio=16)
+    # x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=2, block=2, se_enabled=False, se_ratio=16)
     x_after_stage_2 = x
 
     # second down convolution
@@ -85,9 +82,10 @@ def createModel(patchSize, numClasses):
                                         se_ratio=8)
 
     # third stage
-    x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=False,
+                          se_ratio=16)
     x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=2, se_enabled=False, se_ratio=16)
-    #x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=3, se_enabled=False, se_ratio=16)
+    # x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=3, se_enabled=False, se_ratio=16)
     x_after_stage_3 = x
 
     # third down convolution
@@ -100,25 +98,26 @@ def createModel(patchSize, numClasses):
                                         se_ratio=16)
 
     # fourth stage
-    x = identity_block_3D(x_down_conv_3, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=1, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x_down_conv_3, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=1, se_enabled=False,
+                          se_ratio=16)
     x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=2, se_enabled=False, se_ratio=16)
-    #x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=3, se_enabled=False, se_ratio=16)
+    # x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=3, se_enabled=False, se_ratio=16)
     x_after_stage_4 = x
 
-   #  # fourth down convolution
-   #  x_down_conv_4 = projection_block_3D(x_after_stage_4,
-   #                                      filters=(256, 256),
-   #                                      kernel_size=(3, 3, 3),
-   #                                      stage=4,
-   #                                      block=4,
-   #                                      se_enabled=False,
-   #                                      se_ratio=16)
-   #
-   #  # fifth stage
-   #  x = identity_block_3D(x_down_conv_4, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=1, se_enabled=False, se_ratio=16)
-   #  x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=2, se_enabled=False, se_ratio=16)
-   # # x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=3, se_enabled=False, se_ratio=16)
-   #  x_after_stage_5 = x
+    #  # fourth down convolution
+    #  x_down_conv_4 = projection_block_3D(x_after_stage_4,
+    #                                      filters=(256, 256),
+    #                                      kernel_size=(3, 3, 3),
+    #                                      stage=4,
+    #                                      block=4,
+    #                                      se_enabled=False,
+    #                                      se_ratio=16)
+    #
+    #  # fifth stage
+    #  x = identity_block_3D(x_down_conv_4, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=1, se_enabled=False, se_ratio=16)
+    #  x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=2, se_enabled=False, se_ratio=16)
+    # # x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=3, se_enabled=False, se_ratio=16)
+    #  x_after_stage_5 = x
 
     ### end of encoder path
     ### classification output
@@ -139,8 +138,8 @@ def createModel(patchSize, numClasses):
     return cnn, sModelName
 
 
-def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
-
+def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None, patchSize=0,
+           batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
     # grid search on batch_sizes and learning rates
     # parse inputs
     batchSize = batchSizes[0]
@@ -153,13 +152,13 @@ def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, 
     if X_valid is not None and y_valid is not None:
         X_valid = np.expand_dims(X_valid, axis=-1)
 
-    #y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
-    #y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
+    # y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
+    # y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
 
     # number of classes
     numClasses = np.shape(y_train)[-1]
 
-    #create cnn model
+    # create cnn model
     cnn, sModelName = createModel(patchSize=patchSize, numClasses=numClasses)
 
     fTrainInner(cnn,
@@ -176,7 +175,6 @@ def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, 
                 learningRate=learningRate,
                 iEpochs=iEpochs,
                 dlart_handle=dlart_handle)
-
 
     # for iBatch in batchSizes:
     #     for iLearn in learningRates:
@@ -196,7 +194,8 @@ def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, 
     #                     dlart_handle=dlart_handle)
 
 
-def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None):
+def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None,
+                sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None):
     print('Training CNN')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
@@ -244,26 +243,14 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
     cnn.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
 
     # callbacks
-    callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
-    #callback_tensorBoard = keras.callbacks.TensorBoard(log_dir=dlart_handle.getLearningOutputPath() + '/logs',
-                                                       #histogram_freq=2,
-                                                       #batch_size=batchSize,
-                                                       #write_graph=True,
-                                                      # write_grads=True,
-                                                      # write_images=True,
-                                                      # embeddings_freq=0,
-                                                      # embeddings_layer_names=None,
-                                                      #  embeddings_metadata=None)
-
-    callbacks = [callback_earlyStopping]
-    callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0, period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
-    #callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
-    callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
-    callbacks.append(LivePlotCallback(dlart_handle))
-
+    callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1),
+                 ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc',
+                                 verbose=0,
+                                 period=5, save_best_only=True), LearningRateScheduler(schedule=step_decay, verbose=1),
+                 LivePlotCallback(dlart_handle)]
 
     # data augmentation
-    if dlart_handle.getDataAugmentationEnabled() == True:
+    if dlart_handle.getDataAugmentationEnabled():
         # Initialize Image Generator
         # all shifted and rotated images are filled with zero padded pixels
         datagen = ImageDataGenerator(
@@ -298,7 +285,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
         for x_batch, y_batch in datagen.flow(X_train, y_train, batch_size=9):
             # display first 9 images
             for i in range(0, 9):
-                plt.subplot(330+1+i)
+                plt.subplot(330 + 1 + i)
                 plt.imshow(x_batch[i].reshape(x_batch.shape[1], x_batch.shape[2]), cmap='gray')
             plt.show()
             break
@@ -307,7 +294,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
             # fit model on data
             # use validation/test split
             result = cnn.fit_generator(datagen.flow(X_train, y_train, batch_size=batchSize),
-                                       steps_per_epoch=X_train.shape[0]//batchSize,
+                                       steps_per_epoch=X_train.shape[0] // batchSize,
                                        epochs=iEpochs,
                                        validation_data=(X_valid, y_valid),
                                        callbacks=callbacks,
@@ -356,7 +343,10 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
     # wei = cnn.get_weights()
     cnn.save_weights(weight_name, overwrite=True)
-    # cnn.save(model_all) # keras > v0.7
+    cnn.save(model_all)  # keras > v0.7
+    model_png_dir = sOutPath + os.sep + "model.png"
+    from keras.utils import plot_model
+    plot_model(cnn, to_file=model_png_dir, show_shapes=True, show_layer_names=True)
 
     # matlab
     acc = result.history['acc']
@@ -378,25 +368,24 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
 
 def step_decay(epoch, lr):
-   drop = 0.1
-   epochs_drop = 10.0
-   print("Current Learning Rate: " + str(lr))
-   if epoch == epochs_drop or epoch == 2*epochs_drop or epoch == 3*epochs_drop or epoch == 4*epochs_drop:
-       lr = drop*lr
-       print("Reduce Learningrate by 0.1 to " + str(lr))
+    drop = 0.1
+    epochs_drop = 10.0
+    print("Current Learning Rate: " + str(lr))
+    if epoch == epochs_drop or epoch == 2 * epochs_drop or epoch == 3 * epochs_drop or epoch == 4 * epochs_drop:
+        lr = drop * lr
+        print("Reduce Learningrate by 0.1 to " + str(lr))
 
-   return lr
+    return lr
 
 
-def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
+def fPredict(X, y, sModelPath, sOutPath, batchSize=64):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
-        Input:
-            X: Samples to predict on. The shape of X should fit to the input shape of the model
-            y: Labels for the Samples. Number of Samples should be equal to the number of samples in X
-            sModelPath: (String) full path to a trained keras model. It should be *_json.txt file. there has to be a corresponding *_weights.h5 file in the same directory!
-            sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy stored.
-                        The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the suffix '_pred.mat'
-            batchSize: Batchsize, number of samples that are processed at once"""
+    Input: X: Samples to predict on. The shape of X should fit to the input shape of the model y: Labels for the
+    Samples. Number of Samples should be equal to the number of samples in X sModelPath: (String) full path to a
+    trained keras model. It should be *_json.txt file. there has to be a corresponding *_weights.h5 file in the same
+    directory! sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy
+    stored. The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the
+    suffix '_pred.mat' batchSize: Batchsize, number of samples that are processed at once """
     sModelPath = sModelPath.replace("_json.txt", "")
     weight_name = sModelPath + '_weights.h5'
     model_json = sModelPath + '_json.txt'
@@ -420,7 +409,6 @@ def fPredict(X,y,  sModelPath, sOutPath, batchSize=64):
     modelSave = sOutPath + sModelFileSave + '_pred.mat'
     print('saving Model:{}'.format(modelSave))
     sio.savemat(modelSave, {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test})
-
 
 
 ###############################################################################
@@ -489,8 +477,8 @@ def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
                   W_regularizer='l2'))
     cnn.add(Activation('softmax'))
 
-    #opti = SGD(lr={{choice([0.1, 0.01, 0.05, 0.005, 0.001])}}, momentum=1e-8, decay=0.1, nesterov=True)
-    #cnn.compile(loss='categorical_crossentropy', optimizer=opti)
+    # opti = SGD(lr={{choice([0.1, 0.01, 0.05, 0.005, 0.001])}}, momentum=1e-8, decay=0.1, nesterov=True)
+    # cnn.compile(loss='categorical_crossentropy', optimizer=opti)
 
     epochs = 300
 
@@ -502,7 +490,7 @@ def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
                      validation_data=(X_test, Y_test))
     score_test, acc_test = cnn.evaluate(X_test, Y_test, verbose=0)
 
-    #return {'loss': -acc_test, 'status': STATUS_OK, 'model': cnn, 'trainresult': result, 'score_test': score_test}
+    # return {'loss': -acc_test, 'status': STATUS_OK, 'model': cnn, 'trainresult': result, 'score_test': score_test}
 
 
 ## helper functions
