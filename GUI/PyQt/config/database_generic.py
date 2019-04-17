@@ -1,4 +1,6 @@
 # # generate a database information file
+# # the file is in format .csv, containing pathdata, pathlabel. artefact, bodyregion
+# # type in all  information by replacing 'to_be_defined' or 'None'
 import csv
 import os
 

@@ -1,4 +1,5 @@
 # https://github.com/thomaskuestner/CNNArt
+# containing information about version of packages
 from setuptools import setup
 import sys
 
