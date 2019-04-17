@@ -189,13 +189,13 @@ class DeepLearningArtApp(QWidget):
         ################################################################################################################
         #### Stuff for prediction
         ################################################################################################################
-        self.outPutFolderDataPath = self.pathOutputPatching
+        self.outPutFolderDataPath = self.learningOutputPath
         self.datasetForPrediction = self.pathOutputPatching
         self.datasetOutputPath = self.pathOutputPatching
         self.modelPathPrediction = self.learningOutputPath
         self.modelPrediction = "FCN 3D-VResFCN-Unsampling"
         self.modelPredictionSource = self.deepNeuralNetworks[self.neuralNetworkModel].replace(".", "/") + '.py'
-        self.doUnpatching = False
+        self.doUnpatching = True
 
         self.usingSegmentationMasksForPrediction = False
         self.confusionMatrix = None
@@ -207,6 +207,9 @@ class DeepLearningArtApp(QWidget):
 
         self.predictions = None
         self.unpatched_slices = None
+
+        self.model = {}
+        self.model_name = ''
 
         ################################################################################################################
         self.params = [
@@ -405,41 +408,42 @@ class DeepLearningArtApp(QWidget):
             raise IOError("We do not know your patching mode...")
 
         # stuff for storing
-        if self.storeMode != STORE_DISABLED:
-            # outPutFolder name:
-            outPutFolder = "Patients-" + str(len(self.selectedPatients)) + "_" + \
-                           "Datasets-" + str(len(self.selectedDatasets)) + "_" + \
-                           ("2D" if self.patchingMode == PATCHING_2D else "3D") + \
-                           ('_SegMask_' if self.usingSegmentationMasks else '_') + \
-                           str(self.patchSizeX) + "x" + str(self.patchSizeY)
-            if self.patchingMode == PATCHING_3D:
-                outPutFolder = outPutFolder + "x" + str(self.patchSizeZ)
 
-            outPutFolder = outPutFolder + "_Overlap-" + str(self.patchOverlap) + "_" + \
-                           "Labeling-" + ("patch" if self.labelingMode == PATCH_LABELING else "mask")
+        # outPutFolder name:
+        outPutFolder = "Patients-" + str(len(self.selectedPatients)) + "_" + \
+                       "Datasets-" + str(len(self.selectedDatasets)) + "_" + \
+                       ("2D" if self.patchingMode == PATCHING_2D else "3D") + \
+                       ('_SegMask_' if self.usingSegmentationMasks else '_') + \
+                       str(self.patchSizeX) + "x" + str(self.patchSizeY)
+        if self.patchingMode == PATCHING_3D:
+            outPutFolder = outPutFolder + "x" + str(self.patchSizeZ)
 
-            if self.splittingMode == SIMPLE_RANDOM_SAMPLE_SPLITTING:
-                outPutFolder = outPutFolder + "_Split-simpleRand"
-            elif self.splittingMode == CROSS_VALIDATION_SPLITTING:
-                outPutFolder = outPutFolder + "_Split-crossVal"
-            elif self.splittingMode == SIMPLE_RANDOM_SAMPLE_SPLITTING:
-                outPutFolder = outPutFolder + "Split-patientCrossVal"
+        outPutFolder = outPutFolder + "_Overlap-" + str(self.patchOverlap) + "_" + \
+                       "Labeling-" + ("patch" if self.labelingMode == PATCH_LABELING else "mask")
 
-            outputFolderPath = self.pathOutputPatching + os.sep + outPutFolder
+        if self.splittingMode == SIMPLE_RANDOM_SAMPLE_SPLITTING:
+            outPutFolder = outPutFolder + "_Split-simpleRand"
+        elif self.splittingMode == CROSS_VALIDATION_SPLITTING:
+            outPutFolder = outPutFolder + "_Split-crossVal"
+        elif self.splittingMode == SIMPLE_RANDOM_SAMPLE_SPLITTING:
+            outPutFolder = outPutFolder + "Split-patientCrossVal"
 
-            if not os.path.exists(outputFolderPath):
-                os.makedirs(outputFolderPath)
+        outputFolderPath = self.pathOutputPatching + os.sep + outPutFolder
 
-            # create dataset summary
-            self.datasetName = outPutFolder
-            self.createDatasetInfoSummary(outPutFolder, outputFolderPath)
+        if not os.path.exists(outputFolderPath):
+            os.makedirs(outputFolderPath)
 
-            if self.storeMode == STORE_PATCH_BASED:
-                self.outPutFolderDataPath = outputFolderPath + os.sep + "data"
-                if not os.path.exists(self.outPutFolderDataPath):
-                    os.makedirs(self.outPutFolderDataPath)
+        # create dataset summary
+        self.datasetName = outPutFolder
+        self.datasetForPrediction = outputFolderPath
+        self.createDatasetInfoSummary(outPutFolder, outputFolderPath)
 
-                labelDict = {}
+        if self.storeMode == STORE_PATCH_BASED:
+            self.outPutFolderDataPath = outputFolderPath + os.sep + "data"
+            if not os.path.exists(self.outPutFolderDataPath):
+                os.makedirs(self.outPutFolderDataPath)
+
+            labelDict = {}
 
         # for storing patch based
         iPatchToDisk = 0
@@ -1750,17 +1754,18 @@ class DeepLearningArtApp(QWidget):
             self._network_interface_update.emit()
 
             if self.network_canrun:
-                fRunCNN(dData={'X_train': self.X_train, 'y_train': Y_train, 'X_valid': self.X_validation,
-                               'y_valid': Y_validation, 'X_test': self.X_test, 'y_test': Y_test,
-                               'patchSize': [self.patchSizeX, self.patchSizeY, self.patchSizeZ]},
-                        sModelIn=self.deepNeuralNetworks[self.neuralNetworkModel],
-                        lTrain=RUN_CNN_TRAIN_TEST_VALIDATION,
-                        sParaOptim='',
-                        sOutPath=self.outPutFolderDataPath,
-                        iBatchSize=self.batchSizes,
-                        iLearningRate=self.learningRates,
-                        iEpochs=self.epochs,
-                        dlart_handle=self)
+                self.model, self.model_name = fRunCNN(
+                    dData={'X_train': self.X_train, 'y_train': Y_train, 'X_valid': self.X_validation,
+                           'y_valid': Y_validation, 'X_test': self.X_test, 'y_test': Y_test,
+                           'patchSize': [self.patchSizeX, self.patchSizeY, self.patchSizeZ]},
+                    sModelIn=self.deepNeuralNetworks[self.neuralNetworkModel],
+                    lTrain=RUN_CNN_TRAIN_TEST_VALIDATION,
+                    sParaOptim='',
+                    sOutPath=self.outPutFolderDataPath,
+                    iBatchSize=self.batchSizes,
+                    iLearningRate=self.learningRates,
+                    iEpochs=self.epochs,
+                    dlart_handle=self)
         else:
             # segmentation FCN training
             self.X_train_shape = self.X_train.shape
@@ -1777,25 +1782,26 @@ class DeepLearningArtApp(QWidget):
             self._network_interface_update.emit()
 
             if self.network_canrun:
-                fRunCNN(dData={'X_train': self.X_train,
-                               'y_train': Y_train,
-                               'Y_segMasks_train': self.Y_segMasks_train,
-                               'X_valid': self.X_validation,
-                               'y_valid': Y_validation,
-                               'Y_segMasks_validation': self.Y_segMasks_validation,
-                               'X_test': self.X_test,
-                               'y_test': Y_test,
-                               'Y_segMasks_test': self.Y_segMasks_test,
-                               'patchSize': [self.patchSizeX, self.patchSizeY, self.patchSizeZ]},
-                        sModelIn=self.deepNeuralNetworks[self.neuralNetworkModel],
-                        lTrain=RUN_CNN_TRAIN_TEST_VALIDATION,
-                        sParaOptim='',
-                        sOutPath=self.outPutFolderDataPath,
-                        iBatchSize=self.batchSizes,
-                        iLearningRate=self.learningRates,
-                        iEpochs=self.epochs,
-                        dlart_handle=self,
-                        usingSegmentationMasks=self.usingSegmentationMasks)
+                self.model, self.model_name = fRunCNN(dData={'X_train': self.X_train,
+                                                             'y_train': Y_train,
+                                                             'Y_segMasks_train': self.Y_segMasks_train,
+                                                             'X_valid': self.X_validation,
+                                                             'y_valid': Y_validation,
+                                                             'Y_segMasks_validation': self.Y_segMasks_validation,
+                                                             'X_test': self.X_test,
+                                                             'y_test': Y_test,
+                                                             'Y_segMasks_test': self.Y_segMasks_test,
+                                                             'patchSize': [self.patchSizeX, self.patchSizeY,
+                                                                           self.patchSizeZ]},
+                                                      sModelIn=self.deepNeuralNetworks[self.neuralNetworkModel],
+                                                      lTrain=RUN_CNN_TRAIN_TEST_VALIDATION,
+                                                      sParaOptim='',
+                                                      sOutPath=self.outPutFolderDataPath,
+                                                      iBatchSize=self.batchSizes,
+                                                      iLearningRate=self.learningRates,
+                                                      iEpochs=self.epochs,
+                                                      dlart_handle=self,
+                                                      usingSegmentationMasks=self.usingSegmentationMasks)
 
         # exit()
 
@@ -1885,6 +1891,12 @@ class DeepLearningArtApp(QWidget):
 
         with open((outputFolderPath + os.sep + 'dataset_info.json'), 'w') as fp:
             json.dump(dataDict, fp, indent=4)
+
+    def getModel(self):
+        return self.model
+
+    def setModel(self, model):
+        self.model = model
 
     def setLabelingMode(self, mode):
         if mode == MASK_LABELING or mode == PATCH_LABELING:
@@ -1992,9 +2004,8 @@ class DeepLearningArtApp(QWidget):
         self.network_interface_update.emit()
 
     def getCurrentModelPath(self):
-        model_name = os.path.split(self.outputFolderDataPath)[-1] + '_model.h5'
-        modelPath = self.outPutFolderDataPath + os.sep + model_name
-        return modelPath
+
+        return self.model_name
 
     def setCurrentModelPath(self, model):
         self.outputFolderDataPath = os.path.split(model)[0]
@@ -2279,7 +2290,7 @@ class DeepLearningArtApp(QWidget):
         if self.storeMode != STORE_PATCH_BASED:
             if self.X_train is not None and self.X_validation is not None \
                     and self.X_test is not None and self.Y_train is not None \
-                    and self.Y_validation is not None and self.Y_test.all is not None:
+                    and self.Y_validation is not None and self.Y_test is not None:
                 retbool = True
         return retbool
 

@@ -7,18 +7,19 @@ https://github.com/thomaskuestner/CNNArt
 This GUI is designed with PyQt5 and works for Python >3.5.
 
 ## GUI calling
-run `Qt_Main.py` to open the GUI. <br/>
+run `imagine.py` to open the GUI. <br/>
 This GUI can be run independent from CNNArt. <br/>
 Before running, please change path in param_GUI.py
-`imagine.main('pathOfImageFile','pathOfImageDirectory', ...)`<br/>
-`imagine.main(image array)`<br/>
+`from imagine import imagin_main`
+`imagine_main('pathOfImageFile','pathOfImageDirectory', ...)`<br/>
+`imagine_main(image array)`<br/>
 
 ## Requirements
 `python3.6 -m pip install jsonschema pickleshare h5py keras matplotlib pandas scipy protobuf tensorflow pyYAML PyQt5-stubs PyQt5 numpy pandas argparse hyperas hyperopt graphviz dicom pydicom dicom-numpy pydot pyqtgraph python-csv gtabview pyqtdeploy nibabel Pillow xtract scikit-learn scikit-image seaborn`
 
 ## GUI features
 - data viewing (DICOM, natural scene images)
-- preprocessing: labeling/annotation, patching, data augmentation, data splitting
+- pre-processing: labeling/annotation, patching, data augmentation, data splitting for 2D and 3D data
 - network training: hyperparameter setting and network selection
 - test data evaluation: online accuracy/loss plots, confusion matrix, derived test metrics
 - network visualization: architecture, feature maps, kernel weights, deep visualization
@@ -33,7 +34,7 @@ Before running, please change path in param_GUI.py
 - the name and color of the labels can be modified
 - connected label list: showing label name, show on/off label, sorting label names
 ### Network training
-#### Data preprocessing, parameter setting
+#### Data pre-processing, parameter setting
 - perform patching datasets with different splitting methods, labeling methods, storage modes, using segmentation masks.
 - setting data path and edtting patch size, overlay, datasets splitting ratio, number of folds for cross validation
 - select datasets for training/validation/test

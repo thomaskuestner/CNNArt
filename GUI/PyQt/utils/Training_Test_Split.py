@@ -143,7 +143,7 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         y_trainFold = np.asarray(y_trainFold)
         y_testFold = np.asarray(y_testFold)
 
-        return X_trainFold, y_trainFold, X_testFold, y_testFold, xTest, yTest
+        return [X_trainFold], [y_trainFold], [X_testFold], [y_testFold], [xTest], [yTest]
 
 
     elif sSplitting == PATIENT_CROSS_VALIDATION_SPLITTING:
@@ -154,7 +154,7 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         y_trainFold = []
         y_testFold = []
 
-        for ind_split in unique_pats:
+        for ind_split in range(unique_pats):
             train_index = np.where(allPats != ind_split)[0]
             test_index = np.where(allPats == ind_split)[0]
             X_train, X_test = allPatches[train_index], allPatches[test_index]
@@ -169,9 +169,11 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         X_testFold = np.asarray(X_testFold, dtype='f')
         y_trainFold = np.asarray(y_trainFold, dtype='f')
         y_testFold = np.asarray(y_testFold, dtype='f')
+        X_valFold = np.asarray([])
+        y_valFold = np.asarray([])
 
         if iReturn > 0:
-            return X_trainFold, y_trainFold, X_testFold, y_testFold
+            return [X_trainFold], [y_trainFold], [X_valFold], [y_valFold], [X_testFold], [y_testFold]
 
 
 def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, sSplitting, patchSize, patchOverlap,
@@ -304,7 +306,7 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, s
         y_trainFold = np.asarray(y_trainFold)
         y_testFold = np.asarray(y_testFold)
 
-        return X_trainFold, y_trainFold, X_testFold, y_testFold, xTest, yTest
+        return [X_trainFold], [y_trainFold], [X_testFold], [y_testFold], [xTest], [yTest]
 
 
 
@@ -331,8 +333,11 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, s
         X_testFold = np.asarray(X_testFold, dtype='f')
         y_trainFold = np.asarray(y_trainFold, dtype='f')
         y_testFold = np.asarray(y_testFold, dtype='f')
+        X_valFold = np.asarray([])
+        y_valFold = np.asarray([])
 
-        return X_trainFold, y_trainFold, X_testFold, y_testFold
+        if iReturn > 0:
+            return [X_trainFold], [y_trainFold], [X_valFold], [y_valFold], [X_testFold], [y_testFold]
 
 
 def TransformDataset(allPatches, allY, patchSize, patchOverlap, isRandomShuffle=True, isUsingSegmentation=False, allSegmentationMasks=None):
