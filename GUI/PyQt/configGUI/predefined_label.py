@@ -1,3 +1,4 @@
+# for generating a table for editing predefined label name and color
 import codecs
 import os
 

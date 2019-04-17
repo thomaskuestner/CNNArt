@@ -1,2 +1,5 @@
 class,color
-mask,purple
+P_BG,#ef2929
+P_LT,#0000ff
+P_AT,#ffff00
+P_VAT,#008000

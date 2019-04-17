@@ -1,3 +1,4 @@
+# create label list based on the markings.csv
 import pandas
 import numpy as np
 

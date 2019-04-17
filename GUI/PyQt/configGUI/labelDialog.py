@@ -1,3 +1,5 @@
+# label dialog for selecting label name and color
+# pop up by pressing Enter
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
