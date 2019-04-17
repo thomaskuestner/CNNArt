@@ -1,3 +1,6 @@
+# # generate a network
+# # create model in createModel
+
 import os
 
 # os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
@@ -61,12 +64,16 @@ def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, 
     batchSize = batchSizes[0]
     learningRate = learningRates[0]
 
-    # change the shape of the dataset -> at color channel -> here one for grey scale
-    X_train = np.expand_dims(X_train, axis=-1)
-    X_test = np.expand_dims(X_test, axis=-1)
+    if len(X_train.shape) == 3:
+        # change the shape of the dataset -> at color channel -> here one for grey scale
+        dimExpandEnable = False
+        X_train = np.expand_dims(X_train, axis=-1)
+        X_test = np.expand_dims(X_test, axis=-1)
 
-    if X_valid is not None and y_valid is not None:
-        X_valid = np.expand_dims(X_valid, axis=-1)
+        if X_valid is not None and y_valid is not None:
+            X_valid = np.expand_dims(X_valid, axis=-1)
+    elif len(X_train.shape) == 4:
+        dimExpandEnable = True
 
     # number of classes
     numClasses = np.shape(y_train)[-1]
@@ -87,13 +94,14 @@ def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, 
                 batchSize=batchSize,
                 learningRate=learningRate,
                 iEpochs=iEpochs,
-                dlart_handle=dlart_handle)
+                dlart_handle=dlart_handle,
+                dimExpandEnable=dimExpandEnable)
 
     K.clear_session()
 
 
 def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None,
-                sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None):
+                sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None, dimExpandEnable=False):
     print('Training CNN')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
@@ -102,9 +110,9 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
     sPath, sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
 
-    model_name = sOutPath + os.sep + sFilename + '_lr_' + str(learningRate) + '_bs_' + str(batchSize)
+    model_name = sOutPath + os.sep + sFilename
     weight_name = model_name + '_weights.h5'
-    model_json = model_name + '_json'
+    model_json = model_name + '.json'
     model_all = model_name + '_model.h5'
     model_mat = model_name + '.mat'
 
@@ -141,11 +149,22 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
     cnn.compile(loss=loss_func, optimizer=opti, metrics=['accuracy'])
 
     # callbacks
+    callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=25, verbose=1)
+    # callback_tensorBoard = keras.callbacks.TensorBoard(log_dir=dlart_handle.getLearningOutputPath() + '/logs',
+    # histogram_freq=2,
+    # batch_size=batchSize,
+    # write_graph=True,
+    # write_grads=True,
+    # write_images=True,
+    # embeddings_freq=0,
+    # embeddings_layer_names=None,
+    #  embeddings_metadata=None)
 
-    callbacks = [EarlyStopping(monitor='val_loss', patience=25, verbose=1),
+    callbacks = [callback_earlyStopping,
                  ModelCheckpoint(sOutPath + os.sep + 'checkpoints/checker.hdf5', monitor='val_acc', verbose=0, period=5,
                                  save_best_only=True), LearningRateScheduler(schedule=step_decay, verbose=1),
                  LivePlotCallback(dlart_handle)]
+    # callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
 
     # data augmentation
     if dlart_handle.getDataAugmentationEnabled():
@@ -275,6 +294,8 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
     else:
         if X_valid is not None and y_valid is not None:
+            if dimExpandEnable:
+                X_valid = np.expand_dims(X_valid, axis=-1)
             # use validation/test split
             result = cnn.fit(X_train,
                              y_train,
@@ -284,6 +305,10 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
                              callbacks=callbacks,
                              verbose=1)
         else:
+            if dimExpandEnable:
+                X_train = np.expand_dims(X_train, axis=-1)
+                X_test = np.expand_dims(X_test, axis=-1)
+
             # use test set for validation and test
             result = cnn.fit(X_train,
                              y_train,

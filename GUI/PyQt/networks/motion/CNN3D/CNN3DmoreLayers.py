@@ -47,7 +47,7 @@ def fTrainInner(sOutPath, model, sModelName, patchSize=None, sInPaths=None, sInP
     if CV_Patient != 0: model_name = model_name + '_' + 'CV' + str(
         CV_Patient)  # determine if crossValPatient is used...
     weight_name = model_name + '_weights.h5'
-    model_json = model_name + '_json'
+    model_json = model_name + '.json'
     model_all = model_name + '_model.h5'
     model_mat = model_name + '.mat'
 

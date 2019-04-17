@@ -1,32 +1,51 @@
+### This model is modified based on 'networks/FullyConvolutionalNetworks/3D_VResFCN_Upsampling_final_Motion_Binary.py'
+## dimension extension in fTrainInner
+## callback settings, early stopping set to min_delta=0.02, patience=10
 import os
-
 # os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from tensorflow.python.client import device_lib
 
 print(device_lib.list_local_devices)
 
+import tensorflow as tf
 import os.path
 import scipy.io as sio
 import numpy as np
+import math
 import keras
 from keras.layers import Input
+import keras.backend as K
+from keras.layers import Conv2D
+from keras.layers import BatchNormalization
+from keras.layers import GlobalAveragePooling2D
+from keras.activations import softmax
 from keras.layers import concatenate
-from keras.layers.core import Flatten
+from keras.layers.core import Dense, Activation, Flatten
 from keras.models import Model
 from keras.models import Sequential
+from keras.layers import UpSampling3D
 from keras.layers.convolutional import Convolution2D
+from keras.layers import LeakyReLU
 from keras.layers import Softmax
+
 from keras.callbacks import EarlyStopping
 from keras.callbacks import LearningRateScheduler
+from keras.callbacks import ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint
 from keras.models import model_from_json
 from keras.regularizers import l2  # , activity_l2
-from DLart.Constants_DLart import *
+
+from keras.optimizers import SGD
 from networks.multiclass.SENets.deep_residual_learning_blocks import *
-import tensorflow as tf
+from utils.image_preprocessing import ImageDataGenerator
+from matplotlib import pyplot as plt
+
+from utils.LivePlotCallback import LivePlotCallback
+from DLart.Constants_DLart import *
+
+import scipy.io as sio
 
 
 def createModel(patchSize, numClasses, usingClassification=False):
@@ -43,10 +62,10 @@ def createModel(patchSize, numClasses, usingClassification=False):
                strides=(1, 1, 1),
                padding='same',
                kernel_initializer='he_normal')(input_tensor)
-    x = BatchNormalization(axis=bn_axis, name='bn_conv1')(x)
-    x = LeakyReLU(alpha=0.01)(x)
+    x = BatchNormalization(axis=bn_axis)(x)
+    x_after_stage_1 = LeakyReLU(alpha=0.01)(x)
 
-    x_after_stage_1 = Add()([input_tensor, x])
+    # x_after_stage_1 = Add()([input_tensor, x])
 
     # first down convolution
     x_down_conv_1 = projection_block_3D(x_after_stage_1,
@@ -54,14 +73,14 @@ def createModel(patchSize, numClasses, usingClassification=False):
                                         kernel_size=(2, 2, 2),
                                         stage=1,
                                         block=1,
-                                        se_enabled=False,
-                                        se_ratio=16)
+                                        se_enabled=True,
+                                        se_ratio=4)
 
     # second stage
-    x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=False,
-                          se_ratio=16)
-    # x = identity_block_3D(x, filters=(32, 32), kernel_size=(3,3,3), stage=2, block=2, se_enabled=False, se_ratio=16)
-    x_after_stage_2 = x
+    x = identity_block_3D(x_down_conv_1, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=1, se_enabled=True,
+                          se_ratio=4)
+    x_after_stage_2 = identity_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=2, block=2, se_enabled=True,
+                                        se_ratio=4)
 
     # second down convolution
     x_down_conv_2 = projection_block_3D(x_after_stage_2,
@@ -69,15 +88,15 @@ def createModel(patchSize, numClasses, usingClassification=False):
                                         kernel_size=(2, 2, 2),
                                         stage=2,
                                         block=3,
-                                        se_enabled=False,
-                                        se_ratio=16)
+                                        se_enabled=True,
+                                        se_ratio=8)
 
     # third stage
-    x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=False,
-                          se_ratio=16)
-    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=2, se_enabled=False, se_ratio=16)
+    x = identity_block_3D(x_down_conv_2, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=1, se_enabled=True,
+                          se_ratio=8)
+    x_after_stage_3 = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=2, se_enabled=True,
+                                        se_ratio=8)
     # x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=3, block=3, se_enabled=False, se_ratio=16)
-    x_after_stage_3 = x
 
     # third down convolution
     x_down_conv_3 = projection_block_3D(x_after_stage_3,
@@ -85,38 +104,22 @@ def createModel(patchSize, numClasses, usingClassification=False):
                                         kernel_size=(2, 2, 2),
                                         stage=3,
                                         block=4,
-                                        se_enabled=False,
+                                        se_enabled=True,
                                         se_ratio=16)
 
     # fourth stage
-    x = identity_block_3D(x_down_conv_3, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=1, se_enabled=False,
+    x = identity_block_3D(x_down_conv_3, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=1, se_enabled=True,
                           se_ratio=16)
-    x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=2, se_enabled=False, se_ratio=16)
-    # x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=3, se_enabled=False, se_ratio=16)
-    x_after_stage_4 = x
-
-    # fourth down convolution
-    x_down_conv_4 = projection_block_3D(x_after_stage_4,
-                                        filters=(256, 256),
-                                        kernel_size=(2, 2, 2),
-                                        stage=4,
-                                        block=4,
-                                        se_enabled=False,
+    x_after_stage_4 = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=2, se_enabled=True,
                                         se_ratio=16)
-
-    # fifth stage
-    x = identity_block_3D(x_down_conv_4, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=1, se_enabled=False,
-                          se_ratio=16)
-    x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=2, se_enabled=False, se_ratio=16)
-    # x = identity_block_3D(x, filters=(256, 256), kernel_size=(3, 3, 3), stage=5, block=3, se_enabled=False, se_ratio=16)
-    x_after_stage_5 = x
+    # x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=4, block=3, se_enabled=False, se_ratio=16)
 
     ### end of encoder path
 
     if usingClassification:
-        # use x_after_stage_5 as quantification output
+        # use x_after_stage_4 as quantification output
         # global average pooling
-        x_class = GlobalAveragePooling3D(data_format='channels_last')(x_after_stage_1)
+        x_class = GlobalAveragePooling3D(data_format=K.image_data_format())(x_after_stage_4)
 
         # fully-connected layer
         classification_output = Dense(units=numClasses,
@@ -126,58 +129,53 @@ def createModel(patchSize, numClasses, usingClassification=False):
 
     ### decoder path
 
-    # first transposed 3D Convolution
-    x = transposed_projection_block_3D(x_after_stage_5,
-                                       filters=(128, 128),
-                                       kernel_size=(2, 2, 2),
-                                       stage=5,
-                                       se_enabled=False,
-                                       se_ratio=16)
-    x = concatenate([x, x_after_stage_4], axis=bn_axis)
+    # first 3D upsampling
+    x = UpSampling3D(size=(2, 2, 2), data_format=K.image_data_format())(x_after_stage_4)
+    x = Conv3D(filters=64,
+               kernel_size=(3, 3, 3),
+               strides=(1, 1, 1),
+               padding='same',
+               kernel_initializer='he_normal')(x)
+    x = BatchNormalization(axis=bn_axis)(x)
+    x = LeakyReLU(alpha=0.01)(x)
 
-    # first decoder stage
-    # x = projection_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=1, se_enabled=False,
-    #                         se_ratio=16)
-    # x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=2, se_enabled=False, se_ratio=16)
-
-    # second transposed 3D Convolution
-    x = transposed_projection_block_3D(x,
-                                       filters=(64, 64),
-                                       kernel_size=(2, 2, 2),
-                                       stage=6,
-                                       se_enabled=False,
-                                       se_ratio=16)
     x = concatenate([x, x_after_stage_3], axis=bn_axis)
 
-    # second decoder stage
-    # x = projection_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=1, se_enabled=False, se_ratio=16)
-    # x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=2, se_enabled=False, se_ratio=16)
+    # first decoder stage
+    x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=1, se_enabled=True, se_ratio=16)
+    x = identity_block_3D(x, filters=(128, 128), kernel_size=(3, 3, 3), stage=6, block=2, se_enabled=True, se_ratio=16)
 
-    # third transposed 3D Convolution
-    x = transposed_projection_block_3D(x,
-                                       filters=(32, 32),
-                                       kernel_size=(2, 2, 2),
-                                       stage=7,
-                                       se_enabled=False,
-                                       se_ratio=16)
+    # second 3D upsampling
+    x = UpSampling3D(size=(2, 2, 2), data_format=K.image_data_format())(x)
+    x = Conv3D(filters=32,
+               kernel_size=(3, 3, 3),
+               strides=(1, 1, 1),
+               padding='same',
+               kernel_initializer='he_normal')(x)
+    x = BatchNormalization(axis=bn_axis)(x)
+    x = LeakyReLU(alpha=0.01)(x)
+
     x = concatenate([x, x_after_stage_2], axis=bn_axis)
 
-    # third decoder stage
-    # x = projection_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=8, block=1, se_enabled=False, se_ratio=16)
-    # x = identity_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=8, block=2, se_enabled=False, se_ratio=16)
+    # second decoder stage
+    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=1, se_enabled=True, se_ratio=8)
+    x = identity_block_3D(x, filters=(64, 64), kernel_size=(3, 3, 3), stage=7, block=2, se_enabled=True, se_ratio=8)
 
-    # fourth transposed 3D convolution
-    x = transposed_projection_block_3D(x,
-                                       filters=(16, 16),
-                                       kernel_size=(2, 2, 2),
-                                       stage=8,
-                                       se_enabled=False,
-                                       se_ratio=16)
+    # third 3D upsampling
+    x = UpSampling3D(size=(2, 2, 2), data_format=K.image_data_format())(x)
+    x = Conv3D(filters=16,
+               kernel_size=(3, 3, 3),
+               strides=(1, 1, 1),
+               padding='same',
+               kernel_initializer='he_normal')(x)
+    x = BatchNormalization(axis=bn_axis)(x)
+    x = LeakyReLU(alpha=0.01)(x)
+
     x = concatenate([x, x_after_stage_1], axis=bn_axis)
 
-    # fourth decoder stage
-    # x = projection_block_3D(x, filters=(16, 16), kernel_size=(3, 3, 3), stage=9, block=1, se_enabled=False, se_ratio=16)
-    # x = identity_block_3D(x, filters=(16, 16), kernel_size=(3, 3, 3), stage=9, block=1, se_enabled=False, se_ratio=16)
+    # third decoder stage
+    x = identity_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=9, block=1, se_enabled=True, se_ratio=4)
+    # x = identity_block_3D(x, filters=(32, 32), kernel_size=(3, 3, 3), stage=9, block=2, se_enabled=True, se_ratio=4)
 
     ### End of decoder
 
@@ -189,8 +187,11 @@ def createModel(patchSize, numClasses, usingClassification=False):
                padding='same',
                kernel_initializer='he_normal',
                name='conv_veryEnd')(x)
+    # x = BatchNormalization(axis=bn_axis)(x) # warum leakyrelu vor softmax?
+    # x = LeakyReLU(alpha=0.01)(x)
 
     segmentation_output = Softmax(axis=bn_axis, name='segmentation_output')(x)
+    # segmentation_output = keras.layers.activations.sigmoid(x)
 
     # create model
     if usingClassification:
@@ -207,14 +208,13 @@ def createModel(patchSize, numClasses, usingClassification=False):
 def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None,
            X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSizes=None,
            learningRates=None, iEpochs=None, dlart_handle=None):
-    usingClassification = True
+    usingClassification = dlart_handle.usingClassification
 
     # grid search on batch_sizes and learning rates
     # parse inputs
     batchSize = batchSizes[0]
     learningRate = learningRates[0]
 
-    # change the shape of the dataset -> at color channel -> here one for grey scale
     X_train = np.expand_dims(X_train, axis=-1)
     Y_segMasks_train_foreground = np.expand_dims(Y_segMasks_train, axis=-1)
     Y_segMasks_train_background = np.ones(Y_segMasks_train_foreground.shape) - Y_segMasks_train_foreground
@@ -353,8 +353,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
                     )
 
     # callbacks
-    # callback_earlyStopping = EarlyStopping(monitor='val_loss', patience=12, verbose=1)
-
+    callback_earlyStopping = EarlyStopping(monitor='val_loss', min_delta=0.02, patience=10, verbose=1)
     # callback_tensorBoard = keras.callbacks.TensorBoard(log_dir=dlart_handle.getLearningOutputPath() + '/logs',
     # histogram_freq=2,
     # batch_size=batchSize,
@@ -365,12 +364,10 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     # embeddings_layer_names=None,
     #  embeddings_metadata=None)
 
-    from utils.LivePlotCallback import LivePlotCallback
-    callbacks = [EarlyStopping(monitor='val_loss', patience=12, verbose=1),
-                 ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc',
-                                 verbose=0,
-                                 period=1, save_best_only=True),
-                 LearningRateScheduler(schedule=step_decay, verbose=1),
+    callbacks = [callback_earlyStopping,
+                 ModelCheckpoint(sOutPath + os.sep + 'checkpoints/checker.hdf5', monitor='val_acc', verbose=0,
+                                 period=5,
+                                 save_best_only=True), LearningRateScheduler(schedule=step_decay, verbose=1),
                  LivePlotCallback(dlart_handle)]
     # callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
 
@@ -380,7 +377,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
             result = cnn.fit(X_train,
                              {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
                              validation_data=(
-                                 X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}),
+                             X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -399,7 +396,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
             result = cnn.fit(X_train,
                              {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
                              validation_data=(
-                                 X_valid, {'segmentation_output': Y_segMasks_valid, 'classification_output': y_valid}),
+                             X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -407,7 +404,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         else:
             result = cnn.fit(X_train,
                              Y_segMasks_train,
-                             validation_data=(X_valid, Y_segMasks_valid),
+                             validation_data=(X_test, Y_segMasks_test),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -491,7 +488,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
 
 def step_decay(epoch, lr):
     drop = 0.1
-    epochs_drop = 10.0
+    epochs_drop = 20.0
     print("Current Learning Rate: " + str(lr))
     if epoch == epochs_drop or epoch == 2 * epochs_drop or epoch == 3 * epochs_drop or epoch == 4 * epochs_drop:
         lr = drop * lr
@@ -502,12 +499,13 @@ def step_decay(epoch, lr):
 
 def fPredict(X_test, y=None, Y_segMasks_test=None, sModelPath=None, sOutPath=None, batch_size=64):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
-    Input: X: Samples to predict on. The shape of X should fit to the input shape of the model y: Labels for the
-    Samples. Number of Samples should be equal to the number of samples in X sModelPath: (String) full path to a
-    trained keras model. It should be *_json.txt file. there has to be a corresponding *_weights.h5 file in the same
-    directory! sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy
-    stored. The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the
-    suffix '_pred.mat' batchSize: Batchsize, number of samples that are processed at once """
+        Input:
+            X: Samples to predict on. The shape of X should fit to the input shape of the model
+            y: Labels for the Samples. Number of Samples should be equal to the number of samples in X
+            sModelPath: (String) full path to a trained keras model. It should be *_json.txt file. there has to be a corresponding *_weights.h5 file in the same directory!
+            sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy stored.
+                        The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the suffix '_pred.mat'
+            batchSize: Batchsize, number of samples that are processed at once"""
 
     X_test = np.expand_dims(X_test, axis=-1)
     Y_segMasks_test_foreground = np.expand_dims(Y_segMasks_test, axis=-1)
@@ -687,7 +685,7 @@ def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
     cnn.add(Activation('softmax'))
 
     # opti = SGD(lr={{choice([0.1, 0.01, 0.05, 0.005, 0.001])}}, momentum=1e-8, decay=0.1, nesterov=True)
-    # cnn.compile(loss='sparse_categorical_crossentropy', optimizer=opti)
+    # cnn.compile(loss='categorical_crossentropy', optimizer=opti)
 
     epochs = 300
 
