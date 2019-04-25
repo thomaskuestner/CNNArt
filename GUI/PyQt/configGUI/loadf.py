@@ -1,3 +1,4 @@
+## load image file
 import os
 import dicom
 import numpy as np
@@ -19,8 +20,8 @@ class loadImage(QtCore.QThread):
         # pathDicom is a folder with dicom images: load images in this folder
         # pathDicom is a single file: ima/dcm, .npy, .mat, .nii, .jpg/.tif/.png/other image format
         # pathDicom is a array: print this image direcctly
-        # array is 4D: time, slice, row, column
-        # array is 5D: time, slice, row, column, channel
+        # array is 4D: time, row, column, slice,
+        # array is 5D: time, row, column, slice, channel
         # every image will be stored in self.voxel_ndarray
         super(loadImage, self).__init__()
         self.PathDicom = pathDicom
@@ -63,10 +64,20 @@ class loadImage(QtCore.QThread):
             # here is pathdicom a numpy array
             self.new_shape = list(self.PathDicom.shape)
             if len(self.new_shape) < 3:
-                self.new_shape.append(1)
+                self.voxel_ndarray = np.expand_dims(self.voxel_ndarray, axis=-1)
             elif len(self.new_shape) == 4:
-                self.new_shape.insert(0, 1)
-            self.voxel_ndarray = self.PathDicom.reshape(self.new_shape)
+                self.voxel_ndarray = np.expand_dims(self.voxel_ndarray, axis=0)
+            else:
+                self.voxel_ndarray = self.PathDicom
+            shape = list(self.voxel_ndarray.shape)
+            if len(shape) == 5 and shape.index(min(shape)) == 4:
+                # channel last
+                self.voxel_ndarray = np.swapaxes(self.voxel_ndarray, 3, 4)
+                self.voxel_ndarray = np.swapaxes(self.voxel_ndarray, 2, 3)
+                self.voxel_ndarray = np.swapaxes(self.voxel_ndarray, 1, 2)
+
+            self.new_shape = list(self.voxel_ndarray.shape)
+            print(self.new_shape)
 
         self.trigger.emit()
 

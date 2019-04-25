@@ -687,7 +687,7 @@ def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
     cnn.add(Activation('softmax'))
 
     # opti = SGD(lr={{choice([0.1, 0.01, 0.05, 0.005, 0.001])}}, momentum=1e-8, decay=0.1, nesterov=True)
-    # cnn.compile(loss='categorical_crossentropy', optimizer=opti)
+    # cnn.compile(loss='sparse_categorical_crossentropy', optimizer=opti)
 
     epochs = 300
 

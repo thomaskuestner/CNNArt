@@ -1,5 +1,4 @@
-import os
-
+# for generating a network table for editing predefined networks name and path
 import pandas as pd
 
 from PyQt5 import QtWidgets

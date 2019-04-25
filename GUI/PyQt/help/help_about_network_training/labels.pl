@@ -29,5 +29,25 @@ $noresave{$key} = "$nosave";
 # labels from external_latex_labels array.
 
 
+$key = q/fig:datasets_interface/;
+$external_latex_labels{$key} = q|2|; 
+$noresave{$key} = "$nosave";
+
+$key = q/fig:network_interface/;
+$external_latex_labels{$key} = q|5|; 
+$noresave{$key} = "$nosave";
+
+$key = q/fig:perform_patching/;
+$external_latex_labels{$key} = q|3|; 
+$noresave{$key} = "$nosave";
+
+$key = q/fig:perform_training/;
+$external_latex_labels{$key} = q|4|; 
+$noresave{$key} = "$nosave";
+
+$key = q/fig:select_datasets/;
+$external_latex_labels{$key} = q|1|; 
+$noresave{$key} = "$nosave";
+
 1;
 

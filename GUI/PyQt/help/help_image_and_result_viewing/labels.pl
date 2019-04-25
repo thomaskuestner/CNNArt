@@ -25,5 +25,21 @@ $noresave{$key} = "$nosave";
 # labels from external_latex_labels array.
 
 
+$key = q/fig:cursor_inspector/;
+$external_latex_labels{$key} = q|3|; 
+$noresave{$key} = "$nosave";
+
+$key = q/fig:select_ROI/;
+$external_latex_labels{$key} = q|4|; 
+$noresave{$key} = "$nosave";
+
+$key = q/fig:set_result_color/;
+$external_latex_labels{$key} = q|2|; 
+$noresave{$key} = "$nosave";
+
+$key = q/fig:show_result/;
+$external_latex_labels{$key} = q|1|; 
+$noresave{$key} = "$nosave";
+
 1;
 

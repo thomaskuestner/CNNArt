@@ -6,7 +6,6 @@ import os
 import pickle
 import subprocess
 import sys
-
 import h5py
 import keras.backend as K
 import matplotlib
@@ -24,37 +23,38 @@ from PyQt5.QtWidgets import QAbstractItemView, QTableWidgetItem, QMdiSubWindow, 
 from keras.models import load_model
 from keras.utils.vis_utils import model_to_dot
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.colors import ListedColormap
 from matplotlib.figure import Figure
 from matplotlib.path import Path
+from matplotlib import colors
+from matplotlib.patches import Rectangle, Ellipse, PathPatch
 
-from DLart.network_interface import DataSetsWindow, NetworkInterface
+
 from config.PATH import DLART_OUT_PATH, PATH_OUT, MARKING_PATH, DATASETS, SUBDIRS
+from configGUI.matplotlibwidget import MatplotlibWidget, MyMplCanvas
+from configGUI.network_visualization import cnn2d_visual
+from utils.label import Label
+from utils.tftheanoFunction import TensorFlowTheanoFunction
 from configGUI.canvas import Canvas
 from configGUI.gridTable import TableWidget
 from configGUI.labelDialog import LabelDialog
 from configGUI.labelTable import LabelTable
-from utils.label import Label
-
-matplotlib.use('Qt5Agg')
-from matplotlib import colors
-from matplotlib.patches import Rectangle, Ellipse, PathPatch
-
 from configGUI import network_visualization
 from configGUI.Grey_window import grey_window
 from configGUI.Patches_window import Patches_window
 from configGUI.framework import Ui_MainWindow
 from configGUI.loadf2 import *
-from configGUI.matplotlibwidget import MyMplCanvas
 from configGUI.Unpatch import UnpatchType, UnpatchArte
 from configGUI.Unpatch_eight import UnpatchArte8
 from configGUI.Unpatch_two import fUnpatch2D
 from configGUI.activescene import Activescene
 from configGUI.activeview import Activeview
 from configGUI.loadf import loadImage
+from DLart.network_interface import DataSetsWindow, NetworkInterface
 from DLart.dlart import DeepLearningArtApp
 from DLart.Constants_DLart import *
+
+matplotlib.use('Qt5Agg')
 
 
 class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -494,6 +494,10 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.training_live_performance_figure = Figure(figsize=(10, 10))
         self.canvas_training_live_performance_figure = FigureCanvas(self.training_live_performance_figure)
 
+        # network architecture
+        self.network_architecture_figure = Figure(figsize=(10, 10))
+        self.canvas_network_architecture_figure = FigureCanvas(self.network_architecture_figure)
+
         # confusion matrix
         self.confusion_matrix_figure = Figure(figsize=(10, 10))
         self.canvas_confusion_matrix_figure = FigureCanvas(self.confusion_matrix_figure)
@@ -574,7 +578,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.wyInputData.setCurrentIndex(0)
         self.wyInputData.activated.connect(self.on_wyInputData_clicked)
 
-        self.matplotlibwidget_static.show()
         self.horizontalSliderPatch.hide()
         self.horizontalSliderSlice.hide()
 
@@ -1027,12 +1030,12 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.PathDicom = self.file_dialog.getExistingDirectory(self, 'open a directory', MRPath)
             elif index == 2:
                 self.PathDicom = \
-                        self.file_dialog.getOpenFileName(self, 'open an image', MRPath, 'All Files(*.*)')[
-                            0]
+                    self.file_dialog.getOpenFileName(self, 'open an image', MRPath, 'All Files(*.*)')[
+                        0]
             elif index == 3:
                 imagefilelist = []
                 if self.datasets_window.getCurrentRow() is not None:
-                     imagefilelist.append(self.pathDatabase + os.sep +self.datasets_window.getCurrentRow())
+                    imagefilelist.append(self.pathDatabase + os.sep + self.datasets_window.getCurrentRow())
                 else:
                     if self.selectedDatasets is not None and self.selectedPatients is not None:
                         for patient in self.selectedPatients:
@@ -1059,10 +1062,9 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.selectorPath = self.PathDicom
             self.newMR = loadImage(self.PathDicom)
         elif type(self.PathDicom) is np.ndarray:
-            self.array = self.PathDicom
+            self.newMR = loadImage(self.PathDicom)
             self.PathDicom = ''
             self.selectorPath = self.PathDicom
-            self.newMR = loadImage(self.array)
         else:
             if not nothing2show:
                 QtWidgets.QMessageBox.information(self, 'Warning', 'This format is not supported!')
@@ -1103,14 +1105,13 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.load_patch_end()
         else:
             self.openImage.setDisabled(False)
-            self.openImage.setCurrentIndex(0)
             if not nothing2show:
                 QtWidgets.QMessageBox.information(self, 'Warning', 'This format is not supported!')
-
         try:
             self.imgdialog.close()
         except:
             pass
+        self.openImage.setCurrentIndex(0)
 
     def load_end(self):
 
@@ -1121,7 +1122,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                     for i in range(self.layoutlines):
                         for j in range(self.layoutcolumns):
                             self.maingrids1.itemAtPosition(i, j).addPathd(self.PathDicom, 0)
-                    # self.maingrids1.itemAtPosition(i, j).addPathd(self.PathDicom, 1)
                     for i in range(self.layoutlines):
                         for j in range(self.layoutcolumns):
                             if self.maingrids1.itemAtPosition(i, j).mode == 1 and \
@@ -1218,7 +1218,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                     self.load_MR(4)
                 else:
                     self.imgdialog = QtWidgets.QDialog()
-                    self.imgdialog.setWindowTitle('open an image')
                     self.imgdialog.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint | QtCore.Qt.FramelessWindowHint)
                     layout = QtWidgets.QVBoxLayout()
                     icon = QtGui.QIcon()
@@ -1240,6 +1239,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 return
         else:
             QtWidgets.QMessageBox.information(self, 'Warning', 'No result file!')
+        self.openResult.setCurrentIndex(0)
 
     def load_patch_end(self):
         try:
@@ -1258,7 +1258,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 cnrlist.append(count)
                 default_patch_color = cmap3
                 for c in range(len(cmap3)):
-                    self.patch_color_df.loc[count, 'class'] = 'class' + ' %s'%c
+                    self.patch_color_df.loc[count, 'class'] = 'class' + ' %s' % c
                     self.patch_color_df.loc[count, 'color'] = default_patch_color[c]
                 colormaplist.append(default_patch_color)
 
@@ -1275,7 +1275,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                     cnrlist.append(count)
                     default_patch_color = cmap1
                     for c in range(len(cmap1)):
-                        self.patch_color_df.loc[count, 'class'] = 'class' + ' %s'%c
+                        self.patch_color_df.loc[count, 'class'] = 'class' + ' %s' % c
                         self.patch_color_df.loc[count, 'color'] = default_patch_color[c]
                     colormaplist.append(default_patch_color)
             else:
@@ -1332,7 +1332,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         except:
             self.openResult.setCurrentIndex(0)
             self.loadPatch = False
-            raise QMessageBox.warning(self, 'Error', 'File is not supported!')
+            QMessageBox.information(self, 'Error', 'File is not supported!')
         try:
             self.openimg.close()
         except:
@@ -1340,52 +1340,64 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def flip_image(self):
         # to avoid for confusion with rotate dimension of image, use flip here to rotate image clockwise 90 degree
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            array = self.canvasl.get_image_array()
-            if array is not None:
-                array = np.rot90(array, axes=(-2, -1))
-                self.canvasl.set_image_array(array)
-        for item in self.view_line_list:
-            self.view_line = item
-            self.canvas1 = self.view_line.newcanvas1
-            array = self.canvas1.get_image_array()
-            if array is not None:
-                array = np.rot90(array, axes=(-2, -1))
-                self.canvas1.set_image_array(array)
-            self.canvas2 = self.view_line.newcanvas2
-            array = self.canvas2.get_image_array()
-            if array is not None:
-                array = np.rot90(array, axes=(-2, -1))
-                self.canvas2.set_image_array(array)
-            self.canvas3 = self.view_line.newcanvas3
-            array = self.canvas3.get_image_array()
-            if array is not None:
-                array = np.rot90(array, axes=(-2, -1))
-                self.canvas3.set_image_array(array)
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    array = self.canvasl.get_image_array()
+                    if array is not None:
+                        array = np.rot90(array, axes=(-2, -1))
+                        self.canvasl.set_image_array(array)
+        elif self.vision == 3:
+            for item in self.view_line_list:
+                self.view_line = item
+                self.canvas1 = self.view_line.newcanvas1
+                if self.canvas1 is not None:
+                    array = self.canvas1.get_image_array()
+                    if array is not None:
+                        array = np.rot90(array, axes=(-2, -1))
+                        self.canvas1.set_image_array(array)
+                self.canvas2 = self.view_line.newcanvas2
+                if self.canvas2 is not None:
+                    array = self.canvas2.get_image_array()
+                    if array is not None:
+                        array = np.rot90(array, axes=(-2, -1))
+                        self.canvas2.set_image_array(array)
+                self.canvas3 = self.view_line.newcanvas3
+                if self.canvas3 is not None:
+                    array = self.canvas3.get_image_array()
+                    if array is not None:
+                        array = np.rot90(array, axes=(-2, -1))
+                        self.canvas3.set_image_array(array)
 
     def fit_image(self):
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            aspect = self.canvasl.get_aspect()
-            aspect = 'auto' if aspect == 'equal' else 'equal'
-            self.canvasl.set_aspect(aspect)
-        for item in self.view_line_list:
-            self.view_line = item
-            self.canvas1 = self.view_line.newcanvas1
-            aspect = self.canvas1.get_aspect()
-            aspect = 'auto' if aspect == 'equal' else 'equal'
-            self.canvas1.set_aspect(aspect)
-            self.canvas2 = self.view_line.newcanvas2
-            aspect = self.canvas2.get_aspect()
-            aspect = 'auto' if aspect == 'equal' else 'equal'
-            self.canvas2.set_aspect(aspect)
-            self.canvas3 = self.view_line.newcanvas3
-            aspect = self.canvas3.get_aspect()
-            aspect = 'auto' if aspect == 'equal' else 'equal'
-            self.canvas3.set_aspect(aspect)
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    aspect = self.canvasl.get_aspect()
+                    aspect = 'auto' if aspect == 'equal' else 'equal'
+                    self.canvasl.set_aspect(aspect)
+        elif self.vision == 3:
+            for item in self.view_line_list:
+                self.view_line = item
+                self.canvas1 = self.view_line.newcanvas1
+                if self.canvas1 is not None:
+                    aspect = self.canvas1.get_aspect()
+                    aspect = 'auto' if aspect == 'equal' else 'equal'
+                    self.canvas1.set_aspect(aspect)
+                self.canvas2 = self.view_line.newcanvas2
+                if self.canvas2 is not None:
+                    aspect = self.canvas2.get_aspect()
+                    aspect = 'auto' if aspect == 'equal' else 'equal'
+                    self.canvas2.set_aspect(aspect)
+                self.canvas3 = self.view_line.newcanvas3
+                if self.canvas3 is not None:
+                    aspect = self.canvas3.get_aspect()
+                    aspect = 'auto' if aspect == 'equal' else 'equal'
+                    self.canvas3.set_aspect(aspect)
 
     def set_color(self):
 
@@ -1403,10 +1415,22 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 vtr3 = v3
                 cmaps = cm
                 vtrs = vs
-                for item in self.view_group_list:
-                    self.view_group = item
-                    self.view_group.loadScene_result(self.view_group.refbox.currentIndex())
-                    self.view_group.anewcanvas.set_color()
+                if 'prob_pre' in self.conten:
+                    colormaplist[self.view_group.refbox.currentIndex()-1] = cmap3
+                elif 'prob_test' in self.conten:
+                    colormaplist[self.view_group.refbox.currentIndex()-1] = cmap1
+                else:
+                    colormaplist[self.view_group.refbox.currentIndex()-1] = cmaps
+                if self.vision == 2:
+                    for item in self.view_group_list:
+                        self.view_group = item
+                        self.view_group.loadScene_result(self.view_group.refbox.currentIndex())
+                        self.view_group.anewcanvas.set_color()
+                elif self.vision == 3:
+                    for item in self.view_line_list:
+                        self.view_line = item
+                        self.view_line.loadScene_result(self.view_line.refbox.currentIndex())
+
 
     def set_transparency(self, value):
 
@@ -1422,83 +1446,99 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.colors['classes']['trans'][0] = vtrs
         with open('configGUI/colors1.json', 'w') as json_data:
             json_data.write(json.dumps(self.colors))
-        for item in self.view_group_list:
-            self.view_group = item
-            self.view_group.anewcanvas.set_transparency(vtrs)
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                if self.view_group.anewcanvas is not None:
+                    self.view_group.anewcanvas.set_transparency(vtrs)
+        elif self.vision == 3:
+            for item in self.view_line_list:
+                self.view_line = item
+                if self.view_line.newcanvas1 is not None:
+                    self.view_line.newcanvas1.set_transparency(vtrs)
+                if self.view_line.newcanvas2 is not None:
+                    self.view_line.newcanvas2.set_transparency(vtrs)
+                if self.view_line.newcanvas3 is not None:
+                    self.view_line.newcanvas3.set_transparency(vtrs)
+
 
     def newShape(self):
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            if self.canvasl.get_open_dialog():
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    if self.canvasl.get_open_dialog():
 
-                color = colors.to_hex('b', keep_alpha=True)
+                        color = colors.to_hex('b', keep_alpha=True)
 
-                if not self.useDefaultLabelCheckbox.isChecked() or not self.defaultLabelTextLine.text():
-                    self.labelDialog = LabelDialog(parent=self, listItem=self.labelHist)
-                    text = self.labelDialog.popUp(text=self.prevLabelText)
-                    self.canvasl.set_open_dialog(False)
-                    self.prevLabelText = text
+                        if not self.useDefaultLabelCheckbox.isChecked() or not self.defaultLabelTextLine.text():
+                            self.labelDialog = LabelDialog(parent=self, listItem=self.labelHist)
+                            text = self.labelDialog.popUp(text=self.prevLabelText)
+                            self.canvasl.set_open_dialog(False)
+                            self.prevLabelText = text
 
-                    if text is not None:
-                        if text not in self.labelHist:
-                            self.labelHist.append(text)
+                            if text is not None:
+                                if text not in self.labelHist:
+                                    self.labelHist.append(text)
+                                else:
+                                    pass
+
+                                self.df = pandas.read_csv(self.labelfile)
+                                df_size = pandas.DataFrame.count(self.df)
+                                df_rows = df_size['labelshape'] - 1
+                                self.number = df_rows
+                                self.df.loc[df_rows, 'image'] = self.view_group.current_image()
+                                self.df.loc[df_rows, 'labelname'] = self.prevLabelText
+                                if self.labelDialog.getColor():
+                                    color = self.labelDialog.getColor()
+                                    self.df.loc[df_rows, 'labelcolor'] = color
+                                else:
+                                    self.df.loc[df_rows, 'labelcolor'] = color
+                                self.df.to_csv(self.labelfile, index=False)
+
                         else:
-                            pass
+                            text = self.defaultLabelTextLine.text()
+                            self.prevLabelText = text
+                            if text not in self.labelHist:
+                                self.labelHist.append(text)
+                            if text is not None:
+                                self.df = pandas.read_csv(self.labelfile)
+                                df_size = pandas.DataFrame.count(self.df)
+                                df_rows = df_size['labelshape'] - 1
+                                self.number = df_rows
+                                self.df.loc[df_rows, 'image'] = self.view_group.current_image()
+                                self.df.loc[df_rows, 'labelname'] = self.prevLabelText
+                                dfcolor = pandas.read_csv('configGUI/predefined_label.csv')
+                                if not dfcolor[dfcolor['label name'] == str(self.prevLabelText)].index.values.astype(
+                                        int) == []:
+                                    colorind = \
+                                        dfcolor[dfcolor['label name'] == str(self.prevLabelText)].index.values.astype(int)[0]
+                                    color = dfcolor.at[colorind, 'label color']
+                                else:
+                                    pass
+                                self.df.loc[df_rows, 'labelcolor'] = color
+                                self.df.to_csv(self.labelfile, index=False)
 
-                        self.df = pandas.read_csv(self.labelfile)
-                        df_size = pandas.DataFrame.count(self.df)
-                        df_rows = df_size['labelshape'] - 1
-                        self.number = df_rows
-                        self.df.loc[df_rows, 'image'] = self.view_group.current_image()
-                        self.df.loc[df_rows, 'labelname'] = self.prevLabelText
-                        if self.labelDialog.getColor():
-                            color = self.labelDialog.getColor()
-                            self.df.loc[df_rows, 'labelcolor'] = color
-                        else:
-                            self.df.loc[df_rows, 'labelcolor'] = color
-                        self.df.to_csv(self.labelfile, index=False)
-
-                else:
-                    text = self.defaultLabelTextLine.text()
-                    self.prevLabelText = text
-                    if text not in self.labelHist:
-                        self.labelHist.append(text)
-                    if text is not None:
-                        self.df = pandas.read_csv(self.labelfile)
-                        df_size = pandas.DataFrame.count(self.df)
-                        df_rows = df_size['labelshape'] - 1
-                        self.number = df_rows
-                        self.df.loc[df_rows, 'image'] = self.view_group.current_image()
-                        self.df.loc[df_rows, 'labelname'] = self.prevLabelText
-                        dfcolor = pandas.read_csv('configGUI/predefined_label.csv')
-                        if not dfcolor[dfcolor['label name'] == str(self.prevLabelText)].index.values.astype(
-                                int) == []:
-                            colorind = \
-                                dfcolor[dfcolor['label name'] == str(self.prevLabelText)].index.values.astype(int)[0]
-                            color = dfcolor.at[colorind, 'label color']
-                        else:
-                            pass
-                        self.df.loc[df_rows, 'labelcolor'] = color
-                        self.df.to_csv(self.labelfile, index=False)
-
-                self.canvasl.set_facecolor(color)
-            self.updateList()
+                        self.canvasl.set_facecolor(color)
+                    self.updateList()
 
     def shapeSelectionChanged(self, selected):
         # selected shape changed --> selected item changes at the same time
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            if selected:
-                for i in range(len(self.labelList.get_list())):
-                    if self.labelList.get_list()[i][0] == str(self.canvasl.get_selected()):
-                        selectedRow = i
-                        if selectedRow is not None:
-                            self.selectedshape_name = self.labelList.get_list()[selectedRow][6]
-                            self.canvasl.set_labelon(True)
-                            self.canvasl.set_toolTip(self.selectedshape_name)
-                            self.labelList.selectRow(selectedRow)
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    if selected:
+                        for i in range(len(self.labelList.get_list())):
+                            if self.labelList.get_list()[i][0] == str(self.canvasl.get_selected()):
+                                selectedRow = i
+                                if selectedRow is not None:
+                                    self.selectedshape_name = self.labelList.get_list()[selectedRow][6]
+                                    self.canvasl.set_labelon(True)
+                                    self.canvasl.set_toolTip(self.selectedshape_name)
+                                    self.labelList.selectRow(selectedRow)
 
     def selector_mode(self):
 
@@ -1559,9 +1599,10 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.labelListView.close()
 
     def stop_view(self, n):
-        for item in self.view_group_list:
-            self.view_group = item
-            self.view_group.Viewpanel.stopMove(n)
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.view_group.Viewpanel.stopMove(n)
 
     def show_variables(self):
         dirlist = list(dir(self))
@@ -1614,49 +1655,54 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def edit_label(self, ind):
 
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    self.labelDialog = LabelDialog(parent=self, listItem=self.labelHist)
+                    text = self.labelDialog.popUp(text=self.prevLabelText)
+                    self.canvasl.set_open_dialog(False)
+                    self.prevLabelText = text
 
-            self.labelDialog = LabelDialog(parent=self, listItem=self.labelHist)
-            text = self.labelDialog.popUp(text=self.prevLabelText)
-            self.canvasl.set_open_dialog(False)
-            self.prevLabelText = text
+                    if text is not None:
+                        if text not in self.labelHist:
+                            self.labelHist.append(text)
+                        else:
+                            pass
+                        self.selectind = ind.row()
+                        self.number = self.selectind
+                        self.df = pandas.read_csv(self.labelfile)
+                        self.df.loc[self.selectind, 'labelname'] = self.prevLabelText
+                        if self.labelDialog.getColor():
+                            color = self.labelDialog.getColor()
+                            self.df.loc[self.selectind, 'labelcolor'] = color
+                        else:
+                            color = self.df.loc[self.selectind, 'labelcolor']
+                        self.df.to_csv(self.labelfile, index=False)
+                        self.canvasl.set_facecolor(color)
 
-            if text is not None:
-                if text not in self.labelHist:
-                    self.labelHist.append(text)
-                else:
-                    pass
-                self.selectind = ind.row()
-                self.number = self.selectind
-                self.df = pandas.read_csv(self.labelfile)
-                self.df.loc[self.selectind, 'labelname'] = self.prevLabelText
-                if self.labelDialog.getColor():
-                    color = self.labelDialog.getColor()
-                    self.df.loc[self.selectind, 'labelcolor'] = color
-                else:
-                    color = self.df.loc[self.selectind, 'labelcolor']
-                self.df.to_csv(self.labelfile, index=False)
-                self.canvasl.set_facecolor(color)
-
-            self.updateList()
+                    self.updateList()
 
     def show_label_name(self, index):
-        if index == 1:
-            for item in self.view_group_list:
-                self.view_group = item
-                self.canvasl = self.view_group.anewcanvas
-                if self.selectoron or self.view_group.mode == 2:
-                    self.labelon = not self.labelon
-                    self.canvasl.set_labelon(self.labelon)
-        elif index == 2:
-            for item in self.view_group_list:
-                self.view_group = item
-                self.canvasl = self.view_group.anewcanvas
-                if self.selectoron or self.view_group.mode == 2:
-                    self.legendon = not self.legendon
-                    self.canvasl.set_legendon(self.legendon)
+        if self.vision == 2:
+            if index == 1:
+                for item in self.view_group_list:
+                    self.view_group = item
+                    self.canvasl = self.view_group.anewcanvas
+                    if self.canvasl is not None:
+                        if self.selectoron or self.view_group.mode == 2:
+                            self.labelon = not self.labelon
+                            self.canvasl.set_labelon(self.labelon)
+            elif index == 2:
+                for item in self.view_group_list:
+                    self.view_group = item
+                    self.canvasl = self.view_group.anewcanvas
+                    if self.canvasl is not None:
+                        if self.selectoron or self.view_group.mode == 2:
+                            self.legendon = not self.legendon
+                            self.canvasl.set_legendon(self.legendon)
+            self.labelButton.setCurrentIndex(0)
 
     def show_labelList(self):
 
@@ -1831,15 +1877,17 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                         n += 1
                     else:
                         break
-        for item in self.view_group_list:
-            self.view_group = item
-            self.updateList()
-            self.load_markings(self.view_group.current_slice())
-            self.view_group.rotateSignal.connect(self.load_markings)
-            self.view_group.scrollSignal.connect(self.load_markings)
-            self.view_group.rotateSignal.connect(self.changeSelector)
-            self.view_group.scrollSignal.connect(self.changeSelector)
-            self.view_group.zoomSignal.connect(self.changeSelector)
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                if self.view_group.anewcanvas is not None:
+                    self.updateList()
+                    self.load_markings(self.view_group.current_slice())
+                    self.view_group.rotateSignal.connect(self.load_markings)
+                    self.view_group.scrollSignal.connect(self.load_markings)
+                    self.view_group.rotateSignal.connect(self.changeSelector)
+                    self.view_group.scrollSignal.connect(self.changeSelector)
+                    self.view_group.zoomSignal.connect(self.changeSelector)
 
     def changeSelector(self, val):
         self.bnoselect.setChecked(True)
@@ -1854,129 +1902,135 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         num2 = df[df['slice'] == slice].index.values.astype(int)
         num = list(set(num1).intersection(num2))
         self.markings = []
-        for item in self.view_group_list:
-            self.view_group = item
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                if self.view_group.anewcanvas is not None:
+                    for i in range(0, len(num)):
+                        status = df['status'][num[i]]
+                        df.select_dtypes(include='object')
+                        if df['labelshape'][num[i]] == 'lasso':
+                            path = Path(np.asarray(eval(df['path'][num[i]])))
+                            newItem = PathPatch(path, fill=True, alpha=.2, edgecolor=None)
+                        else:
+                            newItem = eval(df['artist'][num[i]])
+                        color = df['labelcolor'][num[i]]
+                        self.markings.append(newItem)
+                        if status == 0:
+                            newItem.set_visible(True)
+                            if type(newItem) is Rectangle or Ellipse:
+                                newItem.set_picker(True)
+                            else:
+                                newItem.set_picker(False)
+                            newItem.set_facecolor(color)
+                            newItem.set_alpha(0.5)
+                        else:
+                            newItem.set_visible(False)
+                        self.view_group.anewcanvas.ax1.add_artist(newItem)
 
-            for i in range(0, len(num)):
-                status = df['status'][num[i]]
-                df.select_dtypes(include='object')
-                if df['labelshape'][num[i]] == 'lasso':
-                    path = Path(np.asarray(eval(df['path'][num[i]])))
-                    newItem = PathPatch(path, fill=True, alpha=.2, edgecolor=None)
-                else:
-                    newItem = eval(df['artist'][num[i]])
-                color = df['labelcolor'][num[i]]
-                self.markings.append(newItem)
-                if status == 0:
-                    newItem.set_visible(True)
-                    if type(newItem) is Rectangle or Ellipse:
-                        newItem.set_picker(True)
-                    else:
-                        newItem.set_picker(False)
-                    newItem.set_facecolor(color)
-                    newItem.set_alpha(0.5)
-                else:
-                    newItem.set_visible(False)
-                self.view_group.anewcanvas.ax1.add_artist(newItem)
-
-            self.view_group.anewcanvas.blit(self.view_group.anewcanvas.ax1.bbox)
+                    self.view_group.anewcanvas.blit(self.view_group.anewcanvas.ax1.bbox)
 
     def label_on_off(self, status):
 
         for item in self.markings:
             item.remove()
         self.newcanvasview()
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            self.canvasl = self.view_group.anewcanvas
-            self.canvasl.draw_idle()
-            df = pandas.read_csv(self.labelfile)
-            num1 = df[df['image'] == self.view_group.current_image()].index.values.astype(int)
-            num2 = df[df['slice'] == self.view_group.current_slice()].index.values.astype(int)
-            num = list(set(num1).intersection(num2))
-            self.markings = []
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    self.canvasl.draw_idle()
+                    df = pandas.read_csv(self.labelfile)
+                    num1 = df[df['image'] == self.view_group.current_image()].index.values.astype(int)
+                    num2 = df[df['slice'] == self.view_group.current_slice()].index.values.astype(int)
+                    num = list(set(num1).intersection(num2))
+                    self.markings = []
 
-            for i in range(0, len(num)):
-                status = df['status'][num[i]]
-                df.select_dtypes(include='object')
-                if df['labelshape'][num[i]] == 'lasso':
-                    path = Path(np.asarray(eval(df['path'][num[i]])))
-                    newItem = PathPatch(path, fill=True, alpha=.2, edgecolor=None)
-                else:
-                    newItem = eval(df['artist'][num[i]])
-                color = df['labelcolor'][num[i]]
-                self.markings.append(newItem)
+                    for i in range(0, len(num)):
+                        status = df['status'][num[i]]
+                        df.select_dtypes(include='object')
+                        if df['labelshape'][num[i]] == 'lasso':
+                            path = Path(np.asarray(eval(df['path'][num[i]])))
+                            newItem = PathPatch(path, fill=True, alpha=.2, edgecolor=None)
+                        else:
+                            newItem = eval(df['artist'][num[i]])
+                        color = df['labelcolor'][num[i]]
+                        self.markings.append(newItem)
 
-                if not status:
-                    newItem.set_visible(True)
-                    if type(newItem) is Rectangle or Ellipse:
-                        newItem.set_picker(True)
-                    else:
-                        newItem.set_picker(False)
-                    newItem.set_facecolor(color)
-                    newItem.set_alpha(0.5)
-                else:
-                    newItem.set_visible(False)
+                        if not status:
+                            newItem.set_visible(True)
+                            if type(newItem) is Rectangle or Ellipse:
+                                newItem.set_picker(True)
+                            else:
+                                newItem.set_picker(False)
+                            newItem.set_facecolor(color)
+                            newItem.set_alpha(0.5)
+                        else:
+                            newItem.set_visible(False)
 
-                self.canvasl.ax1.add_artist(newItem)
+                        self.canvasl.ax1.add_artist(newItem)
 
-            self.canvasl.blit(self.canvasl.ax1.bbox)
+                    self.canvasl.blit(self.canvasl.ax1.bbox)
 
     def clear_markings(self):
 
         self.load_old()
 
     def marking_shape(self, n):
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            self.canvasl = self.view_group.anewcanvas
-            state = self.cursorCross.isChecked()
+        # for labeling
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    state = self.cursorCross.isChecked()
 
-            if self.selectoron:
+                    if self.selectoron:
 
-                if n == 0:
-                    self.canvasl.set_state(2)
-                    self.canvasl.rec_toggle_selector_off()
-                    self.canvasl.ell_toggle_selector_off()
-                    self.canvasl.lasso_toggle_selector_off()
+                        if n == 0:
+                            self.canvasl.set_state(2)
+                            self.canvasl.rec_toggle_selector_off()
+                            self.canvasl.ell_toggle_selector_off()
+                            self.canvasl.lasso_toggle_selector_off()
 
-                elif n == 1:
-                    self.canvasl.set_state(1)
-                    self.canvasl.rec_toggle_selector_on()
-                    self.canvasl.set_cursor(state)
-                    self.canvasl.ell_toggle_selector_off()
-                    self.canvasl.lasso_toggle_selector_off()
+                        elif n == 1:
+                            self.canvasl.set_state(1)
+                            self.canvasl.rec_toggle_selector_on()
+                            self.canvasl.set_cursor(state)
+                            self.canvasl.ell_toggle_selector_off()
+                            self.canvasl.lasso_toggle_selector_off()
 
-                elif n == 2:
-                    self.canvasl.set_state(1)
-                    self.canvasl.rec_toggle_selector_off()
-                    self.canvasl.ell_toggle_selector_on()
-                    self.canvasl.set_cursor(state)
-                    self.canvasl.lasso_toggle_selector_off()
+                        elif n == 2:
+                            self.canvasl.set_state(1)
+                            self.canvasl.rec_toggle_selector_off()
+                            self.canvasl.ell_toggle_selector_on()
+                            self.canvasl.set_cursor(state)
+                            self.canvasl.lasso_toggle_selector_off()
 
-                elif n == 3:
-                    self.canvasl.set_state(1)
-                    self.canvasl.rec_toggle_selector_off()
-                    self.canvasl.ell_toggle_selector_off()
-                    self.canvasl.lasso_toggle_selector_on()
-                    self.canvasl.set_cursor(state)
+                        elif n == 3:
+                            self.canvasl.set_state(1)
+                            self.canvasl.rec_toggle_selector_off()
+                            self.canvasl.ell_toggle_selector_off()
+                            self.canvasl.lasso_toggle_selector_on()
+                            self.canvasl.set_cursor(state)
 
-            else:
-                pass
+                    else:
+                        pass
 
-            self.canvasl.newShape.connect(self.newShape)
-            self.canvasl.deleteEvent.connect(self.updateList)
-            self.canvasl.selectionChanged.connect(self.shapeSelectionChanged)
+                    self.canvasl.newShape.connect(self.newShape)
+                    self.canvasl.deleteEvent.connect(self.updateList)
+                    self.canvasl.selectionChanged.connect(self.shapeSelectionChanged)
 
     def handle_crossline(self):
-        for item in self.view_group_list:
-            self.view_group = item
-            self.canvasl = self.view_group.anewcanvas
-            self.canvasl = self.view_group.anewcanvas
-            state = self.cursorCross.isChecked()
-            self.canvasl.set_cursor(state)
+        # cursor inspector for labeling
+        if self.vision == 2:
+            for item in self.view_group_list:
+                self.view_group = item
+                self.canvasl = self.view_group.anewcanvas
+                if self.canvasl is not None:
+                    state = self.cursorCross.isChecked()
+                    self.canvasl.set_cursor(state)
 
     def loadPredefinedClasses(self, predefClassesFile):
         if os.path.exists(predefClassesFile) is True:
@@ -2250,11 +2304,13 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         if self.vision == 2:
             for item in self.view_group_list:
                 self.view_group = item
-                self.view_group.mouse_tracking(self.cursor_on)
+                if self.view_group.anewcanvas is not None:
+                    self.view_group.mouse_tracking(self.cursor_on)
         elif self.vision == 3:
             for item in self.view_line_list:
-                self.view_line = item
-                self.view_line.mouse_tracking(self.cursor_on)
+                if self.view_line.newcanvas1 is not None:
+                    self.view_line = item
+                    self.view_line.mouse_tracking(self.cursor_on)
 
     def newSliceview(self):
         self.graylabel.setText('G %s' % (self.graylist))
@@ -2353,23 +2409,13 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         if reply == QtWidgets.QMessageBox.Yes:
             try:
                 self.screenGrids.close()
+                self.labelListView.close()
+                self.info_popup_window.close()
+                self.datasets_window.close()
+                self.network_interface.window.close()
+                self.imgdialog.close()
             except:
-                try:
-                    self.labelListView.close()
-                except:
-                    try:
-                        self.info_popup_window.close()
-                    except:
-                        try:
-                            self.datasets_window.close()
-                        except:
-                            try:
-                                self.network_interface.window.close()
-                            except:
-                                try:
-                                    self.imgdialog.close()
-                                except:
-                                    pass
+                pass
             QCloseEvent.accept()
         else:
             QCloseEvent.ignore()
@@ -2405,11 +2451,6 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             ###############################################################################################################################################################################
 
     ####### network training
-
-    def button_selectDataset_prediction_clicked(self):
-        pathToDataset = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
-        self.deepLearningArtApp.setDatasetForPrediction(pathToDataset)
-        self.Label_currentDataset_prediction.setText(pathToDataset)
 
     def updateProgressBarTraining(self, val):
         if val >= 0 and val <= 100:
@@ -2660,6 +2701,9 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         self.datasets_train = []
         self.datasets_validation = []
         self.datasets_test = []
+        if self.selectedPatients is not None:
+            self.datasets_window = DataSetsWindow(self.selectedPatients, self.selectedDatasets)
+            self.datasets_window.show()
         self.valueChanged.emit(self.deepLearningArtApp.params)
 
     def openFileNamesDialog(self, dir=None):
@@ -2752,6 +2796,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
     def button_selectDataset_clicked(self):
         pathToDataset = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
         retbool, datasetName = self.deepLearningArtApp.loadDataset(pathToDataset)
+        self.deepLearningArtApp.setDatasetForPrediction(pathToDataset)
         if retbool == True:
             self.Label_currentDataset.setText(datasetName + " is used as dataset...")
         else:
@@ -2894,11 +2939,15 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.segmentation_masks_figure.savefig(self.deepLearningArtApp.getModelForPrediction()
                                                        + os.sep + str(index) + "_segmentation_masks_figure" + '.png')
                 self.canvas_segmentation_masks_figure.draw()
-                for w in self.verticalLayout_showing.widget():
-                    self.verticalLayout_showing.removeWidget(w)
-                self.verticalLayout_showing.addWidget(self.canvas_segmentation_masks_figure)
-                self.toolbar_segmentation_masks_figure = NavigationToolbar(self.canvas_segmentation_masks_figure, self)
-                self.verticalLayout_showing.addWidget(self.toolbar_segmentation_masks_figure)
+                self.graphicscene_segmentation_masks = QtWidgets.QGraphicsScene()
+                self.graphicscene_segmentation_masks.addWidget(self.canvas_segmentation_masks_figure)
+                self.graphicview_segmentation_masks = Activeview()
+                scrollAreaWidgetContents = QtWidgets.QWidget()
+                maingrids = QtWidgets.QGridLayout(scrollAreaWidgetContents)
+                self.showResultArea.setWidget(scrollAreaWidgetContents)
+                maingrids.addWidget(self.graphicview_segmentation_masks)
+                self.graphicview_segmentation_masks.setScene(self.graphicscene_segmentation_masks)
+
 
     def plotSegmentationArtifactMaps(self):
         unpatched_slices = self.deepLearningArtApp.getUnpatchedSlices()
@@ -2947,11 +2996,14 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                                                  + os.sep + str(index) + "_artifact_map_figure" + '.png')
 
                 self.canvas_artifact_map_figure.draw()
-                for w in self.verticalLayout_showing.widget():
-                    self.verticalLayout_showing.removeWidget(w)
-                self.verticalLayout_showing.addWidget(self.canvas_artifact_map_figure)
-                self.toolbar_artifact_map_figure = NavigationToolbar(self.canvas_artifact_map_figure, self)
-                self.verticalLayout_showing.addWidget(self.toolbar_artifact_map_figure)
+                self.graphicscene_artifact_map = QtWidgets.QGraphicsScene()
+                self.graphicscene_artifact_map.addWidget(self.canvas_artifact_map_figure)
+                self.graphicview_artifact_map = Activeview()
+                scrollAreaWidgetContents = QtWidgets.QWidget()
+                maingrids = QtWidgets.QGridLayout(scrollAreaWidgetContents)
+                self.showResultArea.setWidget(scrollAreaWidgetContents)
+                maingrids.addWidget(self.graphicview_artifact_map)
+                self.graphicview_artifact_map.setScene(self.graphicscene_artifact_map)
 
     def plotConfusionMatrix(self):
         confusion_matrix = self.deepLearningArtApp.getConfusionMatrix()
@@ -2985,21 +3037,48 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 axes_confmat.set_ylabel('True Label')
                 self.confusion_matrix_figure.tight_layout()
                 self.confusion_matrix_figure.savefig(self.deepLearningArtApp.getModelForPrediction()
-                                                            + os.sep + str(
+                                                     + os.sep + str(
                     len(target_names)) + "_canvas_confusion_matrix_figure" + '.png')
 
                 self.canvas_confusion_matrix_figure.draw()
-                for w in self.verticalLayout_showing.widget():
-                    self.verticalLayout_showing.removeWidget(w)
-
-                self.verticalLayout_showing.addWidget(self.canvas_confusion_matrix_figure)
-                self.toolbar_confusion_matrix_figure = NavigationToolbar(self.canvas_confusion_matrix_figure, self)
-                self.verticalLayout_showing.addWidget(self.toolbar_confusion_matrix_figure)
+                self.graphicscene_confusion_matrix = QtWidgets.QGraphicsScene()
+                self.graphicscene_confusion_matrix.addWidget(self.canvas_confusion_matrix_figure)
+                self.graphicview_confusion_matrix = Activeview()
+                scrollAreaWidgetContents = QtWidgets.QWidget()
+                maingrids = QtWidgets.QGridLayout(scrollAreaWidgetContents)
+                self.showResultArea.setWidget(scrollAreaWidgetContents)
+                maingrids.addWidget(self.graphicview_confusion_matrix)
+                self.graphicview_confusion_matrix.setScene(self.graphicscene_confusion_matrix)
             else:
                 raise ValueError('Confusion matrix shape does not match to target names')
 
         else:
             raise ValueError('There is no confusion matrix for segmentation')
+
+    def plotNetworkArchitecture(self, path=None):
+
+        if path is not None:
+            filename = os.path.splitext(path)[0]
+        else:
+            modelpath = os.path.split(self.openmodel_path)[0]
+            filename = modelpath + os.sep + 'architecture'
+            cnn2d_visual(self.model, title='', filename=filename)
+        self.network_architecture_figure.clear()
+        ax1 = self.network_architecture_figure.add_subplot(111)
+        ax1.clear()
+        image = plt.imread(filename + '.png')
+        ax1.imshow(image)
+        ax1.set_title('architecture')
+
+        self.canvas_network_architecture_figure.draw()
+        self.graphicscene_network_architecture = QtWidgets.QGraphicsScene()
+        self.graphicscene_network_architecture.addWidget(self.canvas_network_architecture_figure)
+        self.graphicview_network_architecture = Activeview()
+        scrollAreaWidgetContents = QtWidgets.QWidget()
+        maingrids = QtWidgets.QGridLayout(scrollAreaWidgetContents)
+        self.showResultArea.setWidget(scrollAreaWidgetContents)
+        maingrids.addWidget(self.graphicview_network_architecture)
+        self.graphicview_network_architecture.setScene(self.graphicscene_network_architecture)
 
     def textChangeAlpha(self, text):
         self.inputalpha = text
@@ -3043,84 +3122,86 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
                 self.W_F = 'w'
                 # show the weights
-                if self.modelDimension == '2D':
-                    if hasattr(self.LayerWeights[self.chosenLayerName], "ndim"):
+                try:
+                    if self.modelDimension == '2D':
+                        if hasattr(self.LayerWeights[self.chosenLayerName], "ndim"):
 
-                        if self.LayerWeights[self.chosenLayerName].ndim == 4:
-                            self.lcdNumberPatch.hide()
-                            self.lcdNumberSlice.hide()
-                            self.horizontalSliderPatch.hide()
-                            self.horizontalSliderSlice.hide()
-                            self.labelPatch.hide()
-                            self.labelSlice.hide()
+                            if self.LayerWeights[self.chosenLayerName].ndim == 4:
+                                self.lcdNumberPatch.hide()
+                                self.lcdNumberSlice.hide()
+                                self.horizontalSliderPatch.hide()
+                                self.horizontalSliderSlice.hide()
+                                self.labelPatch.hide()
+                                self.labelSlice.hide()
 
-                            # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
-                            # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
-                            # self.overlay.show()
+                                # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                                # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                                # self.overlay.show()
 
-                            self.matplotlibwidget_static.mpl.getLayersWeights(self.LayerWeights)
-                            self.wyPlot.setDisabled(True)
-                            self.newW2D = loadImage_weights_plot_2D(self.matplotlibwidget_static,
-                                                                    self.chosenLayerName)
-                            self.newW2D.trigger.connect(self.loadEnd2)
-                            self.newW2D.start()
+                                self.matplotlibwidget_static.mpl.getLayersWeights(self.LayerWeights)
+                                self.wyPlot.setDisabled(True)
+                                self.newW2D = loadImage_weights_plot_2D(self.matplotlibwidget_static,
+                                                                        self.chosenLayerName)
+                                self.newW2D.trigger.connect(self.loadEnd2)
+                                self.newW2D.start()
 
-                            # self.matplotlibwidget_static.mpl.weights_plot_2D(self.chosenLayerName)
-                            self.matplotlibwidget_static.show()
-                        # elif self.LayerWeights[self.chosenLayerName].ndim==0:
-                        #     self.showNoWeights()
-                        else:
-                            self.showWeightsDimensionError()
+                                # self.matplotlibwidget_static.mpl.weights_plot_2D(self.chosenLayerName)
+                                self.matplotlibwidget_static.show()
+                            # elif self.LayerWeights[self.chosenLayerName].ndim==0:
+                            #     self.showNoWeights()
+                            else:
+                                self.showWeightsDimensionError()
 
-                    elif self.LayerWeights[self.chosenLayerName] == 0:
-                        self.showNoWeights()
+                        elif self.LayerWeights[self.chosenLayerName] == 0:
+                            self.showNoWeights()
 
+                    elif self.modelDimension == '3D':
+                        if hasattr(self.LayerWeights[self.chosenLayerName], "ndim"):
 
-                elif self.modelDimension == '3D':
-                    if hasattr(self.LayerWeights[self.chosenLayerName], "ndim"):
+                            if self.LayerWeights[self.chosenLayerName].ndim == 5:
 
-                        if self.LayerWeights[self.chosenLayerName].ndim == 5:
+                                self.w = self.LayerWeights[self.chosenLayerName]
+                                self.totalWeights = self.w.shape[0]
+                                # self.totalWeightsSlices=self.w.shape[2]
+                                self.horizontalSliderPatch.setMinimum(1)
+                                self.horizontalSliderPatch.setMaximum(self.totalWeights)
+                                # self.horizontalSliderSlice.setMinimum(1)
+                                # self.horizontalSliderSlice.setMaximum(self.totalWeightsSlices)
+                                self.chosenWeightNumber = 1
+                                self.horizontalSliderPatch.setValue(self.chosenWeightNumber)
 
-                            self.w = self.LayerWeights[self.chosenLayerName]
-                            self.totalWeights = self.w.shape[0]
-                            # self.totalWeightsSlices=self.w.shape[2]
-                            self.horizontalSliderPatch.setMinimum(1)
-                            self.horizontalSliderPatch.setMaximum(self.totalWeights)
-                            # self.horizontalSliderSlice.setMinimum(1)
-                            # self.horizontalSliderSlice.setMaximum(self.totalWeightsSlices)
-                            self.chosenWeightNumber = 1
-                            self.horizontalSliderPatch.setValue(self.chosenWeightNumber)
+                                # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                                # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                                # self.overlay.show()
 
-                            # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
-                            # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
-                            # self.overlay.show()
+                                self.wyPlot.setDisabled(True)
+                                self.newW3D = loadImage_weights_plot_3D(self.matplotlibwidget_static, self.w,
+                                                                        self.chosenWeightNumber, self.totalWeights,
+                                                                        self.totalWeightsSlices)
+                                self.newW3D.trigger.connect(self.loadEnd2)
+                                self.newW3D.start()
 
-                            self.wyPlot.setDisabled(True)
-                            self.newW3D = loadImage_weights_plot_3D(self.matplotlibwidget_static, self.w,
-                                                                    self.chosenWeightNumber, self.totalWeights,
-                                                                    self.totalWeightsSlices)
-                            self.newW3D.trigger.connect(self.loadEnd2)
-                            self.newW3D.start()
+                                # self.matplotlibwidget_static.mpl.weights_plot_3D(self.w,self.chosenWeightNumber,self.totalWeights,self.totalWeightsSlices)
 
-                            # self.matplotlibwidget_static.mpl.weights_plot_3D(self.w,self.chosenWeightNumber,self.totalWeights,self.totalWeightsSlices)
+                                self.matplotlibwidget_static.show()
+                                self.horizontalSliderSlice.hide()
+                                self.horizontalSliderPatch.show()
+                                self.labelPatch.show()
+                                self.labelSlice.hide()
+                                self.lcdNumberSlice.hide()
+                                self.lcdNumberPatch.show()
+                            # elif self.LayerWeights[self.chosenLayerName].ndim==0:
+                            #     self.showNoWeights()
+                            else:
+                                self.showWeightsDimensionError3D()
 
-                            self.matplotlibwidget_static.show()
-                            self.horizontalSliderSlice.hide()
-                            self.horizontalSliderPatch.show()
-                            self.labelPatch.show()
-                            self.labelSlice.hide()
-                            self.lcdNumberSlice.hide()
-                            self.lcdNumberPatch.show()
-                        # elif self.LayerWeights[self.chosenLayerName].ndim==0:
-                        #     self.showNoWeights()
-                        else:
-                            self.showWeightsDimensionError3D()
+                        elif self.LayerWeights[self.chosenLayerName] == 0:
+                            self.showNoWeights()
 
-                    elif self.LayerWeights[self.chosenLayerName] == 0:
-                        self.showNoWeights()
-
-                else:
-                    print('the dimesnion should be 2D or 3D')
+                    else:
+                        print('the dimesnion should be 2D or 3D')
+                except:
+                    QMessageBox.information(self, "warning", "This layer is not supported to show")
 
             else:
                 self.showChooseLayerDialog()
@@ -3128,82 +3209,85 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         elif self.radioButton_2.isChecked() == True:
             if len(self.chosenLayerName) != 0:
                 self.W_F = 'f'
-                if self.modelDimension == '2D':
-                    if self.act[self.chosenLayerName].ndim == 4:
-                        self.activations = self.act[self.chosenLayerName]
-                        self.totalPatches = self.activations.shape[0]
+                try:
+                    if self.modelDimension == '2D':
+                        if self.act[self.chosenLayerName].ndim == 4:
+                            self.activations = self.act[self.chosenLayerName]
+                            self.totalPatches = self.activations.shape[0]
 
-                        self.matplotlibwidget_static.mpl.getLayersFeatures(self.activations, self.totalPatches)
+                            self.matplotlibwidget_static.mpl.getLayersFeatures(self.activations, self.totalPatches)
 
-                        # show the features
-                        self.chosenPatchNumber = 1
-                        self.horizontalSliderPatch.setMinimum(1)
-                        self.horizontalSliderPatch.setMaximum(self.totalPatches)
-                        self.horizontalSliderPatch.setValue(self.chosenPatchNumber)
+                            # show the features
+                            self.chosenPatchNumber = 1
+                            self.horizontalSliderPatch.setMinimum(1)
+                            self.horizontalSliderPatch.setMaximum(self.totalPatches)
+                            self.horizontalSliderPatch.setValue(self.chosenPatchNumber)
 
-                        # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
-                        # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
-                        # self.overlay.show()
-                        self.wyPlot.setDisabled(True)
-                        self.newf = loadImage_features_plot(self.matplotlibwidget_static,
-                                                            self.chosenPatchNumber)
-                        self.newf.trigger.connect(self.loadEnd2)
-                        self.newf.start()
+                            # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                            # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                            # self.overlay.show()
+                            self.wyPlot.setDisabled(True)
+                            self.newf = loadImage_features_plot(self.matplotlibwidget_static,
+                                                                self.chosenPatchNumber)
+                            self.newf.trigger.connect(self.loadEnd2)
+                            self.newf.start()
 
-                        # self.matplotlibwidget_static.mpl.features_plot(self.chosenPatchNumber)
-                        self.matplotlibwidget_static.show()
-                        self.horizontalSliderSlice.hide()
-                        self.horizontalSliderPatch.show()
-                        self.labelPatch.show()
-                        self.labelSlice.hide()
-                        self.lcdNumberPatch.show()
-                        self.lcdNumberSlice.hide()
+                            # self.matplotlibwidget_static.mpl.features_plot(self.chosenPatchNumber)
+                            self.matplotlibwidget_static.show()
+                            self.horizontalSliderSlice.hide()
+                            self.horizontalSliderPatch.show()
+                            self.labelPatch.show()
+                            self.labelSlice.hide()
+                            self.lcdNumberPatch.show()
+                            self.lcdNumberSlice.hide()
+                        else:
+                            self.showNoFeatures()
+
+                    elif self.modelDimension == '3D':
+                        a = self.act[self.chosenLayerName]
+                        if self.act[self.chosenLayerName].ndim == 5:
+                            self.activations = self.act[self.chosenLayerName]
+                            self.totalPatches = self.activations.shape[0]
+                            self.totalPatchesSlices = self.activations.shape[1]
+
+                            self.matplotlibwidget_static.mpl.getLayersFeatures_3D(self.activations,
+                                                                                  self.totalPatches,
+                                                                                  self.totalPatchesSlices)
+
+                            self.chosenPatchNumber = 1
+                            self.chosenPatchSliceNumber = 1
+                            self.horizontalSliderPatch.setMinimum(1)
+                            self.horizontalSliderPatch.setMaximum(self.totalPatches)
+                            self.horizontalSliderPatch.setValue(self.chosenPatchNumber)
+                            self.horizontalSliderSlice.setMinimum(1)
+                            self.horizontalSliderSlice.setMaximum(self.totalPatchesSlices)
+                            self.horizontalSliderSlice.setValue(self.chosenPatchSliceNumber)
+
+                            # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
+                            # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
+                            # self.overlay.show()
+                            self.wyPlot.setDisabled(True)
+                            self.newf = loadImage_features_plot_3D(self.matplotlibwidget_static,
+                                                                   self.chosenPatchNumber,
+                                                                   self.chosenPatchSliceNumber)
+                            self.newf.trigger.connect(self.loadEnd2)
+                            self.newf.start()
+
+                            # self.matplotlibwidget_static.mpl.features_plot_3D(self.chosenPatchNumber,self.chosenPatchSliceNumber)
+                            self.horizontalSliderSlice.show()
+                            self.horizontalSliderPatch.show()
+                            self.labelPatch.show()
+                            self.labelSlice.show()
+                            self.lcdNumberPatch.show()
+                            self.lcdNumberSlice.show()
+                            self.matplotlibwidget_static.show()
+                        else:
+                            self.showNoFeatures()
+
                     else:
-                        self.showNoFeatures()
-
-                elif self.modelDimension == '3D':
-                    a = self.act[self.chosenLayerName]
-                    if self.act[self.chosenLayerName].ndim == 5:
-                        self.activations = self.act[self.chosenLayerName]
-                        self.totalPatches = self.activations.shape[0]
-                        self.totalPatchesSlices = self.activations.shape[1]
-
-                        self.matplotlibwidget_static.mpl.getLayersFeatures_3D(self.activations,
-                                                                              self.totalPatches,
-                                                                              self.totalPatchesSlices)
-
-                        self.chosenPatchNumber = 1
-                        self.chosenPatchSliceNumber = 1
-                        self.horizontalSliderPatch.setMinimum(1)
-                        self.horizontalSliderPatch.setMaximum(self.totalPatches)
-                        self.horizontalSliderPatch.setValue(self.chosenPatchNumber)
-                        self.horizontalSliderSlice.setMinimum(1)
-                        self.horizontalSliderSlice.setMaximum(self.totalPatchesSlices)
-                        self.horizontalSliderSlice.setValue(self.chosenPatchSliceNumber)
-
-                        # self.overlay = Overlay(self.centralWidget())  # self.scrollArea self.centralWidget()
-                        # self.overlay.setGeometry(QtCore.QRect(500, 350, 171, 141))
-                        # self.overlay.show()
-                        self.wyPlot.setDisabled(True)
-                        self.newf = loadImage_features_plot_3D(self.matplotlibwidget_static,
-                                                               self.chosenPatchNumber,
-                                                               self.chosenPatchSliceNumber)
-                        self.newf.trigger.connect(self.loadEnd2)
-                        self.newf.start()
-
-                        # self.matplotlibwidget_static.mpl.features_plot_3D(self.chosenPatchNumber,self.chosenPatchSliceNumber)
-                        self.horizontalSliderSlice.show()
-                        self.horizontalSliderPatch.show()
-                        self.labelPatch.show()
-                        self.labelSlice.show()
-                        self.lcdNumberPatch.show()
-                        self.lcdNumberSlice.show()
-                        self.matplotlibwidget_static.show()
-                    else:
-                        self.showNoFeatures()
-
-                else:
-                    print('the dimesnion should be 2D or 3D')
+                        print('the dimesnion should be 2D or 3D')
+                except:
+                    QMessageBox.information(self, "warning", "This layer is not supported to show")
 
             else:
                 self.showChooseLayerDialog()
@@ -3222,6 +3306,17 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         return inpName
 
     def show_layer_name(self):
+
+        self.matplotlibwidget_static = MatplotlibWidget(self.NetworkVisualization)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.matplotlibwidget_static.sizePolicy().hasHeightForWidth())
+        self.matplotlibwidget_static.setSizePolicy(sizePolicy)
+        self.matplotlibwidget_static.setMouseTracking(True)
+        self.matplotlibwidget_static.setObjectName("matplotlibwidget_static")
+        self.showResultArea.setWidget(self.matplotlibwidget_static)
+        self.matplotlibwidget_static.show()
         qList = []
 
         for i in self.act:
@@ -3299,44 +3394,55 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.labelSlice.hide()
             self.lcdNumberSlice.hide()
             self.lcdNumberPatch.hide()
-            self.matplotlibwidget_static.mpl.fig.clf()
+
             pathToModel = os.path.split(self.openmodel_path)[0]
             self.deepLearningArtApp.setModelForPrediction(pathToModel)
             QMessageBox.information(self, "Working in Progress", "Loading model")
             print("Loading model")
-            try:
-                self.model = load_model(self.openmodel_path)
-            except:
-                def dice_coef(y_true, y_pred, epsilon=1e-5):
-                    dice_numerator = 2.0 * K.sum(y_true * y_pred, axis=[1, 2, 3, 4])
-                    dice_denominator = K.sum(K.square(y_true), axis=[1, 2, 3, 4]) + K.sum(K.square(y_pred),
-                                                                                          axis=[1, 2, 3, 4])
+            if index == 1:
+                try:
+                    self.model = load_model(self.openmodel_path)
+                except:
+                    try:
+                        def dice_coef(y_true, y_pred, epsilon=1e-5):
+                            dice_numerator = 2.0 * K.sum(y_true * y_pred, axis=[1, 2, 3, 4])
+                            dice_denominator = K.sum(K.square(y_true), axis=[1, 2, 3, 4]) + K.sum(K.square(y_pred),
+                                                                                                  axis=[1, 2, 3, 4])
 
-                    dice_score = dice_numerator / (dice_denominator + epsilon)
-                    return K.mean(dice_score, axis=0)
+                            dice_score = dice_numerator / (dice_denominator + epsilon)
+                            return K.mean(dice_score, axis=0)
 
-                def dice_coef_loss(y_true, y_pred):
-                    return 1 - dice_coef(y_true, y_pred)
+                        def dice_coef_loss(y_true, y_pred):
+                            return 1 - dice_coef(y_true, y_pred)
 
-                self.model = load_model(self.openmodel_path,
-                                        custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef})
+                        self.model = load_model(self.openmodel_path,
+                                                custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef})
+                    except:
+                        self.wyChooseFile.setCurrentIndex(0)
+                        QMessageBox.information(self, "Warning", "This model is not supported, please load another model")
+                        return
+                print(len(self.model.layers), 'layers')
+            elif index == 2:
+                # # using current model
+                self.model = self.deepLearningArtApp.getModel()
 
             QMessageBox.information(self, "Finish Progress", "Finish loading model")
             print("Finish loading model")
-            self.wyChooseFile.setCurrentIndex(0)
             self.model_png_dir = os.path.split(self.openmodel_path)[0] + os.sep + "model.png"
+
+        self.wyChooseFile.setCurrentIndex(0)
 
     def on_wyInputData_clicked(self, index):
         if index == 1:
             pathToDataset = self.openFileNamesDialog(self.deepLearningArtApp.getOutputPathForPatching())
             FL = os.listdir(pathToDataset)
             for fl in FL:
-                if fl == pathToDataset + os.sep + 'datasets.hdf5':
-                    self.inputData_name = fl
+                if fl == 'datasets.hdf5':
+                    self.inputData_name = pathToDataset + os.sep + fl
                     print(self.inputData_name)
             self.deepLearningArtApp.setDatasetForPrediction(pathToDataset)
         elif index == 2:
-            self.inputData_name = self.deepLearningArtApp.getDatasetForPrediction() + os.sep + 'datasets.hdf5'
+            self.inputData_name = None
             print('using current datasets for prediction')
 
         if len(self.openmodel_path) != 0:
@@ -3346,9 +3452,8 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             self.labelSlice.hide()
             self.lcdNumberSlice.hide()
             self.lcdNumberPatch.hide()
-            self.matplotlibwidget_static.mpl.fig.clf()
 
-            if self.inputData_name is not None and os.path.splitext(self.inputData_name)[-1] == 'hdf5':
+            if self.inputData_name is not None:
 
                 self.inputData = h5py.File(self.inputData_name, 'r')
                 # the number of the input
@@ -3393,11 +3498,11 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.show_layer_list()
                 QMessageBox.information(self, "Finish Progress", "Finish loading datasets")
             else:
-                QtWidgets.QMessageBox.information(self, 'Warning', 'This format is not supported!')
-            self.wyInputData.setCurrentIndex(0)
+                QMessageBox.information(self, "Finish Loading", "using current datasets for prediction")
             self.predictButton.setDisabled(False)
         else:
-            self.showChooseFileDialog()
+            pass
+        self.wyInputData.setCurrentIndex(0)
 
     def show_layer_list(self):
 
@@ -3420,148 +3525,303 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 pass
             else:
                 if not type(layer.input) == list:
-                    inputLayerNameList = [self.simpleName(layer.input.name)[0:-2]]
-                    get_activations = K.function([layer.input, K.learning_phase()],
-                                                 [layer.output, ])
-                    self.act[self.simpleName(layer.name)] = \
-                        get_activations([self.act[inputLayerNameList[0]], 0])[0]
-                else:
-                    if len(layer.input) == 2:
-                        inputLayerNameList = []
-                        for ind_li, layerInput in enumerate(layer.input):
-                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
-                        get_activations = K.function([layer.input[0], layer.input[1], K.learning_phase()],
+                    try:
+                        inputLayerNameList = [self.simpleName(layer.input.name)[0:-2]]
+                        get_activations = K.function([layer.input, K.learning_phase()],
                                                      [layer.output, ])
                         self.act[self.simpleName(layer.name)] = \
-                            get_activations([self.act[inputLayerNameList[0]],
-                                             self.act[inputLayerNameList[1]],
-                                             0])[0]
-                    elif len(layer.input) == 3:
-                        inputLayerNameList = []
-                        for ind_li, layerInput in enumerate(layer.input):
-                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
-
-                        get_activations = K.function(
-                            [layer.input[0], layer.input[1], layer.input[2], K.learning_phase()],
-                            [layer.output, ])
+                            get_activations([self.act[inputLayerNameList[0]], 0])[0]
+                    except:
+                        inputLayerNameList = [self.simpleName(layer.input.name)]
+                        get_activations = K.function([layer.input, K.learning_phase()],
+                                                     [layer.output, ])
                         self.act[self.simpleName(layer.name)] = \
-                            get_activations([self.act[inputLayerNameList[0]],
-                                             self.act[inputLayerNameList[1]],
-                                             self.act[inputLayerNameList[2]],
-                                             0])[0]
+                            get_activations([self.act[inputLayerNameList[0]], 0])[0]
+                else:
+                    if len(layer.input) == 2:
+
+                        try:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+                            get_activations = K.function([layer.input[0], layer.input[1], K.learning_phase()],
+                                                         [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 0])[0]
+                        except:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name))
+                            get_activations = K.function([layer.input[0], layer.input[1], K.learning_phase()],
+                                                         [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 0])[0]
+                    elif len(layer.input) == 3:
+
+                        try:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 0])[0]
+                        except:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name))
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 0])[0]
 
                     elif len(layer.input) == 4:
-                        inputLayerNameList = []
-                        for ind_li, layerInput in enumerate(layer.input):
-                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
 
-                        get_activations = K.function(
-                            [layer.input[0], layer.input[1], layer.input[2], layer.input[3],
-                             K.learning_phase()],
-                            [layer.output, ])
-                        self.act[self.simpleName(layer.name)] = \
-                            get_activations([self.act[inputLayerNameList[0]],
-                                             self.act[inputLayerNameList[1]],
-                                             self.act[inputLayerNameList[2]],
-                                             self.act[inputLayerNameList[3]],
-                                             0])[0]
+                        try:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 self.act[inputLayerNameList[3]],
+                                                 0])[0]
+                        except:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name))
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 self.act[inputLayerNameList[3]],
+                                                 0])[0]
 
                     elif len(layer.input) == 5:
-                        inputLayerNameList = []
-                        for ind_li, layerInput in enumerate(layer.input):
-                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
 
-                        get_activations = K.function(
-                            [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
-                             K.learning_phase()],
-                            [layer.output, ])
-                        self.act[self.simpleName(layer.name)] = \
-                            get_activations([self.act[inputLayerNameList[0]],
-                                             self.act[inputLayerNameList[1]],
-                                             self.act[inputLayerNameList[2]],
-                                             self.act[inputLayerNameList[3]],
-                                             self.act[inputLayerNameList[4]],
-                                             0])[0]
+                        try:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 self.act[inputLayerNameList[3]],
+                                                 self.act[inputLayerNameList[4]],
+                                                 0])[0]
+                        except:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name))
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 self.act[inputLayerNameList[3]],
+                                                 self.act[inputLayerNameList[4]],
+                                                 0])[0]
                     elif len(layer.input) == 6:
-                        inputLayerNameList = []
-                        for ind_li, layerInput in enumerate(layer.input):
-                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
 
-                        get_activations = K.function(
-                            [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
-                             layer.input[5],
-                             K.learning_phase()],
-                            [layer.output, ])
-                        self.act[self.simpleName(layer.name)] = \
-                            get_activations([self.act[inputLayerNameList[0]],
-                                             self.act[inputLayerNameList[1]],
-                                             self.act[inputLayerNameList[2]],
-                                             self.act[inputLayerNameList[3]],
-                                             self.act[inputLayerNameList[4]],
-                                             self.act[inputLayerNameList[5]],
-                                             0])[0]
+                        try:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                                 layer.input[5],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 self.act[inputLayerNameList[3]],
+                                                 self.act[inputLayerNameList[4]],
+                                                 self.act[inputLayerNameList[5]],
+                                                 0])[0]
+                        except:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name))
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                                 layer.input[5],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 self.act[inputLayerNameList[3]],
+                                                 self.act[inputLayerNameList[4]],
+                                                 self.act[inputLayerNameList[5]],
+                                                 0])[0]
 
                     elif len(layer.input) == 7:
-                        inputLayerNameList = []
-                        for ind_li, layerInput in enumerate(layer.input):
-                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
 
-                        get_activations = K.function(
-                            [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
-                             layer.input[5], layer.input[6],
-                             K.learning_phase()],
-                            [layer.output, ])
-                        self.act[self.simpleName(layer.name)] = \
-                            get_activations([self.act[inputLayerNameList[0]],
-                                             self.act[inputLayerNameList[1]],
-                                             self.act[inputLayerNameList[2]],
-                                             self.act[inputLayerNameList[3]],
-                                             self.act[inputLayerNameList[4]],
-                                             self.act[inputLayerNameList[5]],
-                                             self.act[inputLayerNameList[6]],
-                                             0])[0]
+                        try:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                                 layer.input[5], layer.input[6],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 self.act[inputLayerNameList[3]],
+                                                 self.act[inputLayerNameList[4]],
+                                                 self.act[inputLayerNameList[5]],
+                                                 self.act[inputLayerNameList[6]],
+                                                 0])[0]
+                        except:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name))
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                                 layer.input[5], layer.input[6],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 self.act[inputLayerNameList[3]],
+                                                 self.act[inputLayerNameList[4]],
+                                                 self.act[inputLayerNameList[5]],
+                                                 self.act[inputLayerNameList[6]],
+                                                 0])[0]
                     elif len(layer.input) == 8:
-                        inputLayerNameList = []
-                        for ind_li, layerInput in enumerate(layer.input):
-                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
 
-                        get_activations = K.function(
-                            [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
-                             layer.input[5], layer.input[6], layer.input[7],
-                             K.learning_phase()],
-                            [layer.output, ])
-                        self.act[self.simpleName(layer.name)] = \
-                            get_activations([self.act[inputLayerNameList[0]],
-                                             self.act[inputLayerNameList[1]],
-                                             self.act[inputLayerNameList[2]],
-                                             self.act[inputLayerNameList[3]],
-                                             self.act[inputLayerNameList[4]],
-                                             self.act[inputLayerNameList[5]],
-                                             self.act[inputLayerNameList[6]],
-                                             self.act[inputLayerNameList[7]],
-                                             0])[0]
+                        try:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                                 layer.input[5], layer.input[6], layer.input[7],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 self.act[inputLayerNameList[3]],
+                                                 self.act[inputLayerNameList[4]],
+                                                 self.act[inputLayerNameList[5]],
+                                                 self.act[inputLayerNameList[6]],
+                                                 self.act[inputLayerNameList[7]],
+                                                 0])[0]
+                        except:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name))
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                                 layer.input[5], layer.input[6], layer.input[7],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 self.act[inputLayerNameList[3]],
+                                                 self.act[inputLayerNameList[4]],
+                                                 self.act[inputLayerNameList[5]],
+                                                 self.act[inputLayerNameList[6]],
+                                                 self.act[inputLayerNameList[7]],
+                                                 0])[0]
 
                     elif len(layer.input) == 9:
-                        inputLayerNameList = []
-                        for ind_li, layerInput in enumerate(layer.input):
-                            inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
 
-                        get_activations = K.function(
-                            [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
-                             layer.input[5], layer.input[6], layer.input[7], layer.input[8],
-                             K.learning_phase()],
-                            [layer.output, ])
-                        self.act[self.simpleName(layer.name)] = \
-                            get_activations([self.act[inputLayerNameList[0]],
-                                             self.act[inputLayerNameList[1]],
-                                             self.act[inputLayerNameList[2]],
-                                             self.act[inputLayerNameList[3]],
-                                             self.act[inputLayerNameList[4]],
-                                             self.act[inputLayerNameList[5]],
-                                             self.act[inputLayerNameList[6]],
-                                             self.act[inputLayerNameList[7]],
-                                             self.act[inputLayerNameList[8]],
-                                             0])[0]
+                        try:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name)[0:-2])
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                                 layer.input[5], layer.input[6], layer.input[7], layer.input[8],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 self.act[inputLayerNameList[3]],
+                                                 self.act[inputLayerNameList[4]],
+                                                 self.act[inputLayerNameList[5]],
+                                                 self.act[inputLayerNameList[6]],
+                                                 self.act[inputLayerNameList[7]],
+                                                 self.act[inputLayerNameList[8]],
+                                                 0])[0]
+                        except:
+                            inputLayerNameList = []
+                            for ind_li, layerInput in enumerate(layer.input):
+                                inputLayerNameList.append(self.simpleName(layerInput.name))
+
+                            get_activations = K.function(
+                                [layer.input[0], layer.input[1], layer.input[2], layer.input[3], layer.input[4],
+                                 layer.input[5], layer.input[6], layer.input[7], layer.input[8],
+                                 K.learning_phase()],
+                                [layer.output, ])
+                            self.act[self.simpleName(layer.name)] = \
+                                get_activations([self.act[inputLayerNameList[0]],
+                                                 self.act[inputLayerNameList[1]],
+                                                 self.act[inputLayerNameList[2]],
+                                                 self.act[inputLayerNameList[3]],
+                                                 self.act[inputLayerNameList[4]],
+                                                 self.act[inputLayerNameList[5]],
+                                                 self.act[inputLayerNameList[6]],
+                                                 self.act[inputLayerNameList[7]],
+                                                 self.act[inputLayerNameList[8]],
+                                                 0])[0]
                     else:
                         print('the number of input is more than 9')
 
@@ -3632,16 +3892,41 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
     @pyqtSlot()
     def on_wyShowArchitecture_clicked(self):
-        # Show the structure of the model and plot the weights
+        self.model_png_dir = '/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/output/Output_Learning/3D_VResFCN_Upsampling_final_Motion_Binary_modified_3D_48x48x16_2019-04-11_16-20/model.png'
+
+        # Show the structure of the model
         if len(self.openmodel_path) != 0:
 
-            webbrowser.open_new(self.model_png_dir)
+            self.canvasStructure = MyMplCanvas()
+            try:
+                self.canvasStructure.loadImage(self.model_png_dir)
+            except:
+                raise ValueError('No model image exits')
+            self.graphicscene_network_architecture = QtWidgets.QGraphicsScene()
+            self.graphicscene_network_architecture.addWidget(self.canvasStructure)
+            self.graphicview_network_architecture = Activeview()
+            self.graphicview_network_architecture.doubleClicked.connect(self.openArchitectureImage)
+            scrollAreaWidgetContents = QtWidgets.QWidget()
+            maingrids = QtWidgets.QGridLayout(scrollAreaWidgetContents)
+            self.showArchitectureArea.setWidget(scrollAreaWidgetContents)
+            maingrids.addWidget(self.graphicview_network_architecture)
+            self.graphicview_network_architecture.setScene(self.graphicscene_network_architecture)
+            try:
+                # # for a simple 2DCNN network
+                self.plotNetworkArchitecture()
+
+            except:
+                QMessageBox.information(self, "warning", "Network contains layer not supported to visualize")
+                return
 
         else:
             self.showChooseFileDialog()
 
+    def openArchitectureImage(self):
+        webbrowser.open_new(self.model_png_dir)
+
     def on_wyPlot_clicked(self, index):
-        # self.matplotlibwidget_static_2.hide()
+        # self.matplotlibwidget_static_2.hide(
 
         # Show the structure of the model and plot the weights
         if len(self.openmodel_path) != 0:
@@ -3654,6 +3939,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.plotConfusionMatrix()
         else:
             self.showChooseFileDialog()
+        self.wyPlot.setCurrentIndex(0)
 
     @pyqtSlot()
     def on_wySubsetSelection_clicked(self):
@@ -3899,7 +4185,8 @@ class Viewgroup(QtWidgets.QGridLayout):
         self.imrotate.setText("")
         self.imrotate.setIcon(icon4)
         self.imrotate.setToolTip(
-            "change view_image XY/YZ/XZ\nduring labeling\nafter change view_image\nplease click_event button\nnoselection on")
+            "change view_image XY/YZ/XZ\nduring labeling\nafter change view_image\nplease click_event "
+            "button\nnoselection on")
         self.Viewpanel = Activeview()
         self.addWidget(self.Viewpanel, 2, 0, 1, 4)
 
@@ -4748,9 +5035,10 @@ class Viewline(QtWidgets.QGridLayout):
         #     self.newcanvas3.ax1.draw_artist(line)
         self.newcanvas3.blit(self.newcanvas3.figure.bbox)
         self.newcanvas3.draw()
-        self.newcanvas1.set_cursor_position(event.xdata, event.ydata)
-        self.newcanvas2.set_cursor_position(event.ydata, self.ind1 * 3.3)
-        self.newcanvas3.set_cursor_position(event.xdata, self.ind1 * 3.3)
+        if self.cursor_on:
+            self.newcanvas1.set_cursor_position(event.xdata, event.ydata)
+            self.newcanvas2.set_cursor_position(event.ydata, self.ind1 * 3.3)
+            self.newcanvas3.set_cursor_position(event.xdata, self.ind1 * 3.3)
 
     def mouse_clicked2(self, event):
 
@@ -4782,9 +5070,10 @@ class Viewline(QtWidgets.QGridLayout):
         #     self.newcanvas3.ax1.draw_artist(line)
         self.newcanvas3.blit(self.newcanvas3.figure.bbox)
         self.newcanvas3.draw()
-        self.newcanvas1.set_cursor_position(self.ind2, event.xdata)
-        self.newcanvas2.set_cursor_position(event.xdata, event.ydata)
-        self.newcanvas3.set_cursor_position(self.ind2, event.ydata)
+        if self.cursor_on:
+            self.newcanvas1.set_cursor_position(self.ind2, event.xdata)
+            self.newcanvas2.set_cursor_position(event.xdata, event.ydata)
+            self.newcanvas3.set_cursor_position(self.ind2, event.ydata)
 
     def mouse_clicked3(self, event):
 
@@ -4815,12 +5104,12 @@ class Viewline(QtWidgets.QGridLayout):
         #     self.newcanvas3.ax1.draw_artist(line)
         self.newcanvas3.blit(self.newcanvas3.figure.bbox)
         self.newcanvas3.draw()
-        self.newcanvas1.set_cursor_position(event.xdata, self.ind3)
-        self.newcanvas2.set_cursor_position(self.ind3, event.ydata)
-        self.newcanvas3.set_cursor_position(event.xdata, event.ydata)
+        if self.cursor_on:
+            self.newcanvas1.set_cursor_position(event.xdata, self.ind3)
+            self.newcanvas2.set_cursor_position(self.ind3, event.ydata)
+            self.newcanvas3.set_cursor_position(event.xdata, event.ydata)
 
     def mouse_tracking(self, cursor):
-
         self.cursor_on = cursor
         if self.newcanvas1 is not None:
             self.newcanvas1.set_cursor2D(self.cursor_on)
@@ -4833,34 +5122,6 @@ class Viewline(QtWidgets.QGridLayout):
             self.newcanvas3.blit(self.newcanvas3.ax1.bbox)
 
 
-class TensorFlowTheanoFunction(object):
-    def __init__(self, inputs, outputs, updates=()):
-        self._inputs = inputs
-        self._outputs = outputs
-        self._updates = updates
-
-    def __call__(self, *args, **kwargs):
-        feeds = {}
-        for (argpos, arg) in enumerate(args):
-            feeds[self._inputs[argpos]] = arg
-        try:
-            outputs_identity = [tf.identity(output) for output in self._outputs]
-            output_is_list = True
-        except TypeError:
-            outputs_identity = [tf.identity(self._outputs)]
-            output_is_list = False
-        with tf.control_dependencies(outputs_identity):
-            assign_ops = [tf.assign(variable, replacement)
-                          for variable, replacement in self._updates]
-        outputs_list = tf.get_default_session().run(
-            outputs_identity + assign_ops, feeds)[:len(outputs_identity)]
-        if output_is_list:
-            return outputs_list
-        else:
-            assert len(outputs_list) == 1
-            return outputs_list[0]
-
-
 ##################
 sys._excepthook = sys.excepthook
 
@@ -4871,7 +5132,7 @@ def my_exception_hook(exctype, value, traceback):
     sys.exit(1)
 
 
-def main(*args):
+def imagine_main(*args):
     app = QtWidgets.QApplication(sys.argv)
     mainWindow = imagine(*args)
     mainWindow.showMaximized()
@@ -4882,26 +5143,6 @@ def main(*args):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    # mainWindow = imagine('/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/newProtocol/01_ab/dicom_sorted/t1_tse_tra_fs_Becken_0008',
-    #                       '/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/newProtocol/01_ab/dicom_sorted/t1_tse_tra_Kopf_Motion_0003')
-    #
-    # img1 = loadImage('/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/newProtocol/01_ab/dicom_sorted/t1_tse_tra_Kopf_Motion_0003')
-    # img2 = loadImage('/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/newProtocol/01_ab/dicom_sorted/t1_tse_tra_Kopf_0002')
-    # # 5 D array in the order: time channel column row slice
-    # # 4 D array in the order: time column row slice
-    # array1 = img1.voxel_ndarray
-    # array2 = img2.voxel_ndarray
-    # pics1 = [array1, array1, array1, array1]
-    # pics1 = [np.expand_dims(pic, axis=0) for pic in pics1]
-    # array4d1 = np.concatenate(pics1)
-    # pics2 = [array2, array2, array2, array2]
-    # pics2 = [np.expand_dims(pic, axis=0) for pic in pics2]
-    # array4d2 = np.concatenate(pics2)
-    # array5d = [array4d1, array4d2]
-    # array5d = [np.expand_dims(pic, axis=0) for pic in array5d]
-    # nimg = np.concatenate(array5d)
-    # mainWindow = imagine(nimg)
-    # Img5D = np.random.randn(4,5,32,64,10)
     mainWindow = imagine()
     mainWindow.showMaximized()
     mainWindow.show()

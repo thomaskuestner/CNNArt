@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=latex 2019.4.7)  7 APR 2019 02:45
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=latex 2019.4.7)  9 APR 2019 10:43
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -66,7 +66,7 @@ Package: inputenc 2015/03/17 v1.2c Input encoding file
 )
 \sizebox=\box26
 \lthtmlwrite=\write3
-No file images.aux.
+(./images.aux)
 \openout1 = `images.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 114.
@@ -121,17 +121,17 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <8> on input line 143.
 LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <6> on input line 143.
-l2hSize :tex2html_wrap_inline62:8.0075pt::0.0pt::5.33759pt.
+l2hSize :tex2html_wrap_inline65:8.0075pt::0.0pt::5.33759pt.
 [1
 
 
 
 ] (./images.aux) ) 
 Here is how much of TeX's memory you used:
- 1201 strings out of 494924
- 14432 string characters out of 6180769
+ 1207 strings out of 494924
+ 14531 string characters out of 6180769
  67036 words of memory out of 5000000
- 4560 multiletter control sequences out of 15000+600000
+ 4564 multiletter control sequences out of 15000+600000
  6376 words of font info for 23 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  25i,5n,35p,205b,145s stack positions out of 5000i,500n,10000p,200000b,80000s

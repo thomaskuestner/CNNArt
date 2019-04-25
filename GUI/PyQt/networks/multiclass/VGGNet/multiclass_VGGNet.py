@@ -67,13 +67,13 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
                        y_train,
                        validation_data=[X_test, y_test],
                        epochs=iEpochs,
-                       batch_size=j,
+                       batch_size=batchSize,
                        callbacks=callbacks,
                        verbose=1)
 
-    score_test, acc_test = model.evaluate(X_test, y_test, batch_size=j)
+    score_test, acc_test = model.evaluate(X_test, y_test, batch_size=batchSize)
 
-    prob_test = model.predict(X_test, j, 0)
+    prob_test = model.predict(X_test, batchSize, 0)
     y_pred=np.argmax(prob_test,axis=1)
     y_test=np.argmax(y_test,axis=1)
     confusion_mat=confusion_matrix(y_test,y_pred)

@@ -22,3 +22,8 @@ FCN 3D-VResFCN-Upsampling final Motion Binary,networks.FullyConvolutionalNetwork
 FCN 3D-VResFCN-Upsampling final Motion Shim Multi Label ,networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_final_Motion_Shim_Label
 Multiclass 3D SE-DenseNet,networks.multiclass.CNN3D.multiclass_3D_SE-DenseNet
 FCN 3D-VResFCN-Upsampling final Motion Shim Multi Label,networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_final_Motion_Shim_Multi_Label
+multiclass_VGGNet,networks.multiclass.VGGNet.multiclass_VGGNet
+MNetArt,networks.motion.MNetArt.MNetArt
+3D_VResFCN_Upsampling_final_Motion_Binary_modified,networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_final_Motion_Binary_modified
+generic,networks.network_generic
+motion_head_CNN2D,networks.motion.CNN2D.motion_head_CNN2D

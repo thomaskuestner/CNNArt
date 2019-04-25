@@ -1,3 +1,4 @@
+## edit layout sets, select column and row
 from PyQt5.QtCore import pyqtSignal, QPersistentModelIndex, QEvent, QModelIndex
 from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem

@@ -162,7 +162,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
     model_name = sOutPath + os.sep + sFilename + '_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     weight_name = model_name + '_weights.h5'
-    model_json = model_name + '_json'
+    model_json = model_name + '.json'
     model_all = model_name + '_model.h5'
     model_mat = model_name + '.mat'
 

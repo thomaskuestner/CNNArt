@@ -128,7 +128,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     model_name = sPath + '/' + sFilename + str(patchSize[0, 0]) + str(patchSize[0, 1]) + '_lr_' + str(
         learningRate) + '_bs_' + str(batchSize)
     weight_name = model_name + '_weights.h5'
-    model_json = model_name + '_json'
+    model_json = model_name + '.json'
     model_all = model_name + '_model.h5'
     model_mat = model_name + '.mat'
 
@@ -197,7 +197,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 
 def fPredict(X_test, y_test, model_name, sOutPath, patchSize, batchSize):
     weight_name = model_name[0]
-    # model_json = model_name[1] + '_json'
+    # model_json = model_name[1] + '.json'
     # model_all = model_name[0] + '.hdf5'
     _, sPath = os.path.splitdrive(sOutPath)
     sPath, sFilename = os.path.split(sOutPath)

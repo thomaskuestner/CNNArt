@@ -1,16 +1,15 @@
+## set network interface
 import os
-
 import pandas as pd
-import yaml
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import QTableWidget
 from PyQt5.QtWidgets import (QTableWidgetItem)
 from PyQt5.QtWidgets import QWidget
 
-with open('config' + os.sep + 'param_GUI.yml', 'r') as ymlfile:
-    cfg = yaml.safe_load(ymlfile)
-    subdir = cfg['subdirs'][1]
+from config.PATH import SUBDIRS
+
+subdir = SUBDIRS[1]
 
 
 class DataSetsWindow(QWidget):
@@ -25,6 +24,7 @@ class DataSetsWindow(QWidget):
         self.df = self.df.drop(self.df.index[:])
         self.createGUI()
         self.createRecord()
+        self.currentrow = None
         self.setToolTip("Click the image to confirm selection")
 
     def createRecord(self):
@@ -55,18 +55,22 @@ class DataSetsWindow(QWidget):
 
         self.layout.addWidget(self.table, 0, 0)
         self.setLayout(self.layout)
-
-        self.setWindowTitle("Select Data Sets for Training & Test Network")
+        self.setGeometry(800, 200, 550, 200)
+        self.setWindowTitle("Select Datasets for Training & Test Network")
         self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
 
     def updateRecord(self):
 
         row = self.table.rowCount()
+        self.currentrow = self.DataSetsHist[row-1]
         df = pd.read_csv('DLart/network_interface_datasets.csv')[:row]
         for r in range(row):
             df.loc[r, 'usingfor'] = self.table.cellWidget(r, 1).currentText()
         df.to_csv('DLart/network_interface_datasets.csv', index=False)
         return df
+
+    def getCurrentRow(self):
+        return self.currentrow
 
 
 from PyQt5 import QtCore

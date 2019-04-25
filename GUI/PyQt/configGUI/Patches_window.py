@@ -1,3 +1,4 @@
+## for editing mask color in results
 import matplotlib
 import pandas
 
@@ -67,7 +68,7 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
         if count>0:
             self.listWidget.insertItem(0, '%d classes' % count)
             for i in range(count):
-                label = QtWidgets.QRadioButton('class: %s' % self.classes[i])
+                label = QtWidgets.QRadioButton(self.classes[i])
                 self.labellist.append(label)
                 button = QtWidgets.QPushButton()
                 button.setText("")
@@ -77,7 +78,6 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
                 button.setStyleSheet('background-color:' + self.colormaps[i])
                 button.clicked.connect(self.colorm)
                 self.buttonlist.append(button)
-            self.labellist[0].setChecked(True)
         self.label_trans = QtWidgets.QLabel('transparency 0-1')
         self.text_trans =  QtWidgets.QLineEdit('0.3')
         row = row + 1

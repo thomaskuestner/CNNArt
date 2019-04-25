@@ -28,7 +28,7 @@ from keras.regularizers import l2#, activity_l2
 from keras.optimizers import SGD
 
 
-def createModel(patchSize):
+def createModel(patchSize, numClasses, usingClassification=False):
     cnn = Sequential()
     cnn.add(Convolution2D(32,
                             14,
@@ -91,7 +91,9 @@ def createModel(patchSize):
     cnn.add(Activation('softmax'))
     return cnn
 
-def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None):
+def fTrain(X_train=None, y_train=None, X_valid=None, y_valid=None, X_test=None, y_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
+
+    usingClassification = False
     # grid search on batch_sizes and learning rates
     # parse inputs
     batchSizes = [64] if batchSizes is None else batchSizes
@@ -101,7 +103,10 @@ def fTrain(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSizes=Non
         for iLearn in learningRates:
             fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, iBatch, iLearn, iEpochs)
 
-def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize=None, learningRate=None, iEpochs=None):
+def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_valid=None,
+                X_test=None, y_test=None,  sOutPath=None, patchSize=0,
+                batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None, usingClassification=False):
+    print('Training CNN')
     # parse inputs
     batchSize = 64 if batchSize is None else batchSize
     learningRate = 0.01 if learningRate is None else learningRate
@@ -116,7 +121,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
     sFilename, sExt = os.path.splitext(sFilename)
     model_name = sPath + '/' + sFilename + str(patchSize[0,0]) + str(patchSize[0,1]) +'_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     weight_name = model_name + '_weights.h5'
-    model_json = model_name + '_json'
+    model_json = model_name + '.json'
     model_all = model_name + '_model.h5'
     model_mat = model_name + '.mat'
 
@@ -125,7 +130,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 
     # create model
     cnn = createModel(patchSize)
-
+    cnn.compile(loss='categorical_crossentropy', optimizer=opti)
     #opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
     opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     callbacks = [EarlyStopping(monitor='val_loss', patience=10, verbose=1),
@@ -133,12 +138,6 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
                                  verbose=0,
                                  period=5, save_best_only=True),
                  ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-4, verbose=1)]
-    cnn.compile(loss='categorical_crossentropy', optimizer=opti)
-    json_string = cnn.to_json()
-    open(model_json, 'w').write(json_string)
-    # wei = best_model.get_weights()
-    cnn.save_weights(weight_name)
-    cnn.save(model_all)
 
     result = cnn.fit(X_train,
                      y_train,
@@ -184,7 +183,7 @@ def fTrainInner(X_train, y_train, X_test, y_test, sOutPath, patchSize, batchSize
 def fPredict(X_test,y_test,model_name, sOutPath, patchSize, batchSize):
 
     weight_name = model_name[0] + '_weights.h5'
-    model_json = model_name[0] + '_json'
+    model_json = model_name[0] + '.json'
     model_all = model_name[0] + '_model.h5'
 
 #    # load weights and model (OLD WAY)

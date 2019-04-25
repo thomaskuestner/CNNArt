@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# for network visualization
 import math
 
 from PyQt5 import QtCore
