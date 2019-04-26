@@ -11,7 +11,7 @@ import numpy as np
 import h5py
 import os
 import json
-import dicom
+import pydicom
 import dicom_numpy as dicom_np
 import tensorflow as tf
 import scipy.io as sio

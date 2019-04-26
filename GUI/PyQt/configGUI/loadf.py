@@ -1,6 +1,6 @@
 ## load image file
 import os
-import dicom
+import pydicom
 import numpy as np
 from PyQt5 import QtCore
 from PIL import Image

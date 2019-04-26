@@ -19,7 +19,7 @@ import webbrowser
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import pyqtSlot, QStringListModel
 from PyQt5.QtWidgets import QAbstractItemView, QTableWidgetItem, QMdiSubWindow, QTreeWidgetItem, QFileDialog, \
-    QMessageBox, QInputDialog, QSizePolicy
+    QMessageBox, QInputDialog, QSizePolicy, QComboBox, QGridLayout, QItemEditorCreatorBase, QItemEditorFactory
 from keras.models import load_model
 from keras.utils.vis_utils import model_to_dot
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -779,49 +779,50 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
             listC.close()
 
     def load_old(self):
-        self.clear_all()
-        global pathlist, list1, pnamelist, problist, hatchlist, imagenum, resultnum, cnrlist, shapelist, \
-            indlist, ind2list, ind3list, classlist, colormaplist
+        if os.path.isfile('config/dump1.txt') & os.path.isfile('config/dump2.txt') & os.path.isfile('config/dump3.txt'):
+            self.clear_all()
+            global pathlist, list1, pnamelist, problist, hatchlist, imagenum, resultnum, cnrlist, shapelist, \
+                indlist, ind2list, ind3list, classlist, colormaplist
 
-        with open('configGUI/lastWorkspace.json', 'r') as json_data:
-            lastState = json.load(json_data)
-            # list1 = lastState['listA']
-            # problist = lastState['Probs']
-            # hatchlist = lastState['Hatches']
-            gridsnr = lastState['mode']  ##
-            shapelist = lastState['Shape']
-            pathlist = lastState['Pathes']
-            pnamelist = lastState['NResults']
-            cnrlist = lastState['NrClass']
-            imagenum = lastState['ImgNum']
-            resultnum = lastState['ResNum']
-            indlist = lastState['Index']
-            ind2list = lastState['Index2']
-            ind3list = lastState['Index3']
-            classlist = lastState['Classes']
-            colormaplist = lastState['Colors']
+            with open('configGUI/lastWorkspace.json', 'r') as json_data:
+                lastState = json.load(json_data)
+                # list1 = lastState['listA']
+                # problist = lastState['Probs']
+                # hatchlist = lastState['Hatches']
+                gridsnr = lastState['mode']  ##
+                shapelist = lastState['Shape']
+                pathlist = lastState['Pathes']
+                pnamelist = lastState['NResults']
+                cnrlist = lastState['NrClass']
+                imagenum = lastState['ImgNum']
+                resultnum = lastState['ResNum']
+                indlist = lastState['Index']
+                ind2list = lastState['Index2']
+                ind3list = lastState['Index3']
+                classlist = lastState['Classes']
+                colormaplist = lastState['Colors']
 
-            if gridsnr == 2:
-                if self.vision == 3:
-                    self.switchview()  # back to 2
-                self.layoutlines = lastState['layout'][0]
-                self.layoutcolumns = lastState['layout'][1]
-            else:
-                if self.vision == 2:
-                    self.switchview()
-                self.layout3D = lastState['layout'][0]
+                if gridsnr == 2:
+                    if self.vision == 3:
+                        self.switchview()  # back to 2
+                    self.layoutlines = lastState['layout'][0]
+                    self.layoutcolumns = lastState['layout'][1]
+                else:
+                    if self.vision == 2:
+                        self.switchview()
+                    self.layout3D = lastState['layout'][0]
 
-        listA = open('config/dump1.txt', 'rb')
-        list1 = pickle.load(listA)
-        listA.close()
-        listB = open('config/dump2.txt', 'rb')
-        problist = pickle.load(listB)
-        listB.close()
-        listC = open('config/dump3.txt', 'rb')
-        hatchlist = pickle.load(listC)
-        listC.close()
+            listA = open('config/dump1.txt', 'rb')
+            list1 = pickle.load(listA)
+            listA.close()
+            listB = open('config/dump2.txt', 'rb')
+            problist = pickle.load(listB)
+            listB.close()
+            listC = open('config/dump3.txt', 'rb')
+            hatchlist = pickle.load(listC)
+            listC.close()
 
-        self.set_layout()
+            self.set_layout()
 
     def show_grids_selection(self):
 

@@ -2,7 +2,8 @@
 import codecs
 import os
 
-import pandas as pd
+#import pandas as pd
+#import pandas
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import pyqtProperty, Qt, QVariant, QSize
 from PyQt5.QtGui import QColor
@@ -50,7 +51,7 @@ class Window(QWidget):
 
     def createGUI(self):
         length = len(self.labelHist)
-        tableData = pd.read_csv('configGUI/predefined_label.csv')
+        tableData = pandas.read_csv('configGUI/predefined_label.csv')
 
         self.table = QTableWidget(length, 2)
         self.table.setHorizontalHeaderLabels(["Label Name", "Label Color"])
@@ -117,7 +118,7 @@ class Window(QWidget):
 
     def read_table(self, table):
         row = table.rowCount()
-        tableData = pd.read_csv('configGUI/predefined_label.csv')
+        tableData = pandas.read_csv('configGUI/predefined_label.csv')
         for r in range(row):
             if table.item(r, 0) is not None:
                 tableData.loc[r,'label name'] = table.item(r,0).text()
