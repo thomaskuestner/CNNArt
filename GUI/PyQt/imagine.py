@@ -5133,7 +5133,7 @@ def my_exception_hook(exctype, value, traceback):
     sys.exit(1)
 
 
-def imagine_main(*args):
+def start(*args):
     app = QtWidgets.QApplication(sys.argv)
     mainWindow = imagine(*args)
     mainWindow.showMaximized()

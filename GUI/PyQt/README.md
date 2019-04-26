@@ -7,12 +7,18 @@ https://github.com/thomaskuestner/CNNArt
 This GUI is designed with PyQt5 and works for Python >3.5.
 
 ## GUI calling
-run `imagine.py` to open the GUI. <br/>
+run 
+```shell
+python3 imagine.py 
+```
+to open the GUI. <br/>
 This GUI can be run independent from CNNArt. <br/>
-Before running, please change path in param_GUI.py
-`from imagine import imagin_main`
-`imagine_main('pathOfImageFile','pathOfImageDirectory', ...)`<br/>
-`imagine_main(image array)`<br/>
+Before running, please adapt paths in `config/param_GUI.yml`
+```shell
+import imagine
+imagine.start('pathOfImageFile','pathOfImageDirectory', ...)
+imagine.start(image array)
+```
 
 ## Requirements
 `python3.6 -m pip install jsonschema pickleshare h5py keras matplotlib pandas scipy protobuf tensorflow pyYAML PyQt5-stubs PyQt5 numpy pandas argparse hyperas hyperopt graphviz dicom pydicom dicom-numpy pydot pyqtgraph python-csv gtabview pyqtdeploy nibabel Pillow xtract scikit-learn scikit-image seaborn`
