@@ -9,7 +9,7 @@ Copyright: 2016, 2017 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) und
 """
 from tensorflow.python.keras.models import load_model
 
-from config.PATH import CNN_PATH
+from config.PATH import LEARNING_OUT
 
 """Import"""
 
@@ -324,10 +324,10 @@ if __name__ == "__main__":  # for command line call
     parser = argparse.ArgumentParser(description='''CNN artifact detection''',
                                      epilog='''(c) Thomas Kuestner, thomas.kuestner@iss.uni-stuttgart.de''')
     parser.add_argument('-i', '--inPath', nargs=1, type=str, help='input path to *.mat of stored patches',
-                        default=CNN_PATH + os.sep + 'Datatmp/in.mat')
+                        default=LEARNING_OUT + os.sep + 'Datatmp/in.mat')
     parser.add_argument('-o', '--outPath', nargs=1, type=str,
                         help='output path to the file used for storage (subfiles _model, _weights, ... are automatically generated)',
-                        default=CNN_PATH + os.sep + 'Datatmp/out')
+                        default=LEARNING_OUT + os.sep + 'Datatmp/out')
     parser.add_argument('-m', '--model', nargs=1, type=str,
                         choices=['motion_head_CNN2D', 'motion_abd_CNN2D', 'motion_all_CNN2D', 'motion_CNN3D',
                                  'motion_MNetArt', 'motion_VNetArt', 'multi_DenseResNet', 'multi_InceptionNet'],
