@@ -1,17 +1,13 @@
 # # generate a network
 # # create model in createModel
+# # change callbacks settings in fTrainInner
+# # change loss function in fTrainInner
+# # change network compile settings in fTrainInner
 
 import os
-
-# os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
 from DLart.Constants_DLart import *
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
 from tensorflow.python.client import device_lib
-
 print(device_lib.list_local_devices)
-
 import os.path
 import scipy.io as sio
 import numpy as np
@@ -34,6 +30,8 @@ from networks.multiclass.SENets.densely_connected_cnn_blocks import *
 
 
 def createModel(patchSize, numClasses):
+    """create network model
+    """
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
     else:
