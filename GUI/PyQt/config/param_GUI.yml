@@ -151,28 +151,17 @@ correction:
   test_patient: "10_mar"
   augmentation: false # augmentation flag
 
-
-gpu_home: "/home/s1275"
-# database name
-pathout: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database"
-
-# (list of) path(s) of to be predicted images
-lPredictImg: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics"
-
-DLart_output_path: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/output"
-
-visualCNN: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/CNN/Headcross"
-
-predict_result: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/CNN/PredictResults/"
-
-test_path: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/CNN/PatchbasedLabeling Results"
-
-cnn_path: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/CNN"
-
-marking_path: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/Markings/"
-
-label_path: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/Paper_Markings"
-
-output_learning: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database"
-
-check_point: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/output/checkpoints"
+# # set paths here, use / but not \ regardless of operating system
+# #( for linux, separation symbol is automatic /;
+# # for windows, you also need to change it to /)
+# where the username home locates
+gpu_home: "C:/"
+# where all databases locate
+pathout: "D:/To_be_Trained/CNNArt_GUI/config/database"
+# path for labels of database
+label_path: "D:/To_be_Trained/CNNArt_GUI/config/database/MRPhysics/Paper_Markings"
+# output path for storage of training/validation/test datasets and network training output,
+# including training information, model, model weights, training history, etc.
+output_learning: "D:/To_be_Trained/CNNArt_GUI/config/database"
+# to plot network architecture, there is need to install graphviz in PC
+graphviz_path: "C:/Program Files (x86)/graphviz-2.38/bin/"
