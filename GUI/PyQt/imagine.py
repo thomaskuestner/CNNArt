@@ -3893,8 +3893,7 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
 
     @pyqtSlot()
     def on_wyShowArchitecture_clicked(self):
-        self.model_png_dir = '/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/output/Output_Learning/3D_VResFCN_Upsampling_final_Motion_Binary_modified_3D_48x48x16_2019-04-11_16-20/model.png'
-
+        
         # Show the structure of the model
         if len(self.openmodel_path) != 0:
 
