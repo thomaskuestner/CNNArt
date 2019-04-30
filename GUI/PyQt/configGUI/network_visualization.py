@@ -323,4 +323,4 @@ def cnn2d_visual(model, view=True, filename="network.gv", title="My Neural Netwo
     g.attr(arrowShape="none")
     g.edge_attr.update(arrowhead="none", color="#707070")
     if view == True:
-         g.save()
+         g.render(filename=filename, view=False)
