@@ -21,7 +21,11 @@ imagine.start(image array)
 ```
 
 ## Requirements
-`python3.6 -m pip install jsonschema pickleshare h5py keras matplotlib pandas scipy protobuf tensorflow pyYAML PyQt5-stubs PyQt5 numpy pandas argparse hyperas hyperopt graphviz dicom pydicom dicom-numpy pydot pyqtgraph python-csv gtabview pyqtdeploy nibabel Pillow xtract scikit-learn scikit-image seaborn`
+1. Install graphviz and Qt on your computer
+2. Install Python packages
+```shell
+python3.6 -m pip install jsonschema pickleshare h5py keras matplotlib pandas scipy protobuf tensorflow pyYAML PyQt5-stubs PyQt5 numpy pandas argparse hyperas hyperopt graphviz dicom pydicom dicom-numpy pydot pyqtgraph python-csv gtabview pyqtdeploy nibabel Pillow xtract scikit-learn scikit-image seaborn
+```
 
 ## GUI features
 - data viewing (DICOM, natural scene images)
