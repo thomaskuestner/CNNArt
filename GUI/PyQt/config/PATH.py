@@ -16,5 +16,5 @@ GPU_HOME_PATH = cfg['gpu_home']
 LABEL_PATH = cfg['label_path']
 
 LEARNING_OUT = cfg['output_learning']
-
+# in some case, graphviz can not be installed by python module automatically, there is need to add the path manual in code
 GRAPHVIZ_PATH = cfg['graphviz_path']
