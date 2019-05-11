@@ -1,4 +1,4 @@
-# # generate a network
+# # This is a script for generating a network, copy this file and save it in the path /networks with name of architecture
 # # create model in createModel
 # # change callbacks settings in fTrainInner
 # # change loss function in fTrainInner
