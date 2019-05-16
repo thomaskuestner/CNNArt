@@ -1,10 +1,9 @@
 import tensorflow as tf
 import numpy as np
 import time
-
-from medio import convert_tf
-from medio import parse_tf
-from util import patches
+from ..medio import convert_tf
+from ..medio import parse_tf
+from ..util import patches
 # It shall return the data associated label
 
 
