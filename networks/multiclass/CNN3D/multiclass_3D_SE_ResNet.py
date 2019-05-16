@@ -27,9 +27,9 @@ from keras.regularizers import l2  # , activity_l2
 
 from keras.optimizers import SGD
 from networks.multiclass.CNN2D.SENets.deep_residual_learning_blocks import *
-from GUI.PyQt.DLArt_GUI.dlart import DeepLearningArtApp
-from GUI.PyQt.utilsGUI.image_preprocessing import ImageDataGenerator
-from GUI.PyQt.utilsGUI.LivePlotCallback import LivePlotCallback
+from GUI.PyQt.DLart.dlart import DeepLearningArtApp
+from GUI.PyQt.utils.image_preprocessing import ImageDataGenerator
+from GUI.PyQt.utils.LivePlotCallback import LivePlotCallback
 from matplotlib import pyplot as plt
 
 print(device_lib.list_local_devices)
