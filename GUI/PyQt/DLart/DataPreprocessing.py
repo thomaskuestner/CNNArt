@@ -7,7 +7,7 @@ import cProfile
 import json
 from matplotlib import path
 
-from DLart.RigidPatching import fRigidPatching, fRigidPatching3D
+from GUI.PyQt.DLart.RigidPatching import fRigidPatching, fRigidPatching3D
 
 
 def fPreprocessData(Path_Markings, mrt_Folder,proband, model, patchSize, patchOverlap, ratio_labeling, dimension):
