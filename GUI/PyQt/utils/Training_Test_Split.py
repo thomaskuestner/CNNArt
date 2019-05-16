@@ -11,7 +11,7 @@ import math
 import numpy as np
 from sklearn.model_selection import KFold
 
-from DLart.Constants_DLart import *
+from GUI.PyQt.DLart.Constants_DLart import *
 
 
 def expecting():
