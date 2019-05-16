@@ -11,8 +11,8 @@ will cause an ImportError. It may because this `tfrecord` folder was a independe
 ```
 from utils.tfrecord.medio import convert_tf
 ```
-## Goods start for the new developers
-- Convert `DICOM` files to `TFRecord` and start training: Try `CNNArt/utils/tfrecord`. 
+## Good starts for the new developers
+- **Convert `DICOM` files to `TFRecord` and start training:** Try `CNNArt/utils/tfrecord`. If you are facing with `Resource Exhaust` error, you could try to ruduce `batch_size` in `create_dataset()` function. 
 
 ## Fix log
-- 
+- 2019-05-16 12:05:47 @so2liu@gmail.com: CNNArt/utils/tfrecord/training/train.py is able to run. 

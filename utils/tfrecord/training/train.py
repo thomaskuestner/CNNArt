@@ -14,8 +14,8 @@ tf.keras.backend.set_session(tf.Session(config = config))
 if __name__ == '__main__':
 
     print('begin creating the input dataset')
-    # data_dir = '/home/d1290/no_backup/d1290/myNAKO'
-    data_dir = '/home/d1290/med_data/NAKO/NAKO_IQA_tf'
+    data_dir = '/home/d1290/med_data/NAKO/NAKO_IQA_tf'  
+    # The path above: TFRecords folder path
     datagen= create_dataset(data_dir, batch_size=4)
 
     # The image shape is (236, 320, 260)
@@ -27,7 +27,8 @@ if __name__ == '__main__':
                   optimizer="sgd",
                   metrics=['acc'])
 
-    model_dir = os.path.join('/home/d1290/no_backup/d1290/model', "IQA_test_with_tfrecord")
+    model_dir = os.path.join('/home/d1290/no_backup/d1290/model', "IQA_test_with_tfrecord")  
+    # The path above: if not exist, new folder will be made.
     os.makedirs(model_dir, exist_ok=True)
     print("model_dir: ",model_dir)
     est_iqa = tf.keras.estimator.model_to_estimator(keras_model=model,
