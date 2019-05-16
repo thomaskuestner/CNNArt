@@ -5,9 +5,8 @@ import h5py
 import numpy as np
 
 # internal import
-#import main
 import utils.DataPreprocessing as datapre
-import main as cnn_main
+#import main as cnn_main
 
 def run(cfg, dbinfo):
     """
