@@ -3,16 +3,16 @@ import os
 
 
 from tensorflow.python.client import device_lib
-print(device_lib.list_local_devices)
 
 import tensorflow as tf
 import os.path
-import scipy.io as sio
 import numpy as np
 import math
 import keras
-from keras.layers import Input
+import scipy.io as sio
 import keras.backend as K
+import sys
+from keras.layers import Input
 from keras.layers import Conv2D
 from keras.layers import BatchNormalization
 from keras.layers import GlobalAveragePooling2D
@@ -34,15 +34,14 @@ from keras.models import model_from_json
 from keras.regularizers import l2  # , activity_l2
 
 from keras.optimizers import SGD
-from networks.multiclass.SENets.deep_residual_learning_blocks import *
-from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
-from utils.image_preprocessing import ImageDataGenerator
+from networks.multiclass.CNN2D.SENets.deep_residual_learning_blocks import *
+from GUI.PyQt.DLart.dlart import DeepLearningArtApp
+from GUI.PyQt.utils.image_preprocessing import ImageDataGenerator
 from matplotlib import pyplot as plt
 
-from utils.LivePlotCallback import LivePlotCallback
+from GUI.PyQt.utils.LivePlotCallback import LivePlotCallback
 
 
-import scipy.io as sio
 
 
 def createModel(patchSize, numClasses, usingClassification=False):
