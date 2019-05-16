@@ -1,3 +1,6 @@
+## Tips
+- Don't write code like `from os import *`. Please write the exact name like `from sys import sys.path`. Otherwise, other coders will not know the source of subfuncitons. 
+
 ## Dependencies instruction
 - Use `dicom` in version **0.9.9** in this project. The newest version of this lib is renamed as `pydicom` and some functions may not work as the same as the older version. 
 
