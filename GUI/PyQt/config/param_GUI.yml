@@ -50,7 +50,7 @@ motion_head_abd_becken: &id006
 #
 #### set parameters ####
 
-MRdatabase : MRPhysics
+MRdatabase : NAKO_IQA_tf
 # subdirectories in database, patient, output directory
 subdirs : ["newProtocol", "dicom_sorted"]
 # CNN database to be modeled
