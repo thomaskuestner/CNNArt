@@ -16,7 +16,7 @@ if __name__ == '__main__':
     print('begin creating the input dataset')
     data_dir = '/home/d1290/med_data/NAKO/NAKO_IQA_tf'  
     # The path above: TFRecords folder path
-    datagen= create_dataset(data_dir, batch_size=4)
+    datagen= create_dataset(data_dir, batch_size=64)
 
     # The image shape is (236, 320, 260)
     # model = Resnet3DBuilder.build_resnet_50((64, 64, 64, 1), 3)
