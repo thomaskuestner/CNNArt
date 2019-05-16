@@ -5,7 +5,6 @@
 # To generate the mat data
 
 import pathlib
-import os
 # use glob / fnmatch / os.scandir for folder parsing
 
 

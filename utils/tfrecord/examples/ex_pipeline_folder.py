@@ -6,8 +6,8 @@ import numpy as np
 import time
 import os
 
-from medio import convert_tf
-from medio import parse_tf
+from utils.tfrecord.medio import convert_tf
+from utils.tfrecord.medio import parse_tf
 
 
 if __name__ == '__main__':

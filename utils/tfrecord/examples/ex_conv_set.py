@@ -3,7 +3,7 @@
 
 # create the tensorflow folder from the original image folder
 
-from medio import convert_dir
+from utils.tfrecord.medio import convert_dir
 
 if __name__ == '__main__':
 

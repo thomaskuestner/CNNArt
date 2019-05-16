@@ -1,6 +1,5 @@
 import tensorflow as tf
 
-
 from utils.tfrecord.medio import convert_tf, parse_tf
 from utils.tfrecord.util import patches
 # It shall return the data associated label

@@ -14,30 +14,28 @@ tf.keras.backend.set_session(tf.Session(config = config))
 if __name__ == '__main__':
 
     print('begin creating the input dataset')
-    data_dir = '/home/d1274/no_backup/d1274/data'
-
-    datagen= create_dataset(data_dir)
-
+    # data_dir = '/home/d1290/no_backup/d1290/myNAKO'
+    data_dir = '/home/d1290/med_data/NAKO/NAKO_IQA_tf'
+    datagen= create_dataset(data_dir, batch_size=4)
 
     # The image shape is (236, 320, 260)
-    #model = Resnet3DBuilder.build_resnet_50((64, 64, 64, 1), 3)
+    # model = Resnet3DBuilder.build_resnet_50((64, 64, 64, 1), 3)
     model = buildModel((64, 64, 64, 1), 3)
-    print(model.summary())
+    model.summary()
 
     model.compile(loss="categorical_crossentropy",
                   optimizer="sgd",
                   metrics=['acc'])
 
-    model_dir = os.path.join('/home/d1274/no_backup/d1274/model', "IQA_test_with_tfrecord")
+    model_dir = os.path.join('/home/d1290/no_backup/d1290/model', "IQA_test_with_tfrecord")
     os.makedirs(model_dir, exist_ok=True)
     print("model_dir: ",model_dir)
     est_iqa = tf.keras.estimator.model_to_estimator(keras_model=model,
                                                     model_dir=model_dir)
 
     input_name = model.input_names[0]
-    print(input_name)
+    print('Input name:',  input_name)
     # model.compile(loss="categorical_crossentropy", optimizer="sgd", metrics=['accuracy'])
-
 
     # attention: steps_per_epoch = num_samples * num_patches_per_image/ batch_size
 
