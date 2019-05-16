@@ -14,8 +14,6 @@ from keras.layers.convolutional import Conv3D,Conv2D, MaxPooling3D, MaxPooling2D
 from keras.regularizers import l1_l2,l2
 from keras.models import model_from_json
 from keras.callbacks import EarlyStopping, ModelCheckpoint,ReduceLROnPlateau
-from keras import backend as K
-K.set_image_dim_ordering('th')  # set channel first reordering
 
 def fTrain(X_train, Y_train, X_test, Y_test, sOutPath, patchSize, batchSizes=None, learningRates=None, iEpochs=None,sInPaths=None,sInPaths_valid=None, CV_Patient=0, model='motion_head'):#rigid for loops for simplicity
     #add for loops here
