@@ -1,12 +1,7 @@
 import os
 import tensorflow as tf
-import glob
-import sys
-from keras import backend as K
-from tensorflow.python import keras
-#from _3D_ResNet import Resnet3DBuilder
-from multiclass_3D_CNN import buildModel
-from create_dataset import create_dataset
+from utils.tfrecord.training.multiclass_3D_CNN import buildModel
+from utils.tfrecord.training.create_dataset import create_dataset
 #from create_dataset_copy import create_dataset
 
 config = tf.ConfigProto()
