@@ -26,9 +26,9 @@ from networks.motion.CNN2D import *
 from networks.motion.CNN3D import *
 from networks.motion.MNetArt import *
 from networks.motion.VNetArt import *
-from networks.multiclass.DenseResNet import *
-from networks.multiclass.InceptionNet import *
-from networks.multiclass.SENets import *
+from networks.multiclass.CNN2D.DenseResNet import *
+from networks.multiclass.CNN2D.InceptionNet import *
+from networks.multiclass.CNN2D.SENets import *
 
 from hyperopt import Trials, STATUS_OK, tpe
 from hyperas import optim
