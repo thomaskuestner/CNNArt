@@ -5,10 +5,10 @@ import keras.backend as K
 from keras.models import model_from_json
 import tensorflow as tf
 
-from utils.label import *
+from GUI.PyQt.utils.label import *
 
 from sklearn.metrics import classification_report, confusion_matrix
-from DLart.Constants_DLart import *
+from GUI.PyQt.DLart.Constants_DLart import *
 
 
 def predict_model(X_test, Y_test, sModelPath, batch_size=32, dlart_handle=None):
