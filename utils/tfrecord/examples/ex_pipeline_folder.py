@@ -6,8 +6,8 @@ import numpy as np
 import time
 import os
 
-from medio import convert_tf
-from medio import parse_tf
+from utils.tfrecord.medio import convert_tf
+from utils.tfrecord.medio import parse_tf
 
 
 if __name__ == '__main__':
@@ -18,13 +18,13 @@ if __name__ == '__main__':
     slice_size = [64, 64, 64]
 
     # define some example values
-    data_dir = '/home/d1274/no_backup/d1274/data'
+    data_dir = '/home/s1304/no_backup/s1304/data'
     b_viewer = True
     b_verbose = True
 
     # choose & fetch all required data / discard subjects missing crucial data
     list_images = parse_tf.fetch_paths(data_dir, '_F_')
-    #list_images = ['/home/d1274/no_backup/d1274/data/Q8/3D_GRE_TRA_bh_F_COMPOSED_0015.tfrecord' for _ in range(20)]
+    #list_images = ['/home/s1304/no_backup/s1304/data/Q8/3D_GRE_TRA_bh_F_COMPOSED_0015.tfrecord' for _ in range(20)]
 
     def parse_label(path_name):
         if path_name.find('_deep_') != -1:
