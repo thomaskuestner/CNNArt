@@ -30,29 +30,29 @@ from matplotlib import colors
 from matplotlib.patches import Rectangle, Ellipse, PathPatch
 
 
-from config.PATH import DLART_OUT_PATH, PATH_OUT, MARKING_PATH, DATASETS, SUBDIRS
-from configGUI.matplotlibwidget import MatplotlibWidget, MyMplCanvas
-from configGUI.network_visualization import cnn2d_visual
-from utils.label import Label
-from utils.tftheanoFunction import TensorFlowTheanoFunction
-from configGUI.canvas import Canvas
-from configGUI.gridTable import TableWidget
-from configGUI.labelDialog import LabelDialog
-from configGUI.labelTable import LabelTable
-from configGUI import network_visualization
-from configGUI.Grey_window import grey_window
-from configGUI.Patches_window import Patches_window
-from configGUI.framework import Ui_MainWindow
-from configGUI.loadf2 import *
-from configGUI.Unpatch import UnpatchType, UnpatchArte
-from configGUI.Unpatch_eight import UnpatchArte8
-from configGUI.Unpatch_two import fUnpatch2D
-from configGUI.activescene import Activescene
-from configGUI.activeview import Activeview
-from configGUI.loadf import loadImage
-from DLart.network_interface import DataSetsWindow, NetworkInterface
-from DLart.dlart import DeepLearningArtApp
-from DLart.Constants_DLart import *
+from GUI.PyQt.config.PATH import DLART_OUT_PATH, PATH_OUT, MARKING_PATH, DATASETS, SUBDIRS
+from GUI.PyQt.configGUI.matplotlibwidget import MatplotlibWidget, MyMplCanvas
+from GUI.PyQt.configGUI.network_visualization import cnn2d_visual
+from GUI.PyQt.utils.label import Label
+from GUI.PyQt.utils.tftheanoFunction import TensorFlowTheanoFunction
+from GUI.PyQt.configGUI.canvas import Canvas
+from GUI.PyQt.configGUI.gridTable import TableWidget
+from GUI.PyQt.configGUI.labelDialog import LabelDialog
+from GUI.PyQt.configGUI.labelTable import LabelTable
+from GUI.PyQt.configGUI import network_visualization
+from GUI.PyQt.configGUI.Grey_window import grey_window
+from GUI.PyQt.configGUI.Patches_window import Patches_window
+from GUI.PyQt.configGUI.framework import Ui_MainWindow
+from GUI.PyQt.configGUI.loadf2 import *
+from GUI.PyQt.configGUI.Unpatch import UnpatchType, UnpatchArte
+from GUI.PyQt.configGUI.Unpatch_eight import UnpatchArte8
+from GUI.PyQt.configGUI.Unpatch_two import fUnpatch2D
+from GUI.PyQt.configGUI.activescene import Activescene
+from GUI.PyQt.configGUI.activeview import Activeview
+from GUI.PyQt.configGUI.loadf import loadImage
+from GUI.PyQt.DLart.network_interface import DataSetsWindow, NetworkInterface
+from GUI.PyQt.DLart.dlart import DeepLearningArtApp
+from GUI.PyQt.DLart.Constants_DLart import *
 
 matplotlib.use('Qt5Agg')
 
