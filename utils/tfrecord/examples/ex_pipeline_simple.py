@@ -6,12 +6,12 @@
 
 import tensorflow as tf
 import nibabel
-from medio import convert_tf, read_image
+from utils.tfrecord.medio import convert_tf, read_image
 
 if __name__ == '__main__':
 
     # define some example values
-    path_tf = '/home/d1274/no_backup/d1274/tmp_data/scan.tfrecord'
+    path_tf = '/home/s1304/no_backup/s1304/tmp_data/scan.tfrecord'
     b_custom = False
 
     # path_image = '/home/d1274/med_data/NAKO/NAKO_IQA/Q1/dicom_sorted/3D_GRE_TRA_bh_W_COMPOSED_0014.mat'
