@@ -6,8 +6,8 @@ import numpy as np
 import time
 import os
 
-from medio import convert_tf
-from medio import parse_tf
+from utils.tfrecord.medio import convert_tf
+from utils.tfrecord.medio import parse_tf
 
 
 if __name__ == '__main__':
@@ -16,7 +16,7 @@ if __name__ == '__main__':
     num_parallel_calls = 1
 
     # define some example values
-    data_dir = '/home/d1274/no_backup/d1274/data'
+    data_dir = '/home/s1304/no_backup/s1304/data'
     b_viewer = True
     b_verbose = True
 
