@@ -6,9 +6,9 @@ import time
 import os
 import nibabel
 
-from medio import convert_tf
-from medio import parse_tf
-from util import patches
+from utils.tfrecord.medio import convert_tf
+from utils.tfrecord.medio import parse_tf
+from utils.tfrecord.util import patches
 
 def parse_label(path_name):
     if path_name.find('_deep_') != -1:
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     num_parallel_calls = 4
 
     # define some example values
-    data_dir = '/home/d1274/no_backup/d1274/data'
+    data_dir = '/home/s1304/no_backup/s1304/data'
     b_viewer = True
     b_verbose = True
 
