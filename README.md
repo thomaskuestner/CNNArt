@@ -16,17 +16,22 @@ easy-to-use graphical interface for medical deep learning
 - network visualization: kernel weights, feature maps and deep visualization
 
 ## Usage
+Install the requirements
+```shell
+$ python3 -m pip install -r requirements.txt
+```
+
 ### direct
 1. define database layout in `config/database/_NAME_OF_DATABASE_.csv` (as specified in param.yml -> MRdatabase)
 2. edit parameters in `config/param.yml`
 3. run code via `main.py`
 
 ### GUI
-training/prediction can also be invoked from the GUI. Please adapt `mainPatches_Template.py` according to your needs   
+training/prediction can also be invoked from the GUI. Please adapt `mainGUI_Template.py` according to your needs   
 `Qt_main.py`
 
 ### calling structure
-`main.py ==> mainPatches.py ==> model.fTrain()/fPredict()`
+`main.py ==> model.fTrain()/fPredict()`
 
 ## Networks
 Network | Artifact type detection | Publication

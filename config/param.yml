@@ -5,7 +5,6 @@ motion_head: &id001
    labelref  : [0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003"]
    labelart  : [1]
-   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Headcross"
    bestmodel : {CNN2D: "head_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_abd: &id002
@@ -14,7 +13,6 @@ motion_abd: &id002
    labelref  : [0]
    dataart   : ["t1_tse_tra_fs_mbh_Leber_Motion_0005"]
    labelart  : [1]
-   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Abdcross"
    bestmodel : {CNN2D: "abdomen_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_becken: &id003
@@ -23,7 +21,6 @@ motion_becken: &id003
    labelref  : [0]
    dataart   : ["t1_tse_tra_fs_Becken_Motion_0010"]
    labelart  : [1]
-   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Beckencross"
    bestmodel : {CNN2D: "head_becken_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_head_abd: &id004
@@ -32,7 +29,6 @@ motion_head_abd: &id004
    labelref  : [0, 0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_mbh_Leber_Motion_0005"]
    labelart  : [1, 1]
-   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Head-Abdcross"
    bestmodel : {CNN2D: "head_abd_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_head_becken: &id005
@@ -41,7 +37,6 @@ motion_head_becken: &id005
    labelref  : [0, 0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_Becken_Motion_0010"]
    labelart  : [1, 1]
-   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Head-Beckencross"
    bestmodel : {CNN2D: "head_becken_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 motion_head_abd_becken: &id006
@@ -50,14 +45,13 @@ motion_head_abd_becken: &id006
    labelref  : [0, 0, 0]
    dataart   : ["t1_tse_tra_Kopf_Motion_0003", "t1_tse_tra_fs_mbh_Leber_Motion_0005", "t1_tse_tra_fs_Becken_Motion_0010"]
    labelart  : [1, 1, 1]
-   pathout   : "/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Allcross"
    bestmodel : {CNN2D: "head_abd_becken_4040_lr_0.0001_bs_64", CNN3D: "xxx", MNetArt: "xxx", VNetArt: "xxx"}
 #
 #### set parameters ####
-# database name
+
 MRdatabase : MRPhysics
 # subdirectories in database, patient, output directory
-subdirs : ["newProtocol", "dicom_sorted", "testout", "correction"]
+subdirs : ["newProtocol", "dicom_sorted"]
 # CNN database to be modeled
 selectedDatabase: *id001
 # network architecture (if existing for chosen database!)
@@ -103,8 +97,7 @@ epochs : 300
 lTrain : true
 # save intermediate results
 lSave : true
-# (list of) path(s) of to be predicted images
-lPredictImg : ["/med_data/ImageSimilarity/Databases/MRPhysics/..."]
+
 # (list with) labels of to be predicted images (either scalar or path to patch-wise label file)
 lLabelPredictImg : [ 1 ]
 # sPredictModel: if empty, the best model in the selected database will be chosen.
@@ -126,6 +119,7 @@ lScaleFactor : [0.5, 1]
 # false: classification
 lCorrection: false
 # parameters in artifacts correction
+
 correction:
   # training model
   sCorrection: "motion_VAE2D"
@@ -155,3 +149,29 @@ correction:
   evaluate: true
   test_patient: "10_mar"
   augmentation: false # augmentation flag
+
+
+gpu_home: "/home/s1275"
+# database name
+pathout: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database"
+
+# (list of) path(s) of to be predicted images
+lPredictImg: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics"
+
+DLart_output_path: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/output"
+
+visualCNN: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/CNN/Headcross"
+
+predict_result: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/CNN/PredictResults/"
+
+test_path: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/CNN/PatchbasedLabeling Results"
+
+cnn_path: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/CNN"
+
+marking_path: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/Markings/"
+
+label_path: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/Paper_Markings"
+
+output_learning: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database"
+
+check_point: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics/output/checkpoints"

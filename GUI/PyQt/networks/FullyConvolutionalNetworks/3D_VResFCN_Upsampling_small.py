@@ -111,7 +111,7 @@ def createModel(patchSize, numClasses, usingClassification=False):
     if usingClassification:
         # use x_after_stage_4 as quantification output
         # global average pooling
-        x_class = GlobalAveragePooling2D(data_format='channels_last')(x_after_stage_4)
+        x_class = GlobalAveragePooling3D(data_format='channels_last')(x_after_stage_4)
 
         # fully-connected layer
         classification_output = Dense(units=numClasses,
@@ -361,20 +361,22 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     # embeddings_layer_names=None,
     #  embeddings_metadata=None)
 
-    #callbacks = [callback_earlyStopping]
-    callbacks = []
-    #callbacks.append(
-     #   ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0,
-      #                  period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
+    from utils.LivePlotCallback import LivePlotCallback
+    callbacks = [EarlyStopping(monitor='val_loss', patience=12, verbose=1),
+                 ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc',
+                                 verbose=0,
+                                 period=1, save_best_only=True),
+                 LearningRateScheduler(schedule=step_decay, verbose=1),
+                 LivePlotCallback(dlart_handle)]
     # callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
-    callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
 
     if X_valid.size == 0 and y_valid.size == 0:
         # using test set for validation
         if usingClassification:
             result = cnn.fit(X_train,
                              {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
-                             validation_split=0.15,
+                             validation_data=(
+                                 X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -382,7 +384,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         else:
             result = cnn.fit(X_train,
                              Y_segMasks_train,
-                             validation_split=0.15,
+                             validation_data=(X_test, Y_segMasks_test),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -392,7 +394,8 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         if usingClassification:
             result = cnn.fit(X_train,
                              {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
-                             validation_split=0.15,
+                             validation_data=(
+                                 X_valid, {'segmentation_output': Y_segMasks_valid, 'classification_output': y_valid}),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -400,7 +403,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         else:
             result = cnn.fit(X_train,
                              Y_segMasks_train,
-                             validation_split=0.15,
+                             validation_data=(X_valid, Y_segMasks_valid),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -423,7 +426,10 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
 
     # wei = cnn.get_weights()
     cnn.save_weights(weight_name, overwrite=True)
-    # cnn.save(model_all) # keras > v0.7
+    cnn.save(model_all) # keras > v0.7
+    model_png_dir = sOutPath + os.sep + "model.png"
+    from keras.utils import plot_model
+    plot_model(cnn, to_file=model_png_dir, show_shapes=True, show_layer_names=True)
 
     if not usingClassification:
         # matlab

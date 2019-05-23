@@ -153,7 +153,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
     model_name = sOutPath + os.sep + sFilename + '_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     weight_name = model_name + '_weights.h5'
-    model_json = model_name + '_json'
+    model_json = model_name + '.json'
     model_all = model_name + '_model.h5'
     model_mat = model_name + '.mat'
 
@@ -367,7 +367,10 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
     # wei = cnn.get_weights()
     cnn.save_weights(weight_name, overwrite=True)
-    # cnn.save(model_all) # keras > v0.7
+    cnn.save(model_all) # keras > v0.7
+    model_png_dir = sOutPath + os.sep + "model.png"
+    from keras.utils import plot_model
+    plot_model(cnn, to_file=model_png_dir, show_shapes=True, show_layer_names=True)
 
     # matlab
     acc = result.history['acc']

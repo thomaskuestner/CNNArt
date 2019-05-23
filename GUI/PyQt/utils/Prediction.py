@@ -1,47 +1,17 @@
 import os
-#os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
-from tensorflow.python.client import device_lib
-print(device_lib.list_local_devices)
-
 import os.path
-import scipy.io as sio
-import numpy as np
-import math
 import keras
-from keras.layers import Input
 import keras.backend as K
-from keras.layers import Conv2D
-from keras.layers import BatchNormalization
-from keras.layers import GlobalAveragePooling2D
-from keras.activations import softmax
-from keras.layers import concatenate
-from keras.layers.core import Dense, Activation, Flatten
-from keras.models import Model
-from keras.models import Sequential
-from keras.layers import UpSampling3D
-from keras.layers.convolutional import Convolution2D
-from keras.layers import LeakyReLU
-from keras.layers import Softmax
-from keras.callbacks import EarlyStopping
-from keras.callbacks import LearningRateScheduler
-from keras.callbacks import ReduceLROnPlateau
-from keras.callbacks import ModelCheckpoint
 from keras.models import model_from_json
-from keras.regularizers import l2  # , activity_l2
 import tensorflow as tf
-from keras.optimizers import SGD
-from utils.image_preprocessing import ImageDataGenerator
-from matplotlib import pyplot as plt
 
 from utils.label import *
 
 from sklearn.metrics import classification_report, confusion_matrix
+from DLart.Constants_DLart import *
 
 
-
-def predict_model(X_test, Y_test, sModelPath, batch_size=32, classMappings=None):
+def predict_model(X_test, Y_test, sModelPath, batch_size=32, dlart_handle=None):
     X_test = np.expand_dims(X_test, axis=-1)
 
     # pathes
@@ -54,9 +24,35 @@ def predict_model(X_test, Y_test, sModelPath, batch_size=32, classMappings=None)
         model_string = fp.read()
 
     model = model_from_json(model_string)
+
+    # create optimizer
+
+    if dlart_handle is not None:
+        if dlart_handle.getOptimizer() == SGD_OPTIMIZER:
+            opti = keras.optimizers.SGD(momentum=dlart_handle.getMomentum(),
+                                        decay=dlart_handle.getWeightDecay(),
+                                        nesterov=dlart_handle.getNesterovEnabled())
+
+        elif dlart_handle.getOptimizer() == RMS_PROP_OPTIMIZER:
+            opti = keras.optimizers.RMSprop(decay=dlart_handle.getWeightDecay())
+
+        elif dlart_handle.getOptimizer() == ADAGRAD_OPTIMIZER:
+            opti = keras.optimizers.Adagrad(epsilon=None, decay=dlart_handle.getWeightDecay())
+
+        elif dlart_handle.getOptimizer() == ADADELTA_OPTIMIZER:
+            opti = keras.optimizers.Adadelta(rho=0.95, epsilon=None,
+                                             decay=dlart_handle.getWeightDecay())
+
+        elif dlart_handle.getOptimizer() == ADAM_OPTIMIZER:
+            opti = keras.optimizers.Adam(beta_1=0.9, beta_2=0.999, epsilon=None,
+                                         decay=dlart_handle.getWeightDecay())
+        else:
+            raise ValueError("Unknown Optimizer!")
+    else:
+        opti = keras.optimizers.Adam(beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     model.summary()
 
-    model.compile(loss='categorical_crossentropy', optimizer=keras.optimizers.Adam(), metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer=opti, metrics=['accuracy'])
     model.load_weights(sModelPath + os.sep + sFilename + '_weights.h5')
 
     # evaluate model on test data
@@ -66,7 +62,7 @@ def predict_model(X_test, Y_test, sModelPath, batch_size=32, classMappings=None)
     # predict test dataset
     probability_predictions = model.predict(X_test, batch_size=batch_size, verbose=1, steps=None)
 
-    #classification report
+    # classification report
     # target_names = []
     # if len(classMappings[list(classMappings.keys())[0]]) == 3:
     #     for i in sorted(classMappings):
@@ -87,11 +83,10 @@ def predict_model(X_test, Y_test, sModelPath, batch_size=32, classMappings=None)
                                                    np.argmax(probability_predictions, axis=1),
                                                    target_names=None, digits=4)
 
-    #confusion matrix
+    # confusion matrix
     confusionMatrix = confusion_matrix(y_true=np.argmax(Y_test, axis=1),
                                        y_pred=np.argmax(probability_predictions, axis=1),
                                        labels=range(int(probability_predictions.shape[1])))
-
 
     prediction = {
         'predictions': probability_predictions,
@@ -104,7 +99,8 @@ def predict_model(X_test, Y_test, sModelPath, batch_size=32, classMappings=None)
     return prediction
 
 
-def predict_segmentation_model(X_test, y_test=None, Y_segMasks_test=None, sModelPath=None, sOutPath=None, batch_size=64, usingClassification=False):
+def predict_segmentation_model(X_test, y_test=None, Y_segMasks_test=None, sModelPath=None, sOutPath=None, batch_size=64,
+                               usingClassification=False, dlart_handle=None):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
         Input:
             X: Samples to predict on. The shape of X should fit to the input shape of the model
@@ -115,15 +111,12 @@ def predict_segmentation_model(X_test, y_test=None, Y_segMasks_test=None, sModel
             batchSize: Batchsize, number of samples that are processed at once"""
 
     X_test = np.expand_dims(X_test, axis=-1)
-
-    Y_segMasks_test[Y_segMasks_test == 3] = 1
-    Y_segMasks_test[Y_segMasks_test == 2] = 0
     Y_segMasks_test_foreground = np.expand_dims(Y_segMasks_test, axis=-1)
     Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape) - Y_segMasks_test_foreground
     Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground), axis=-1)
 
-    #if usingClassification:
-     #   y_test = np.expand_dims(y_test, axis=-1)
+    # if usingClassification:
+    #   y_test = np.expand_dims(y_test, axis=-1)
 
     _, sPath = os.path.splitdrive(sModelPath)
     sPath, sFilename = os.path.split(sPath)
@@ -131,10 +124,10 @@ def predict_segmentation_model(X_test, y_test=None, Y_segMasks_test=None, sModel
 
     listdir = os.listdir(sModelPath)
 
-    #sModelPath = sModelPath.replace("_json.txt", "")
-    #weight_name = sModelPath + '_weights.h5'
-    #model_json = sModelPath + '_json.txt'
-    #model_all = sModelPath + '_model.h5'
+    # sModelPath = sModelPath.replace("_json.txt", "")
+    # weight_name = sModelPath + '_weights.h5'
+    # model_json = sModelPath + '_json.txt'
+    # model_all = sModelPath + '_model.h5'
 
     # load weights and model (new way)
     with open(sModelPath + os.sep + sFilename + '.json', 'r') as fp:
@@ -144,9 +137,33 @@ def predict_segmentation_model(X_test, y_test=None, Y_segMasks_test=None, sModel
 
     model.summary()
 
+    if dlart_handle is not None:
+        if dlart_handle.getOptimizer() == SGD_OPTIMIZER:
+            opti = keras.optimizers.SGD(momentum=dlart_handle.getMomentum(),
+                                        decay=dlart_handle.getWeightDecay(),
+                                        nesterov=dlart_handle.getNesterovEnabled())
+
+        elif dlart_handle.getOptimizer() == RMS_PROP_OPTIMIZER:
+            opti = keras.optimizers.RMSprop(decay=dlart_handle.getWeightDecay())
+
+        elif dlart_handle.getOptimizer() == ADAGRAD_OPTIMIZER:
+            opti = keras.optimizers.Adagrad(epsilon=None, decay=dlart_handle.getWeightDecay())
+
+        elif dlart_handle.getOptimizer() == ADADELTA_OPTIMIZER:
+            opti = keras.optimizers.Adadelta(rho=0.95, epsilon=None,
+                                             decay=dlart_handle.getWeightDecay())
+
+        elif dlart_handle.getOptimizer() == ADAM_OPTIMIZER:
+            opti = keras.optimizers.Adam(beta_1=0.9, beta_2=0.999, epsilon=None,
+                                         decay=dlart_handle.getWeightDecay())
+        else:
+            raise ValueError("Unknown Optimizer!")
+    else:
+        opti = keras.optimizers.Adam(beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+
     if usingClassification:
         model.compile(loss={'segmentation_output': dice_coef_loss, 'classification_output': 'categorical_crossentropy'},
-                      optimizer=keras.optimizers.Adam(),
+                      optimizer=opti,
                       metrics={'segmentation_output': dice_coef, 'classification_output': 'accuracy'})
 
         model.load_weights(sModelPath + os.sep + sFilename + '_weights.h5')
@@ -156,8 +173,10 @@ def predict_segmentation_model(X_test, y_test=None, Y_segMasks_test=None, sModel
                              {'segmentation_output': Y_segMasks_test, 'classification_output': y_test},
                              batch_size=batch_size, verbose=1)
 
-        print('loss' + str(loss_test) + ' segmentation loss:' + str(segmentation_output_loss_test) + ' classification loss: ' + str(classification_output_loss_test) + \
-              ' segmentation dice coef: ' + str(segmentation_output_dice_coef_test) + ' classification accuracy: ' + str(classification_output_acc_test))
+        print('loss' + str(loss_test) + ' segmentation loss:' + str(
+            segmentation_output_loss_test) + ' classification loss: ' + str(classification_output_loss_test) + \
+              ' segmentation dice coef: ' + str(
+            segmentation_output_dice_coef_test) + ' classification accuracy: ' + str(classification_output_acc_test))
 
         prob_pre = model.predict(X_test, batch_size=batch_size, verbose=1)
 
@@ -168,8 +187,8 @@ def predict_segmentation_model(X_test, y_test=None, Y_segMasks_test=None, sModel
                        'segmentation_output_dice_coef_test': segmentation_output_dice_coef_test,
                        'classification_output_acc_test': classification_output_acc_test}
     else:
-        model.compile(loss=dice_coef_loss, optimizer=keras.optimizers.Adam(), metrics=[dice_coef])
-        model.load_weights(sModelPath+ os.sep + sFilename+'_weights.h5')
+        model.compile(loss=dice_coef_loss, optimizer=opti, metrics=[dice_coef])
+        model.load_weights(sModelPath + os.sep + sFilename + '_weights.h5')
 
         score_test, acc_test = model.evaluate(X_test, Y_segMasks_test, batch_size=batch_size)
         print('loss: ' + str(score_test) + '   dice coef:' + str(acc_test))
@@ -181,19 +200,16 @@ def predict_segmentation_model(X_test, y_test=None, Y_segMasks_test=None, sModel
     return predictions
 
 
-
-
-
 def dice_coef(y_true, y_pred, epsilon=1e-5):
-    dice_numerator = 2.0 * K.sum(y_true*y_pred, axis=[1,2,3,4])
-    dice_denominator = K.sum(y_true, axis=[1,2,3,4]) + K.sum(y_pred, axis=[1,2,3,4])
+    dice_numerator = 2.0 * K.sum(y_true * y_pred, axis=[1, 2, 3, 4])
+    dice_denominator = K.sum(K.square(y_true), axis=[1, 2, 3, 4]) + K.sum(K.square(y_pred), axis=[1, 2, 3, 4])
 
     dice_score = dice_numerator / (dice_denominator + epsilon)
     return K.mean(dice_score, axis=0)
 
 
 def dice_coef_loss(y_true, y_pred):
-    return 1-dice_coef(y_true, y_pred)
+    return 1 - dice_coef(y_true, y_pred)
 
 
 def dice_coef_2(ground_truth, prediction, weight_map=None):
@@ -242,5 +258,5 @@ def dice_coef_2(ground_truth, prediction, weight_map=None):
     # dice_score.set_shape([n_classes])
     # minimising (1 - dice_coefficients)
 
-    #return 1.0 - tf.reduce_mean(dice_score)
+    # return 1.0 - tf.reduce_mean(dice_score)
     return tf.reduce_mean(dice_score)

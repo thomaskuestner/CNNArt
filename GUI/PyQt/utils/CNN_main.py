@@ -7,6 +7,8 @@ Created on Wed Jan 27 16:57:10 2016
 Copyright: 2016, 2017 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) under Apache2 license
 @author: Thomas Kuestner
 """
+from tensorflow.python.keras.models import load_model
+
 from config.PATH import CNN_PATH
 
 """Import"""
@@ -17,6 +19,7 @@ import h5py
 import scipy.io as sio  # I/O
 import os.path  # operating system
 import argparse
+import keras.backend as K
 
 # networks
 from networks.motion.CNN2D import *
@@ -29,8 +32,12 @@ from networks.multiclass.SENets import *
 
 from hyperopt import Trials, STATUS_OK, tpe
 from hyperas import optim
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
 
-
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+set_session(tf.Session(config=config))
 
 """functions"""
 
@@ -102,30 +109,15 @@ def fLoadDataForOptim(sInPath):
 #        if not any(x in sVarname for x in ['X_train', 'X_test', 'y_train', 'y_test'] ):
 #            conten[sVarname]
 
-def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearningRate, iEpochs, dlart_handle=None, usingSegmentationMasks=False):
+def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearningRate, iEpochs, dlart_handle=None,
+            usingSegmentationMasks=False):
     """CNN Models"""
     # check model
     sModel = sModelIn
 
-    # if 'motion' in sModelIn:
-    #     if 'CNN2D' in sModelIn:
-    #         sModel = 'networks.motion.CNN2D.' + sModelIn
-    #     elif 'motion_3DCNN' in sModelIn:
-    #         sModel = 'networks.motion.CNN3D.' + sModelIn
-    #     elif 'motion_MNetArt' in sModelIn:
-    #         sModel = 'networks.motion.MNetArt.' + sModelIn
-    #     elif 'motion_VNetArt' in sModelIn:
-    #         sModel = 'networks.motion.VNetArt.' + sModelIn
-    # elif 'multi' in sModelIn:
-    #     if 'multi_DenseResNet' in sModelIn:
-    #         sModel = 'networks.multiclass.DenseResNet.' + sModelIn
-    #     elif 'multi_InceptionNet' in sModelIn:
-    #         sModel = 'networks.multiclass.InceptionNet.' + sModelIn
-    # else:
-    #     sys.exit("Model is not supported")
-
     # dynamic loading of corresponding model
-    cnnModel = __import__(sModel, globals(), locals(), ['createModel', 'fTrain', 'fPredict'], 0)  # dynamic module loading with specified functions and with absolute importing (level=0) -> work in both Python2 and Python3
+    cnnModel = __import__(sModel, globals(), locals(), ['createModel', 'fTrain', 'fPredict', 'load_best_model'],
+                          0)  # dynamic module loading with specified functions and with absolute importing (level=0) -> work in both Python2 and Python3
 
     # train (w/ or w/o optimization) and predicting
     if lTrain == RUN_CNN_TRAIN_TEST:  # training
@@ -144,16 +136,16 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
             sFilename, sExt = os.path.splitext(sFilename)
             model_name = sPath + '/' + sFilename + str(patchSize[0, 0]) + str(patchSize[0, 1]) + '_best'
             weight_name = model_name + '_weights.h5'
-            model_json = model_name + '_json'
+            model_json = model_name + '.json'
             model_all = model_name + '_model.h5'
             json_string = best_model.to_json()
             open(model_json, 'w').write(json_string)
             # wei = best_model.get_weights()
             best_model.save_weights(weight_name)
-            # best_model.save(model_all)
+            best_model.save(model_all)
 
             result = best_run['result']
-            # acc = result.history['acc']
+            # acc = result.history['acc']y,
             loss = result.history['loss']
             val_acc = result.history['val_acc']
             val_loss = result.history['val_loss']
@@ -224,13 +216,13 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
             sFilename, sExt = os.path.splitext(sFilename)
             model_name = sPath + '/' + sFilename + str(patchSize[0, 0]) + str(patchSize[0, 1]) + '_best'
             weight_name = model_name + '_weights.h5'
-            model_json = model_name + '_json'
+            model_json = model_name + '.json'
             model_all = model_name + '_model.h5'
             json_string = best_model.to_json()
             open(model_json, 'w').write(json_string)
             # wei = best_model.get_weights()
             best_model.save_weights(weight_name)
-            # best_model.save(model_all)
+            best_model.save(model_all)
 
             result = best_run['result']
             # acc = result.history['acc']
@@ -294,7 +286,35 @@ def fRunCNN(dData, sModelIn, lTrain, sParaOptim, sOutPath, iBatchSize, iLearning
                                 dlart_handle=dlart_handle)
 
     elif lTrain == RUN_CNN_PREDICT:  # predicting
-        cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, dData['patchSize'], iBatchSize[0])
+        cnnModel.fPredict(dData['X_test'], dData['y_test'], dData['model_name'], sOutPath, dData['patchSize'],
+                          iBatchSize[0])
+
+    _, sPath = os.path.splitdrive(sOutPath)
+    sPath, sFilename = os.path.split(sPath)
+    sFilename, sExt = os.path.splitext(sFilename)
+
+    model_name = sOutPath + os.sep + sFilename
+    model_all = model_name + '_model.h5'
+    try:
+        model = load_model(model_all)
+    except:
+        try:
+            def dice_coef(y_true, y_pred, epsilon=1e-5):
+                dice_numerator = 2.0 * K.sum(y_true * y_pred, axis=[1, 2, 3, 4])
+                dice_denominator = K.sum(K.square(y_true), axis=[1, 2, 3, 4]) + K.sum(K.square(y_pred),
+                                                                                      axis=[1, 2, 3, 4])
+
+                dice_score = dice_numerator / (dice_denominator + epsilon)
+                return K.mean(dice_score, axis=0)
+
+            def dice_coef_loss(y_true, y_pred):
+                return 1 - dice_coef(y_true, y_pred)
+
+            model = load_model(model_all,
+                               custom_objects={'dice_coef_loss': dice_coef_loss, 'dice_coef': dice_coef})
+        except:
+            model = {}
+    return model, model_all
 
 
 # Main Code

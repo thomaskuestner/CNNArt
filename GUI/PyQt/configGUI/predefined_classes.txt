@@ -1,18 +1,22 @@
-brain tumors
-brain injury
-developmental anomaly
-multiple sclerosis
-stroke
-dementia
-aneurysms
-blockage
-carotid artery disease
-malformation
-herniated discs
-pinched nerves
-spinal tumor
-spinal cord compression
-spinal cord fracture
-unhappy
-happy
-nothing
+T1 Head Ref
+T1 Head Motion
+T1 Abdomen Ref
+T1 Abdomen Motion
+T1 Pelvis Ref
+T1 Pelvis Motion
+T2 Abdomen Ref
+T2 Abdomen Shim
+T2 Pelvis Ref
+T2 Pelvis Motion
+T2 Pelvis Shim
+Head Ref
+Head Motion
+Abdomen Ref
+Abdomen Motion
+Abdomen Shim
+Pelvis Ref
+Pelvis Motion
+Pelvis Shim
+Ref
+Motion
+Shim

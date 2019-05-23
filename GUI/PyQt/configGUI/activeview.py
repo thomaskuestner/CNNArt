@@ -1,9 +1,11 @@
+# https://github.com/thomaskuestner/CNNArt
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 class Activeview(QtWidgets.QGraphicsView):
     zooming_data = QtCore.pyqtSignal(float)
     zoom_link = QtCore.pyqtSignal(float)
     move_link = QtCore.pyqtSignal(list)
+    doubleClicked = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
         super(Activeview, self).__init__(parent)
@@ -83,6 +85,10 @@ class Activeview(QtWidgets.QGraphicsView):
         if event.button() == QtCore.Qt.RightButton:
             self.selfhandle = False
         super(Activeview, self).mouseReleaseEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            self.doubleClicked.emit()
 
     def zoomback(self):
         factor = 1/self.zoomdata

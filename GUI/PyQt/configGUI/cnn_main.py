@@ -10,25 +10,17 @@ Copyright: 2016, 2017 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) und
 
 """Import"""
 
-import sys
-import numpy as np  # for algebraic operations, matrices
-import h5py
-import scipy.io as sio  # I/O
-import os.path  # operating system
 import argparse
+import os.path  # operating system
+import sys
+
+import h5py
+import numpy as np  # for algebraic operations, matrices
+import scipy.io as sio  # I/O
+from hyperas import optim
+from hyperopt import Trials, tpe
 
 # networks
-from networks.motion.CNN2D import *
-from networks.motion.CNN3D import *
-from networks.motion.MNetArt import *
-from networks.motion.VNetArt import *
-from networks.multiclass.DenseResNet import *
-from networks.multiclass.InceptionNet import *
-from networks.multiclass.SENets import *
-
-from hyperopt import Trials, STATUS_OK, tpe
-from hyperas import optim
-
 
 
 """functions"""

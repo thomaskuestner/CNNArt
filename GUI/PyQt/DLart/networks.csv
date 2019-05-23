@@ -1,0 +1,29 @@
+name,path
+Multiclass DenseResNet,networks.multiclass.DenseResNet.multiclass_DenseResNet
+Multiclass InceptionNet,networks.multiclass.InceptionNet.multiclass_InceptionNet
+Mulitclass ResNet-56,networks.multiclass.SENets.multiclass_ResNet-56
+Multiclass SE-ResNet-56,networks.multiclass.SENets.multiclass_SE-ResNet-56
+Mulitclass ResNet-50,networks.multiclass.SENets.multiclass_ResNet-50
+Multiclass SE-ResNet-50,networks.multiclass.SENets.multiclass_SE-ResNet-50
+Multiclass DenseNet-34,networks.multiclass.SENets.multiclass_DenseNet-34
+Multiclass SE-DenseNet-34,networks.multiclass.SENets.multiclass_SE-DenseNet-34
+Multiclass DenseNet-BC-100,networks.multiclass.SENets.multiclass_DenseNet-BC-100
+Multiclass SE-DenseNet-BC-100,networks.multiclass.SENets.multiclass_SE-DenseNet-BC-100
+Multiclass SE-ResNet-32,networks.multiclass.SENets.multiclass_SE-ResNet-32
+Multiclass 3D ResNet,networks.multiclass.CNN3D.multiclass_3D_ResNet
+Multiclass 3D SE-ResNet,networks.multiclass.CNN3D.multiclass_3D_SE-ResNet
+Multiclass SE-ResNet-44_dense,networks.multiclass.SENets.multiclass_SE-ResNet-44_dense
+FCN 3D-VResFCN,networks.FullyConvolutionalNetworks.3D_VResFCN
+FCN 3D-VResFCN-Upsampling,networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling
+FCN 3D-VResFCN-Upsampling small,networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_small
+FCN 3D-VResFCN-Upsampling small_single,networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_small_single
+FCN 3D-VResFCN-Upsampling final,networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_final
+FCN 3D-VResFCN-Upsampling final Motion Binary,networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_final_Motion_Binary
+FCN 3D-VResFCN-Upsampling final Motion Shim Multi Label ,networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_final_Motion_Shim_Label
+Multiclass 3D SE-DenseNet,networks.multiclass.CNN3D.multiclass_3D_SE-DenseNet
+FCN 3D-VResFCN-Upsampling final Motion Shim Multi Label,networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_final_Motion_Shim_Multi_Label
+multiclass_VGGNet,networks.multiclass.VGGNet.multiclass_VGGNet
+MNetArt,networks.motion.MNetArt.MNetArt
+3D_VResFCN_Upsampling_final_Motion_Binary_modified,networks.FullyConvolutionalNetworks.3D_VResFCN_Upsampling_final_Motion_Binary_modified
+generic,networks.network_generic
+motion_head_CNN2D,networks.motion.CNN2D.motion_head_CNN2D

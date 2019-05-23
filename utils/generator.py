@@ -47,7 +47,7 @@ def tfdata_generator(file_lists, label_lists, is_training, num_parallel_calls=4,
     # Note: this could be rewritten as one map call
     # map parse function to each zipped element
     dataset = dataset.map(
-        map_func=lambda a, b: (tfrecord.medio.convert_tf.parse_function_image(a), b),
+        map_func=lambda a, b: (tfrecord.medio.convert_tf.parse_function(a), b),
         num_parallel_calls=num_parallel_calls)
 
     dataset = dataset.map(

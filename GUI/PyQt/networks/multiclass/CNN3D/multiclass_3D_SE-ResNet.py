@@ -208,7 +208,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
     model_name = sOutPath + os.sep + sFilename + '_lr_' + str(learningRate) + '_bs_' + str(batchSize)
     weight_name = model_name + '_weights.h5'
-    model_json = model_name + '_json'
+    model_json = model_name + '.json'
     model_all = model_name + '_model.h5'
     model_mat = model_name + '.mat'
 
@@ -256,11 +256,11 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
     # embeddings_layer_names=None,
     #  embeddings_metadata=None)
 
-    callbacks = [callback_earlyStopping]
-    callbacks.append(ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc', verbose=0, period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
+    callbacks = [callback_earlyStopping,
+                 ModelCheckpoint(sOutPath + os.sep + 'checkpoints' + os.sep + 'checker.hdf5', monitor='val_acc',
+                                 verbose=0, period=1, save_best_only=True),
+                 LearningRateScheduler(schedule=step_decay, verbose=1), LivePlotCallback(dlart_handle)]
     # callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
-    callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
-    callbacks.append(LivePlotCallback(dlart_handle))
 
     # data augmentation
     if dlart_handle.getDataAugmentationEnabled() == True:
@@ -356,7 +356,10 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, X_valid=None, y_vali
 
     # wei = cnn.get_weights()
     cnn.save_weights(weight_name, overwrite=True)
-    # cnn.save(model_all) # keras > v0.7
+    cnn.save(model_all) # keras > v0.7
+    model_png_dir =sOutPath + os.sep +  "model.png"
+    from keras.utils import plot_model
+    plot_model(cnn, to_file=model_png_dir, show_shapes=True, show_layer_names=True)
 
     # matlab
     acc = result.history['acc']
@@ -391,13 +394,12 @@ def step_decay(epoch, lr):
 
 def fPredict(X, y, sModelPath, sOutPath, batchSize=64):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
-        Input:
-            X: Samples to predict on. The shape of X should fit to the input shape of the model
-            y: Labels for the Samples. Number of Samples should be equal to the number of samples in X
-            sModelPath: (String) full path to a trained keras model. It should be *_json.txt file. there has to be a corresponding *_weights.h5 file in the same directory!
-            sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy stored.
-                        The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the suffix '_pred.mat'
-            batchSize: Batchsize, number of samples that are processed at once"""
+    Input: X: Samples to predict on. The shape of X should fit to the input shape of the model y: Labels for the
+    Samples. Number of Samples should be equal to the number of samples in X sModelPath: (String) full path to a
+    trained keras model. It should be *_json.txt file. there has to be a corresponding *_weights.h5 file in the same
+    directory! sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy
+    stored. The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the
+    suffix '_pred.mat' batchSize: Batchsize, number of samples that are processed at once """
     sModelPath = sModelPath.replace("_json.txt", "")
     weight_name = sModelPath + '_weights.h5'
     model_json = sModelPath + '_json.txt'

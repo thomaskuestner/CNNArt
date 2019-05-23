@@ -1,14 +1,18 @@
+# https://github.com/thomaskuestner/CNNArt
 from setuptools import setup
 import sys
+
 
 def readme():
     with open('README.md') as f:
         return f.read()
 
-if sys.argv[-1] == 'test':
-    setup(name='CNNArt',
+
+#if sys.argv[-1] == 'test':
+if __name__ == "__main__":
+    setup(name='imagine',
           version='1.0',
-          description='M R artifact detection',
+          description='imagine visualization GUI',
           long_description=readme(),
           classifiers=[ 
             'Development Status :: Beta',
@@ -16,7 +20,7 @@ if sys.argv[-1] == 'test':
             'Programming Language :: Python :: 3.6',
             'Topic :: CNN',
           ],
-          keywords='CNN, artifacts, motion, multiclass',
+          keywords='2D/3D/4D/5D image visualization, CNN, artifacts, motion, multiclass',
           url='https://github.com/thomaskuestner/CNNArt',
           author='kSpace Astronauts',
           author_email='thomas.kuestner@iss.uni-stuttgart.de',
@@ -25,9 +29,9 @@ if sys.argv[-1] == 'test':
           tests_require=['pytest'],
           include_package_data=True,
           zip_safe=False,
-          install_requires=['openapi-codec', 'json', 'pickle', 'subprocess', 'sys', 'os', 'h5py', 'keras', 'matplotlib',
-                            'pandas', 'scipy', 'tensorflow', 'yaml', 'PyQt5', 'numbers', 'copy', 'numpy', 'pandas',
-                            'argparse', 'hyperopt', 'hyperopt', 'hashlib', 'math', 'dicom', 'pydicom', 'dicom-numpy',
-                            'collections', 'pyqtgraph', 'python-csv', 'gtabview' , 'pyqtdeploy', 'nibabel', 'Pillow',
-                            'xtract'])
-    sys.exit()
+          install_requires=['jsonschema', 'pickleshare', 'h5py', 'keras', 'matplotlib',
+                            'pandas', 'scipy', 'protobuf', 'tensorflow', 'pyYAML', 'PyQt5-stubs', 'PyQt5',
+                            'numpy', 'pandas', 'argparse', 'hyperas', 'hyperopt', 'graphviz', 'dicom',
+                            'pydicom', 'dicom-numpy', 'pyqtgraph', 'python-csv', 'gtabview', 'pyqtdeploy',
+                            'nibabel', 'Pillow', 'pydot', 'xtract', 'scikit-image', 'scikit-learn', 'seaborn'])
+    #sys.exit()

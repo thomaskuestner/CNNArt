@@ -1,3 +1,4 @@
+## for editing mask color in results
 import matplotlib
 import pandas
 
@@ -34,10 +35,12 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
             self.dev2 = self.colors['class11']['trans'][0]
             self.trans = self.colors['classes']['trans'][0]
             self.colormaps = []
+            self.classes = []
         self.patch_color_df = pandas.read_csv('configGUI/patch_color.csv')
         count = self.patch_color_df['class'].count()
         for i in range(count):
             self.colormaps.append(self.patch_color_df.iloc[i]['color'])
+            self.classes.append(self.patch_color_df.iloc[i]['class'])
 
         for n, i in enumerate(self.hmap1):
             if i == '\\\\':
@@ -65,7 +68,7 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
         if count>0:
             self.listWidget.insertItem(0, '%d classes' % count)
             for i in range(count):
-                label = QtWidgets.QRadioButton('class: %s' % self.colormaps[i])
+                label = QtWidgets.QRadioButton(self.classes[i])
                 self.labellist.append(label)
                 button = QtWidgets.QPushButton()
                 button.setText("")
@@ -75,7 +78,6 @@ class Patches_window(QtWidgets.QDialog,Ui_Patches):
                 button.setStyleSheet('background-color:' + self.colormaps[i])
                 button.clicked.connect(self.colorm)
                 self.buttonlist.append(button)
-            self.labellist[0].setChecked(True)
         self.label_trans = QtWidgets.QLabel('transparency 0-1')
         self.text_trans =  QtWidgets.QLineEdit('0.3')
         row = row + 1

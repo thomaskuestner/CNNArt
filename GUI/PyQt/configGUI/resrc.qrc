@@ -1,5 +1,9 @@
 <RCC>
   <qresource prefix="icons">
+    <file>../Icons/flip.png</file>
+    <file>../Icons/data.png</file>
+    <file>../Icons/execute.png</file>
+    <file>../Icons/process observer.png</file>
     <file>../Icons/image.png</file>
     <file>../Icons/results.png</file>
     <file>../Icons/info.png</file>
