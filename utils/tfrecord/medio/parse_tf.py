@@ -1,6 +1,4 @@
 import pathlib as pl
-import collections
-import logging
 
 
 def fetch_paths(dir_tf, pattern):
@@ -30,5 +28,5 @@ def _parse_tf_gen(path):
         if subject.is_dir():
             # tfrecord
             files = subject.rglob('*.tfrecord')
-
+            # rglob can read all file endet with .tfrecord
             yield subject, files

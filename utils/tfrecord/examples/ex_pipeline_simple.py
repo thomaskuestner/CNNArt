@@ -6,7 +6,7 @@
 
 import tensorflow as tf
 import nibabel
-from medio import convert_tf, read_image
+from utils.tfrecord.medio import convert_tf, read_image
 
 if __name__ == '__main__':
 
