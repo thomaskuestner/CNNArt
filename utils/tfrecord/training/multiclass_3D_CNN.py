@@ -5,7 +5,6 @@ from __future__ import (
     unicode_literals
 )
 
-import six
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import (
     Input,
@@ -19,7 +18,6 @@ from tensorflow.keras.layers import (
     MaxPooling3D
 )
 
-from tensorflow.keras.layers import add
 from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras import backend as K

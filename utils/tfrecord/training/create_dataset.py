@@ -1,10 +1,7 @@
 import tensorflow as tf
-import numpy as np
-import time
 
-from medio import convert_tf
-from medio import parse_tf
-from util import patches
+from utils.tfrecord.medio import convert_tf, parse_tf
+from utils.tfrecord.util import patches
 # It shall return the data associated label
 
 
@@ -16,11 +13,10 @@ def parse_label(path_name):
     elif path_name.find('fb') != -1:
         return 1
 
-def create_dataset (data_dir, num_parallel_calls = 4, patch_size = [64, 64, 64],
-                    overlap = 32, image_shape = [236 , 320, 260], start = [0, 0, 50],
-                    num_imgaes_loaded = 32, batch_size = 64, prefetched_buffer_size = 8000):
+def create_dataset (data_dir, num_parallel_calls = 4, patch_size=[64, 64, 64],
+                    overlap=32, image_shape=[236 , 320, 260], start=[0, 0, 50],
+                    num_imgaes_loaded=32, batch_size = 64, prefetched_buffer_size=8000):
     NUM_CLASSES = 3
-
 
     # choose & fetch all required data / discard subjects missing crucial data
     list_images = parse_tf.fetch_paths(data_dir, '_F_')

@@ -3,7 +3,7 @@
 
 # This file should be re defined accoirding to the situation of the directory !
 
-from medio import convert_tf, parse_gen , read_image
+from utils.tfrecord.medio import convert_tf, parse_gen , read_image
 import pathlib as pl
 import os
 import logging

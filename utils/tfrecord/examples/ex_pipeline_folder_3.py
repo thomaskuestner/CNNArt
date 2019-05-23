@@ -4,11 +4,10 @@
 import tensorflow as tf
 import time
 import os
-import nibabel
 
-from medio import convert_tf
-from medio import parse_tf
-from util import patches
+from utils.tfrecord.medio import convert_tf
+from utils.tfrecord.medio import parse_tf
+from utils.tfrecord.util import patches
 
 def parse_label(path_name):
     if path_name.find('_deep_') != -1:
