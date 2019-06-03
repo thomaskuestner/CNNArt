@@ -9,6 +9,7 @@ import sys
 import h5py
 import keras.backend as K
 import matplotlib
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas
@@ -53,9 +54,6 @@ from configGUI.loadf import loadImage
 from DLart.network_interface import DataSetsWindow, NetworkInterface
 from DLart.dlart import DeepLearningArtApp
 from DLart.Constants_DLart import *
-
-matplotlib.use('Qt5Agg')
-
 
 class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
     update_data = QtCore.pyqtSignal(list)
