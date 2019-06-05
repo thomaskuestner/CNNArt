@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import os
+os.environ['IMAGINEUSEGPU'] = 'False'
 
 import codecs
 import json
@@ -7,7 +9,11 @@ import pickle
 import subprocess
 import sys
 import h5py
-import keras.backend as K
+if os.environ['IMAGINEUSEGPU'] == 'True':
+    import keras.backend as K
+    from keras.models import load_model
+    from keras.utils.vis_utils import model_to_dot
+
 import matplotlib
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
@@ -15,14 +21,17 @@ import numpy as np
 import pandas
 import scipy.io as sio
 import seaborn as sn
-import tensorflow as tf
+if os.environ['IMAGINEUSEGPU'] == 'True':
+    import tensorflow as tf
+    from utils.tftheanoFunction import TensorFlowTheanoFunction
+
 import webbrowser
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import pyqtSlot, QStringListModel
 from PyQt5.QtWidgets import QAbstractItemView, QTableWidgetItem, QMdiSubWindow, QTreeWidgetItem, QFileDialog, \
     QMessageBox, QInputDialog, QSizePolicy, QComboBox, QGridLayout, QItemEditorCreatorBase, QItemEditorFactory
-from keras.models import load_model
-from keras.utils.vis_utils import model_to_dot
+
+
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.colors import ListedColormap
 from matplotlib.figure import Figure
@@ -34,8 +43,7 @@ from matplotlib.patches import Rectangle, Ellipse, PathPatch
 from config.PATH import DLART_OUT_PATH, PATH_OUT, MARKING_PATH, DATASETS, SUBDIRS
 from configGUI.matplotlibwidget import MatplotlibWidget, MyMplCanvas
 from configGUI.network_visualization import cnn2d_visual
-from utils.label import Label
-from utils.tftheanoFunction import TensorFlowTheanoFunction
+from utils.Label import Label
 from configGUI.canvas import Canvas
 from configGUI.gridTable import TableWidget
 from configGUI.labelDialog import LabelDialog
@@ -4070,24 +4078,27 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         class_idx = 0
         reg_param = 1 / (2e-4)
 
-        input = modelInput  # tensor
-        cost = -K.sum(K.log(input[:, class_idx] + 1e-8))  # tensor
-        gradient = K.gradients(cost, input)  # list
+        if lusegpu:
+            input = modelInput  # tensor
+            cost = -K.sum(K.log(input[:, class_idx] + 1e-8))  # tensor
+            gradient = K.gradients(cost, input)  # list
 
-        sess = tf.InteractiveSession()
-        calcCost = TensorFlowTheanoFunction([input], cost)
-        calcGrad = TensorFlowTheanoFunction([input], gradient)
+            sess = tf.InteractiveSession()
+            calcCost = TensorFlowTheanoFunction([input], cost)
+            calcGrad = TensorFlowTheanoFunction([input], gradient)
 
-        step_size = float(self.inputalpha)
-        reg_param = float(self.inputGamma)
+            step_size = float(self.inputalpha)
+            reg_param = float(self.inputGamma)
 
-        test = subset_selection
-        data_c = test
-        oss_v = network_visualization.SubsetSelection(calcGrad, calcCost, data_c, alpha=reg_param, gamma=step_size)
-        result = oss_v.optimize(np.random.uniform(0, 1.0, size=data_c.shape))
-        result = result * test
-        result[result > 0] = 1
-        self.ssResult = result
+            test = subset_selection
+            data_c = test
+            oss_v = network_visualization.SubsetSelection(calcGrad, calcCost, data_c, alpha=reg_param, gamma=step_size)
+            result = oss_v.optimize(np.random.uniform(0, 1.0, size=data_c.shape))
+            result = result * test
+            result[result > 0] = 1
+            self.ssResult = result
+        else:
+            self.ssResult = None
 
     def showChooseInput(self):
         reply = QtWidgets.QMessageBox.information(self,

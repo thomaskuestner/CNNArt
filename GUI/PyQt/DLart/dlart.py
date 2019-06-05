@@ -13,15 +13,19 @@ import os
 import json
 import pydicom
 import dicom_numpy as dicom_np
-import tensorflow as tf
+if os.environ['IMAGINEUSEGPU'] == 'True':
+    import tensorflow as tf
 import scipy.io as sio
 
 from DLart.RigidPatching import fRigidPatching_maskLabeling, fRigidPatching_patchLabeling, fRigidPatching3D_maskLabeling
 from config.PATH import PATH_OUT, LEARNING_OUT, LABEL_PATH, DATASETS
-from utils.CNN_main import fRunCNN, RUN_CNN_TRAIN_TEST_VALIDATION, RUN_CNN_TRAIN_TEST
-from utils.label import Label
+if os.environ['IMAGINEUSEGPU'] == 'True':
+    from utils.CNN_main import fRunCNN, RUN_CNN_TRAIN_TEST_VALIDATION, RUN_CNN_TRAIN_TEST
+
+from utils.Label import Label
 from utils.Multiclass_Unpatching import UnpatchType, UnpatchArte
-from utils.Prediction import predict_segmentation_model, predict_model
+if os.environ['IMAGINEUSEGPU'] == 'True':
+    from utils.Prediction import predict_segmentation_model, predict_model
 from utils.Training_Test_Split import fSplitSegmentationDataset, fSplitDataset, TransformDataset
 from utils.Unpatching import fUnpatchSegmentation, fMulticlassUnpatch2D, fUnpatch3D
 from DLart.Constants_DLart import *
