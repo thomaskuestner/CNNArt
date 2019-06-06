@@ -1,3 +1,12 @@
+# imports
+import sys
+import numpy as np                  # for algebraic operations, matrices
+import h5py
+import scipy.io as sio              # I/O
+import os                      # operating system
+import argparse
+from utils.data import *
+import utils.Label as Label
 
 def fParseConfig(sFile):
     # get config file
@@ -5,6 +14,152 @@ def fParseConfig(sFile):
         cfg = yaml.safe_load(ymlfile)
 
     return cfg
+
+
+def performTraining(data):
+    # set GPU
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(data.gpu_id)
+
+    # get output vector for different classes
+    classes = np.asarray(np.unique(data.Y_train, ), dtype=int)
+    data.classMappings = Label.mapClassesToOutputVector(classes=classes, usingArtefacts=data.usingArtifacts,
+                                                        usingBodyRegion=data.usingBodyRegions,
+                                                        usingTWeightings=data.usingTWeighting)
+
+
+
+        Y_train = []
+
+        Y_validation = []
+
+        Y_test = []
+
+        data.Y_segMasks_train[data.Y_segMasks_train == 3] = 1
+        data.Y_segMasks_train[data.Y_segMasks_train == 2] = 0
+
+        data.Y_segMasks_test[data.Y_segMasks_test == 3] = 1
+        data.Y_segMasks_test[data.Y_segMasks_test == 2] = 0
+
+        ##########################
+        ###########################
+        # for generating patch labels
+
+        y_labels_train = np.expand_dims(data.Y_segMasks_train, axis=-1)
+        y_labels_train[y_labels_train == 0] = -1
+        y_labels_train[y_labels_train == 1] = 1
+        y_labels_train = np.sum(y_labels_train, axis=1)
+        y_labels_train = np.sum(y_labels_train, axis=1)
+        y_labels_train = np.sum(y_labels_train, axis=1)
+        y_labels_train[y_labels_train >= 0] = 1
+        y_labels_train[y_labels_train < 0] = 0
+        for i in range(y_labels_train.shape[0]):
+            Y_train.append([1, 0] if y_labels_train[i].all() == 0 else [0, 1])
+        Y_train = np.asarray(Y_train)
+
+        y_labels_test = np.expand_dims(data.Y_segMasks_test, axis=-1)
+        y_labels_test[y_labels_test == 0] = -1
+        y_labels_test[y_labels_test == 1] = 1
+        y_labels_test = np.sum(y_labels_test, axis=1)
+        y_labels_test = np.sum(y_labels_test, axis=1)
+        y_labels_test = np.sum(y_labels_test, axis=1)
+        y_labels_test[y_labels_test >= 0] = 1
+        y_labels_test[y_labels_test < 0] = 0
+
+        for i in range(y_labels_test.shape[0]):
+            Y_test.append([1, 0] if y_labels_test[i].all() == 0 else [0, 1])
+        Y_test = np.asarray(Y_test)
+
+        # change the shape of the dataset -> at color channel -> here one for grey scale
+
+        # Y_segMasks_train_foreground = np.expand_dims(data.Y_segMasks_train, axis=-1)
+        # Y_segMasks_train_background = np.ones(Y_segMasks_train_foreground.shape) - Y_segMasks_train_foreground
+        # data.Y_segMasks_train = np.concatenate((Y_segMasks_train_background, Y_segMasks_train_foreground),
+        #                                        axis=-1)
+        # data.Y_segMasks_train = np.sum(data.Y_segMasks_train, axis=-1)
+        #
+        # Y_segMasks_test_foreground = np.expand_dims(data.Y_segMasks_test, axis=-1)
+        # Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape) - Y_segMasks_test_foreground
+        # data.Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground),
+        #                                        axis=-1)
+        # data.Y_segMasks_test = np.sum(data.Y_segMasks_test, axis=-1)
+
+        if data.X_validation.size == 0 and data.Y_validation.size == 0:
+            data.X_validation = 0
+            data.Y_segMasks_validation = 0
+            data.Y_validation = 0
+            print("No Validation Dataset.")
+        else:
+            for i in range(data.Y_validation.shape[0]):
+                Y_validation.append(data.classMappings[data.Y_validation[i]])
+            Y_validation = np.asarray(Y_validation)
+            data.Y_segMasks_validation[data.Y_segMasks_validation == 3] = 1
+            data.Y_segMasks_validation[data.Y_segMasks_validation == 2] = 0
+
+
+
+    ################################################################################################################
+    # debug!
+    # for i in range(data.X_train.shape[0]):
+    #
+    #     plt.subplot(141)
+    #     plt.imshow(data.X_train[i, :, :, 4, 0])
+    #
+    #     plt.subplot(142)
+    #     plt.imshow(data.Y_segMasks_train[i, :, :, 4, 0])
+    #
+    #     plt.subplot(143)
+    #     plt.imshow(data.Y_segMasks_train[i, :, :, 4, 1])
+    #
+    #     #plt.subplot(144)
+    #     #plt.imshow(data.Y_segMasks_train[i, :, :, 4, 2])
+    #
+    #     plt.show()
+    #
+    #     print(i)
+
+    ###################################################################################################################
+
+    # output folder
+    data.outPutFolderDataPath = data.learningOutputPath + os.sep + data.neuralNetworkModel + "_"
+    if data.patchingMode == PATCHING_2D:
+        data.outPutFolderDataPath += "2D" + "_" + str(data.patchSizeX) + "x" + str(data.patchSizeY)
+    elif data.patchingMode == PATCHING_3D:
+        data.outPutFolderDataPath += "3D" + "_" + str(data.patchSizeX) + "x" + str(data.patchSizeY) + \
+                                     "x" + str(data.patchSizeZ)
+
+    data.outPutFolderDataPath += "_" + datetime.datetime.today().strftime('%Y-%m-%d_%H-%M')
+
+    if not os.path.exists(data.outPutFolderDataPath):
+        os.makedirs(data.outPutFolderDataPath)
+
+    if not os.path.exists(data.outPutFolderDataPath + os.sep + 'checkpoints'):
+        os.makedirs(data.outPutFolderDataPath + os.sep + 'checkpoints')
+
+    # summarize cnn and training
+    data.create_cnn_training_summary(data.neuralNetworkModel, data.outPutFolderDataPath)
+
+    # segmentation FCN training
+    data.model, data.model_name = fRunCNN(dData={'X_train': data.X_train,
+                                                 'y_train': Y_train,
+                                                 'Y_segMasks_train': data.Y_segMasks_train,
+                                                 'X_valid': data.X_validation,
+                                                 'y_valid': Y_validation,
+                                                 'Y_segMasks_validation': data.Y_segMasks_validation,
+                                                 'X_test': data.X_test,
+                                                 'y_test': Y_test,
+                                                 'Y_segMasks_test': data.Y_segMasks_test,
+                                                 'patchSize': [data.patchSizeX, data.patchSizeY,
+                                                               data.patchSizeZ]},
+                                                  sModelIn=data.deepNeuralNetworks[data.neuralNetworkModel],
+                                                  lTrain=RUN_CNN_TRAIN_TEST_VALIDATION,
+                                                  sParaOptim='',
+                                                  sOutPath=data.outPutFolderDataPath,
+                                                  iBatchSize=data.batchSizes,
+                                                  iLearningRate=data.learningRates,
+                                                  iEpochs=data.epochs,
+                                                  dlart_handle=self,
+                                                  usingSegmentationMasks=data.usingSegmentationMasks)
+
 
 
 if __name__ == "__main__": # for command line call
@@ -26,49 +181,15 @@ if __name__ == "__main__": # for command line call
     cfg = fParseConfig(args.config[0])
 
     lTrain = cfg['lTrain']  # training or prediction
-    lSave = cfg['lSave']  # save intermediate test, training sets
-    lCorrection = cfg['lCorrection']  # artifact correction or classification
-    sPredictModel = cfg['sPredictModel']  # choose trained model used in prediction
-    # initiate info objects
-    # default database: MRPhysics with ['newProtocol','dicom_sorted']
-    dbinfo = DatabaseInfo(cfg['MRdatabase'], cfg['subdirs'])
+
+    sdata = Data(cfg)
+    # parse database
+    sdata.getAllDicomsPathList()
+    # patch and split into training, val, test set
+    sdata.generateDataset()
 
 
-    # load/create input data
-    patchSize = cfg['patchSize']
-    if cfg['sSplitting'] == 'normal':
-        sFSname = 'normal'
-    elif cfg['sSplitting'] == 'crossvalidation_data':
-        sFSname = 'crossVal_data'
-        nFolds = cfg['nFolds']
-    elif cfg['sSplitting'] == 'crossvalidation_patient':
-        sFSname = 'crossVal'
-
-    # set ouput path
-    sOutsubdir = cfg['subdirs'][2]
-    sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(map(str, patchSize)).replace(" ",
-                                                                                                  "") + os.sep + sOutsubdir + str(
-        patchSize[0]) + str(patchSize[1])  # + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
-    if len(patchSize) == 3:
-        sOutPath = sOutPath + str(patchSize[2])
-    if sTrainingMethod != "None":
-        if sTrainingMethod != "ScaleJittering":
-            sOutPath = sOutPath + '_sf' + ''.join(map(str, lScaleFactor)).replace(" ", "").replace(".", "")
-            sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + 'sf' + ''.join(
-                map(str, lScaleFactor)).replace(" ", "").replace(".", "") + '.h5'
-        else:
-            sOutPath = sOutPath + '_sj'
-            sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + 'sj' + '.h5'
-    else:
-        sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '.h5'
-
-    if lCorrection:
-        #########################
-        ## Artifact Correction ##
-        #########################
-        correction.run(cfg, dbinfo)
-
-    elif lTrain:
+    if lTrain:
         ########################
         ## artifact detection ##
         ## ---- training ---- ##
