@@ -1,3 +1,8 @@
+'''
+Copyright: 2016-2019 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) under Apache2 license
+@author: Thomas Kuestner
+'''
+
 import numpy as np
 import math
 

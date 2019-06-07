@@ -11,7 +11,6 @@ import math
 import numpy as np
 from sklearn.model_selection import KFold
 
-from DLart.Constants_DLart import *
 
 
 def expecting():
@@ -30,11 +29,12 @@ def expecting():
     return 1
 
 
-def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap, testTrainingDatasetRatio=0,
+def fSplitDataset(allPatches, allY, allPats, allTestPats, sSplitting, patchSize, patchOverlap, testTrainingDatasetRatio=0,
                   validationTrainRatio=0, outPutPath=None, nfolds=0, isRandomShuffle=True):
     # TODO: adapt path
-    iReturn = expecting()
+    # iReturn = expecting()
     # iReturn = 1000
+    iReturn = 1
 
     # 2D or 3D patching?
     if len(patchSize) == 2:
@@ -47,7 +47,7 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
                 patchSize[2]:
             allPatches = np.transpose(allPatches, (3, 0, 1, 2))
 
-    if sSplitting == SIMPLE_RANDOM_SAMPLE_SPLITTING:
+    if sSplitting == 'SIMPLE_RANDOM_SAMPLE_SPLITTING':
         # splitting
         indexSlices = range(allPatches.shape[0])
 
@@ -94,8 +94,7 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
 
         return [X_train], [y_train], [X_valid], [y_valid], [X_test], [y_test]  # embed in a 1-fold list
 
-
-    elif sSplitting == CROSS_VALIDATION_SPLITTING:
+    elif sSplitting == 'CROSS_VALIDATION_SPLITTING':
         # split into test/train sets
         # shuffle
         indexSlices = range(allPatches.shape[0])
@@ -117,7 +116,7 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
 
         # split training dataset into n folds
         if nfolds == 0:
-            kf = KFold(n_splits=len(allPats))
+            kf = KFold(n_splits=len(allTestPats))
         else:
             kf = KFold(n_splits=nfolds)
 
@@ -146,15 +145,15 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
         return [X_trainFold], [y_trainFold], [X_testFold], [y_testFold], [xTest], [yTest]
 
 
-    elif sSplitting == PATIENT_CROSS_VALIDATION_SPLITTING:
-        unique_pats = len(allPats)
+    elif sSplitting == 'PATIENT_CROSS_VALIDATION_SPLITTING':
+        #unique_pats = len(allTestPats)
 
         X_trainFold = []
         X_testFold = []
         y_trainFold = []
         y_testFold = []
 
-        for ind_split in range(unique_pats):
+        for ind_split in allTestPats:
             train_index = np.where(allPats != ind_split)[0]
             test_index = np.where(allPats == ind_split)[0]
             X_train, X_test = allPatches[train_index], allPatches[test_index]
@@ -165,23 +164,37 @@ def fSplitDataset(allPatches, allY, allPats, sSplitting, patchSize, patchOverlap
             y_trainFold.append(y_train)
             y_testFold.append(y_test)
 
-        X_trainFold = np.asarray(X_trainFold, dtype='f')
-        X_testFold = np.asarray(X_testFold, dtype='f')
-        y_trainFold = np.asarray(y_trainFold, dtype='f')
-        y_testFold = np.asarray(y_testFold, dtype='f')
-        X_valFold = np.asarray([])
-        y_valFold = np.asarray([])
+        if validationTrainRatio > 0:
+            iAll = np.arange(len(X_trainFold))
+            iSel = np.random.choice(len(X_trainFold), np.around(validationTrainRatio * len(X_trainFold)))
+            X_valFold = np.asarray(X_trainFold[iSel], dtype='f')
+            y_valFold = np.asarray(y_trainFold[iSel], dtype='f')
+            iRem = np.delete(iAll, iSel)
+
+            X_trainFold = np.asarray(X_trainFold[iRem], dtype='f')
+            X_testFold = np.asarray(X_testFold, dtype='f')
+            y_trainFold = np.asarray(y_trainFold[iRem], dtype='f')
+            y_testFold = np.asarray(y_testFold, dtype='f')
+
+        else:
+            X_trainFold = np.asarray(X_trainFold, dtype='f')
+            X_testFold = np.asarray(X_testFold, dtype='f')
+            y_trainFold = np.asarray(y_trainFold, dtype='f')
+            y_testFold = np.asarray(y_testFold, dtype='f')
+            X_valFold = np.asarray([])
+            y_valFold = np.asarray([])
 
         if iReturn > 0:
             return [X_trainFold], [y_trainFold], [X_valFold], [y_valFold], [X_testFold], [y_testFold]
 
 
-def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, sSplitting, patchSize, patchOverlap,
+def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, allTestPats, sSplitting, patchSize, patchOverlap,
                               testTrainingDatasetRatio=0, validationTrainRatio=0, outPutPath=None, nfolds=0,
                               isRandomShuffle=True):
     # TODO: adapt path
-    iReturn = expecting()
+    # iReturn = expecting()
     # iReturn = 1000
+    iReturn = 1
 
     # 2D or 3D patching?
     if len(patchSize) == 2:
@@ -196,7 +209,7 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, s
             allPatches = np.transpose(allPatches, (3, 0, 1, 2))
             allSegmentationMasks = np.transpose(allSegmentationMasks, (3, 0, 1, 2))
 
-    if sSplitting == SIMPLE_RANDOM_SAMPLE_SPLITTING:
+    if sSplitting == 'SIMPLE_RANDOM_SAMPLE_SPLITTING':
         # splitting
         indexSlices = range(allPatches.shape[0])
 
@@ -258,7 +271,7 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, s
             y_test], [Y_segMasks_test]  # embed in a 1-fold list
 
 
-    elif sSplitting == CROSS_VALIDATION_SPLITTING:
+    elif sSplitting == 'CROSS_VALIDATION_SPLITTING':
         # split into test/train sets
         # shuffle
         indexSlices = range(allPatches.shape[0])
@@ -280,7 +293,7 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, s
 
         # split training dataset into n folds
         if nfolds == 0:
-            kf = KFold(n_splits=len(allPats))
+            kf = KFold(n_splits=len(allTestPats))
         else:
             kf = KFold(n_splits=nfolds)
 
@@ -308,17 +321,15 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, s
 
         return [X_trainFold], [y_trainFold], [X_testFold], [y_testFold], [xTest], [yTest]
 
-
-
-    elif sSplitting == PATIENT_CROSS_VALIDATION_SPLITTING:
-        unique_pats = len(allPats)
+    elif sSplitting == 'PATIENT_CROSS_VALIDATION_SPLITTING':
+        #unique_pats = len(allTestPats)
 
         X_trainFold = []
         X_testFold = []
         y_trainFold = []
         y_testFold = []
 
-        for ind_split in range(unique_pats):
+        for ind_split in allTestPats:
             train_index = np.where(allPats != ind_split)[0]
             test_index = np.where(allPats == ind_split)[0]
             X_train, X_test = allPatches[train_index], allPatches[test_index]
@@ -329,12 +340,25 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, s
             y_trainFold.append(y_train)
             y_testFold.append(y_test)
 
-        X_trainFold = np.asarray(X_trainFold, dtype='f')
-        X_testFold = np.asarray(X_testFold, dtype='f')
-        y_trainFold = np.asarray(y_trainFold, dtype='f')
-        y_testFold = np.asarray(y_testFold, dtype='f')
-        X_valFold = np.asarray([])
-        y_valFold = np.asarray([])
+        if validationTrainRatio > 0:
+            iAll = np.arange(len(X_trainFold))
+            iSel = np.random.choice(len(X_trainFold), np.around(validationTrainRatio * len(X_trainFold)))
+            X_valFold = np.asarray(X_trainFold[iSel], dtype='f')
+            y_valFold = np.asarray(y_trainFold[iSel], dtype='f')
+            iRem = np.delete(iAll, iSel)
+
+            X_trainFold = np.asarray(X_trainFold[iRem], dtype='f')
+            X_testFold = np.asarray(X_testFold, dtype='f')
+            y_trainFold = np.asarray(y_trainFold[iRem], dtype='f')
+            y_testFold = np.asarray(y_testFold, dtype='f')
+
+        else:
+            X_trainFold = np.asarray(X_trainFold, dtype='f')
+            X_testFold = np.asarray(X_testFold, dtype='f')
+            y_trainFold = np.asarray(y_trainFold, dtype='f')
+            y_testFold = np.asarray(y_testFold, dtype='f')
+            X_valFold = np.asarray([])
+            y_valFold = np.asarray([])
 
         if iReturn > 0:
             return [X_trainFold], [y_trainFold], [X_valFold], [y_valFold], [X_testFold], [y_testFold]
