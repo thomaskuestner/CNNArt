@@ -155,6 +155,7 @@ class Data:
 
                     # read DICOMS
                     dicomDataset = [pydicom.read_file(f) for f in fileNames]
+                    # TODO: add here reading in of phase images
 
                     # Combine DICOM Slices to a single 3D image (voxel)
                     try:
@@ -518,6 +519,7 @@ class Data:
 
                         # read DICOMS
                         dicomDataset = [pydicom.read_file(f) for f in fileNames]
+                        # reading in of phase images not really needed at this place, because this data is only required for displaying purposes
 
                         # Combine DICOM Slices to a single 3D image (voxel)
                         try:

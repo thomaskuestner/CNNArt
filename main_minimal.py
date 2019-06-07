@@ -188,7 +188,7 @@ def fArtDetection(data, dlnetwork, sMode):
         predictions = cnnModel.fPredict(X_test=data.X_test,
                           Y_test=Y_test,
                           Y_segMasks_test=data.Y_segMasks_test,
-                          sModelPath=savedmodel.savemodel,
+                          sModelPath=dlnetwork.savemodel,
                           batch_size=dlnetwork.batchSize,
                           usingClassification=dlnetwork.usingClassification,
                           usingSegmentationMasks=data.usingSegmentationMasks,
@@ -198,6 +198,7 @@ def fArtDetection(data, dlnetwork, sMode):
             data.handlepredictionssegmentation(predictions)
         else:
             # TODO
+            data.handlepredictions(predictions)
         print('==== Network testing finished ====')
 
 
