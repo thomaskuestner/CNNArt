@@ -1,8 +1,17 @@
 # GPU
 iGPU : 0
 
+# set mode: 'training', 'prediction'
+sMode : 'training'
+
 # Datasets
 sDatabase : 'MRPhysics'
+# selected artifact type: e.g. 'sPairsMotion'
+sSelectedArtifact : 'sPairsMotion'
+# selected datasets: either e.g. ['HeadT1', 'AbdomenT1'] or ['All']
+sSelectedDataset : ['HeadT1', 'AbdomenT1', 'PelvisT1']
+# selected patients: either array with numbers of patients to be used [1,2,6] or ['All']
+sSelectedPatient : ['All']
 
 MRPhysics:
   sPathIn : "/med_data/ImageSimilarity/Databases/MRPhysics/newProtocol"
@@ -29,16 +38,6 @@ NAKO_IQA:
   sPathInLabel: "/med_data/ImageSimilarity/Databases/NAKO_IQA_Label"
 
 
-# network architecture (if existing for chosen database!)
-# see *.py files in subfolders of "./networks"
-# naming convention: artifactType_bodyRegion_network OR artifactType_network
-# artifactType: motion, multiclass
-# bodyRegion: abd, head, all
-# network: CNN2D, CNN3D, MNetArt, VNetArt
-# Single-pathway Multiscale networks are: MS_SPP, MS_FCN_simple, MS_FCN_MultiFM, MS_Inception_Archi1, MS_Inception_Archi2
-# Dual-pathway Multiscale networks are: MS_VNet_MultiPath, MS_SPP_MultiPath, MS_FCN_MultiFM_MultiPath
-network : "VResFCN_3D_Upsampling_final_Motion_Binary"
-
 # scaling range
 range : [0, 1]
 # patches
@@ -53,18 +52,51 @@ sLabeling : "local"
 # 'rigidPatching' or'adaptivePatching':
 sPatching : "rigidPatching"
 # splitting strategy
-# 'normal': percentage splitting
-# 'crossvalidation_patient': cross validation on patient (leave one patient out)
-# 'crossvalidation_data': cross validation on data
+# 'random': percentage splitting
+# 'crossvalidation_data': random with cross validation on data -> use "nfolds" value
+# 'crossvalidation_patient': cross validation on patient (leave one-N patient out) -> not using "nfolds" value
 sSplitting : "crossvalidation_patient"
+# splitting in train/test subjects
+# if crossvalidation_patient: specify number of patient
+# if random: specify a percentage ratio
+trainTestDatasetRatio : [16]  # use subject 16
+# ratio between training and validation patches (percentage ratio of validation set size)
+trainValidationRatio : 0
+# random shuffling of patches during training -> improves stability
+randomShuffle : True
+# number of cross-validation folds (0 = no cross-val -> only 1 run)
+nfolds : 0
+
+# network architecture (if existing for chosen database!)
+# see *.py files in subfolders of "./networks"
+# naming convention: artifactType_bodyRegion_network OR artifactType_network
+# artifactType: motion, multiclass
+# bodyRegion: abd, head, all
+# network: CNN2D, CNN3D, MNetArt, VNetArt
+# Single-pathway Multiscale networks are: MS_SPP, MS_FCN_simple, MS_FCN_MultiFM, MS_Inception_Archi1, MS_Inception_Archi2
+# Dual-pathway Multiscale networks are: MS_VNet_MultiPath, MS_SPP_MultiPath, MS_FCN_MultiFM_MultiPath
+network : "VResFCN_3D_Upsampling_final_Motion_Binary"
+# use classification output on deepest layer
+usingClassification : False
 # optimized parameters
 batchSize : 128
 # learning rate
 learningRate : 0.001
 # amount of epochs
 epochs : 100
+# optimizer and associated parameters
+optimizer :
+  # algos: 'SGD', 'RMSPROP', 'ADAGRAD', 'ADADELTA', 'ADAM'
+  algorithm : 'ADAM'
+  momentum : 0.9
+  weightdecay : 0.0001
+  nesterov : True
+
 
 
 # paths
 # output path
 sOutputPath : '/tmp'
+# path to trained model and weights (same name, just file extension will be different -> handled automatically)
+sSaveModel : '/tmp/trainedMODEL'
+
