@@ -1,46 +1,48 @@
-'''
-Copyright: 2016-2019 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) under Apache2 license
-@author: Thomas Kuestner
-'''
-
 import os
 #os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
+
 
 from tensorflow.python.client import device_lib
 print(device_lib.list_local_devices)
 
 import tensorflow as tf
 import os.path
-import numpy as np
 import scipy.io as sio
+import numpy as np
+import math
 import keras
 from keras.layers import Input
 import keras.backend as K
-#from keras.layers import Conv2D
+from keras.layers import Conv2D
 from keras.layers import BatchNormalization
-#from keras.layers import GlobalAveragePooling2D
-#from keras.activations import softmax
+from keras.layers import GlobalAveragePooling2D
+from keras.activations import softmax
 from keras.layers import concatenate
 from keras.layers.core import Dense, Activation, Flatten
 from keras.models import Model
-#from keras.models import Sequential
+from keras.models import Sequential
 from keras.layers import UpSampling3D
-#from keras.layers.convolutional import Convolution2D
+from keras.layers.convolutional import Convolution2D
 from keras.layers import LeakyReLU
 from keras.layers import Softmax
 
 from keras.callbacks import EarlyStopping
 from keras.callbacks import LearningRateScheduler
-#from keras.callbacks import ReduceLROnPlateau
-#from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ReduceLROnPlateau
+from keras.callbacks import ModelCheckpoint
 from keras.models import model_from_json
-#from keras.regularizers import l2  # , activity_l2
-from sklearn.metrics import classification_report, confusion_matrix
+from keras.regularizers import l2  # , activity_l2
 
-#from utils.LivePlotCallback import LivePlotCallback
+from keras.optimizers import SGD
+from networks.multiclass.SENets.deep_residual_learning_blocks import *
+from DeepLearningArt.DLArt_GUI.dlart import DeepLearningArtApp
+from utils.image_preprocessing import ImageDataGenerator
+from matplotlib import pyplot as plt
 
-from networks.FullyConvolutionalNetworks.motion.deep_residual_learning_blocks import *
-from utils.dlnetwork import *
+from utils.LivePlotCallback import LivePlotCallback
+
+
+import scipy.io as sio
 
 
 def createModel(patchSize, numClasses, usingClassification=False):
@@ -202,9 +204,9 @@ def createModel(patchSize, numClasses, usingClassification=False):
 
 
 
-def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlnetwork = None):
+def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlart_handle=None):
 
-    usingClassification = dlnetwork.usingClassification
+    usingClassification = False
 
     # grid search on batch_sizes and learning rates
     # parse inputs
@@ -245,8 +247,7 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
                 batchSize=batchSize,
                 learningRate=learningRate,
                 iEpochs=iEpochs,
-                usingClassification=usingClassification,
-                dlnetwork=dlnetwork)
+                dlart_handle=dlart_handle, usingClassification=usingClassification)
 
     K.clear_session()
 
@@ -256,25 +257,21 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
     #                     sModelName,
     #                     X_train=X_train,
     #                     y_train=y_train,
-    #                     Y_segMasks_train=Y_segMasks_train,
     #                     X_valid=X_valid,
     #                     y_valid=y_valid,
-    #                     Y_segMasks_valid=Y_segMasks_valid,
     #                     X_test=X_test,
     #                     y_test=y_test,
-    #                     Y_segMasks_test=Y_segMasks_test,
     #                     sOutPath=sOutPath,
     #                     patchSize=patchSize,
     #                     batchSize=iBatch,
     #                     learningRate=iLearn,
     #                     iEpochs=iEpochs,
-    #                     usingClassification=usingClassification,
-    #                     dlnetwork=dlnetwork)
+    #                     dlart_handle=dlart_handle)
 
 
 def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None,
                 Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0,
-                batchSize=None, learningRate=None, iEpochs=None, usingClassification=False, dlnetwork = None):
+                batchSize=None, learningRate=None, iEpochs=None, dlart_handle=None, usingClassification=False):
     print('Training CNN')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
@@ -300,26 +297,26 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         return
 
     # create optimizer
-    if dlnetwork != None:
-        if dlnetwork.optimizer == 'SGD':
+    if dlart_handle != None:
+        if dlart_handle.getOptimizer() == DeepLearningArtApp.SGD_OPTIMIZER:
             opti = keras.optimizers.SGD(lr=learningRate,
-                                        momentum=dlnetwork.momentum,
-                                        decay=dlnetwork.weightdecay,
-                                        nesterov=dlnetwork.nesterov)
+                                        momentum=dlart_handle.getMomentum(),
+                                        decay=dlart_handle.getWeightDecay(),
+                                        nesterov=dlart_handle.getNesterovEnabled())
 
-        elif dlnetwork.optimizer == 'RMSPROP':
-            opti = keras.optimizers.RMSprop(lr=learningRate, decay=dlnetwork.weightdecay)
+        elif dlart_handle.getOptimizer() == DeepLearningArtApp.RMS_PROP_OPTIMIZER:
+            opti = keras.optimizers.RMSprop(lr=learningRate, decay=dlart_handle.getWeightDecay())
 
-        elif dlnetwork.optimizer == 'ADAGRAD':
-            opti = keras.optimizers.Adagrad(lr=learningRate, epsilon=None, decay=dlnetwork.weightdecay)
+        elif dlart_handle.getOptimizer() == DeepLearningArtApp.ADAGRAD_OPTIMIZER:
+            opti = keras.optimizers.Adagrad(lr=learningRate, epsilon=None, decay=dlart_handle.getWeightDecay())
 
-        elif dlnetwork.optimizer == 'ADADELTA':
+        elif dlart_handle.getOptimizer() == DeepLearningArtApp.ADADELTA_OPTIMIZER:
             opti = keras.optimizers.Adadelta(lr=learningRate, rho=0.95, epsilon=None,
-                                             decay=dlnetwork.weightdecay)
+                                             decay=dlart_handle.getWeightDecay())
 
-        elif dlnetwork.optimizer == 'ADAM':
+        elif dlart_handle.getOptimizer() == DeepLearningArtApp.ADAM_OPTIMIZER:
             opti = keras.optimizers.Adam(lr=learningRate, beta_1=0.9, beta_2=0.999, epsilon=None,
-                                         decay=dlnetwork.weightdecay)
+                                         decay=dlart_handle.getWeightDecay())
         else:
             raise ValueError("Unknown Optimizer!")
     else:
@@ -360,7 +357,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
       #                  period=1, save_best_only=True))  # overrides the last checkpoint, its just for security
     # callbacks.append(ReduceLROnPlateau(monitor='loss', factor=0.1, patience=5, min_lr=1e-4, verbose=1))
     callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
-    #callbacks.append(LivePlotCallback(dlart_handle))
+    callbacks.append(LivePlotCallback(dlart_handle))
 
     if X_valid == 0 and y_valid == 0:
         # using test set for validation
@@ -471,6 +468,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
                                  'classification_predictions': prob_test[1]})
 
 
+
 def step_decay(epoch, lr):
    drop = 0.1
    epochs_drop = 20.0
@@ -482,7 +480,9 @@ def step_decay(epoch, lr):
    return lr
 
 
-def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_size=64, usingClassification=False, usingSegmentationMasks=True, dlnetwork=dlnetwork):
+
+
+def fPredict(X_test, y=None, Y_segMasks_test=None, sModelPath=None, sOutPath=None, batch_size=64):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
         Input:
             X: Samples to predict on. The shape of X should fit to the input shape of the model
@@ -492,20 +492,16 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
                         The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the suffix '_pred.mat'
             batchSize: Batchsize, number of samples that are processed at once"""
 
-    if usingSegmentationMasks:
-        X_test = np.expand_dims(X_test, axis=-1)
-        Y_segMasks_test_foreground = np.expand_dims(Y_segMasks_test, axis=-1)
-        Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape) - Y_segMasks_test_foreground
-        Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground), axis=-1)
-
-    else:
-        X_test = np.expand_dims(X_test, axis=-1)
+    X_test = np.expand_dims(X_test, axis=-1)
+    Y_segMasks_test_foreground = np.expand_dims(Y_segMasks_test, axis=-1)
+    Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape) - Y_segMasks_test_foreground
+    Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground), axis=-1)
 
     _, sPath = os.path.splitdrive(sModelPath)
     sPath, sFilename = os.path.split(sPath)
     sFilename, sExt = os.path.splitext(sFilename)
 
-    #listdir = os.listdir(sModelPath)
+    listdir = os.listdir(sModelPath)
 
     #sModelPath = sModelPath.replace("_json.txt", "")
     #weight_name = sModelPath + '_weights.h5'
@@ -513,107 +509,22 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
     #model_all = sModelPath + '_model.h5'
 
     # load weights and model (new way)
-    with open(sPath + os.sep + sFilename + '.json', 'r') as fp:
+    with open(sModelPath + os.sep + sFilename + '.json', 'r') as fp:
         model_string = fp.read()
 
     model = model_from_json(model_string)
-    # create optimizer
-    if dlnetwork != None:
-        if dlnetwork.optimizer == 'SGD':
-            opti = keras.optimizers.SGD(lr=dlnetwork.learningRate,
-                                        momentum=dlnetwork.momentum,
-                                        decay=dlnetwork.weightdecay,
-                                        nesterov=dlnetwork.nesterov)
-
-        elif dlnetwork.optimizer == 'RMSPROP':
-            opti = keras.optimizers.RMSprop(lr=dlnetwork.learningRate, decay=dlnetwork.weightdecay)
-
-        elif dlnetwork.optimizer == 'ADAGRAD':
-            opti = keras.optimizers.Adagrad(lr=dlnetwork.learningRate, epsilon=None, decay=dlnetwork.weightdecay)
-
-        elif dlnetwork.optimizer == 'ADADELTA':
-            opti = keras.optimizers.Adadelta(lr=dlnetwork.learningRate, rho=0.95, epsilon=None,
-                                             decay=dlnetwork.weightdecay)
-
-        elif dlnetwork.optimizer == 'ADAM':
-            opti = keras.optimizers.Adam(lr=dlnetwork.learningRate, beta_1=0.9, beta_2=0.999, epsilon=None,
-                                         decay=dlnetwork.weightdecay)
-        else:
-            raise ValueError("Unknown Optimizer!")
-    else:
-        # opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
-        opti = keras.optimizers.Adam(lr=dlnetwork.learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 
     model.summary()
 
-    if usingSegmentationMasks:
-        if usingClassification:
-            model.compile(
-                loss={'segmentation_output': dice_coef_loss, 'classification_output': 'categorical_crossentropy'},
-                optimizer=opti,
-                metrics={'segmentation_output': dice_coef, 'classification_output': 'accuracy'})
+    model.compile(loss=dice_coef_loss, optimizer=keras.optimizers.Adam(), metrics=[dice_coef])
+    model.load_weights(sModelPath+ os.sep + sFilename+'_weights.h5')
 
-            model.load_weights(sPath + os.sep + sFilename + '_weights.h5')
+    score_test, acc_test = model.evaluate(X_test, Y_segMasks_test, batch_size=2)
+    print('loss' + str(score_test) + '   acc:' + str(acc_test))
 
-            loss_test, segmentation_output_loss_test, classification_output_loss_test, segmentation_output_dice_coef_test, classification_output_acc_test \
-                = model.evaluate(X_test,
-                                 {'segmentation_output': Y_segMasks_test, 'classification_output': Y_test},
-                                 batch_size=batch_size, verbose=1)
+    prob_pre = model.predict(X_test, batch_size=batch_size, verbose=1)
 
-            print('loss' + str(loss_test) + ' segmentation loss:' + str(
-                segmentation_output_loss_test) + ' classification loss: ' + str(classification_output_loss_test) + \
-                  ' segmentation dice coef: ' + str(
-                segmentation_output_dice_coef_test) + ' classification accuracy: ' + str(
-                classification_output_acc_test))
-
-            prob_pre = model.predict(X_test, batch_size=batch_size, verbose=1)
-
-            predictions = {'prob_pre': prob_pre,
-                           'loss_test': loss_test,
-                           'segmentation_output_loss_test': segmentation_output_loss_test,
-                           'classification_output_loss_test': classification_output_loss_test,
-                           'segmentation_output_dice_coef_test': segmentation_output_dice_coef_test,
-                           'classification_output_acc_test': classification_output_acc_test}
-
-        else:
-            model.compile(loss=dice_coef_loss, optimizer=opti, metrics=[dice_coef])
-            model.load_weights(sPath + os.sep + sFilename + '_weights.h5')
-
-            score_test, acc_test = model.evaluate(X_test, Y_segMasks_test, batch_size=batch_size)
-            print('loss: ' + str(score_test) + '   dice coef:' + str(acc_test))
-
-            prob_pre = model.predict(X_test, batch_size=batch_size, verbose=1)
-
-            predictions = {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test}
-
-    else:
-        model.compile(loss=dice_coef_loss, optimizer=opti, metrics=[dice_coef])
-
-        model.load_weights(sPath + os.sep + sFilename+'_weights.h5')
-
-        score_test, acc_test = model.evaluate(X_test, Y_segMasks_test, batch_size=2)
-        print('loss' + str(score_test) + '   acc:' + str(acc_test))
-
-        prob_pre = model.predict(X_test, batch_size=batch_size, verbose=1)
-
-        probability_predictions = {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test}
-
-        classification_summary = classification_report(np.argmax(Y_test, axis=1),
-                                                       np.argmax(probability_predictions, axis=1),
-                                                       target_names=None, digits=4)
-
-        # confusion matrix
-        confusionMatrix = confusion_matrix(y_true=np.argmax(Y_test, axis=1),
-                                           y_pred=np.argmax(probability_predictions, axis=1),
-                                           labels=range(int(probability_predictions.shape[1])))
-
-        predictions = {
-            'predictions': probability_predictions,
-            'score_test': score_test,
-            'acc_test': acc_test,
-            'classification_report': classification_summary,
-            'confusion_matrix': confusionMatrix
-        }
+    predictions = {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test}
 
     return predictions
 
@@ -691,3 +602,93 @@ def jaccard_distance(y_true, y_pred, smooth=100):
     jac = (intersection + smooth) / (sum_ - intersection + smooth)
 
     return (1 - jac) * smooth
+
+
+###############################################################################
+## OPTIMIZATIONS ##
+###############################################################################
+def fHyperasTrain(X_train, Y_train, X_test, Y_test, patchSize):
+    # explicitly stated here instead of cnn = createModel() to allow optimization
+    cnn = Sequential()
+    #    cnn.add(Convolution2D(32,
+    #                            14,
+    #                            14,
+    #                            init='normal',
+    #                           # activation='sigmoid',
+    #                            weights=None,
+    #                            border_mode='valid',
+    #                            subsample=(1, 1),
+    #                            W_regularizer=l2(1e-6),
+    #                            input_shape=(1, patchSize[0,0], patchSize[0,1])))
+    #    cnn.add(Activation('relu'))
+
+    cnn.add(Convolution2D(32,  # 64
+                          7,
+                          7,
+                          init='normal',
+                          # activation='sigmoid',
+                          weights=None,
+                          border_mode='valid',
+                          subsample=(1, 1),
+                          W_regularizer=l2(1e-6)))
+    cnn.add(Activation('relu'))
+    cnn.add(Convolution2D(64,  # learning rate: 0.1 -> 76%
+                          3,
+                          3,
+                          init='normal',
+                          # activation='sigmoid',
+                          weights=None,
+                          border_mode='valid',
+                          subsample=(1, 1),
+                          W_regularizer=l2(1e-6)))
+    cnn.add(Activation('relu'))
+
+    cnn.add(Convolution2D(128,  # learning rate: 0.1 -> 76%
+                          3,
+                          3,
+                          init='normal',
+                          # activation='sigmoid',
+                          weights=None,
+                          border_mode='valid',
+                          subsample=(1, 1),
+                          W_regularizer=l2(1e-6)))
+    cnn.add(Activation('relu'))
+
+    # cnn.add(pool2(pool_size=(2, 2), strides=None, border_mode='valid', dim_ordering='th'))
+
+    cnn.add(Flatten())
+    # cnn.add(Dense(input_dim= 100,
+    #              output_dim= 100,
+    #              init = 'normal',
+    #              #activation = 'sigmoid',
+    #              W_regularizer='l2'))
+    # cnn.add(Activation('sigmoid'))
+    cnn.add(Dense(input_dim=100,
+                  output_dim=2,
+                  init='normal',
+                  # activation = 'sigmoid',
+                  W_regularizer='l2'))
+    cnn.add(Activation('softmax'))
+
+    #opti = SGD(lr={{choice([0.1, 0.01, 0.05, 0.005, 0.001])}}, momentum=1e-8, decay=0.1, nesterov=True)
+    #cnn.compile(loss='categorical_crossentropy', optimizer=opti)
+
+    epochs = 300
+
+    result = cnn.fit(X_train, Y_train,
+                     batch_size=128,  # {{choice([64, 128])}}
+                     nb_epoch=epochs,
+                     show_accuracy=True,
+                     verbose=2,
+                     validation_data=(X_test, Y_test))
+    score_test, acc_test = cnn.evaluate(X_test, Y_test, verbose=0)
+
+    #return {'loss': -acc_test, 'status': STATUS_OK, 'model': cnn, 'trainresult': result, 'score_test': score_test}
+
+
+## helper functions
+def drange(start, stop, step):
+    r = start
+    while r < stop:
+        yield r
+    r += step
