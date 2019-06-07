@@ -12,14 +12,13 @@ from keras.layers import Conv2D
 from keras.layers import Conv3D
 from keras.layers import Conv3DTranspose
 from keras.layers import BatchNormalization
-from keras.layers import advanced_activations
 from keras.layers import Activation
 from keras.layers import MaxPooling2D
 from keras.layers import Add
 from keras.layers import LeakyReLU
 from keras.layers import Lambda
 import keras.backend as K
-from networks.multiclass.CNN2D.SENets.squeeze_excitation_block import *
+from networks.FullyConvolutionalNetworks.motion.squeeze_excitation_block import *
 
 
 

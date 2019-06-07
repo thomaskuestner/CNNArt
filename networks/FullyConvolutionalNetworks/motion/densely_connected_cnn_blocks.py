@@ -16,7 +16,7 @@ from keras.layers import AveragePooling2D
 from keras.layers import AveragePooling3D
 from keras.layers import Activation
 from keras.layers import concatenate
-from networks.multiclass.CNN2D.SENets.squeeze_excitation_block import *
+from networks.FullyConvolutionalNetworks.motion.squeeze_excitation_block import *
 
 
 
