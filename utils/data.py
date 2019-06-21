@@ -2,11 +2,13 @@
 Copyright: 2016-2019 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) under Apache2 license
 @author: Thomas Kuestner
 '''
-
+import datetime
 import json
 import os
 
+import dicom
 import dicom_numpy as dicom_np
+#import pydicom as dicom_np
 import h5py
 import nrrd
 import pydicom
@@ -16,6 +18,7 @@ from matplotlib import path
 from utils.RigidPatching import *
 from utils.RigidUnpatching import *
 from utils.Training_Test_Split_FCN import *
+from utils.Label import Label
 
 
 class Data:
@@ -35,11 +38,11 @@ class Data:
         self.usingSegmentationMasks = True  # voxel-wise classification
         self.splittingMode = 'PATIENT_CROSS_VALIDATION_SPLITTING'  # = "crossvalidation_patient"
         if self.splittingMode == 'PATIENT_CROSS_VALIDATION_SPLITTING':
-            self.selectedTestPatients = cfg['trainTestDatasetRatio']
+            self.selectedTestPatients = [x-1 for x in cfg['trainTestDatasetRatio']]  # convert to python index
             self.trainTestDatasetRatio = 0
         else:
             self.selectedTestPatients = 0
-            self.trainTestDatasetRatio = cfg['trainTestDatasetRatio']  # either ratio for random splitting or selected test patients
+            self.trainTestDatasetRatio = cfg['trainTestDatasetRatio'][0]  # either ratio for random splitting or selected test patients
 
         self.trainValidationRatio = cfg['trainValidationRatio']  # ratio between training and validation patches (percentage ratio)
         self.isRandomShuffle = cfg['randomShuffle']  # random shuffling in training
@@ -62,17 +65,24 @@ class Data:
         self.modelSubDir = cfg[self.database]['sSubDir']
         self.markingsPath = cfg[self.database]['sPathInLabel']
         # parse selected patients
-        if cfg['sSelectedPatient'] == 'All':
-            self.selectedPatients = os.listdir(self.pathDatabase)
+        if cfg['sSelectedPatient'][0] == 'All':
+            self.selectedPatients = sorted(os.listdir(self.pathDatabase))
         else:
-            dpat = os.listdir(self.pathDatabase)
-            self.selectedPatients = dpat[cfg['sSelectedPatient']]
+            dpat = sorted(os.listdir(self.pathDatabase))
+            self.selectedPatients = [dpat[i] for i in [x-1 for x in cfg['sSelectedPatient']]]
 
         # parse selected artifacts and datasets
         self.selectedDatasets = []
-        for art, i in enumerate(cfg['sSelectedArtifact']):
-            for dat, j in enumerate(cfg['sSelectedDataset']):
-                self.selectedDatasets.extend(cfg[self.database][art][dat])
+        for i, art in enumerate(cfg['sSelectedArtifact']):
+            for j, dat in enumerate(cfg['sSelectedDataset']):
+                #self.selectedDatasets.extend(cfg[self.database][art][dat])
+                for k, selData in enumerate(cfg[self.database][art][dat]):
+                    currdat = cfg[self.database]['MappingData'][selData]
+                    if currdat[0] == 'None':
+                        self.selectedDatasets.append(Dataset(selData,None,currdat[1],currdat[2],currdat[3]))
+                    else:
+                        self.selectedDatasets.append(Dataset(selData, currdat[0], currdat[1], currdat[2], currdat[3]))
+
 
 
     def generateDataset(self):
@@ -141,12 +151,30 @@ class Data:
 
             labelDict = {}
 
+        if self.storeMode == 'STORE_HDF5':  # shortcut if data already patched and splitted
+            if os.path.exists(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5'):
+                print('Loading data from file: %s' % (outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5'))
+                f = h5py.File(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5', 'r')
+                self.X_train = np.array(f.get('X_train'))
+                self.Y_train = np.array(f.get('Y_train'))
+                self.X_validation = np.array(f.get('X_validation'))
+                self.Y_validation = np.array(f.get('Y_validation'))
+                self.X_test = np.array(f.get('X_test'))
+                self.Y_test = np.array(f.get('Y_test'))
+                if self.usingSegmentationMasks:
+                    self.Y_segMasks_train = np.array(f.get('Y_segMasks_train'))
+                    self.Y_segMasks_validation = np.array(f.get('Y_segMasks_validation'))
+                    self.Y_segMasks_test = np.array(f.get('Y_segMasks_test'))
+                f.close()
+                return 0
+
         # for storing patch based
         iPatchToDisk = 0
 
-        for patient, ipat in enumerate(self.selectedPatients):
-            for dataset, idat in enumerate(self.selectedDatasets):
-                currentDataDir = self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset
+        for ipat, patient in enumerate(self.selectedPatients):
+            print('Loading patient %d\%d' % (ipat+1, len(self.selectedPatients)))
+            for idat, dataset in enumerate(self.selectedDatasets):
+                currentDataDir = self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset.pathdata
 
                 if os.path.exists(currentDataDir):
                     # get list with all paths of dicoms for current patient and current dataset
@@ -206,7 +234,7 @@ class Data:
                                                                             [self.patchSizeX, self.patchSizeY],
                                                                             self.patchOverlap,
                                                                             labelMask_ndarray, 0.5,
-                                                                            self.datasets[dataset])
+                                                                            dataset)
 
                             # convert to float32
                             dPatches = np.asarray(dPatches, dtype=np.float32)
@@ -220,8 +248,7 @@ class Data:
                                                                                            self.patchSizeY],
                                                                                           self.patchOverlap,
                                                                                           labelMask_ndarray, 0.5,
-                                                                                          self.datasets[
-                                                                                              dataset])
+                                                                                          dataset)
 
                                 dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.float32)
 
@@ -269,12 +296,12 @@ class Data:
                                                                               self.patchOverlap,
                                                                               labelMask_ndarray,
                                                                               0.5,
-                                                                              self.datasets[dataset])
+                                                                              dataset)
 
                             # convert to float32
                             dPatches = np.asarray(dPatches, dtype=np.float32)
                             dLabels = np.asarray(dLabels, dtype=np.float32)
-                            dPats = ipat * np.ones(dLabels.shape()[0], dtype=np.int16)
+                            dPats = ipat * np.ones(dLabels.shape[0], dtype=np.int16)
 
                             ############################################################################################
                             if self.usingSegmentationMasks:
@@ -284,8 +311,7 @@ class Data:
                                                                                              self.patchSizeZ],
                                                                                             self.patchOverlap,
                                                                                             labelMask_ndarray, 0.5,
-                                                                                            self.datasets[
-                                                                                                dataset])
+                                                                                            dataset)
                                 dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.byte)
                             ############################################################################################
 
@@ -332,6 +358,7 @@ class Data:
         self.dAllPats = dAllPats  # save info of patients
         self.dAllLabels = dAllLabels  # save all label info
         # dataset splitting
+        print('Dataset splitting')
         # store mode
         if self.storeMode != 'STORE_DISABLED':
             # H5py store mode
@@ -368,7 +395,7 @@ class Data:
 
                     # store datasets with h5py
                     self.datasetOutputPath = outputFolderPath
-                    with h5py.File(outputFolderPath + os.sep + 'datasets.hdf5', 'w') as hf:
+                    with h5py.File(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5', 'w') as hf:
                         hf.create_dataset('X_train', data=self.X_train)
                         hf.create_dataset('X_validation', data=self.X_validation)
                         hf.create_dataset('X_test', data=self.X_test)
@@ -413,7 +440,7 @@ class Data:
 
                     # store datasets with h5py
                     self.datasetOutputPath = outputFolderPath
-                    with h5py.File(outputFolderPath + os.sep + 'datasets.hdf5', 'w') as hf:
+                    with h5py.File(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + 'hdf5', 'w') as hf:
                         hf.create_dataset('X_train', data=self.X_train)
                         hf.create_dataset('X_validation', data=self.X_validation)
                         hf.create_dataset('X_test', data=self.X_test)
@@ -500,16 +527,16 @@ class Data:
 
             # find test patient in test set
             test_set_idx = []
-            for patient, ipat in enumerate(self.selectedTestPatients):
-                for dataset, idat in enumerate(self.selectedDatasets):
+            for ipat, patient in enumerate(self.selectedTestPatients):
+                for idat, dataset in enumerate(self.selectedDatasets):
                     test_index = np.where(self.dAllPats == ipat)[0]
                     test_set_tmp = self.dAllPats[test_index]
                     test_set_idx.append(test_set_tmp)
 
             allUnpatchedTest = []
             # load corresponding original dataset
-            for patient, ipat in enumerate(self.selectedTestPatients):
-                for dataset, idat in enumerate(self.selectedDatasets):
+            for ipat, patient in enumerate(self.selectedTestPatients):
+                for idat, dataset in enumerate(self.selectedDatasets):
                     currentDataDir = self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset
 
                     if os.path.exists(currentDataDir):
@@ -874,7 +901,7 @@ class Data:
         dataDict = {}
         dataDict['Name'] = name
         dataDict['Date'] = datetime.datetime.today().strftime('%Y-%m-%d')
-        dataDict['BatchSize'] = ''.join(str(e) for e in self.batchSizes)
+        dataDict['BatchSize'] = ''.join(str(e) for e in self.batchSize)
         dataDict['LearningRate'] = ''.join(str(e) for e in self.learningRates)
         dataDict['DataAugmentation'] = self.dataAugmentationEnabled
         dataDict['HorizontalFlip'] = self.horizontalFlip
@@ -1033,3 +1060,87 @@ class Data:
         mask_lay = newArray.reshape(layer_mask.shape)
 
         return mask_lay
+
+
+class Dataset:
+    def __init__(self, pathdata, pathlabel=None, artefact=None, bodyregion=None, tWeighting=None):
+        self.pathdata = pathdata
+        self.artefact = artefact
+        self.bodyregion = bodyregion
+        self.mrtWeighting = tWeighting
+
+        if pathlabel==None:
+            if tWeighting == None:
+                if artefact == 'ref' and bodyregion =='head':
+                    self.datasetLabel = Label.getLabel(Label.HEAD, Label.REFERENCE)
+                elif artefact == 'motion' and bodyregion == 'head':
+                    self.datasetLabel = Label.getLabel(Label.HEAD, Label.MOTION)
+                elif artefact == 'ref' and bodyregion == 'abdomen':
+                    self.datasetLabel = Label.getLabel(Label.ABDOMEN, Label.REFERENCE)
+                elif artefact == 'motion' and bodyregion == 'abdomen':
+                    self.datasetLabel = Label.getLabel(Label.ABDOMEN, Label.MOTION)
+                elif artefact == 'shim' and bodyregion == 'abdomen':
+                    self.datasetLabel = Label.getLabel(Label.ABDOMEN, Label.SHIM)
+                elif artefact == 'ref' and bodyregion == 'pelvis':
+                    self.datasetLabel = Label.getLabel(Label.PELVIS, Label.REFERENCE)
+                elif artefact == 'motion' and bodyregion == 'pelvis':
+                    self.datasetLabel = Label.getLabel(Label.PELVIS, Label.MOTION)
+                elif artefact == 'shim' and bodyregion == 'pelvis':
+                    self.datasetLabel = Label.getLabel(Label.PELVIS, Label.SHIM)
+                else:
+                    raise ValueError('Problem with dataset labeling!')
+            else:
+                if artefact == 'ref' and bodyregion =='head' and tWeighting == 't1':
+                    self.datasetLabel = Label.getLabel(Label.HEAD, Label.REFERENCE, Label.T1)
+                elif artefact == 'motion' and bodyregion == 'head' and tWeighting == 't1':
+                    self.datasetLabel = Label.getLabel(Label.HEAD, Label.MOTION, Label.T1)
+                elif artefact == 'ref' and bodyregion == 'abdomen' and tWeighting == 't1':
+                    self.datasetLabel = Label.getLabel(Label.ABDOMEN, Label.REFERENCE, Label.T1)
+                elif artefact == 'motion' and bodyregion == 'abdomen' and tWeighting == 't1':
+                    self.datasetLabel = Label.getLabel(Label.ABDOMEN, Label.MOTION, Label.T1)
+                elif artefact == 'ref' and bodyregion == 'abdomen' and tWeighting == 't2':
+                    self.datasetLabel = Label.getLabel(Label.ABDOMEN, Label.REFERENCE, Label.T2)
+                elif artefact == 'shim' and bodyregion == 'abdomen' and tWeighting == 't2':
+                    self.datasetLabel = Label.getLabel(Label.ABDOMEN, Label.SHIM, Label.T2)
+                elif artefact == 'ref' and bodyregion == 'pelvis' and tWeighting == 't1':
+                    self.datasetLabel = Label.getLabel(Label.PELVIS, Label.REFERENCE, Label.T1)
+                elif artefact == 'ref' and bodyregion == 'pelvis' and tWeighting == 't2':
+                    self.datasetLabel = Label.getLabel(Label.PELVIS, Label.REFERENCE, Label.T2)
+                elif artefact == 'motion' and bodyregion == 'pelvis' and tWeighting == 't1':
+                    self.datasetLabel = Label.getLabel(Label.PELVIS, Label.MOTION, Label.T1)
+                elif artefact == 'motion' and bodyregion == 'pelvis' and tWeighting == 't2':
+                    self.datasetLabel = Label.getLabel(Label.PELVIS, Label.MOTION, Label.T2)
+                elif artefact == 'shim' and bodyregion == 'pelvis' and tWeighting == 't2':
+                    self.datasetLabel = Label.getLabel(Label.PELVIS, Label.SHIM, Label.T2)
+                else:
+                    raise ValueError('Problem with dataset labeling!')
+        else:
+            self.datasetLabel = pathlabel
+
+    def getPathdata(self):
+        return self.pathdata
+
+    def getDatasetLabel(self):
+        return self.datasetLabel
+
+    def getArtefact(self):
+        return self.artefact
+
+    def getBodyRegion(self):
+        labelBodyRegion = None
+        if self.bodyregion == 'head':
+            labelBodyRegion = Label.HEAD
+        elif self.bodyregion == 'abdomen':
+            labelBodyRegion = Label.ABDOMEN
+        elif self.bodyregion == 'pelvis':
+            labelBodyRegion = Label.PELVIS
+
+        return self.bodyregion, labelBodyRegion
+
+    def getMRTWeighting(self):
+        tWeighting = None
+        if self.mrtWeighting == 't1':
+            tWeighting = Label.T1
+        elif self.mrtWeighting == 't2':
+            tWeighting = Label.T2
+        return self.mrtWeighting, tWeighting

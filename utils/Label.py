@@ -5,13 +5,13 @@
 """
 import numpy as np
 
+
 class Label:
     '''
     class Label has a static method getLabel(bodyRegion, artefact) to return the specific label for
     an artefact and a body region. The artefacts and body region labels can be accessed with static members of class
     label.
     '''
-
 
     LABEL_STRINGS = {
         110: "T1 Head Ref",
@@ -95,7 +95,6 @@ class Label:
         231: [240, 320, 35],
         232: [240, 320, 35]
     }
-
 
     @staticmethod
     def getLabel(bodyRegion, artefact, tWeighting = 0):
