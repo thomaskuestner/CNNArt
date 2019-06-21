@@ -324,44 +324,40 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, a
     elif sSplitting == 'PATIENT_CROSS_VALIDATION_SPLITTING':
         #unique_pats = len(allTestPats)
 
-        X_trainFold = []
-        X_testFold = []
-        y_trainFold = []
-        y_testFold = []
+        #for ind_split in allTestPats:
+        #    train_index = np.where(allPats != ind_split)[0]
+        #    test_index = np.where(allPats == ind_split)[0]
+        test_index = np.in1d(allPats, allTestPats)
+        train_index = [not x for x in test_index]
 
-        for ind_split in allTestPats:
-            train_index = np.where(allPats != ind_split)[0]
-            test_index = np.where(allPats == ind_split)[0]
-            X_train, X_test = allPatches[train_index], allPatches[test_index]
-            y_train, y_test = allY[train_index], allY[test_index]
-
-            X_trainFold.append(X_train)
-            X_testFold.append(X_test)
-            y_trainFold.append(y_train)
-            y_testFold.append(y_test)
+        X_train = allPatches[train_index, :, :, :]
+        X_test = allPatches[test_index, :, :, :]
+        Y_segMasks_train = allSegmentationMasks[train_index, :, :, :]
+        Y_segMasks_test = allSegmentationMasks[test_index, :, :, :]
+        y_train, y_test = allY[train_index], allY[test_index]
 
         if validationTrainRatio > 0:
-            iAll = np.arange(len(X_trainFold))
-            iSel = np.random.choice(len(X_trainFold), np.around(validationTrainRatio * len(X_trainFold)))
-            X_valFold = np.asarray(X_trainFold[iSel], dtype='f')
-            y_valFold = np.asarray(y_trainFold[iSel], dtype='f')
-            iRem = np.delete(iAll, iSel)
+            iAll = np.arange(X_train.shape[0])
+            iSel = np.random.choice(X_train.shape[0], np.around(validationTrainRatio * X_train.shape[0]))
+            X_valFold = X_train[iSel, :, :, :]
+            y_valFold = y_train[iSel]
+            Y_segMasks_valFold = Y_segMasks_train[iSel, :, :, :]
 
-            X_trainFold = np.asarray(X_trainFold[iRem], dtype='f')
-            X_testFold = np.asarray(X_testFold, dtype='f')
-            y_trainFold = np.asarray(y_trainFold[iRem], dtype='f')
-            y_testFold = np.asarray(y_testFold, dtype='f')
+            iRem = np.delete(iAll, iSel)
+            X_trainFold = X_train[iRem, :, :, :]
+            Y_segMasks_trainFold = Y_segMasks_train[iRem, :, :, :]
+            y_trainFold = y_train[iRem]
 
         else:
-            X_trainFold = np.asarray(X_trainFold, dtype='f')
-            X_testFold = np.asarray(X_testFold, dtype='f')
-            y_trainFold = np.asarray(y_trainFold, dtype='f')
-            y_testFold = np.asarray(y_testFold, dtype='f')
+            X_trainFold = X_train
             X_valFold = np.asarray([])
+            Y_segMasks_trainFold = Y_segMasks_train
+            Y_segMasks_valFold = np.asarray([])
+            y_trainFold = y_train
             y_valFold = np.asarray([])
 
         if iReturn > 0:
-            return [X_trainFold], [y_trainFold], [X_valFold], [y_valFold], [X_testFold], [y_testFold]
+            return [X_trainFold], [y_trainFold], [Y_segMasks_trainFold], [X_valFold], [y_valFold], [Y_segMasks_valFold], [X_test], [y_test], [Y_segMasks_test]
 
 
 def TransformDataset(allPatches, allY, patchSize, patchOverlap, isRandomShuffle=True, isUsingSegmentation=False, allSegmentationMasks=None):
