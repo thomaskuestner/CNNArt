@@ -249,3 +249,5 @@ GUI/PyQt/DLart/__pycache__/
 config/param_minimal_tk\.yml
 
 GUI/PyQt/utils/label\.py
+
+GUI/multi_slice_viewer\.py
