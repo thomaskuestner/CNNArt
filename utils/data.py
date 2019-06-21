@@ -215,7 +215,7 @@ class Data:
                             if self.database == 'MRPhysics':
                                 currentMarkingsPath = self.markingsPath + os.sep + patient + ".json"
                                 # get the markings mask
-                                labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset,
+                                labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset.pathdata,
                                                                       voxel_ndarray.shape[0],
                                                                       voxel_ndarray.shape[1], voxel_ndarray.shape[2])
                             elif self.database == 'NAKO_IQA':
@@ -275,7 +275,7 @@ class Data:
                             if self.database == 'MRPhysics':
                                 currentMarkingsPath = self.markingsPath + os.sep + patient + ".json"
                                 # get the markings mask
-                                labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset,
+                                labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset.pathdata,
                                                                       voxel_ndarray.shape[0],
                                                                       voxel_ndarray.shape[1], voxel_ndarray.shape[2])
                             elif self.database == 'NAKO_IQA':
@@ -569,7 +569,7 @@ class Data:
                         if self.database == 'MRPhysics':
                             currentMarkingsPath = self.markingsPath + os.sep + patient + ".json"
                             # get the markings mask
-                            labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset,
+                            labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset.pathdata,
                                                                        voxel_ndarray.shape[0],
                                                                        voxel_ndarray.shape[1], voxel_ndarray.shape[2])
                         elif self.database == 'NAKO_IQA':
