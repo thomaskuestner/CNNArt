@@ -41,6 +41,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 
 from networks.FullyConvolutionalNetworks.motion.deep_residual_learning_blocks import *
 from utils.dlnetwork import *
+from utils.image_preprocessing import *
 
 
 def createModel(patchSize, numClasses, usingClassification=False):
@@ -202,14 +203,14 @@ def createModel(patchSize, numClasses, usingClassification=False):
 
 
 
-def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSizes=None, learningRates=None, iEpochs=None, dlnetwork = None):
+def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlnetwork = None):
 
     usingClassification = dlnetwork.usingClassification
 
     # grid search on batch_sizes and learning rates
     # parse inputs
-    batchSize = batchSizes[0]
-    learningRate = learningRates[0]
+    #batchSize = batchSizes[0]
+    #learningRate = learningRates[0]
 
 
 
@@ -227,6 +228,7 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
     numClasses = np.shape(y_train)[1]
 
     #create cnn model
+    print('Create model')
     cnn, sModelName = createModel(patchSize=patchSize, numClasses=numClasses, usingClassification=usingClassification)
 
     fTrainInner(cnn,
@@ -362,6 +364,9 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     callbacks.append(LearningRateScheduler(schedule=step_decay, verbose=1))
     #callbacks.append(LivePlotCallback(dlart_handle))
 
+    print('Start training')
+
+    # TODO: add here data augmentation via ImageDataGenerator from utils/image_preprocessing + change to fit_generator
     if X_valid == 0 and y_valid == 0:
         # using test set for validation
         if usingClassification:
@@ -385,7 +390,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         if usingClassification:
             result = cnn.fit(X_train,
                              {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
-                             validation_data=(X_test,{'segmentation_output': Y_segMasks_test, 'classification_output': y_test}),
+                             validation_data=(X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -482,7 +487,7 @@ def step_decay(epoch, lr):
    return lr
 
 
-def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_size=64, usingClassification=False, usingSegmentationMasks=True, dlnetwork=dlnetwork):
+def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_size=64, usingClassification=False, usingSegmentationMasks=True, dlnetwork=None):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
         Input:
             X: Samples to predict on. The shape of X should fit to the input shape of the model
