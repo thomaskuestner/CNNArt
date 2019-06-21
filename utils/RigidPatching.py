@@ -257,8 +257,9 @@ def fRigidPatching3DN(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_arr
                 shim_artefact = False
                 noise_artefact = False
 
-    print("Rigid done!")
-    print(dLabels)
+    print("Rigid patching done!")
+    #print("Rigid done!")
+    #print(dLabels)
     return dPatches, dLabels, nbPatches
 
 
@@ -356,8 +357,8 @@ def fRigidPatching_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, mask
                 shim_artefact = False
                 noise_artefact = False
 
-    print("Rigid done!")
-    print(dLabels)
+    print("Rigid patching done for %s!" % dataset.getPathdata())
+    #print(dLabels)
     #return dPatches, dLabels, nbPatches
     return dPatches, dLabels
 
@@ -504,6 +505,6 @@ def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, ma
                 shim_artefact = False
                 noise_artefact = False
 
-    print("Rigid done!")
-    print(dLabels)
+    print("Rigid patching done for %s " % dataset.getPathdata())
+    #print(dLabels)
     return dPatches, dLabels#, nbPatches
