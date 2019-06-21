@@ -11,7 +11,7 @@ import os                      # operating system
 import argparse
 from utils.data import *
 from utils.dlnetwork import *
-import utils.Label as Label
+from utils.Label import Label
 import datetime
 import yaml
 
@@ -26,8 +26,9 @@ def fParseConfig(sFile):
 
 def fArtDetection(data, dlnetwork, sMode):
     # set GPU
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(data.gpu_id)
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(data.iGPU)
 
+    print('Prepare data')
     # get output vector for different classes
     classes = np.asarray(np.unique(data.Y_train, ), dtype=int)
     data.classMappings = Label.mapClassesToOutputVector(classes=classes, usingArtefacts=data.usingArtifacts,
@@ -100,8 +101,14 @@ def fArtDetection(data, dlnetwork, sMode):
         Y_validation = np.asarray(Y_validation)
         data.Y_segMasks_validation[data.Y_segMasks_validation == 3] = 1
         data.Y_segMasks_validation[data.Y_segMasks_validation == 2] = 0
+        data.X_validation = np.expand_dims(data.X_validation, axis=-1)
+        data.Y_segMasks_validation = np.expand_dims(data.Y_segMasks_validation, axis=-1)
 
+    data.X_train = np.expand_dims(data.X_train, axis=-1)
+    data.Y_segMasks_train = np.expand_dims(data.Y_segMasks_train, axis=-1)
 
+    data.X_test = np.expand_dims(data.X_test, axis=-1)
+    data.Y_segMasks_test = np.expand_dims(data.Y_segMasks_test, axis=-1)
 
     ################################################################################################################
     # debug!
@@ -142,14 +149,15 @@ def fArtDetection(data, dlnetwork, sMode):
         os.makedirs(data.outPutFolderDataPath + os.sep + 'checkpoints')
 
     # summarize cnn and training
-    data.create_cnn_training_summary(dlnetwork.neuralNetworkModel, data.outPutFolderDataPath)
+    # TODO
+    #data.create_cnn_training_summary(dlnetwork.neuralNetworkModel, data.outPutFolderDataPath)
 
     # segmentation FCN training
     # dynamic loading of corresponding model
     # TODO: case switch here for the different networks
     sModel = 'networks.FullyConvolutionalNetworks.motion.VResFCN_3D_Upsampling_final_Motion_Binary'
-    cnnModel = __import__(sModel, globals(), locals(), ['fTrain', 'fPredict'],
-                          0)  # dynamic module loading with specified functions and with absolute importing (level=0) -> work in both Python2 and Python3
+    cnnModel = __import__(sModel, globals(), locals(), ['fTrain', 'fPredict'], 0)
+    # dynamic module loading with specified functions and with absolute importing (level=0) -> work in both Python2 and Python3
 
     if sMode == 'training':
         if not data.usingSegmentationMasks:
@@ -161,8 +169,8 @@ def fArtDetection(data, dlnetwork, sMode):
                             y_test=Y_test,
                             sOutPath=data.outPutFolderDataPath,
                             patchSize=[data.patchSizeX, data.patchSizeY, data.patchSizeZ],
-                            batchSizes=dlnetwork.batchSize,
-                            learningRates=dlnetwork.learningRate,
+                            batchSize=dlnetwork.batchSize,
+                            learningRate=dlnetwork.learningRate,
                             iEpochs=dlnetwork.epochs,
                             dlnetwork=dlnetwork)
         else:
@@ -177,8 +185,8 @@ def fArtDetection(data, dlnetwork, sMode):
                             Y_segMasks_test=data.Y_segMasks_test,
                             sOutPath=data.outPutFolderDataPath,
                             patchSize=[data.patchSizeX, data.patchSizeY, data.patchSizeZ],
-                            batchSizes=dlnetwork.batchSize,
-                            learningRates=dlnetwork.learningRate,
+                            batchSize=dlnetwork.batchSize,
+                            learningRate=dlnetwork.learningRate,
                             iEpochs=dlnetwork.epochs,
                             dlnetwork=dlnetwork)
 
@@ -205,7 +213,7 @@ def fArtDetection(data, dlnetwork, sMode):
 if __name__ == "__main__": # for command line call
     # input parsing
     parser = argparse.ArgumentParser(description='''CNN artifact detection''', epilog='''(c) Thomas Kuestner, thomas.kuestner@iss.uni-stuttgart.de''')
-    parser.add_argument('-c', '--config', nargs = 1, type = str, help='path to config file', default= 'config/param.yml')
+    parser.add_argument('-c', '--config', nargs = 1, type = str, help='path to config file', default= 'config/param_minimal.yml')
     parser.add_argument('-i','--inPath', nargs = 1, type = str, help='input path to *.mat of stored patches', default= '/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Datatmp/in.mat')
     parser.add_argument('-o','--outPath', nargs = 1, type = str, help='output path to the file used for storage (subfiles _model, _weights, ... are automatically generated)', default= '/med_data/ImageSimilarity/Databases/MRPhysics/CNN/Datatmp/out' )
     parser.add_argument('-m','--model', nargs = 1, type = str, choices =['motion_head_CNN2D', 'motion_abd_CNN2D', 'motion_all_CNN2D', 'motion_CNN3D', 'motion_MNetArt', 'motion_VNetArt', 'multi_DenseResNet', 'multi_InceptionNet'], help='select CNN model', default='motion_2DCNN_head' )
@@ -218,7 +226,8 @@ if __name__ == "__main__": # for command line call
     args = parser.parse_args()
 
     # parse input
-    cfg = fParseConfig(args.config[0])
+    #cfg = fParseConfig(args.config[0])
+    cfg = fParseConfig('config/param_minimal_tk.yml')
 
     data = Data(cfg)
     # patch and split into training, val, test set
