@@ -11,7 +11,8 @@ sSelectedArtifact : ['sPairsMotion']
 # selected datasets: either e.g. ['HeadT1', 'AbdomenT1'] or ['All']
 sSelectedDataset : ['HeadT1', 'AbdomenT1', 'PelvisT1']
 # selected patients: either array with numbers of patients to be used [1,2,6] or ['All']
-sSelectedPatient : ['All']
+# variable states all patients (training, validation, test)
+sSelectedPatient : [1,5]
 
 MRPhysics:
   sPathIn : "/med_data/ImageSimilarity/Databases/MRPhysics/newProtocol"
@@ -55,6 +56,10 @@ NAKO_IQA:
     3D_GRE_TRA_fb_F_COMPOSED_0028 : [None, 'motion', 'abdomen', 't1']
     3D_GRE_TRA_fb_deep_F_COMPOSED_0042 : [None, 'motion', 'abdomen', 't1']
   sPathInLabel: "/med_data/ImageSimilarity/Databases/NAKO_IQA_Label"
+
+# store mode of data after/during/before patching
+# 'STORE_DISABLED', 'STORE_HDF5', 'STORE_TFRECORD', 'STORE_PATCH_BASED',
+storeMode : 'STORE_TFRECORD'
 
 # scaling range
 range : [0, 1]
