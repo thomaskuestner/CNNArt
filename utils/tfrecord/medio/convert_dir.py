@@ -45,7 +45,7 @@ def dir2tf(dir_data, dir_tf, b_verbose=False, b_skip_existing=False):
         image_shapes = []
         expected_shape = (236, 320, 260)
 
-        image = read_image.read_mat_image(subject_path)
+        image = read_image.read_mat_image(subject_path)  # image = numpy array
         #print('image_shape: ', image.shape)
 
         # skip files not conforming minimal shape requirements

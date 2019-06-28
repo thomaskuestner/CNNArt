@@ -48,6 +48,7 @@ def create_dataset (data_dir, num_parallel_calls = 4, patch_size=[64, 64, 64],
                                                        patch_size=patch_size,
                                                        overlap=overlap,
                                                        start=start)
+    # TODO: this can be called later and no need to have image_shape as input as image is already reshaped
 
     # generate placeholders that receive paths of type str
     images = tf.placeholder(tf.string, shape=[None])
