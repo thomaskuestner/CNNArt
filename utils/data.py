@@ -19,6 +19,8 @@ from utils.RigidPatching import *
 from utils.RigidUnpatching import *
 from utils.Training_Test_Split_FCN import *
 from utils.Label import Label
+from utils.tfrecord.medio import convert_tf, parse_tf_cnnart
+from utils.patch_shaping import *
 
 
 class Data:
@@ -33,6 +35,7 @@ class Data:
         else:
             self.patchingMode = 'PATCHING_2D'
         self.patchOverlap = cfg['patchOverlap']
+        self.batchSize = cfg['batchSize']
 
         self.labelingMode = 'MASK_LABELING'  # voxel-wise labeling
         self.usingSegmentationMasks = True  # voxel-wise classification
@@ -47,7 +50,10 @@ class Data:
         self.trainValidationRatio = cfg['trainValidationRatio']  # ratio between training and validation patches (percentage ratio)
         self.isRandomShuffle = cfg['randomShuffle']  # random shuffling in training
         self.nfolds = cfg['nfolds']  # number of cross-validation folds
-        self.storeMode = 'STORE_HDF5'  # 'STORE_DISABLED', 'STORE_HDF5', 'STORE_PATCH_BASED', 'STORE_TFRecord' (TODO)
+        if 'storeMode' in cfg:
+            self.storeMode = cfg['storeMode']
+        else:
+            self.storeMode = 'STORE_HDF5'  # 'STORE_DISABLED', 'STORE_HDF5', 'STORE_TFRECORD', 'STORE_PATCH_BASED'
         self.pathOutput = cfg['sOutputPath']
         self.pathOutputPatching = self.pathOutput  # same for now
         self.database = cfg['sDatabase']
@@ -58,6 +64,7 @@ class Data:
         if self.splittingMode == 'PATIENT_CROSS_VALIDATION_SPLITTING':
             self.doUnpatching = True  # only unpatching possible for left out test subjects
         self.usingClassification = cfg['usingClassification']  # use classification output on deepest layer
+        self.datagenerator = []
 
         # selected database
         self.database = cfg['sDatabase']
@@ -98,21 +105,6 @@ class Data:
         self.Y_validation = []
         self.Y_train = []
 
-        if self.patchingMode == 'PATCHING_2D':
-            dAllPatches = np.zeros((self.patchSizeX, self.patchSizeY, 0))
-            dAllLabels = np.zeros(0)
-            dAllPats = np.zeros(0)
-            if self.usingSegmentationMasks:
-                dAllSegmentationMaskPatches = np.zeros((self.patchSizeX, self.patchSizeY, 0))
-        elif self.patchingMode == 'PATCHING_3D':
-            dAllPatches = np.zeros((self.patchSizeX, self.patchSizeY, self.patchSizeZ, 0))
-            dAllLabels = np.zeros(0)
-            dAllPats = np.zeros(0)
-            if self.usingSegmentationMasks:
-                dAllSegmentationMaskPatches = np.zeros((self.patchSizeX, self.patchSizeY, self.patchSizeZ, 0))
-        else:
-            raise IOError("We do not know your patching mode...")
-
         # stuff for storing
 
         # outPutFolder name:
@@ -144,6 +136,20 @@ class Data:
         # self.datasetForPrediction = outputFolderPath
         #self.createDatasetInfoSummary(outPutFolder, outputFolderPath)
 
+        if self.storeMode == 'STORE_TFRECORD':
+            # check if database was already converted
+            pathtf = self.pathDatabase + '.tfrecord'
+            if not os.path.exists(pathtf):
+                # convert database to TFRecords
+                self.convert2TFrecords(pathtf)
+            # create TFRecord iterator (training data)
+            self.datagenerator = self.create_dataset(pathtf)
+            # load here test data and patch it
+            selTestPat = self.selectedPatients[self.selectedTestPatients]
+            self.X_test, _, self.Y_test, self.Y_segMasks_test = self.fload_and_patch(selTestPat, self.selectedDatasets)
+            self.X_test, self.Y_test, self.Y_segMasks_test = freshape_numpy(self.X_test, self.Y_segMasks_test)  # only valid with segmentation masks!
+            return 0
+
         if self.storeMode == 'STORE_PATCH_BASED':
             self.outPutFolderDataPath = outputFolderPath + os.sep + "data"
             if not os.path.exists(self.outPutFolderDataPath):
@@ -171,189 +177,8 @@ class Data:
         # for storing patch based
         iPatchToDisk = 0
 
-        for ipat, patient in enumerate(self.selectedPatients):
-            print('Loading patient %d\%d' % (ipat+1, len(self.selectedPatients)))
-            for idat, dataset in enumerate(self.selectedDatasets):
-                currentDataDir = self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset.pathdata
-
-                if os.path.exists(currentDataDir):
-                    # get list with all paths of dicoms for current patient and current dataset
-                    fileNames = os.listdir(currentDataDir)
-                    fileNames = [os.path.join(currentDataDir, f) for f in fileNames]
-
-                    # read DICOMS
-                    dicomDataset = [pydicom.read_file(f) for f in fileNames]
-                    # TODO: add here reading in of phase images
-
-                    # Combine DICOM Slices to a single 3D image (voxel)
-                    try:
-                        voxel_ndarray, ijk_to_xyz = dicom_np.combine_slices(dicomDataset)
-                        voxel_ndarray = voxel_ndarray.astype(float)
-                        voxel_ndarray = np.swapaxes(voxel_ndarray, 0, 1)
-                    except dicom_np.DicomImportException as e:
-                        # invalid DICOM data
-                        raise
-
-                    # normalization of DICOM voxel
-                    rangeNorm = [0, 1]
-                    norm_voxel_ndarray = (voxel_ndarray - np.min(voxel_ndarray)) * (rangeNorm[1] - rangeNorm[0]) / (
-                            np.max(voxel_ndarray) - np.min(voxel_ndarray))
-
-                    # sort array
-                    newnparray = np.zeros(shape=norm_voxel_ndarray.shape)
-                    for i in range(norm_voxel_ndarray.shape[-1]):
-                        newnparray[:, :, norm_voxel_ndarray.shape[-1] - 1 - i] = norm_voxel_ndarray[:, :, i]
-
-                    norm_voxel_ndarray = newnparray
-
-                    # 2D or 3D patching?
-                    if self.patchingMode == 'PATCHING_2D':
-                        # 2D patching
-                        # mask labeling or path labeling
-                        if self.labelingMode == 'MASK_LABELING':
-                            # path to marking file
-                            if self.database == 'MRPhysics':
-                                currentMarkingsPath = self.markingsPath + os.sep + patient + ".json"
-                                # get the markings mask
-                                labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset.pathdata,
-                                                                      voxel_ndarray.shape[0],
-                                                                      voxel_ndarray.shape[1], voxel_ndarray.shape[2])
-                            elif self.database == 'NAKO_IQA':
-                                if dataset == '3D_GRE_TRA_bh_F_COMPOSED_0014':  # reference --> all 0
-                                    labelMask_ndarray = np.zeros((voxel_ndarray.shape[0],
-                                                                      voxel_ndarray.shape[1], voxel_ndarray.shape[2]))
-                                elif dataset == '3D_GRE_TRA_fb_F_COMPOSED_0028':  # free-breathing mask
-                                    currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_fb.nrrd'
-                                    labelMask_ndarray = nrrd.read(currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
-                                elif dataset == '3D_GRE_TRA_fb_deep_F_COMPOSED_0042':  # free-breathing mask
-                                    currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_db.nrrd'
-                                    labelMask_ndarray = nrrd.read(currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
-
-                            # compute 2D Mask labling patching
-                            dPatches, dLabels = fRigidPatching_maskLabeling(norm_voxel_ndarray,
-                                                                            [self.patchSizeX, self.patchSizeY],
-                                                                            self.patchOverlap,
-                                                                            labelMask_ndarray, 0.5,
-                                                                            dataset)
-
-                            # convert to float32
-                            dPatches = np.asarray(dPatches, dtype=np.float32)
-                            dLabels = np.asarray(dLabels, dtype=np.float32)
-                            dPats = ipat * np.ones(dLabels.shape()[0], dtype = np.int16)
-
-                            ############################################################################################
-                            if self.usingSegmentationMasks:
-                                dPatchesOfMask, dLabelsMask = fRigidPatching_maskLabeling(labelMask_ndarray,
-                                                                                          [self.patchSizeX,
-                                                                                           self.patchSizeY],
-                                                                                          self.patchOverlap,
-                                                                                          labelMask_ndarray, 0.5,
-                                                                                          dataset)
-
-                                dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.float32)
-
-                            ############################################################################################
-
-
-                        elif self.labelingMode == 'PATCH_LABELING':
-                            # get label
-                            datasetLabel = self.datasets[dataset].getDatasetLabel()
-
-                            # compute 2D patch labeling patching
-                            dPatches, dLabels = fRigidPatching_patchLabeling(norm_voxel_ndarray,
-                                                                             [self.patchSizeX, self.patchSizeY],
-                                                                             self.patchOverlap, 1)
-                            dLabels = dLabels * datasetLabel
-
-                            # convert to float32
-                            dPatches = np.asarray(dPatches, dtype=np.float32)
-                            dLabels = np.asarray(dLabels, dtype=np.float32)
-                    elif self.patchingMode == 'PATCHING_3D':
-                        # 3D Patching
-                        if self.labelingMode == 'MASK_LABELING':
-                            # path to marking file
-                            if self.database == 'MRPhysics':
-                                currentMarkingsPath = self.markingsPath + os.sep + patient + ".json"
-                                # get the markings mask
-                                labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset.pathdata,
-                                                                      voxel_ndarray.shape[0],
-                                                                      voxel_ndarray.shape[1], voxel_ndarray.shape[2])
-                            elif self.database == 'NAKO_IQA':
-                                if dataset == '3D_GRE_TRA_bh_F_COMPOSED_0014':  # reference --> all 0
-                                    labelMask_ndarray = np.zeros((voxel_ndarray.shape[0],
-                                                                      voxel_ndarray.shape[1], voxel_ndarray.shape[2]))
-                                elif dataset == '3D_GRE_TRA_fb_F_COMPOSED_0028':  # free-breathing mask
-                                    currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_fb.nrrd'
-                                    labelMask_ndarray = nrrd.read(currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
-                                elif dataset == '3D_GRE_TRA_fb_deep_F_COMPOSED_0042':  # free-breathing mask
-                                    currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_db.nrrd'
-                                    labelMask_ndarray = nrrd.read(currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
-
-                            # compute 3D Mask labling patching
-                            dPatches, dLabels = fRigidPatching3D_maskLabeling(norm_voxel_ndarray,
-                                                                              [self.patchSizeX, self.patchSizeY,
-                                                                               self.patchSizeZ],
-                                                                              self.patchOverlap,
-                                                                              labelMask_ndarray,
-                                                                              0.5,
-                                                                              dataset)
-
-                            # convert to float32
-                            dPatches = np.asarray(dPatches, dtype=np.float32)
-                            dLabels = np.asarray(dLabels, dtype=np.float32)
-                            dPats = ipat * np.ones(dLabels.shape[0], dtype=np.int16)
-
-                            ############################################################################################
-                            if self.usingSegmentationMasks:
-                                dPatchesOfMask, dLabelsMask = fRigidPatching3D_maskLabeling(labelMask_ndarray,
-                                                                                            [self.patchSizeX,
-                                                                                             self.patchSizeY,
-                                                                                             self.patchSizeZ],
-                                                                                            self.patchOverlap,
-                                                                                            labelMask_ndarray, 0.5,
-                                                                                            dataset)
-                                dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.byte)
-                            ############################################################################################
-
-                        elif self.labelingMode == 'PATCH_LABELING':
-                            print("3D local patch labeling not available until now!")
-
-                    else:
-                        print("We do not know what labeling mode you want to use :p")
-
-                    if self.storeMode == 'STORE_PATCH_BASED':
-                        # patch based storage
-                        if self.patchingMode == 'PATCHING_3D':
-                            for i in range(0, dPatches.shape[3]):
-                                patchSlice = np.asarray(dPatches[:, :, :, i], dtype=np.float32)
-                                np.save((self.outPutFolderDataPath + os.sep + "X" + str(iPatchToDisk) + ".npy"),
-                                        patchSlice, allow_pickle=False)
-                                labelDict["Y" + str(iPatchToDisk)] = int(dLabels[i])
-                                iPatchToDisk += 1
-                        else:
-                            for i in range(0, dPatches.shape[2]):
-                                patchSlice = np.asarray(dPatches[:, :, i], dtype=np.float32)
-                                np.save((self.outPutFolderDataPath + os.sep + "X" + str(iPatchToDisk) + ".npy"),
-                                        patchSlice, allow_pickle=False)
-                                labelDict["Y" + str(iPatchToDisk)] = int(dLabels[i])
-                                iPatchToDisk += 1
-
-                    else:
-                        # concatenate all patches in one array
-                        if self.patchingMode == 'PATCHING_2D':
-                            dAllPatches = np.concatenate((dAllPatches, dPatches), axis=2)
-                            dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
-                            dAllPats = np.concatenate((dAllPats, dPats), axis=0)
-                            if self.usingSegmentationMasks:
-                                dAllSegmentationMaskPatches = np.concatenate(
-                                    (dAllSegmentationMaskPatches, dPatchesOfMask), axis=2)
-                        elif self.patchingMode == 'PATCHING_3D':
-                            dAllPatches = np.concatenate((dAllPatches, dPatches), axis=3)
-                            dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
-                            dAllPats = np.concatenate((dAllPats, dPats), axis=0)
-                            if self.usingSegmentationMasks:
-                                dAllSegmentationMaskPatches = np.concatenate(
-                                    (dAllSegmentationMaskPatches, dPatchesOfMask), axis=3)
+        # load and patch
+        dAllPatches, dAllPats, dAllLabels, dAllSegmentationMaskPatches = self.fload_and_patch(self.selectedPatients, self.selectedDatasets)
 
         self.dAllPats = dAllPats  # save info of patients
         self.dAllLabels = dAllLabels  # save all label info
@@ -519,6 +344,390 @@ class Data:
                                                     outPutPath=self.pathOutputPatching,
                                                     nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
 
+    def fload_and_patch(self, selectedPatients, selectedDatasets):
+        if self.patchingMode == 'PATCHING_2D':
+            dAllPatches = np.zeros((self.patchSizeX, self.patchSizeY, 0))
+            dAllLabels = np.zeros(0)
+            dAllPats = np.zeros(0)
+            if self.usingSegmentationMasks:
+                dAllSegmentationMaskPatches = np.zeros((self.patchSizeX, self.patchSizeY, 0))
+        elif self.patchingMode == 'PATCHING_3D':
+            dAllPatches = np.zeros((self.patchSizeX, self.patchSizeY, self.patchSizeZ, 0))
+            dAllLabels = np.zeros(0)
+            dAllPats = np.zeros(0)
+            if self.usingSegmentationMasks:
+                dAllSegmentationMaskPatches = np.zeros((self.patchSizeX, self.patchSizeY, self.patchSizeZ, 0))
+        else:
+            raise IOError("We do not know your patching mode...")
+
+        for ipat, patient in enumerate(selectedPatients):
+            print('Loading patient %d\%d' % (ipat+1, len(selectedPatients)))
+            for idat, dataset in enumerate(selectedDatasets):
+                currentDataDir = self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset.pathdata
+
+                if os.path.exists(currentDataDir):
+                    # get list with all paths of dicoms for current patient and current dataset
+                    fileNames = os.listdir(currentDataDir)
+                    fileNames = [os.path.join(currentDataDir, f) for f in fileNames]
+
+                    # read DICOMS
+                    dicomDataset = [pydicom.read_file(f) for f in fileNames]
+                    # TODO: add here reading in of phase images
+
+                    # Combine DICOM Slices to a single 3D image (voxel)
+                    try:
+                        voxel_ndarray, _ = dicom_np.combine_slices(dicomDataset)
+                        voxel_ndarray = voxel_ndarray.astype(float)
+                        voxel_ndarray = np.swapaxes(voxel_ndarray, 0, 1)
+                    except dicom_np.DicomImportException as e:
+                        # invalid DICOM data
+                        raise
+
+                    # normalization of DICOM voxel
+                    rangeNorm = [0, 1]
+                    norm_voxel_ndarray = (voxel_ndarray - np.min(voxel_ndarray)) * (rangeNorm[1] - rangeNorm[0]) / (
+                            np.max(voxel_ndarray) - np.min(voxel_ndarray))
+
+                    # sort array
+                    newnparray = np.zeros(shape=norm_voxel_ndarray.shape)
+                    for i in range(norm_voxel_ndarray.shape[-1]):
+                        newnparray[:, :, norm_voxel_ndarray.shape[-1] - 1 - i] = norm_voxel_ndarray[:, :, i]
+
+                    norm_voxel_ndarray = newnparray
+                    del newnparray
+
+                    # 2D or 3D patching?
+                    if self.patchingMode == 'PATCHING_2D':
+                        # 2D patching
+                        # mask labeling or path labeling
+                        if self.labelingMode == 'MASK_LABELING':
+                            # path to marking file
+                            if self.database == 'MRPhysics':
+                                currentMarkingsPath = self.markingsPath + os.sep + patient + ".json"
+                                # get the markings mask
+                                labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset.pathdata,
+                                                                           voxel_ndarray.shape[0],
+                                                                           voxel_ndarray.shape[1], voxel_ndarray.shape[2])
+                            elif self.database == 'NAKO_IQA':
+                                if dataset.pathdata == '3D_GRE_TRA_bh_F_COMPOSED_0014':  # reference --> all 0
+                                    labelMask_ndarray = np.zeros((voxel_ndarray.shape[0],
+                                                                  voxel_ndarray.shape[1], voxel_ndarray.shape[2]))
+                                elif dataset.pathdata == '3D_GRE_TRA_fb_F_COMPOSED_0028':  # free-breathing mask
+                                    currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_fb.nrrd'
+                                    labelMask_ndarray = nrrd.read(
+                                        currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
+                                elif dataset.pathdata == '3D_GRE_TRA_fb_deep_F_COMPOSED_0042':  # free-breathing mask
+                                    currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_db.nrrd'
+                                    labelMask_ndarray = nrrd.read(
+                                        currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
+
+                            # compute 2D Mask labling patching
+                            dPatches, dLabels = fRigidPatching_maskLabeling(norm_voxel_ndarray,
+                                                                            [self.patchSizeX, self.patchSizeY],
+                                                                            self.patchOverlap,
+                                                                            labelMask_ndarray, 0.5,
+                                                                            dataset)
+
+                            # convert to float32
+                            dPatches = np.asarray(dPatches, dtype=np.float32)
+                            dLabels = np.asarray(dLabels, dtype=np.float32)
+                            dPats = ipat * np.ones(dLabels.shape()[0], dtype=np.int16)
+
+                            ############################################################################################
+                            if self.usingSegmentationMasks:
+                                dPatchesOfMask, dLabelsMask = fRigidPatching_maskLabeling(labelMask_ndarray,
+                                                                                          [self.patchSizeX,
+                                                                                           self.patchSizeY],
+                                                                                          self.patchOverlap,
+                                                                                          labelMask_ndarray, 0.5,
+                                                                                          dataset)
+
+                                dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.float32)
+
+                            ############################################################################################
+
+
+                        elif self.labelingMode == 'PATCH_LABELING':
+                            # get label
+                            datasetLabel = self.datasets[dataset].getDatasetLabel()
+
+                            # compute 2D patch labeling patching
+                            dPatches, dLabels = fRigidPatching_patchLabeling(norm_voxel_ndarray,
+                                                                             [self.patchSizeX, self.patchSizeY],
+                                                                             self.patchOverlap, 1)
+                            dLabels = dLabels * datasetLabel
+
+                            # convert to float32
+                            dPatches = np.asarray(dPatches, dtype=np.float32)
+                            dLabels = np.asarray(dLabels, dtype=np.float32)
+                    elif self.patchingMode == 'PATCHING_3D':
+                        # 3D Patching
+                        if self.labelingMode == 'MASK_LABELING':
+                            # path to marking file
+                            if self.database == 'MRPhysics':
+                                currentMarkingsPath = self.markingsPath + os.sep + patient + ".json"
+                                # get the markings mask
+                                labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset.pathdata,
+                                                                           voxel_ndarray.shape[0],
+                                                                           voxel_ndarray.shape[1], voxel_ndarray.shape[2])
+                            elif self.database == 'NAKO_IQA':
+                                if dataset.pathdata == '3D_GRE_TRA_bh_F_COMPOSED_0014':  # reference --> all 0
+                                    labelMask_ndarray = np.zeros((voxel_ndarray.shape[0],
+                                                                  voxel_ndarray.shape[1], voxel_ndarray.shape[2]))
+                                elif dataset.pathdata == '3D_GRE_TRA_fb_F_COMPOSED_0028':  # free-breathing mask
+                                    currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_fb.nrrd'
+                                    labelMask_ndarray = nrrd.read(
+                                        currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
+                                elif dataset.pathdata == '3D_GRE_TRA_fb_deep_F_COMPOSED_0042':  # free-breathing mask
+                                    currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_db.nrrd'
+                                    labelMask_ndarray = nrrd.read(
+                                        currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
+
+                            # compute 3D Mask labling patching
+                            dPatches, dLabels = fRigidPatching3D_maskLabeling(norm_voxel_ndarray,
+                                                                              [self.patchSizeX, self.patchSizeY,
+                                                                               self.patchSizeZ],
+                                                                              self.patchOverlap,
+                                                                              labelMask_ndarray,
+                                                                              0.5,
+                                                                              dataset)
+
+                            # convert to float32
+                            dPatches = np.asarray(dPatches, dtype=np.float32)
+                            dLabels = np.asarray(dLabels, dtype=np.float32)
+                            dPats = ipat * np.ones(dLabels.shape[0], dtype=np.int16)
+
+                            ############################################################################################
+                            if self.usingSegmentationMasks:
+                                dPatchesOfMask, dLabelsMask = fRigidPatching3D_maskLabeling(labelMask_ndarray,
+                                                                                            [self.patchSizeX,
+                                                                                             self.patchSizeY,
+                                                                                             self.patchSizeZ],
+                                                                                            self.patchOverlap,
+                                                                                            labelMask_ndarray, 0.5,
+                                                                                            dataset)
+                                dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.byte)
+                            ############################################################################################
+
+                        elif self.labelingMode == 'PATCH_LABELING':
+                            print("3D local patch labeling not available until now!")
+
+                    else:
+                        print("We do not know what labeling mode you want to use :p")
+
+                    if self.storeMode == 'STORE_PATCH_BASED':
+                        # patch based storage
+                        if self.patchingMode == 'PATCHING_3D':
+                            for i in range(0, dPatches.shape[3]):
+                                patchSlice = np.asarray(dPatches[:, :, :, i], dtype=np.float32)
+                                np.save((self.outPutFolderDataPath + os.sep + "X" + str(iPatchToDisk) + ".npy"),
+                                        patchSlice, allow_pickle=False)
+                                labelDict["Y" + str(iPatchToDisk)] = int(dLabels[i])
+                                iPatchToDisk += 1
+                        else:
+                            for i in range(0, dPatches.shape[2]):
+                                patchSlice = np.asarray(dPatches[:, :, i], dtype=np.float32)
+                                np.save((self.outPutFolderDataPath + os.sep + "X" + str(iPatchToDisk) + ".npy"),
+                                        patchSlice, allow_pickle=False)
+                                labelDict["Y" + str(iPatchToDisk)] = int(dLabels[i])
+                                iPatchToDisk += 1
+
+                    else:
+                        # concatenate all patches in one array
+                        if self.patchingMode == 'PATCHING_2D':
+                            dAllPatches = np.concatenate((dAllPatches, dPatches), axis=2)
+                            dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
+                            dAllPats = np.concatenate((dAllPats, dPats), axis=0)
+                            if self.usingSegmentationMasks:
+                                dAllSegmentationMaskPatches = np.concatenate(
+                                    (dAllSegmentationMaskPatches, dPatchesOfMask), axis=2)
+                        elif self.patchingMode == 'PATCHING_3D':
+                            dAllPatches = np.concatenate((dAllPatches, dPatches), axis=3)
+                            dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
+                            dAllPats = np.concatenate((dAllPats, dPats), axis=0)
+                            if self.usingSegmentationMasks:
+                                dAllSegmentationMaskPatches = np.concatenate(
+                                    (dAllSegmentationMaskPatches, dPatchesOfMask), axis=3)
+
+        return dAllPatches, dAllPats, dAllLabels, dAllSegmentationMaskPatches
+
+    def convert2TFrecords(self, pathtf):
+        for ipat, patient in enumerate(self.selectedPatients):
+            print('Loading patient %d\%d' % (ipat+1, len(self.selectedPatients)))
+            for idat, dataset in enumerate(self.selectedDatasets):
+                currentDataDir = self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset.pathdata
+
+                if os.path.exists(currentDataDir):
+                    # get list with all paths of dicoms for current patient and current dataset
+                    fileNames = os.listdir(currentDataDir)
+                    fileNames = [os.path.join(currentDataDir, f) for f in fileNames]
+
+                    # read DICOMS
+                    dicomDataset = [pydicom.read_file(f) for f in fileNames]
+                    # TODO: add here reading in of phase images
+
+                    # Combine DICOM Slices to a single 3D image (voxel)
+                    try:
+                        voxel_ndarray, _ = dicom_np.combine_slices(dicomDataset)
+                        voxel_ndarray = voxel_ndarray.astype(int16)
+                        voxel_ndarray = np.swapaxes(voxel_ndarray, 0, 1)
+                    except dicom_np.DicomImportException as e:
+                        # invalid DICOM data
+                        raise
+
+                    # normalization of DICOM voxel
+                    #rangeNorm = [0, 1]
+                    #norm_voxel_ndarray = (voxel_ndarray - np.min(voxel_ndarray)) * (rangeNorm[1] - rangeNorm[0]) / (
+                    #        np.max(voxel_ndarray) - np.min(voxel_ndarray))
+
+                    # sort array
+                    #newnparray = np.zeros(shape=norm_voxel_ndarray.shape)
+                    #for i in range(norm_voxel_ndarray.shape[-1]):
+                    #    newnparray[:, :, norm_voxel_ndarray.shape[-1] - 1 - i] = norm_voxel_ndarray[:, :, i]
+                    for i in range(voxel_ndarray.shape[-1]):
+                        newnparray[:, :, voxel_ndarray.shape[-1] - 1 - i] = voxel_ndarray[:, :, i]
+
+                    path_file = pathtf + os.sep + patient + os.sep + dataset.pathdata + '.tfrecord'
+                    if not os.path.exists(pathtf + os.sep + patient):
+                        os.makedirs(pathtf + os.sep + patient)
+
+                    # body region
+                    _, bodyRegionLabel = dataset.getBodyRegion()
+
+                    # MRT weighting label (T1, T2)
+                    _, weightingLabel = dataset.getMRTWeighting()
+                    bodyRegionweightingLabel = bodyRegionLabel + weightingLabel
+                    print('creating ', path_file)
+                    convert_tf.im2tfrecord(image=newnparray, path=path_file, metadata=bodyRegionweightingLabel)
+                    # save a numpy array with some image information
+                    path_file = pathtf + os.sep + patient + os.sep + dataset.pathdata + '_info'
+                    dataset.image_shape = newnparray.shape()
+                    np.save(path_file, dataset)
+
+                    # convert voxel masks as well
+                    if self.labelingMode == 'MASK_LABELING':
+                        # path to marking file
+                        if self.database == 'MRPhysics':
+                            currentMarkingsPath = self.markingsPath + os.sep + patient + ".json"
+                            # get the markings mask
+                            labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset.pathdata,
+                                                                       voxel_ndarray.shape[0],
+                                                                       voxel_ndarray.shape[1], voxel_ndarray.shape[2])
+                        elif self.database == 'NAKO_IQA':
+                            if dataset == '3D_GRE_TRA_bh_F_COMPOSED_0014':  # reference --> all 0
+                                labelMask_ndarray = np.zeros((voxel_ndarray.shape[0],
+                                                              voxel_ndarray.shape[1], voxel_ndarray.shape[2]))
+                            elif dataset == '3D_GRE_TRA_fb_F_COMPOSED_0028':  # free-breathing mask
+                                currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_fb.nrrd'
+                                labelMask_ndarray = nrrd.read(
+                                    currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
+                            elif dataset == '3D_GRE_TRA_fb_deep_F_COMPOSED_0042':  # free-breathing mask
+                                currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_db.nrrd'
+                                labelMask_ndarray = nrrd.read(
+                                    currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
+
+                        path_file = pathtf + os.sep + patient + os.sep + dataset.pathdata + '_mask.tfrecord'
+                        print('creating mask ', path_file)
+                        convert_tf.im2tfrecord(image=labelMask_ndarray, path=path_file)
+
+    def create_dataset(self, data_dir, num_parallel_calls=4, prefetched_buffer_size=8000):
+
+        # choose & fetch all required training data / discard subjects missing crucial data
+        # TODO: only fetch training data, test data is not used for training: only works for subject leave-out at the moment, no batch-based splitting!
+        list_images = parse_tf_cnnart.fetch_paths(data_dir, self.selectedDatasets, self.selectedTestPatients)
+        list_masks = parse_tf_cnnart.fetch_path(data_dir, self.selectedDatasets, self.selectedTestPatients, ismask = True)
+        #print(list_images)
+        #list_labels = [parse_label(x) for x in list_images]
+        # print(list_labels)
+        # TODO: patch-based labels not supported yet -> needs to be incorporated into dynamic loading in generator function
+        # TODO: 2D patching not supported yet
+        num_samples = len(list_images)
+        print('num_samples ', num_samples)
+
+        # define the patch you want to crop
+        num_patches = []
+        for files in list_images:
+            # get corresponding image size
+            dataInfo = np.load(files[:-9] + '_info')  # reload pickled dataset object
+            num_patches += fcalculatepatches(dataInfo.image_shape, self.patchSize, self.patchOverlap)
+
+        print('number of patches cropped per image: ', num_patches)
+
+        #buffer_size = num_imgaes_loaded * num_patches  # shuffle patches from 34 different big images
+        buffer_size = num_patches
+
+        # This function splits a whole image into many splits and return
+        get_patches_fn = lambda image, dataset, segMask: fRigidPatching3D_maskLabeling(image,  # dataset is here returned as int (bodRegion+weighting label) from TFRecord
+                                                                              self.patchSize,
+                                                                              self.patchOverlap,
+                                                                              segMask,
+                                                                              0.5,
+                                                                              dataset)
+
+        # TODO: this can be called later and no need to have image_shape as input as image is already reshaped
+
+        # generate placeholders that receive paths of type str
+        images = tf.placeholder(tf.string, shape=[None])
+        masks = tf.placeholder(tf.string, shape=[None])
+        #labels = tf.placeholder(tf.int32, shape=[None])
+
+        # create dataset for your needs
+        dataset_image = tf.data.TFRecordDataset(images)
+        dataset_masks = tf.data.TFRecordDataset(masks)
+        #dataset_labels = tf.data.Dataset.from_tensor_slices(labels)
+        dataset = tf.data.Dataset.zip((dataset_image, dataset_masks))
+
+        # Note: this could be rewritten as one map call
+        # map parse function to each zipped element
+        dataset = dataset.map(
+            map_func=lambda a, b: (convert_tf.parse_withlabel_function(a), convert_tf.parse_function(b)),   # fist input zipped image list, 2nd zipped mask list
+            num_parallel_calls=num_parallel_calls)  # returns: image, image_label, segMask
+
+        # scale image to [0,1]
+        dataset = dataset.map(
+            map_func=lambda a, b, c: ( (a-tf.reduce_min(a))/(tf.reduce_max(a) - tf.reduce_min(a)), b, c),
+            num_parallel_calls=num_parallel_calls
+        )  # returns: scaled image, image_label, segMask
+
+        # patching
+        dataset = dataset.map(
+            map_func=lambda a, b, c: (get_patches_fn(a, b, c), get_patches_fn(c, b, c)),
+            num_parallel_calls=num_parallel_calls
+        )  # returns: imagePatch, segMaskPatch
+
+        # reshaping of tensors
+        dataset = dataset.map(
+            map_func=lambda a, b: (freshape_tensor(a, b)),
+            num_parallel_calls=num_parallel_calls)  # returns: X_train, Y_train, Y_segMasks_train
+
+        dataset = dataset.apply(tf.contrib.data.unbatch())
+
+        # here one could use shuffle, repeat, prefetch, ...
+        dataset = dataset.shuffle(buffer_size=buffer_size)
+        dataset_batched = dataset.batch(batch_size=self.batchSize)
+        dataset_batched = dataset_batched.prefetch(buffer_size=prefetched_buffer_size)
+        dataset_batched = dataset_batched.repeat()
+
+        iterator = dataset_batched.make_initializable_iterator()
+
+        next_element = iterator.get_next()
+
+        # dummy "model"
+        result = next_element
+
+        with tf.Session() as sess:
+
+            sess.run(iterator.initializer,
+                     feed_dict={images: list_images, masks: list_masks})
+
+            while True:
+                try:
+                    yield sess.run(result)
+
+                except tf.errors.OutOfRangeError:
+                    print('finished')
+                    break
+
     def handlepredictionssegmentation(self, predictions):
         # do unpatching if is enabled
         if self.doUnpatching:
@@ -550,7 +759,7 @@ class Data:
 
                         # Combine DICOM Slices to a single 3D image (voxel)
                         try:
-                            voxel_ndarray, ijk_to_xyz = dicom_np.combine_slices(dicomDataset)
+                            voxel_ndarray, _ = dicom_np.combine_slices(dicomDataset)
                             voxel_ndarray = voxel_ndarray.astype(float)
                             voxel_ndarray = np.swapaxes(voxel_ndarray, 0, 1)
                         except dicom_np.DicomImportException as e:
@@ -563,6 +772,7 @@ class Data:
                             newnparray[:, :, voxel_ndarray.shape[-1] - 1 - i] = voxel_ndarray[:, :, i]
 
                         voxel_ndarray = newnparray
+                        del newnparray
 
                     if self.labelingMode == 'MASK_LABELING':
                         # path to marking file
@@ -1068,6 +1278,7 @@ class Dataset:
         self.artefact = artefact
         self.bodyregion = bodyregion
         self.mrtWeighting = tWeighting
+        self.image_shape = []
 
         if pathlabel==None:
             if tWeighting == None:
