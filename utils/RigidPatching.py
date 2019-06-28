@@ -413,18 +413,21 @@ def fRigidPatching_patchLabeling(dicom_numpy_array, patchSize, patchOverlap, rat
 #        dLabels ---> 1D-Numpy-Array with all corresponding labels                                                                      #
 #########################################################################################################################################
 
-def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, dataset):
+def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, dataset=None, dopatching=True):
     #ToDo error for patchSizeZ = 5. To different Array sizes (40,40,4) and (40,40,5). Padding problem with uneven z-patch sizes????
 
     move_artefact = False
     shim_artefact = False
     noise_artefact = False
 
-    # body region
-    bodyRegion, bodyRegionLabel = dataset.getBodyRegion()
+    if isinstance(dataset, int):  # already pre-processed label bodyRegionLabel + weightingLabel
+        bodyRegionweightingLabel = dataset
+    else:
+        # body region
+        bodyRegion, bodyRegionLabel = dataset.getBodyRegion()
 
-    # MRT weighting label (T1, T2)
-    weighting, weightingLabel = dataset.getMRTWeighting()
+        # MRT weighting label (T1, T2)
+        weighting, weightingLabel = dataset.getMRTWeighting()
 
     dOverlap = np.round(np.multiply(patchSize, patchOverlap))
     dNotOverlap = np.round(np.multiply(patchSize, (1 - patchOverlap)))
@@ -495,8 +498,10 @@ def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, ma
                 elif move_artefact == True and shim_artefact == True and noise_artefact == True:
                     label = Label.MOTION_AND_SHIM_AND_NOISE
 
-
-                label = weightingLabel + bodyRegionLabel + label
+                if isinstance(dataset, int):
+                    label = bodyRegionweightingLabel + label
+                else:
+                    label = weightingLabel + bodyRegionLabel + label
 
                 dLabels[idxPatch] = label
                 idxPatch += 1
@@ -505,6 +510,27 @@ def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, ma
                 shim_artefact = False
                 noise_artefact = False
 
-    print("Rigid patching done for %s " % dataset.getPathdata())
-    #print(dLabels)
-    return dPatches, dLabels#, nbPatches
+    if isinstance(dataset, int):
+        return dPatches
+    else:
+        print("Rigid patching done for %s " % dataset.getPathdata())
+        #print(dLabels)
+        return dPatches, dLabels#, nbPatches
+
+def fcalculatepatches(imageSize, patchSize, patchOverlap):
+
+    dOverlap = np.round(np.multiply(patchSize, patchOverlap))
+    dNotOverlap = np.round(np.multiply(patchSize, (1 - patchOverlap)))
+
+    size_zero_pad = np.array(
+        ([math.ceil((imageSize[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0],
+          math.ceil((imageSize[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1],
+          math.ceil((imageSize[2] - dOverlap[2]) / (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2]]))
+
+    idxPatch = 0
+    for iZ in range(0, int(size_zero_pad[2] - dOverlap[2]), int(dNotOverlap[2])):
+        for iY in range(0, int(size_zero_pad[0] - dOverlap[0]), int(dNotOverlap[0])):
+            for iX in range(0, int(size_zero_pad[1] - dOverlap[1]), int(dNotOverlap[1])):
+                idxPatch += 1
+
+    return idxPatch
