@@ -3,7 +3,7 @@
 
 # This file should be re defined accoirding to the situation of the directory !
 
-from medio import convert_tf, parse_gen , read_image
+from utils.tfrecord.medio import convert_tf, parse_gen , read_image
 import pathlib as pl
 import os
 import logging
@@ -45,7 +45,7 @@ def dir2tf(dir_data, dir_tf, b_verbose=False, b_skip_existing=False):
         image_shapes = []
         expected_shape = (236, 320, 260)
 
-        image = read_image.read_mat_image(subject_path)
+        image = read_image.read_mat_image(subject_path)  # image = numpy array
         #print('image_shape: ', image.shape)
 
         # skip files not conforming minimal shape requirements
