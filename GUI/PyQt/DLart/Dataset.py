@@ -1,5 +1,5 @@
 
-from GUI.PyQt.utils.label import Label
+from utils.Label import Label
 
 class Dataset:
     def __init__(self, pathdata, pathlabel=None, artefact=None, bodyregion=None, tWeighting=None):
