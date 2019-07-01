@@ -5,8 +5,8 @@ import pandas
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget
 
-from GUI.PyQt.DLart.DataPreprocessing import create_MASK_Array
-from GUI.PyQt.DLart.Dataset import Dataset
+from DLart.DataPreprocessing import create_MASK_Array
+from DLart.Dataset import Dataset
 import numpy as np
 import h5py
 import os
@@ -17,7 +17,7 @@ if os.environ['IMAGINEUSEGPU'] == 'True':
     import tensorflow as tf
 import scipy.io as sio
 
-from GUI.PyQt.DLart.RigidPatching import fRigidPatching_maskLabeling, fRigidPatching_patchLabeling, fRigidPatching3D_maskLabeling
+from DLart.RigidPatching import fRigidPatching_maskLabeling, fRigidPatching_patchLabeling, fRigidPatching3D_maskLabeling
 from config.PATH import PATH_OUT, LEARNING_OUT, LABEL_PATH, DATASETS
 if os.environ['IMAGINEUSEGPU'] == 'True':
     from utils.CNN_main import fRunCNN, RUN_CNN_TRAIN_TEST_VALIDATION, RUN_CNN_TRAIN_TEST
@@ -28,7 +28,7 @@ if os.environ['IMAGINEUSEGPU'] == 'True':
     from utils.Prediction import predict_segmentation_model, predict_model
 from utils.Training_Test_Split import fSplitSegmentationDataset, fSplitDataset, TransformDataset
 from utils.Unpatching import fUnpatchSegmentation, fMulticlassUnpatch2D, fUnpatch3D
-from GUI.PyQt.DLart.Constants_DLart import *
+from DLart.Constants_DLart import *
 
 
 class DeepLearningArtApp(QWidget):
