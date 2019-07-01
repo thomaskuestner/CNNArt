@@ -13,31 +13,35 @@ import os
 import json
 import pydicom
 import dicom_numpy as dicom_np
-import tensorflow as tf
+if os.environ['IMAGINEUSEGPU'] == 'True':
+    import tensorflow as tf
 import scipy.io as sio
 
 from GUI.PyQt.DLart.RigidPatching import fRigidPatching_maskLabeling, fRigidPatching_patchLabeling, fRigidPatching3D_maskLabeling
-from GUI.PyQt.config.PATH import PATH_OUT, LEARNING_OUT, LABEL_PATH, DATASETS
-from GUI.PyQt.utils.CNN_main import fRunCNN, RUN_CNN_TRAIN_TEST_VALIDATION, RUN_CNN_TRAIN_TEST
-from GUI.PyQt.utils.label import Label
-from GUI.PyQt.utils.Multiclass_Unpatching import UnpatchType, UnpatchArte
-from GUI.PyQt.utils.Prediction import predict_segmentation_model, predict_model
-from GUI.PyQt.utils.Training_Test_Split import fSplitSegmentationDataset, fSplitDataset, TransformDataset
-from GUI.PyQt.utils.Unpatching import fUnpatchSegmentation, fMulticlassUnpatch2D, fUnpatch3D
+from config.PATH import PATH_OUT, LEARNING_OUT, LABEL_PATH, DATASETS
+if os.environ['IMAGINEUSEGPU'] == 'True':
+    from utils.CNN_main import fRunCNN, RUN_CNN_TRAIN_TEST_VALIDATION, RUN_CNN_TRAIN_TEST
+
+from utils.Label import Label
+from utils.Multiclass_Unpatching import UnpatchType, UnpatchArte
+if os.environ['IMAGINEUSEGPU'] == 'True':
+    from utils.Prediction import predict_segmentation_model, predict_model
+from utils.Training_Test_Split import fSplitSegmentationDataset, fSplitDataset, TransformDataset
+from utils.Unpatching import fUnpatchSegmentation, fMulticlassUnpatch2D, fUnpatch3D
 from GUI.PyQt.DLart.Constants_DLart import *
 
 
 class DeepLearningArtApp(QWidget):
     network_interface_update = pyqtSignal()
     _network_interface_update = pyqtSignal()  # used for activate network training
-    datasetscsv = pandas.read_csv('config' + os.sep + 'database' +  os.sep + DATASETS + '.csv')
+    datasetscsv = pandas.read_csv('config' + os.sep + 'database' + os.sep + DATASETS + os.sep + DATASETS + '.csv')
     datasets = {}
     for i in range(pandas.DataFrame.count(datasetscsv)['pathdata']):
         datasets[datasetscsv['pathdata'][i]] = Dataset(datasetscsv['pathdata'][i], datasetscsv['pathlabel'][i],
                                                        datasetscsv['artefact'][i], datasetscsv['bodyregion'][i],
                                                        datasetscsv['pathdata'][i].split('_')[0])
 
-    deepNeuralNetworks = pandas.read_csv('GUI/PyQt/DLart/networks.csv', index_col=0, squeeze=True).to_dict()
+    deepNeuralNetworks = pandas.read_csv('DLart/networks.csv', index_col=0, squeeze=True).to_dict()
 
     # structure of the directory where the dicom files are located
     modelSubDir = "dicom_sorted"

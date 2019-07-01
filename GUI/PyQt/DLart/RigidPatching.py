@@ -1,7 +1,7 @@
 import numpy as np
 import math
 
-from GUI.PyQt.utils.label import Label
+from utils.Label import Label
 
 #########################################################################################################################################
 #Function: fRigidPatching                                                                                                               #

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import os
+os.environ['IMAGINEUSEGPU'] = 'False'
 
 import codecs
 import json
@@ -7,21 +9,29 @@ import pickle
 import subprocess
 import sys
 import h5py
-import keras.backend as K
+if os.environ['IMAGINEUSEGPU'] == 'True':
+    import keras.backend as K
+    from keras.models import load_model
+    from keras.utils.vis_utils import model_to_dot
+
 import matplotlib
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas
 import scipy.io as sio
 import seaborn as sn
-import tensorflow as tf
+if os.environ['IMAGINEUSEGPU'] == 'True':
+    import tensorflow as tf
+    from utils.tftheanoFunction import TensorFlowTheanoFunction
+
 import webbrowser
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import pyqtSlot, QStringListModel
 from PyQt5.QtWidgets import QAbstractItemView, QTableWidgetItem, QMdiSubWindow, QTreeWidgetItem, QFileDialog, \
     QMessageBox, QInputDialog, QSizePolicy, QComboBox, QGridLayout, QItemEditorCreatorBase, QItemEditorFactory
-from keras.models import load_model
-from keras.utils.vis_utils import model_to_dot
+
+
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.colors import ListedColormap
 from matplotlib.figure import Figure
@@ -30,32 +40,28 @@ from matplotlib import colors
 from matplotlib.patches import Rectangle, Ellipse, PathPatch
 
 
-from GUI.PyQt.config.PATH import DLART_OUT_PATH, PATH_OUT, MARKING_PATH, DATASETS, SUBDIRS
-from GUI.PyQt.configGUI.matplotlibwidget import MatplotlibWidget, MyMplCanvas
-from GUI.PyQt.configGUI.network_visualization import cnn2d_visual
-from GUI.PyQt.utils.label import Label
-from GUI.PyQt.utils.tftheanoFunction import TensorFlowTheanoFunction
-from GUI.PyQt.configGUI.canvas import Canvas
-from GUI.PyQt.configGUI.gridTable import TableWidget
-from GUI.PyQt.configGUI.labelDialog import LabelDialog
-from GUI.PyQt.configGUI.labelTable import LabelTable
-from GUI.PyQt.configGUI import network_visualization
-from GUI.PyQt.configGUI.Grey_window import grey_window
-from GUI.PyQt.configGUI.Patches_window import Patches_window
-from GUI.PyQt.configGUI.framework import Ui_MainWindow
-from GUI.PyQt.configGUI.loadf2 import *
-from GUI.PyQt.configGUI.Unpatch import UnpatchType, UnpatchArte
-from GUI.PyQt.configGUI.Unpatch_eight import UnpatchArte8
-from GUI.PyQt.configGUI.Unpatch_two import fUnpatch2D
-from GUI.PyQt.configGUI.activescene import Activescene
-from GUI.PyQt.configGUI.activeview import Activeview
-from GUI.PyQt.configGUI.loadf import loadImage
-from GUI.PyQt.DLart.network_interface import DataSetsWindow, NetworkInterface
-from GUI.PyQt.DLart.dlart import DeepLearningArtApp
-from GUI.PyQt.DLart.Constants_DLart import *
-
-matplotlib.use('Qt5Agg')
-
+from config.PATH import DLART_OUT_PATH, PATH_OUT, MARKING_PATH, DATASETS, SUBDIRS
+from configGUI.matplotlibwidget import MatplotlibWidget, MyMplCanvas
+from configGUI.network_visualization import cnn2d_visual
+from utils.Label import Label
+from configGUI.canvas import Canvas
+from configGUI.gridTable import TableWidget
+from configGUI.labelDialog import LabelDialog
+from configGUI.labelTable import LabelTable
+from configGUI import network_visualization
+from configGUI.Grey_window import grey_window
+from configGUI.Patches_window import Patches_window
+from configGUI.framework import Ui_MainWindow
+from configGUI.loadf2 import *
+from configGUI.Unpatch import UnpatchType, UnpatchArte
+from configGUI.Unpatch_eight import UnpatchArte8
+from configGUI.Unpatch_two import fUnpatch2D
+from configGUI.activescene import Activescene
+from configGUI.activeview import Activeview
+from configGUI.loadf import loadImage
+from DLart.network_interface import DataSetsWindow, NetworkInterface
+from DLart.dlart import DeepLearningArtApp
+from DLart.Constants_DLart import *
 
 class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
     update_data = QtCore.pyqtSignal(list)
@@ -4072,24 +4078,27 @@ class imagine(QtWidgets.QMainWindow, Ui_MainWindow):
         class_idx = 0
         reg_param = 1 / (2e-4)
 
-        input = modelInput  # tensor
-        cost = -K.sum(K.log(input[:, class_idx] + 1e-8))  # tensor
-        gradient = K.gradients(cost, input)  # list
+        if lusegpu:
+            input = modelInput  # tensor
+            cost = -K.sum(K.log(input[:, class_idx] + 1e-8))  # tensor
+            gradient = K.gradients(cost, input)  # list
 
-        sess = tf.InteractiveSession()
-        calcCost = TensorFlowTheanoFunction([input], cost)
-        calcGrad = TensorFlowTheanoFunction([input], gradient)
+            sess = tf.InteractiveSession()
+            calcCost = TensorFlowTheanoFunction([input], cost)
+            calcGrad = TensorFlowTheanoFunction([input], gradient)
 
-        step_size = float(self.inputalpha)
-        reg_param = float(self.inputGamma)
+            step_size = float(self.inputalpha)
+            reg_param = float(self.inputGamma)
 
-        test = subset_selection
-        data_c = test
-        oss_v = network_visualization.SubsetSelection(calcGrad, calcCost, data_c, alpha=reg_param, gamma=step_size)
-        result = oss_v.optimize(np.random.uniform(0, 1.0, size=data_c.shape))
-        result = result * test
-        result[result > 0] = 1
-        self.ssResult = result
+            test = subset_selection
+            data_c = test
+            oss_v = network_visualization.SubsetSelection(calcGrad, calcCost, data_c, alpha=reg_param, gamma=step_size)
+            result = oss_v.optimize(np.random.uniform(0, 1.0, size=data_c.shape))
+            result = result * test
+            result[result > 0] = 1
+            self.ssResult = result
+        else:
+            self.ssResult = None
 
     def showChooseInput(self):
         reply = QtWidgets.QMessageBox.information(self,

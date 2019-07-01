@@ -4,8 +4,8 @@
 MRdatabase : NAKO_IQA
 # subdirectories in database, patient, output directory
 subdirs : ["", "dicom_sorted", "testout", "correction"]
-sDatabaseRootPath : '/home/s1304/med_data/NAKO'
-tfrecordsPath : '/home/s1304/med_data/NAKO/NAKO_IQA_tf'
+sDatabaseRootPath : '/home/d1274/med_data/NAKO'
+tfrecordsPath : '/home/d1274/med_data/NAKO/NAKO_IQA_tf'
 
 MRTfrecordDatabase : NAKO_IQA_tf
 

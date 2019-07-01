@@ -7,29 +7,22 @@ from tensorflow.python.client import device_lib
 import os.path
 import scipy.io as sio
 import numpy as np
-import math
 import keras
 from keras.layers import Input
-import keras.backend as K
-from keras.layers import Conv2D
-from keras.layers import BatchNormalization
-from keras.layers import GlobalAveragePooling2D
-from keras.layers.core import Dense, Activation, Flatten
+from keras.layers.core import Dense, Flatten
 from keras.models import Model
 from keras.models import Sequential
 from keras.layers.convolutional import Convolution2D
 from keras.callbacks import EarlyStopping
 from keras.callbacks import LearningRateScheduler
-from keras.callbacks import ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint
 from keras.models import model_from_json
 from keras.regularizers import l2  # , activity_l2
 
-from keras.optimizers import SGD
-from networks.multiclass.CNN2D.SENets.deep_residual_learning_blocks import *
-from GUI.PyQt.DLart.dlart import DeepLearningArtApp
-from GUI.PyQt.utils.image_preprocessing import ImageDataGenerator
-from GUI.PyQt.utils.LivePlotCallback import LivePlotCallback
+from networks.FullyConvolutionalNetworks.motion.deep_residual_learning_blocks import *
+from GUI.PyQt.DLArt_GUI.dlart import DeepLearningArtApp
+from GUI.PyQt.utilsGUI.image_preprocessing import ImageDataGenerator
+from GUI.PyQt.utilsGUI.LivePlotCallback import LivePlotCallback
 from matplotlib import pyplot as plt
 
 print(device_lib.list_local_devices)

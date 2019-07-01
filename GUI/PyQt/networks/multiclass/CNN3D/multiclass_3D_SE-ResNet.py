@@ -25,13 +25,13 @@ from keras.callbacks import ReduceLROnPlateau
 from keras.callbacks import ModelCheckpoint
 from keras.models import model_from_json
 from keras.regularizers import l2  # , activity_l2
-from matplotlib import pyplot as plt
-from keras.optimizers import SGD
-from GUI.PyQt.networks.multiclass.SENets.deep_residual_learning_blocks import *
-from GUI.PyQt.DLart.Constants_DLart import *
-from GUI.PyQt.utils.image_preprocessing import ImageDataGenerator
-from GUI.PyQt.utils.LivePlotCallback import LivePlotCallback
 
+from keras.optimizers import SGD
+from networks.multiclass.SENets.deep_residual_learning_blocks import *
+from DLart.Constants_DLart import *
+from utils.image_preprocessing import ImageDataGenerator
+from utils.LivePlotCallback import LivePlotCallback
+from matplotlib import pyplot as plt
 
 
 def createModel(patchSize, numClasses):

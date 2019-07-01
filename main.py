@@ -12,18 +12,12 @@ Copyright: 2016-2019 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) unde
 """
 
 # imports
-import os
 import sys
 import numpy as np                  # for algebraic operations, matrices
 import h5py
 import scipy.io as sio              # I/O
 import os.path                      # operating system
 import argparse
-import yaml
-import glob
-import tensorflow as tf
-import tensorflow.keras.optimizers as optimizers
-from tensorflow.keras.callbacks import (CSVLogger,ModelCheckpoint)
 
 # utils
 from DatabaseInfo import DatabaseInfo
@@ -48,8 +42,8 @@ import correction.main_correction as correction
 from utils.calculateInputOfPath2 import fcalculateInputOfPath2
 from networks.multiscale.runMS import frunCNN_MS
 
-from hyperopt import Trials, STATUS_OK, tpe
-from hyperas import optim
+#from hyperopt import Trials, STATUS_OK, tpe
+#from hyperas import optim
 
 
 
@@ -269,18 +263,6 @@ def fDeprecatedMain(args):
 
 def fTrainArtDetection():
     # training for artifact detection
-    patchSize = cfg['patchSize']
-    sOutsubdir = cfg['subdirs'][2]
-    sOutPath = cfg['selectedDatabase']['pathout'] + os.sep + ''.join(map(str, patchSize)).replace(" ",
-                                                                                                  "") + os.sep + sOutsubdir + str(
-        patchSize[0]) + str(patchSize[1])  # + str(ind_split) + '_' + str(patchSize[0]) + str(patchSize[1]) + '.h5'
-    if len(patchSize) == 3:
-        sOutPath = sOutPath + str(patchSize[2])
-    if sTrainingMethod != "None":
-            sOutPath = sOutPath + '_sj'
-            sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + 'sj' + '.h5'
-    else:
-        sDatafile = sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '.h5'
 
     # check if file is already existing -> skip patching
     if glob.glob(sOutPath + os.sep + sFSname + ''.join(map(str, patchSize)).replace(" ", "") + '*_input.mat'):  # deprecated
@@ -500,9 +482,8 @@ if __name__ == "__main__": # for command line call
     # TODO: add a check for old version
     # fDeprecatedMain(args)
 
-
     # parse input
-    cfg = fParseConfig('config' + os.sep + 'param.yml')
+    cfg = fParseConfig(args.config[0])
 
     lTrain = cfg['lTrain']  # training or prediction
     lSave = cfg['lSave']  # save intermediate test, training sets
@@ -562,10 +543,3 @@ if __name__ == "__main__": # for command line call
         ## --- prediction --- ##
         ########################
         fPredictArtDetection()
-
-
-
-
-
-
-

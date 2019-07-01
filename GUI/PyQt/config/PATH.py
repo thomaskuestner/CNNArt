@@ -2,7 +2,7 @@
 ## define path as constant.
 
 import yaml
-with open('GUI/PyQt/config/param_GUI.yml', 'r') as ymlfile:
+with open('config/param_GUI.yml', 'r') as ymlfile:
     cfg = yaml.safe_load(ymlfile)
 
 DATASETS = cfg['MRdatabase']

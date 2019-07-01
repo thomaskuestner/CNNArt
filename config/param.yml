@@ -49,9 +49,9 @@ motion_head_abd_becken: &id006
 #
 #### set parameters ####
 
-MRdatabase : NAKO_IQA
+MRdatabase : MRPhysics
 # subdirectories in database, patient, output directory
-subdirs : ["", "dicom_sorted", "testout", "correction"]
+subdirs : ["newProtocol", "dicom_sorted"]
 # CNN database to be modeled
 selectedDatabase: *id001
 # network architecture (if existing for chosen database!)
@@ -62,7 +62,7 @@ selectedDatabase: *id001
 # network: CNN2D, CNN3D, MNetArt, VNetArt
 # Single-pathway Multiscale networks are: MS_SPP, MS_FCN_simple, MS_FCN_MultiFM, MS_Inception_Archi1, MS_Inception_Archi2
 # Dual-pathway Multiscale networks are: MS_VNet_MultiPath, MS_SPP_MultiPath, MS_FCN_MultiFM_MultiPath
-network : "VResFCN_3D_Upsampling_final_Motion_Binary"
+network : "motion_all_CNN2D"
 
 # scaling range
 range : [0, 1]
@@ -151,9 +151,9 @@ correction:
   augmentation: false # augmentation flag
 
 
-gpu_home: "/home/s1304"
+gpu_home: "/home/s1275"
 # database name
-pathout: "/home/s1304/no_backup/s1304/database"
+pathout: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database"
 
 # (list of) path(s) of to be predicted images
 lPredictImg: "/home/yi/Desktop/Forschungsarbeit/WIP_YI/config/database/MRPhysics"

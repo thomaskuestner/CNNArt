@@ -4,7 +4,6 @@
 import tensorflow as tf
 import time
 import os
-import nibabel
 
 from utils.tfrecord.medio import convert_tf
 from utils.tfrecord.medio import parse_tf
@@ -25,7 +24,7 @@ if __name__ == '__main__':
     num_parallel_calls = 4
 
     # define some example values
-    data_dir = '/home/s1304/no_backup/s1304/data'
+    data_dir = '/home/d1274/no_backup/d1274/data'
     b_viewer = True
     b_verbose = True
 
