@@ -11,7 +11,7 @@ def fetch_paths(dir_tf, patterns, testpatients, ismask=False):
     if not isinstance(dir_tf, pl.Path):
         path_tf = pl.Path(dir_tf)
     else:
-        path_tf = dir_tf    
+        path_tf = dir_tf
 
     path_list = []
 
