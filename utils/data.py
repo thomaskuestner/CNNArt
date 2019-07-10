@@ -679,23 +679,28 @@ class Data:
 
         # Note: this could be rewritten as one map call
         # map parse function to each zipped element
+        # load data
+        # input: a = string of stored image, b = string of stored segMask
         dataset = dataset.map(
             map_func=lambda a, b: (convert_tf.parse_withlabel_function(a), convert_tf.parse_function(b)),   # fist input zipped image list, 2nd zipped mask list
             num_parallel_calls=num_parallel_calls)  # returns: image, image_label, segMask
 
         # scale image to [0,1]
+        # input: a = image, b = image_label, c = segMask
         dataset = dataset.map(
             map_func=lambda a, b, c: ( (a-tf.reduce_min(a))/(tf.reduce_max(a) - tf.reduce_min(a)), b, c),
             num_parallel_calls=num_parallel_calls
-        )  # returns: scaled image, image_label, segMask
+        )  # returns: scaledImage, image_label, segMask
 
         # patching
+        # input: a = scaledImage, image_label, segMask
         dataset = dataset.map(
             map_func=lambda a, b, c: (get_patches_fn(a, b, c), get_patches_fn(c, b, c)),
             num_parallel_calls=num_parallel_calls
         )  # returns: imagePatch, segMaskPatch
 
         # reshaping of tensors
+        # input: a = imagePatch, b = segMaskPatch
         dataset = dataset.map(
             map_func=lambda a, b: (freshape_tensor(a, b)),
             num_parallel_calls=num_parallel_calls)  # returns: X_train, Y_train, Y_segMasks_train
