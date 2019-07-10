@@ -15,19 +15,22 @@ def fetch_paths(dir_tf, patterns, testpatients, ismask=False):
 
     path_list = []
 
-    iSubject = 0
-    for subject, files in _parse_tf_gen(path_tf):
+    iSubject = 1
+    for subject, files in _parse_tf_gen(path_tf):        
         if iSubject in testpatients:
             iSubject += 1
             continue
-        for file in files:
+        for file in files:            
             for pattern in patterns:
                 if ismask:
-                    searchpattern = pattern.pathdata + '_mask'
+                    searchpattern = pattern.pathdata + '_mask' + '.tfrecord'
+                    searchpattern_phase =  pattern.pathdata + '_phase' + '_mask' + '.tfrecord'
                 else:
-                    searchpattern = pattern.pathdata
+                    searchpattern = pattern.pathdata + '.tfrecord'
+                    searchpattern_phase = pattern.pathdata + '_phase' + '.tfrecord'                   
+                    
 
-                if searchpattern == file.name:  # exact matching to avoid confusion to segmentation masks
+                if searchpattern == file.name or searchpattern_phase == file.name:  # exact matching to avoid confusion to segmentation masks                    
                     path_list.append(str(file))
         iSubject += 1
 
