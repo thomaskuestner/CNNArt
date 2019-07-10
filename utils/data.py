@@ -159,8 +159,8 @@ class Data:
             self.datagenerator = self.create_dataset(pathtf)
             # load here test data and patch it
             selTestPat = self.selectedPatients[self.selectedTestPatients]
-            self.X_test, self.Y_test, self.Y_segMasks_test = self.fload_and_patch(selTestPat, self.selectedDatasets)
-            self.X_test, self.Y_test, self.Y_segMasks_test = freshape_numpy(self.X_test, self.Y_segMasks_test)  # only valid with segmentation masks!
+            self.X_test, _, self.Y_test, self.Y_segMasks_test, _ = self.fload_and_patch(selTestPat, self.selectedDatasets)
+            self.X_test, _, self.Y_test, self.Y_segMasks_test, _ = freshape_numpy(self.X_test, self.Y_segMasks_test)  # only valid with segmentation masks!
             return 0
 
         if self.storeMode == 'STORE_PATCH_BASED':
@@ -191,7 +191,7 @@ class Data:
         iPatchToDisk = 0
 
         # load and patch
-        dAllPatches, dAllPats, dAllLabels, dAllSegmentationMaskPatches = self.fload_and_patch(self.selectedPatients, self.selectedDatasets)
+        dAllPatches, dAllPats, dAllLabels, dAllSegmentationMaskPatches, dAllPatchesPhase = self.fload_and_patch(self.selectedPatients, self.selectedDatasets)
 
         self.dAllPats = dAllPats  # save info of patients
         self.dAllLabels = dAllLabels  # save all label info
@@ -360,12 +360,14 @@ class Data:
     def fload_and_patch(self, selectedPatients, selectedDatasets):
         if self.patchingMode == 'PATCHING_2D':
             dAllPatches = np.zeros((self.patchSizeX, self.patchSizeY, 0))
+            dAllPatchesPhase = np.zeros((self.patchSizeX, self.patchSizeY, 0))
             dAllLabels = np.zeros(0)
             dAllPats = np.zeros(0)
             if self.usingSegmentationMasks:
                 dAllSegmentationMaskPatches = np.zeros((self.patchSizeX, self.patchSizeY, 0))
         elif self.patchingMode == 'PATCHING_3D':
             dAllPatches = np.zeros((self.patchSizeX, self.patchSizeY, self.patchSizeZ, 0))
+            dAllPatchesPhase = np.zeros((self.patchSizeX, self.patchSizeY, self.patchSizeZ, 0))
             dAllLabels = np.zeros(0)
             dAllPats = np.zeros(0)
             if self.usingSegmentationMasks:
@@ -486,8 +488,7 @@ class Data:
 
                             # convert to float32 - Phase part
                             dPatches_phase = np.asarray(dPatches_phase, dtype=np.float32)
-                            dLabels_phase = np.asarray(dLabels_phase, dtype=np.float32)
-                            dPats_phase = ipat * np.ones(dLabels_phase.shape[0], dtype=np.int16)
+                            # dLabels_phase = np.asarray(dLabels_phase, dtype=np.float32) # not required should be the same as magnitude
 
                             ############################################################################################
                             if self.usingSegmentationMasks:
@@ -497,15 +498,8 @@ class Data:
                                                                                           self.patchOverlap,
                                                                                           labelMask_ndarray, 0.5,
                                                                                           dataset)
-                                dPatchesOfMask_phase, dLabelsMask_phase = fRigidPatching_maskLabeling(labelMask_ndarray_phase,
-                                                                                            [self.patchSizeX,
-                                                                                            self.patchSizeY],
-                                                                                            self.patchOverlap,
-                                                                                            labelMask_ndarray_phase, 0.5,
-                                                                                            dataset)
-
+         
                                 dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.float32)
-                                dPatchesOfMask_phase = np.asarray(dPatchesOfMask_phase, dtype=np.float32)
 
                             ############################################################################################
 
@@ -572,8 +566,7 @@ class Data:
 
                             # convert to float32 - Phase part
                             dPatches_phase = np.asarray(dPatches_phase, dtype=np.float32)
-                            dLabels_phase = np.asarray(dLabels_phase, dtype=np.float32)
-                            dPats_phase = ipat * np.ones(dLabels_phase.shape[0], dtype=np.int16)
+                            # dLabels_phase = np.asarray(dLabels_phase, dtype=np.float32) # not required
 
 
                             ############################################################################################
@@ -585,14 +578,9 @@ class Data:
                                                                                             self.patchOverlap,
                                                                                             labelMask_ndarray, 0.5,
                                                                                             dataset)
-                                dPatchesOfMask_phase, dLabelsMask_phase = fRigidPatching_maskLabeling(labelMask_ndarray_phase,
-                                                                                            [self.patchSizeX,
-                                                                                             self.patchSizeY, self.patchSizeZ],
-                                                                                             self.patchOverlap,
-                                                                                             labelMask_ndarray_phase, 0.5,
-                                                                                            dataset)
+
                                 dPatchesOfMask = np.asarray(dPatchesOfMask, dtype=np.byte)
-                                dPatchesOfMask_phase = np.asarray(dPatchesOfMask_phase, dtype=np.float32)
+
                             ############################################################################################
 
                         elif self.labelingMode == 'PATCH_LABELING':
@@ -621,21 +609,23 @@ class Data:
                     else:
                         # concatenate all patches in one array
                         if self.patchingMode == 'PATCHING_2D':
-                            dAllPatches = np.concatenate((dPatches,dPatches_phase ), axis=2)
-                            dAllLabels = np.concatenate((dLabels,dLabels_phase ), axis=0)
-                            dAllPats = np.concatenate((dPats, dPats_phase), axis=0)
+                            dAllPatches = np.concatenate((dAllPatches, dPatches ), axis=2)
+                            dAllPatchesPhase = np.concatenate((dAllPatchesPhase, dPatches_phase ), axis=2)
+                            dAllLabels = np.concatenate((dAllLabels, dLabels ), axis=0)
+                            dAllPats = np.concatenate((dAllPats, dPats ), axis=0)
                             if self.usingSegmentationMasks:
                                 dAllSegmentationMaskPatches = np.concatenate(
-                                    (dPatchesOfMask, dPatchesOfMask_phase), axis=2)
+                                    (dAllSegmentationMaskPatches, dPatchesOfMask), axis=2)
                         elif self.patchingMode == 'PATCHING_3D':
-                            dAllPatches = np.concatenate((dPatches,dPatches_phase ), axis=3)
-                            dAllLabels = np.concatenate((dLabels,dLabels_phase ), axis=0)
-                            dAllPats = np.concatenate((dPats, dPats_phase), axis=0)
+                            dAllPatches = np.concatenate((dAllPatches, dPatches ), axis=3)
+                            dAllPatchesPhase = np.concatenate((dAllPatchesPhase, dPatches_phase ), axis=3)
+                            dAllLabels = np.concatenate((dAllLabels, dLabels ), axis=0)
+                            dAllPats = np.concatenate((dAllPats, dPats), axis=0)
                             if self.usingSegmentationMasks:
                                 dAllSegmentationMaskPatches = np.concatenate(
-                                    (dPatchesOfMask, dPatchesOfMask_phase), axis=3)
+                                    (dAllSegmentationMaskPatches, dPatchesOfMask), axis=3)
 
-        return dAllPatches, dAllPats, dAllLabels, dAllSegmentationMaskPatches
+        return dAllPatches, dAllPats, dAllLabels, dAllSegmentationMaskPatches, dAllPatchesPhase  # all patches phase last -> backward comp.
 
     def convert2TFrecords(self, pathtf):
         for ipat, patient in enumerate(self.selectedPatients):
