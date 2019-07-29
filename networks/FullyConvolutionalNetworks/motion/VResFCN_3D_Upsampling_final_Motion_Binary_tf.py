@@ -433,7 +433,7 @@ def step_decay(epoch, lr):
    return lr
 
 
-'''
+
 def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_size=64, usingClassification=False, usingSegmentationMasks=True, dlnetwork=None):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
         Input:
@@ -569,7 +569,7 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
 
     return predictions
 
-'''
+
 
 def dice_coef(y_true, y_pred, epsilon=1e-5):
     dice_numerator = 2.0 * K.sum(y_true*y_pred, axis=[1,2,3,4])
