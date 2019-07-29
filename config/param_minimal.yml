@@ -1,7 +1,7 @@
 # GPU
 iGPU : 0
 
-# set mode: 'training', 'prediction'
+# set mode: 'training', 'prediction', 'plotting'
 sMode : 'training'
 
 # Datasets
@@ -61,6 +61,13 @@ NAKO_IQA:
 # 'STORE_DISABLED', 'STORE_HDF5', 'STORE_TFRECORD', 'STORE_PATCH_BASED',
 storeMode : 'STORE_TFRECORD'
 
+# plot results
+plotting:
+  plotResults: True
+  format : png        # data format of stored file
+  alpha: 0.4          # transparency of labels/prediction-masks on MRI
+  colormap: [[0,0,0],[0.2,1,0],[1,1,0.2],[1,0.2,0]] # colormap of overlays
+
 # scaling range
 range : [0, 1]
 # patches
@@ -100,7 +107,7 @@ nfolds : 0
 # Dual-pathway Multiscale networks are: MS_VNet_MultiPath, MS_SPP_MultiPath, MS_FCN_MultiFM_MultiPath
 network : "VResFCN_3D_Upsampling_final_Motion_Binary"
 # use classification output on deepest layer
-usingClassification : False
+usingClassification : True
 # optimized parameters
 batchSize : 64
 # learning rate

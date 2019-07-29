@@ -14,6 +14,7 @@ import nrrd
 import pydicom
 import scipy.io as sio
 from matplotlib import path
+import matplotlib.pyplot as plt
 
 from utils.RigidPatching import *
 from utils.RigidUnpatching import *
@@ -64,6 +65,10 @@ class Data:
         if self.splittingMode == 'PATIENT_CROSS_VALIDATION_SPLITTING':
             self.doUnpatching = True  # only unpatching possible for left out test subjects
         self.usingClassification = cfg['usingClassification']  # use classification output on deepest layer
+        self.plotresults = cfg['plotting']['plotResults']
+        self.plotFormat = cfg['plotting']['format']
+        self.plotAlpha = cfg['plotting']['alpha']
+        self.plotColormap = cfg['plotting']['colormap']
         self.datagenerator = []
 
         # selected database
@@ -742,16 +747,16 @@ class Data:
             # find test patient in test set
             test_set_idx = []
             for ipat, patient in enumerate(self.selectedTestPatients):
-                for idat, dataset in enumerate(self.selectedDatasets):
-                    test_index = np.where(self.dAllPats == ipat)[0]
-                    test_set_tmp = self.dAllPats[test_index]
-                    test_set_idx.append(test_set_tmp)
+                #for idat, dataset in enumerate(self.selectedDatasets):
+                test_index = np.where(self.dAllPats == ipat)[0]
+                test_set_tmp = self.dAllPats[test_index]
+                test_set_idx.append(test_set_tmp)
 
             allUnpatchedTest = []
             # load corresponding original dataset
             for ipat, patient in enumerate(self.selectedTestPatients):
                 for idat, dataset in enumerate(self.selectedDatasets):
-                    currentDataDir = self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset
+                    currentDataDir = self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset.pathdata
 
                     if os.path.exists(currentDataDir):
                         # get list with all paths of dicoms for current patient and current dataset
@@ -833,8 +838,11 @@ class Data:
                         'dicom_masks': labelMask_ndarray,
                     }
 
-                    allUnpatchedTest.append(unpatched_slices)
+                    # plot output overlays
+                    savepath = self.pathOutput + os.sep + patient + '_' + dataset.pathdata
+                    plot_patient_mask(voxel_ndarray, unpatched_img_foreground, labelMask_ndarray, savepath, plot_overlay=True)
 
+                    allUnpatchedTest.append(unpatched_slices)
 
         if self.usingClassification:
             # save prediction into .mat file
@@ -869,19 +877,19 @@ class Data:
                                             'segmentation_output_dice_coef_test'],
                                         'classification_output_acc_test': predictions[
                                             'classification_output_acc_test'],
-                                        'unpatched_slices': self.unpatched_slices
+                                        'unpatched_slices': allUnpatchedTest
                                         })
             #self.result_WorkSpace = modelSave
 
             # load training results
-            _, sPath = os.path.splitdrive(self.outPutFolderDataPath)
-            sPath, sFilename = os.path.split(sPath)
-            sFilename, sExt = os.path.splitext(sFilename)
+            #_, sPath = os.path.splitdrive(self.outPutFolderDataPath)
+            #sPath, sFilename = os.path.split(sPath)
+            #sFilename, sExt = os.path.splitext(sFilename)
 
-            training_results = sio.loadmat(sPath + os.sep + sFilename + ".mat")
-            self.acc_training = training_results['segmentation_output_dice_coef_training']
-            self.acc_validation = training_results['segmentation_output_dice_coef_val']
-            self.acc_test = training_results['segmentation_output_dice_coef_test']
+            #training_results = sio.loadmat(sPath + os.sep + sFilename + ".mat")
+            #self.acc_training = training_results['segmentation_output_dice_coef_training']
+            #self.acc_validation = training_results['segmentation_output_dice_coef_val']
+            #self.acc_test = training_results['segmentation_output_dice_coef_test']
 
         else:
             # save prediction into .mat file
@@ -896,37 +904,33 @@ class Data:
                 sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
                                         'score_test': predictions['score_test'],
                                         'acc_test': predictions['acc_test'],
-                                        'unpatched_slices': self.unpatched_slices
+                                        'unpatched_slices': unpatched_slices
                                         })
             #self.result_WorkSpace = modelSave
 
             # load training results
-            _, sPath = os.path.splitdrive(self.outPutFolderDataPath)
-            sPath, sFilename = os.path.split(sPath)
-            sFilename, sExt = os.path.splitext(sFilename)
+            #_, sPath = os.path.splitdrive(self.outPutFolderDataPath)
+            #sPath, sFilename = os.path.split(sPath)
+            #sFilename, sExt = os.path.splitext(sFilename)
 
-            training_results = sio.loadmat(sPath + os.sep + sFilename + ".mat")
-            self.acc_training = training_results['dice_coef']
-            self.acc_validation = training_results['val_dice_coef']
-            self.acc_test = training_results['dice_coef_test']
-
-
+            #training_results = sio.loadmat(sPath + os.sep + sFilename + ".mat")
+            #self.acc_training = training_results['dice_coef']
+            #self.acc_validation = training_results['val_dice_coef']
+            #self.acc_test = training_results['dice_coef_test']
 
     def handlepredictions(self, prediction):
-        # TODO: NOT fully implemented yet!
-        '''
-        self.predictions = prediction['predictions']
-        self.confusionMatrix = prediction['confusion_matrix']
-        self.classificationReport = prediction['classification_report']
+        #self.predictions = prediction['predictions']
+        #self.confusionMatrix = prediction['confusion_matrix']
+        #self.classificationReport = prediction['classification_report']
 
         ############################################################
 
         # organize confusion matrix
-        sum_all = np.array(np.sum(self.confusionMatrix, axis=0))
+        sum_all = np.array(np.sum(prediction['confusion_matrix'], axis=0))
         all = np.zeros((len(sum_all), len(sum_all)))
         for i in range(all.shape[0]):
             all[i, :] = sum_all
-        self.confusionMatrix = np.divide(self.confusionMatrix, all)
+        prediction['confusion_matrix'] = np.divide(prediction['confusion_matrix'], all)
 
         # do unpatching if is enabled
         if self.doUnpatching:
@@ -937,151 +941,174 @@ class Data:
             iClass = np.where(classVec == 1)
             iClass = iClass[0]
 
+            # find test patient in test set
+            test_set_idx = []
+            for ipat, patient in enumerate(self.selectedTestPatients):
+                # for idat, dataset in enumerate(self.selectedDatasets):
+                test_index = np.where(self.dAllPats == ipat)[0]
+                test_set_tmp = self.dAllPats[test_index]
+                test_set_idx.append(test_set_tmp)
+
             # load corresponding original dataset
-            for i in self.datasets:
-                set = self.datasets[i]
-                if set.getDatasetLabel() == self.classLabel:
-                    originalDatasetName = set.getPathdata()
+            #for i in self.datasets:
+            #    set = self.datasets[i]
+            #    if set.getDatasetLabel() == self.classLabel:
+            #        originalDatasetName = set.getPathdata()
 
-            pathToOriginalDataset = self.getPathToDatabase() + os.sep + str(
-                patientsOfDataset[0]) + os.sep + 'dicom_sorted' + os.sep + originalDatasetName
-            fileNames = os.listdir(pathToOriginalDataset)
-            fileNames = [os.path.join(pathToOriginalDataset, f) for f in fileNames]
+            #pathToOriginalDataset = self.getPathToDatabase() + os.sep + str(
+            #    patientsOfDataset[0]) + os.sep + 'dicom_sorted' + os.sep + originalDatasetName
 
-            # read DICOMS
-            dicomDataset = [dicom.read_file(f) for f in fileNames]
+            allUnpatchedTest = []
+            # load corresponding original dataset
+            for ipat, patient in enumerate(self.selectedTestPatients):
+                for idat, dataset in enumerate(self.selectedDatasets):
+                    currentDataDir = self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset.pathdata
 
-            # Combine DICOM Slices to a single 3D image (voxel)
-            try:
-                voxel_ndarray, ijk_to_xyz = dicom_np.combine_slices(dicomDataset)
-                voxel_ndarray = voxel_ndarray.astype(float)
-                voxel_ndarray = np.swapaxes(voxel_ndarray, 0, 1)
-            except dicom_np.DicomImportException as e:
-                # invalid DICOM data
-                raise
+                    if os.path.exists(currentDataDir):
+                        # get list with all paths of dicoms for current patient and current dataset
+                        fileNames = os.listdir(pathToOriginalDataset)
+                        fileNames = [os.path.join(pathToOriginalDataset, f) for f in fileNames]
 
-            # sort array
-            newnparray = np.zeros(shape=voxel_ndarray.shape)
-            for i in range(voxel_ndarray.shape[-1]):
-                newnparray[:, :, voxel_ndarray.shape[-1] - 1 - i] = voxel_ndarray[:, :, i]
+                        # read DICOMS
+                        dicomDataset = [dicom.read_file(f) for f in fileNames]
 
-            voxel_ndarray = newnparray
+                        # Combine DICOM Slices to a single 3D image (voxel)
+                        try:
+                            voxel_ndarray, ijk_to_xyz = dicom_np.combine_slices(dicomDataset)
+                            voxel_ndarray = voxel_ndarray.astype(float)
+                            voxel_ndarray = np.swapaxes(voxel_ndarray, 0, 1)
+                        except dicom_np.DicomImportException as e:
+                            # invalid DICOM data
+                            raise
 
-            # load dicom mask
-            currentMarkingsPath = self.getMarkingsPath() + os.sep + str(patientsOfDataset[0]) + ".json"
-            # get the markings mask
-            labelMask_ndarray = create_MASK_Array(currentMarkingsPath,
-                                                  patientsOfDataset[0],
-                                                  originalDatasetName,
-                                                  voxel_ndarray.shape[0],
-                                                  voxel_ndarray.shape[1],
-                                                  voxel_ndarray.shape[2])
+                        # sort array
+                        newnparray = np.zeros(shape=voxel_ndarray.shape)
+                        for i in range(voxel_ndarray.shape[-1]):
+                            newnparray[:, :, voxel_ndarray.shape[-1] - 1 - i] = voxel_ndarray[:, :, i]
 
-            dicom_size = [voxel_ndarray.shape[0], voxel_ndarray.shape[1], voxel_ndarray.shape[2]]
+                        voxel_ndarray = newnparray
 
-            if len(self.patchOverlapPrediction) == 2:
-                multiclass_probability_masks = fMulticlassUnpatch2D(self.predictions,
-                                                                    self.patchSizePrediction,
-                                                                    self.patchOverlapPrediction,
-                                                                    dicom_size)
+                        # load dicom mask
+                        currentMarkingsPath = self.getMarkingsPath() + os.sep + str(patientsOfDataset[0]) + ".json"
+                        # get the markings mask
+                        labelMask_ndarray = create_MASK_Array(currentMarkingsPath,
+                                                              patientsOfDataset[0],
+                                                              originalDatasetName,
+                                                              voxel_ndarray.shape[0],
+                                                              voxel_ndarray.shape[1],
+                                                              voxel_ndarray.shape[2])
 
-            if len(self.patchSizePrediction) == 3:
-                multiclass_probability_masks = fUnpatch3D(self.predictions,
-                                                          self.patchSizePrediction,
-                                                          self.patchOverlapPrediction,
-                                                          dicom_size)
+                        dicom_size = [voxel_ndarray.shape[0], voxel_ndarray.shape[1], voxel_ndarray.shape[2]]
 
-            ########################################################################################################
-            # Hatching and colors multicalss unpatching
-            prob_test = self.predictions
+                        if len(self.patchOverlapPrediction) == 2:
+                            multiclass_probability_masks = fMulticlassUnpatch2D(prediction['prob_pre'],
+                                                                                self.patchSizePrediction,
+                                                                                self.patchOverlapPrediction,
+                                                                                dicom_size)
 
-            IArte = []
-            IType = []
+                        if len(self.patchSizePrediction) == 3:
+                            multiclass_probability_masks = fUnpatch3D(prediction['prob_pre'],
+                                                                      self.patchSizePrediction,
+                                                                      self.patchOverlapPrediction,
+                                                                      dicom_size)
 
-            if prob_test.shape[1] == 11:
-                IndexType = np.argmax(prob_test, 1)
-                IndexType[IndexType == 0] = 1
-                IndexType[(IndexType > 1) & (IndexType < 4)] = 2
-                IndexType[(IndexType > 3) & (IndexType < 6)] = 3
-                IndexType[(IndexType > 5) & (IndexType < 8)] = 4
-                IndexType[IndexType > 7] = 5
+                        ########################################################################################################
+                        # Hatching and colors multicalss unpatching
+                        prob_test = prediction['prob_pre']
 
-                a = Counter(IndexType).most_common(1)
-                domain = a[0][0]
+                        IArte = []
+                        IType = []
 
-                PType = np.delete(prob_test, [1, 3, 5, 7, 9, 10],
-                                  1)  # delete all artefact images,  only 5 region left
-                PArte = np.delete(prob_test, [0, 2, 4, 6, 8], 1)  # all artefacts
-                PArte[:, [3, 4]] = PArte[:, [4, 3]]
-                # PArte = np.reshape(PArte, (0, 1, 2, 3, 4, 5))
-                PNew = np.concatenate((PType, PArte), axis=1)
-                IndexArte = np.argmax(PNew, 1)
+                        if prob_test.shape[1] == 11:
+                            IndexType = np.argmax(prob_test, 1)
+                            IndexType[IndexType == 0] = 1
+                            IndexType[(IndexType > 1) & (IndexType < 4)] = 2
+                            IndexType[(IndexType > 3) & (IndexType < 6)] = 3
+                            IndexType[(IndexType > 5) & (IndexType < 8)] = 4
+                            IndexType[IndexType > 7] = 5
 
-                IType = UnpatchType(IndexType, domain, self.patchSizePrediction, self.patchOverlapPrediction,
-                                    dicom_size)
+                            a = Counter(IndexType).most_common(1)
+                            domain = a[0][0]
 
-                IArte = UnpatchArte(IndexArte, self.patchSizePrediction, self.patchOverlapPrediction, dicom_size,
-                                    11)
+                            PType = np.delete(prob_test, [1, 3, 5, 7, 9, 10],
+                                              1)  # delete all artefact images,  only 5 region left
+                            PArte = np.delete(prob_test, [0, 2, 4, 6, 8], 1)  # all artefacts
+                            PArte[:, [3, 4]] = PArte[:, [4, 3]]
+                            # PArte = np.reshape(PArte, (0, 1, 2, 3, 4, 5))
+                            PNew = np.concatenate((PType, PArte), axis=1)
+                            IndexArte = np.argmax(PNew, 1)
 
-            if prob_test.shape[1] == 3:
-                IndexType = np.argmax(prob_test, 1)
-                IndexType[IndexType == 0] = 1
-                IndexType[IndexType == 1] = 2
-                IndexType[IndexType == 2] = 3
+                            IType = UnpatchType(IndexType, domain, self.patchSizePrediction, self.patchOverlapPrediction,
+                                                dicom_size)
 
-                a = Counter(IndexType).most_common(1)
-                domain = a[0][0]
+                            IArte = UnpatchArte(IndexArte, self.patchSizePrediction, self.patchOverlapPrediction, dicom_size,
+                                                11)
 
-                PType = np.delete(prob_test, [1, 2], 1)  # delete all artefact images, only 5 region left
-                PArte = np.delete(prob_test, [0], 1)
+                        if prob_test.shape[1] == 3:
+                            IndexType = np.argmax(prob_test, 1)
+                            IndexType[IndexType == 0] = 1
+                            IndexType[IndexType == 1] = 2
+                            IndexType[IndexType == 2] = 3
 
-                # PArte = np.reshape(PArte, (0, 1, 2, 3, 4, 5))
-                PNew = np.concatenate((PType, PArte), axis=1)
-                IndexArte = np.argmax(PNew, 1)
+                            a = Counter(IndexType).most_common(1)
+                            domain = a[0][0]
 
-                IType = UnpatchType(IndexType, domain, self.patchSizePrediction, self.patchOverlapPrediction,
-                                    dicom_size)
+                            PType = np.delete(prob_test, [1, 2], 1)  # delete all artefact images, only 5 region left
+                            PArte = np.delete(prob_test, [0], 1)
 
-                IArte = UnpatchArte(IndexArte, self.patchSizePrediction, self.patchOverlapPrediction, dicom_size, 3)
+                            # PArte = np.reshape(PArte, (0, 1, 2, 3, 4, 5))
+                            PNew = np.concatenate((PType, PArte), axis=1)
+                            IndexArte = np.argmax(PNew, 1)
 
-            if prob_test.shape[1] == 8:
-                IndexType = np.argmax(prob_test, 1)
-                IndexType[IndexType == 0] = 1
-                IndexType[(IndexType > 1) & (IndexType < 5)] = 2
-                IndexType[(IndexType > 4) & (IndexType < 8)] = 3
+                            IType = UnpatchType(IndexType, domain, self.patchSizePrediction, self.patchOverlapPrediction,
+                                                dicom_size)
 
-                a = Counter(IndexType).most_common(1)
-                domain = a[0][0]
+                            IArte = UnpatchArte(IndexArte, self.patchSizePrediction, self.patchOverlapPrediction, dicom_size, 3)
 
-                PType = np.delete(prob_test, [1, 3, 4, 6, 7],
-                                  1)  # delete all artefact images,  only 5 region left
-                PArte = np.delete(prob_test, [0, 2, 5], 1)  # all artefacts
-                # PArte[:, [3, 4]] = PArte[:, [4, 3]]
-                # PArte = np.reshape(PArte, (0, 1, 2, 3, 4, 5))
-                PNew = np.concatenate((PType, PArte), axis=1)
-                IndexArte = np.argmax(PNew, 1)
+                        if prob_test.shape[1] == 8:
+                            IndexType = np.argmax(prob_test, 1)
+                            IndexType[IndexType == 0] = 1
+                            IndexType[(IndexType > 1) & (IndexType < 5)] = 2
+                            IndexType[(IndexType > 4) & (IndexType < 8)] = 3
 
-                IType = UnpatchType(IndexType, domain, self.patchSizePrediction, self.patchOverlapPrediction,
-                                    dicom_size)
+                            a = Counter(IndexType).most_common(1)
+                            domain = a[0][0]
 
-                IArte = UnpatchArte(IndexArte, self.patchSizePrediction, self.patchOverlapPrediction, dicom_size, 8)
+                            PType = np.delete(prob_test, [1, 3, 4, 6, 7],
+                                              1)  # delete all artefact images,  only 5 region left
+                            PArte = np.delete(prob_test, [0, 2, 5], 1)  # all artefacts
+                            # PArte[:, [3, 4]] = PArte[:, [4, 3]]
+                            # PArte = np.reshape(PArte, (0, 1, 2, 3, 4, 5))
+                            PNew = np.concatenate((PType, PArte), axis=1)
+                            IndexArte = np.argmax(PNew, 1)
 
-            ########################################################################################################
+                            IType = UnpatchType(IndexType, domain, self.patchSizePrediction, self.patchOverlapPrediction,
+                                                dicom_size)
 
-            self.unpatched_slices = {
-                'multiclass_probability_masks': multiclass_probability_masks,
-                'dicom_slices': voxel_ndarray,
-                'dicom_masks': labelMask_ndarray,
-                'index_class': iClass,
-                'IType': IType,
-                'IArte': IArte
-            }
+                            IArte = UnpatchArte(IndexArte, self.patchSizePrediction, self.patchOverlapPrediction, dicom_size, 8)
+
+                        ########################################################################################################
+
+                        unpatched_slices = {
+                            'multiclass_probability_masks': multiclass_probability_masks,
+                            'dicom_slices': voxel_ndarray,
+                            'dicom_masks': labelMask_ndarray,
+                            'index_class': iClass,
+                            'IType': IType,
+                            'IArte': IArte
+                        }
+                        # plot output overlays
+                        savepath = self.pathOutput + os.sep + patient + '_' + dataset.pathdata
+                        plot_patient_mask(voxel_ndarray, unpatched_img_foreground, labelMask_ndarray, savepath,
+                                          plot_overlay=True)
+
+                        allUnpatchedTest.append(unpatched_slices)
 
         # save prediction into .mat file
         modelSave = self.pathOutput + os.sep + 'model_predictions.mat'
         print('saving Model:{}'.format(modelSave))
         if not self.doUnpatching:
-            sio.savemat(modelSave, {'prob_pre': prediction['predictions'],
+            sio.savemat(modelSave, {'prob_pre': prediction['prob_pre'],
                                     'Y_test': self.Y_test,
                                     'score_test': prediction['score_test'],
                                     'acc_test': prediction['acc_test'],
@@ -1089,28 +1116,73 @@ class Data:
                                     'confusion_matrix': prediction['confusion_matrix']
                                     })
         else:
-            sio.savemat(modelSave, {'prob_pre': prediction['predictions'],
+            sio.savemat(modelSave, {'prob_pre': prediction['prob_pre'],
                                     'Y_test': self.Y_test,
                                     'score_test': prediction['score_test'],
                                     'acc_test': prediction['acc_test'],
                                     'classification_report': prediction['classification_report'],
                                     'confusion_matrix': prediction['confusion_matrix'],
-                                    'unpatched_slices': self.unpatched_slices
+                                    'unpatched_slices': allUnpatchedTest
                                     })
-        self.result_WorkSpace = modelSave
+        print('Saved to: ' + modelSave)
 
         # load training results
-        _, sPath = os.path.splitdrive(self.outPutFolderDataPath)
-        sPath, sFilename = os.path.split(sPath)
-        sFilename, sExt = os.path.splitext(sFilename)
+        #_, sPath = os.path.splitdrive(self.outPutFolderDataPath)
+        #sPath, sFilename = os.path.split(sPath)
+        #sFilename, sExt = os.path.splitext(sFilename)
 
-        print(sPath + os.sep + sFilename + ".mat")
+        #print(sPath + os.sep + sFilename + ".mat")
 
-        training_results = sio.loadmat(sPath + os.sep + sFilename + ".mat")
-        self.acc_training = training_results['acc']
-        self.acc_validation = training_results['val_acc']
-        self.acc_test = training_results['acc_test']
-        '''
+        #training_results = sio.loadmat(sPath + os.sep + sFilename + ".mat")
+        #self.acc_training = training_results['acc']
+        #self.acc_validation = training_results['val_acc']
+        #self.acc_test = training_results['acc_test']
+
+    def plot_patient_mask(self, images, prediction, labels, savepath, plot_overlay=False, rot_op=lambda x, dim_z: x[:,:,dim_z,:], ch='fat'):
+        """Function for plotting patient with label."""
+        x, y, z = images.shape[:3]
+        images = (images).astype('float32')  # arrays for plotting
+        prediction = (prediction).astype('float32')
+        labels = (labels).astype('float32')
+
+        chNr = 0  # channel: fat/T1w = 0, water = 1
+        if ch == 'water':
+            chNr = 1
+
+        for dim_z in range(z):
+            # prediction
+            fig = plt.figure()
+            plt.axis('off')
+            plt.imshow(rot_op(images, dim_z), interpolation='none', cmap='gray')  # include channel for NAKO_IQA: rot_op(images, dim_z)[:, :, chNr]
+            if plot_overlay:
+                plt.imshow(rot_op(colorize(prediction, self.plotColormap), dim_z), interpolation='none', alpha=self.plotAlpha)
+
+            print(' Save prediction at z ' + str(i))
+            fig.savefig(savepath + '_pred_' + "{:03d}".format(i) + '.' + self.plotFormat,
+                            format=self.plotFormat,
+                            transparent=True,
+                            bbox_inches='tight')
+            fig.clf()
+
+            # ground-truth/label
+            fig = plt.figure()
+            plt.axis('off')
+            plt.imshow(rot_op(images, dim_z), interpolation='none', cmap='gray')
+            if plot_overlay:
+                plt.imshow(rot_op(colorize(labels, self.plotColormap), dim_z), interpolation='none', alpha=self.plotAlpha)
+
+            print(' Save label at z ' + str(i))
+            fig.savefig(savepath + '_label_' + "{:03d}".format(i) + '.' + self.plotFormat,
+                        format=self.plotFormat,
+                        transparent=True,
+                        bbox_inches='tight')
+
+            fig.clf()
+
+    def colorize(prediction, colormap=np.array([[0, 0, 0], [1, 0, 0.2], [0, 1, 0.2]])):
+        """Colorize for patient-plots."""
+        pred_picture = colormap[prediction.astype(int)]
+        return pred_picture
 
     def create_cnn_training_summary(self, name, outputFolderPath):
         dataDict = {}

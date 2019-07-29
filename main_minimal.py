@@ -155,7 +155,6 @@ def fArtDetection(data, dlnetwork, sMode):
 
     # segmentation FCN training
     # dynamic loading of corresponding model
-    # TODO: case switch here for the different networks
     if data.storeMode == 'STORE_TFRECORD':
         sModel = 'networks.FullyConvolutionalNetworks.motion.VResFCN_3D_Upsampling_final_Motion_Binary_tf'
         import networks.FullyConvolutionalNetworks.motion.VResFCN_3D_Upsampling_final_Motion_Binary_tf as cnnModel
@@ -210,8 +209,13 @@ def fArtDetection(data, dlnetwork, sMode):
                                 dlnetwork=dlnetwork)
 
         print('==== Network training finished ====')
+        if data.plotresults:
+            # prepare test data output
+            predictions = fgetpredictions(data.outPutFolderDataPath, data.usingSegmentationMasks,
+                                          dlnetwork.usingClassification)
 
-    else:  # prediction
+
+    elif sMode == 'prediction':  # prediction
         predictions = cnnModel.fPredict(X_test=data.X_test,
                           Y_test=Y_test,
                           Y_segMasks_test=data.Y_segMasks_test,
@@ -221,15 +225,49 @@ def fArtDetection(data, dlnetwork, sMode):
                           usingSegmentationMasks=data.usingSegmentationMasks,
                           dlnetwork=dlnetwork)
 
+        print('==== Network testing finished ====')
+
+    else:  # plotting
+        # load from pre-trained network run, the predicted outputs
+        predictions = fgetpredictions(data.outPutFolderDataPath, data.usingSegmentationMasks, dlnetwork.usingClassification)
+
+    # result preparation
+    if data.plotresults | (sMode == 'plotting'):
+        print('==== Result plotting ====')
         if data.usingSegmentationMasks:
             data.handlepredictionssegmentation(predictions)
         else:
-            # TODO
             data.handlepredictions(predictions)
-        print('==== Network testing finished ====')
 
 
-if __name__ == "__main__": # for command line call
+def fgetpredictions(sOutPath, usingSegmentationMasks, usingClassification):
+    # save names
+    _, sPath = os.path.splitdrive(sOutPath)
+    sPath, sFilename = os.path.split(sPath)
+    sFilename, sExt = os.path.splitext(sFilename)
+
+    model_name = sOutPath + os.sep + sFilename
+
+    data = sio.loadmat(model_name)
+    predictions['prob_pre'] = data['prob_test']
+    if usingSegmentationMasks:
+        if usingClassification:
+            predictions['loss_test'] = data['loss_test']
+            predictions['segmentation_output_loss_test'] = data['segmentation_output_loss_test']
+            predictions['classification_output_loss_test'] = data['classification_output_loss_test']
+            predictions['segmentation_output_dice_coef_test'] = data['segmentation_output_dice_coef_test']
+            predictions['classification_output_acc_test'] = data['classification_output_acc_test']
+        else:
+            predictions['score_test'] = data['score_test']
+            predictions['acc_test'] = data['acc_test']
+    else:
+        predictions['confusion_matrix'] = data['confusion_matrix']
+        predictions['classification_report'] = data['classification_report']
+
+    return predictions
+
+
+if __name__ == "__main__":  # for command line call
     # input parsing
     parser = argparse.ArgumentParser(description='''CNN artifact detection''', epilog='''(c) Thomas Kuestner, thomas.kuestner@iss.uni-stuttgart.de''')
     parser.add_argument('-c', '--config', nargs = 1, type = str, help='path to config file', default= 'config/param_minimal.yml')
