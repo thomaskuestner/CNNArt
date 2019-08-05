@@ -6,20 +6,22 @@ import datetime
 import json
 import os
 
-import dicom
-import dicom_numpy as dicom_np
+#import dicom
+#import dicom_numpy as dicom_np
 #import pydicom as dicom_np
 import h5py
 import nrrd
 import pydicom
+import dicom_numpy as dicom_np
 import scipy.io as sio
 from matplotlib import path
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 
 from utils.RigidPatching import *
 from utils.RigidUnpatching import *
 from utils.Training_Test_Split_FCN import *
-from utils.Label import Label
+from utils.Label import *
 from utils.tfrecord.medio import convert_tf, parse_tf_cnnart
 from utils.patch_shaping import *
 
@@ -68,7 +70,9 @@ class Data:
         self.plotresults = cfg['plotting']['plotResults']
         self.plotFormat = cfg['plotting']['format']
         self.plotAlpha = cfg['plotting']['alpha']
-        self.plotColormap = cfg['plotting']['colormap']
+        self.plotColormap = np.array(cfg['plotting']['colormap'])
+        self.plotTestFile = cfg['sTestFile']
+        self.plotSaveMat = cfg['plotting']['savePlotMat']
         self.datagenerator = []
 
         # selected database
@@ -178,9 +182,6 @@ class Data:
                     self.Y_segMasks_test = np.array(f.get('Y_segMasks_test'))
                 f.close()
                 return 0
-
-        # for storing patch based
-        iPatchToDisk = 0
 
         # load and patch
         dAllPatches, dAllPats, dAllLabels, dAllSegmentationMaskPatches = self.fload_and_patch(self.selectedPatients, self.selectedDatasets)
@@ -350,6 +351,10 @@ class Data:
                                                     nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
 
     def fload_and_patch(self, selectedPatients, selectedDatasets):
+        # for storing patch based
+        iPatchToDisk = 0
+        labelDict = {}
+
         if self.patchingMode == 'PATCHING_2D':
             dAllPatches = np.zeros((self.patchSizeX, self.patchSizeY, 0))
             dAllLabels = np.zeros(0)
@@ -574,7 +579,7 @@ class Data:
                     # Combine DICOM Slices to a single 3D image (voxel)
                     try:
                         voxel_ndarray, _ = dicom_np.combine_slices(dicomDataset)
-                        voxel_ndarray = voxel_ndarray.astype(int16)
+                        voxel_ndarray = voxel_ndarray.astype('int16')
                         voxel_ndarray = np.swapaxes(voxel_ndarray, 0, 1)
                     except dicom_np.DicomImportException as e:
                         # invalid DICOM data
@@ -742,21 +747,28 @@ class Data:
         # do unpatching if is enabled
         if self.doUnpatching:
 
-            self.patchSizePrediction = [self.X_test.shape[1], self.X_test.shape[2], self.X_test.shape[3]]
+            if hasattr(self, 'X_test'):
+                self.patchSizePrediction = [self.X_test.shape[1], self.X_test.shape[2], self.X_test.shape[3]]
+                self.patchOverlapPrediction = predictions['overlap']
+            else:
+                self.patchSizePrediction = self.patchSize
+                self.patchOverlapPrediction = self.patchOverlap
 
             # find test patient in test set
-            test_set_idx = []
-            for ipat, patient in enumerate(self.selectedTestPatients):
-                #for idat, dataset in enumerate(self.selectedDatasets):
-                test_index = np.where(self.dAllPats == ipat)[0]
-                test_set_tmp = self.dAllPats[test_index]
-                test_set_idx.append(test_set_tmp)
+            #test_set_idx = []
+            #for ipat, patient in enumerate(self.selectedTestPatients):
+            #    #for idat, dataset in enumerate(self.selectedDatasets):
+            #    test_index = np.where(self.dAllPats == ipat)[0]
+            #    test_set_tmp = self.dAllPats[test_index]
+            #    test_set_idx.append(test_set_tmp)
 
             allUnpatchedTest = []
+            test_set_patch = 0  # ATTENTION: requires same order of test subjects as requested in training phase!
             # load corresponding original dataset
             for ipat, patient in enumerate(self.selectedTestPatients):
                 for idat, dataset in enumerate(self.selectedDatasets):
-                    currentDataDir = self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset.pathdata
+                    print('Test Patient ' + self.selectedPatients[patient] + ' with dataset ' + dataset.pathdata)
+                    currentDataDir = self.pathDatabase + os.sep + self.selectedPatients[patient] + os.sep + self.modelSubDir + os.sep + dataset.pathdata
 
                     if os.path.exists(currentDataDir):
                         # get list with all paths of dicoms for current patient and current dataset
@@ -787,7 +799,7 @@ class Data:
                     if self.labelingMode == 'MASK_LABELING':
                         # path to marking file
                         if self.database == 'MRPhysics':
-                            currentMarkingsPath = self.markingsPath + os.sep + patient + ".json"
+                            currentMarkingsPath = self.markingsPath + os.sep + self.selectedPatients[patient] + ".json"
                             # get the markings mask
                             labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset.pathdata,
                                                                        voxel_ndarray.shape[0],
@@ -807,10 +819,13 @@ class Data:
 
                     dicom_size = [voxel_ndarray.shape[0], voxel_ndarray.shape[1], voxel_ndarray.shape[2]]
 
-                    allPreds = predictions['prob_pre'][0][test_set_idx == ipat]
+                    test_set_currpatch = fcalculatepatches(dicom_size,  self.patchSizePrediction, self.patchOverlap)
+
+                    allPreds = predictions['prob_pre'][test_set_patch:test_set_patch+test_set_currpatch, :, :, :, :]
+                    test_set_patch += test_set_currpatch
 
                     unpatched_img_foreground = fUnpatchSegmentation(allPreds,
-                                                                    patchSize=self.patchSizePredictionSize,
+                                                                    patchSize=self.patchSizePrediction,
                                                                     patchOverlap=self.patchOverlapPrediction,
                                                                     actualSize=dicom_size,
                                                                     iClass=1)
@@ -836,87 +851,89 @@ class Data:
                         'predicted_segmentation_mask': unpatched_img_mask,
                         'dicom_slices': voxel_ndarray,
                         'dicom_masks': labelMask_ndarray,
+                        'patient': patient
                     }
 
                     # plot output overlays
-                    savepath = self.pathOutput + os.sep + patient + '_' + dataset.pathdata
-                    plot_patient_mask(voxel_ndarray, unpatched_img_foreground, labelMask_ndarray, savepath, plot_overlay=True)
+                    savepath = self.pathOutput + os.sep + self.selectedPatients[patient] + '_' + dataset.pathdata
+                    self.plot_patient_mask(voxel_ndarray, unpatched_img_foreground, labelMask_ndarray, savepath, plot_overlay=True)
 
                     allUnpatchedTest.append(unpatched_slices)
 
-        if self.usingClassification:
-            # save prediction into .mat file
-            modelSave = self.pathOutput + os.sep + 'model_predictions.mat'
-            print('saving Model:{}'.format(modelSave))
+        if self.plotSaveMat:
+            if self.usingClassification:
+                # save prediction into .mat file
+                modelSave = self.pathOutput + os.sep + 'model_predictions.mat'
+                print('saving Model:{}'.format(modelSave))
 
-            if not self.doUnpatching:
-                allPreds = predictions['prob_pre']
-                sio.savemat(modelSave, {'prob_pre': allPreds[0],
-                                        'Y_test': self.Y_test,
-                                        'classification_prob_pre': allPreds[1],
-                                        'loss_test': predictions['loss_test'],
-                                        'segmentation_output_loss_test': predictions[
-                                            'segmentation_output_loss_test'],
-                                        'classification_output_loss_test': predictions[
-                                            'classification_output_loss_test'],
-                                        'segmentation_output_dice_coef': predictions[
-                                            'segmentation_output_dice_coef_test'],
-                                        'classification_output_acc_test': predictions[
-                                            'classification_output_acc_test']
-                                        })
+                if not self.doUnpatching:
+                    allPreds = predictions['prob_pre']
+                    sio.savemat(modelSave, {'prob_pre': allPreds[0],
+                                            'Y_test': self.Y_test,
+                                            'classification_prob_pre': allPreds[1],
+                                            'loss_test': predictions['loss_test'],
+                                            'segmentation_output_loss_test': predictions[
+                                                'segmentation_output_loss_test'],
+                                            'classification_output_loss_test': predictions[
+                                                'classification_output_loss_test'],
+                                            'segmentation_output_dice_coef': predictions[
+                                                'segmentation_output_dice_coef_test'],
+                                            'classification_output_acc_test': predictions[
+                                                'classification_output_acc_test']
+                                            })
+                else:
+                    sio.savemat(modelSave, {'prob_pre': allPreds[0],
+                                            'Y_test': self.Y_test,
+                                            'classification_prob_pre': allPreds[1],
+                                            'loss_test': predictions['loss_test'],
+                                            'segmentation_output_loss_test': predictions[
+                                                'segmentation_output_loss_test'],
+                                            'classification_output_loss_test': predictions[
+                                                'classification_output_loss_test'],
+                                            'segmentation_output_dice_coef_test': predictions[
+                                                'segmentation_output_dice_coef_test'],
+                                            'classification_output_acc_test': predictions[
+                                                'classification_output_acc_test'],
+                                            'unpatched_slices': allUnpatchedTest
+                                            })
+                #self.result_WorkSpace = modelSave
+
+                # load training results
+                #_, sPath = os.path.splitdrive(self.outPutFolderDataPath)
+                #sPath, sFilename = os.path.split(sPath)
+                #sFilename, sExt = os.path.splitext(sFilename)
+
+                #training_results = sio.loadmat(sPath + os.sep + sFilename + ".mat")
+                #self.acc_training = training_results['segmentation_output_dice_coef_training']
+                #self.acc_validation = training_results['segmentation_output_dice_coef_val']
+                #self.acc_test = training_results['segmentation_output_dice_coef_test']
+
             else:
-                sio.savemat(modelSave, {'prob_pre': allPreds[0],
-                                        'Y_test': self.Y_test,
-                                        'classification_prob_pre': allPreds[1],
-                                        'loss_test': predictions['loss_test'],
-                                        'segmentation_output_loss_test': predictions[
-                                            'segmentation_output_loss_test'],
-                                        'classification_output_loss_test': predictions[
-                                            'classification_output_loss_test'],
-                                        'segmentation_output_dice_coef_test': predictions[
-                                            'segmentation_output_dice_coef_test'],
-                                        'classification_output_acc_test': predictions[
-                                            'classification_output_acc_test'],
-                                        'unpatched_slices': allUnpatchedTest
-                                        })
-            #self.result_WorkSpace = modelSave
+                # save prediction into .mat file
+                modelSave = self.pathOutput + os.sep + 'model_predictions.mat'
+                print('saving Model:{}'.format(modelSave))
+                if not self.doUnpatching:
+                    sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
+                                            'score_test': predictions['score_test'],
+                                            'acc_test': predictions['acc_test'],
+                                            })
+                else:
+                    sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
+                                            'score_test': predictions['score_test'],
+                                            'acc_test': predictions['acc_test'],
+                                            'unpatched_slices': unpatched_slices
+                                            })
+                #self.result_WorkSpace = modelSave
 
-            # load training results
-            #_, sPath = os.path.splitdrive(self.outPutFolderDataPath)
-            #sPath, sFilename = os.path.split(sPath)
-            #sFilename, sExt = os.path.splitext(sFilename)
+                # load training results
+                #_, sPath = os.path.splitdrive(self.outPutFolderDataPath)
+                #sPath, sFilename = os.path.split(sPath)
+                #sFilename, sExt = os.path.splitext(sFilename)
 
-            #training_results = sio.loadmat(sPath + os.sep + sFilename + ".mat")
-            #self.acc_training = training_results['segmentation_output_dice_coef_training']
-            #self.acc_validation = training_results['segmentation_output_dice_coef_val']
-            #self.acc_test = training_results['segmentation_output_dice_coef_test']
-
-        else:
-            # save prediction into .mat file
-            modelSave = self.pathOutput + os.sep + 'model_predictions.mat'
-            print('saving Model:{}'.format(modelSave))
-            if not self.doUnpatching:
-                sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
-                                        'score_test': predictions['score_test'],
-                                        'acc_test': predictions['acc_test'],
-                                        })
-            else:
-                sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
-                                        'score_test': predictions['score_test'],
-                                        'acc_test': predictions['acc_test'],
-                                        'unpatched_slices': unpatched_slices
-                                        })
-            #self.result_WorkSpace = modelSave
-
-            # load training results
-            #_, sPath = os.path.splitdrive(self.outPutFolderDataPath)
-            #sPath, sFilename = os.path.split(sPath)
-            #sFilename, sExt = os.path.splitext(sFilename)
-
-            #training_results = sio.loadmat(sPath + os.sep + sFilename + ".mat")
-            #self.acc_training = training_results['dice_coef']
-            #self.acc_validation = training_results['val_dice_coef']
-            #self.acc_test = training_results['dice_coef_test']
+                #training_results = sio.loadmat(sPath + os.sep + sFilename + ".mat")
+                #self.acc_training = training_results['dice_coef']
+                #self.acc_validation = training_results['val_dice_coef']
+                #self.acc_test = training_results['dice_coef_test']
 
     def handlepredictions(self, prediction):
         #self.predictions = prediction['predictions']
@@ -962,15 +979,15 @@ class Data:
             # load corresponding original dataset
             for ipat, patient in enumerate(self.selectedTestPatients):
                 for idat, dataset in enumerate(self.selectedDatasets):
-                    currentDataDir = self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset.pathdata
+                    currentDataDir = self.pathDatabase + os.sep + self.selectedPatients[patient] + os.sep + self.modelSubDir + os.sep + dataset.pathdata
 
                     if os.path.exists(currentDataDir):
                         # get list with all paths of dicoms for current patient and current dataset
-                        fileNames = os.listdir(pathToOriginalDataset)
-                        fileNames = [os.path.join(pathToOriginalDataset, f) for f in fileNames]
+                        fileNames = os.listdir(currentDataDir)
+                        fileNames = [os.path.join(currentDataDir, f) for f in fileNames]
 
                         # read DICOMS
-                        dicomDataset = [dicom.read_file(f) for f in fileNames]
+                        dicomDataset = [pydicom.read_file(f) for f in fileNames]
 
                         # Combine DICOM Slices to a single 3D image (voxel)
                         try:
@@ -989,7 +1006,7 @@ class Data:
                         voxel_ndarray = newnparray
 
                         # load dicom mask
-                        currentMarkingsPath = self.getMarkingsPath() + os.sep + str(patientsOfDataset[0]) + ".json"
+                        currentMarkingsPath = self.getMarkingsPath() + os.sep + str(self.selectedPatients[patient]) + ".json"
                         # get the markings mask
                         labelMask_ndarray = create_MASK_Array(currentMarkingsPath,
                                                               patientsOfDataset[0],
@@ -1099,46 +1116,47 @@ class Data:
                         }
                         # plot output overlays
                         savepath = self.pathOutput + os.sep + patient + '_' + dataset.pathdata
-                        plot_patient_mask(voxel_ndarray, unpatched_img_foreground, labelMask_ndarray, savepath,
+                        self.plot_patient_mask(voxel_ndarray, unpatched_img_foreground, labelMask_ndarray, savepath,
                                           plot_overlay=True)
 
                         allUnpatchedTest.append(unpatched_slices)
 
-        # save prediction into .mat file
-        modelSave = self.pathOutput + os.sep + 'model_predictions.mat'
-        print('saving Model:{}'.format(modelSave))
-        if not self.doUnpatching:
-            sio.savemat(modelSave, {'prob_pre': prediction['prob_pre'],
-                                    'Y_test': self.Y_test,
-                                    'score_test': prediction['score_test'],
-                                    'acc_test': prediction['acc_test'],
-                                    'classification_report': prediction['classification_report'],
-                                    'confusion_matrix': prediction['confusion_matrix']
-                                    })
-        else:
-            sio.savemat(modelSave, {'prob_pre': prediction['prob_pre'],
-                                    'Y_test': self.Y_test,
-                                    'score_test': prediction['score_test'],
-                                    'acc_test': prediction['acc_test'],
-                                    'classification_report': prediction['classification_report'],
-                                    'confusion_matrix': prediction['confusion_matrix'],
-                                    'unpatched_slices': allUnpatchedTest
-                                    })
-        print('Saved to: ' + modelSave)
+        if self.plotSaveMat:
+            # save prediction into .mat file
+            modelSave = self.pathOutput + os.sep + 'model_predictions.mat'
+            print('saving Model:{}'.format(modelSave))
+            if not self.doUnpatching:
+                sio.savemat(modelSave, {'prob_pre': prediction['prob_pre'],
+                                        'Y_test': self.Y_test,
+                                        'score_test': prediction['score_test'],
+                                        'acc_test': prediction['acc_test'],
+                                        'classification_report': prediction['classification_report'],
+                                        'confusion_matrix': prediction['confusion_matrix']
+                                        })
+            else:
+                sio.savemat(modelSave, {'prob_pre': prediction['prob_pre'],
+                                        'Y_test': self.Y_test,
+                                        'score_test': prediction['score_test'],
+                                        'acc_test': prediction['acc_test'],
+                                        'classification_report': prediction['classification_report'],
+                                        'confusion_matrix': prediction['confusion_matrix'],
+                                        'unpatched_slices': allUnpatchedTest
+                                        })
+            print('Saved to: ' + modelSave)
 
-        # load training results
-        #_, sPath = os.path.splitdrive(self.outPutFolderDataPath)
-        #sPath, sFilename = os.path.split(sPath)
-        #sFilename, sExt = os.path.splitext(sFilename)
+            # load training results
+            #_, sPath = os.path.splitdrive(self.outPutFolderDataPath)
+            #sPath, sFilename = os.path.split(sPath)
+            #sFilename, sExt = os.path.splitext(sFilename)
 
-        #print(sPath + os.sep + sFilename + ".mat")
+            #print(sPath + os.sep + sFilename + ".mat")
 
-        #training_results = sio.loadmat(sPath + os.sep + sFilename + ".mat")
-        #self.acc_training = training_results['acc']
-        #self.acc_validation = training_results['val_acc']
-        #self.acc_test = training_results['acc_test']
+            #training_results = sio.loadmat(sPath + os.sep + sFilename + ".mat")
+            #self.acc_training = training_results['acc']
+            #self.acc_validation = training_results['val_acc']
+            #self.acc_test = training_results['acc_test']
 
-    def plot_patient_mask(self, images, prediction, labels, savepath, plot_overlay=False, rot_op=lambda x, dim_z: x[:,:,dim_z,:], ch='fat'):
+    def plot_patient_mask(self, images, prediction, labels, savepath, plot_overlay=False, rot_op=lambda x, dim_z: x[:,:,dim_z], ch='fat'):
         """Function for plotting patient with label."""
         x, y, z = images.shape[:3]
         images = (images).astype('float32')  # arrays for plotting
@@ -1149,40 +1167,44 @@ class Data:
         if ch == 'water':
             chNr = 1
 
+        artColormap = self.colorize(prediction, self.plotColormap)
         for dim_z in range(z):
             # prediction
             fig = plt.figure()
             plt.axis('off')
+
             plt.imshow(rot_op(images, dim_z), interpolation='none', cmap='gray')  # include channel for NAKO_IQA: rot_op(images, dim_z)[:, :, chNr]
             if plot_overlay:
-                plt.imshow(rot_op(colorize(prediction, self.plotColormap), dim_z), interpolation='none', alpha=self.plotAlpha)
+                plt.imshow(rot_op((prediction*100).astype(int), dim_z), cmap=artColormap, interpolation='none', alpha=self.plotAlpha)
 
-            print(' Save prediction at z ' + str(i))
-            fig.savefig(savepath + '_pred_' + "{:03d}".format(i) + '.' + self.plotFormat,
+            print(' Save prediction at z ' + str(dim_z))
+            fig.savefig(savepath + '_pred_' + "{:03d}".format(dim_z) + '.' + self.plotFormat,
                             format=self.plotFormat,
                             transparent=True,
                             bbox_inches='tight')
             fig.clf()
 
             # ground-truth/label
-            fig = plt.figure()
+            fig2 = plt.figure()
             plt.axis('off')
             plt.imshow(rot_op(images, dim_z), interpolation='none', cmap='gray')
             if plot_overlay:
-                plt.imshow(rot_op(colorize(labels, self.plotColormap), dim_z), interpolation='none', alpha=self.plotAlpha)
+                plt.imshow(rot_op((labels*100).astype(int), dim_z), cmap=artColormap, interpolation='none', alpha=self.plotAlpha)
 
-            print(' Save label at z ' + str(i))
-            fig.savefig(savepath + '_label_' + "{:03d}".format(i) + '.' + self.plotFormat,
+            print(' Save label at z ' + str(dim_z))
+            fig2.savefig(savepath + '_label_' + "{:03d}".format(dim_z) + '.' + self.plotFormat,
                         format=self.plotFormat,
                         transparent=True,
                         bbox_inches='tight')
 
-            fig.clf()
+            fig2.clf()
 
-    def colorize(prediction, colormap=np.array([[0, 0, 0], [1, 0, 0.2], [0, 1, 0.2]])):
+    def colorize(self, prediction, colormap=np.array([[0, 1, 0], [1, 1, 0], [1, 0, 0]])):
         """Colorize for patient-plots."""
-        pred_picture = colormap[prediction.astype(int)]
-        return pred_picture
+        artifact_colormap = LinearSegmentedColormap.from_list('artifact_map_colors', colormap, N=100) # green -> yellow -> red
+
+        # pred_picture = artifact_colormap[(prediction*100).astype(int)]
+        return artifact_colormap
 
     def create_cnn_training_summary(self, name, outputFolderPath):
         dataDict = {}

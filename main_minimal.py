@@ -28,7 +28,7 @@ def fArtDetection(data, dlnetwork, sMode):
     # set GPU
     os.environ["CUDA_VISIBLE_DEVICES"] = str(data.iGPU)
 
-    if data.storeMode != 'STORE_TFRECORD':
+    if (data.storeMode != 'STORE_TFRECORD') & (sMode != 'plotting'):
         print('Prepare data')
         # get output vector for different classes
         classes = np.asarray(np.unique(data.Y_train, ), dtype=int)
@@ -229,7 +229,7 @@ def fArtDetection(data, dlnetwork, sMode):
 
     else:  # plotting
         # load from pre-trained network run, the predicted outputs
-        predictions = fgetpredictions(data.outPutFolderDataPath, data.usingSegmentationMasks, dlnetwork.usingClassification)
+        predictions = fgetpredictions(data.outPutFolderDataPath, data.usingSegmentationMasks, dlnetwork.usingClassification, data.plotTestFile)
 
     # result preparation
     if data.plotresults | (sMode == 'plotting'):
@@ -240,29 +240,35 @@ def fArtDetection(data, dlnetwork, sMode):
             data.handlepredictions(predictions)
 
 
-def fgetpredictions(sOutPath, usingSegmentationMasks, usingClassification):
+def fgetpredictions(sOutPath, usingSegmentationMasks, usingClassification, plotTestFile=None):
     # save names
-    _, sPath = os.path.splitdrive(sOutPath)
-    sPath, sFilename = os.path.split(sPath)
-    sFilename, sExt = os.path.splitext(sFilename)
-
-    model_name = sOutPath + os.sep + sFilename
-
-    data = sio.loadmat(model_name)
-    predictions['prob_pre'] = data['prob_test']
-    if usingSegmentationMasks:
-        if usingClassification:
-            predictions['loss_test'] = data['loss_test']
-            predictions['segmentation_output_loss_test'] = data['segmentation_output_loss_test']
-            predictions['classification_output_loss_test'] = data['classification_output_loss_test']
-            predictions['segmentation_output_dice_coef_test'] = data['segmentation_output_dice_coef_test']
-            predictions['classification_output_acc_test'] = data['classification_output_acc_test']
-        else:
-            predictions['score_test'] = data['score_test']
-            predictions['acc_test'] = data['acc_test']
+    if plotTestFile is None:
+        _, sPath = os.path.splitdrive(sOutPath)
+        sPath, sFilename = os.path.split(sPath)
+        sFilename, sExt = os.path.splitext(sFilename)
+        model_name = sOutPath + os.sep + sFilename
     else:
-        predictions['confusion_matrix'] = data['confusion_matrix']
-        predictions['classification_report'] = data['classification_report']
+        model_name = plotTestFile
+
+    dataIn = sio.loadmat(model_name)
+    predictions = {}
+
+    if usingSegmentationMasks:
+        predictions['prob_pre'] = dataIn['segmentation_predictions']
+        if usingClassification:
+            predictions['classification_predictions'] = dataIn['classification_predictions']
+            predictions['loss_test'] = dataIn['loss_test']
+            predictions['segmentation_output_loss_test'] = dataIn['segmentation_output_loss_test']
+            predictions['classification_output_loss_test'] = dataIn['classification_output_loss_test']
+            predictions['segmentation_output_dice_coef_test'] = dataIn['segmentation_output_dice_coef_test']
+            predictions['classification_output_acc_test'] = dataIn['classification_output_acc_test']
+        else:
+            predictions['score_test'] = dataIn['score_test']
+            predictions['acc_test'] = dataIn['acc_test']
+    else:
+        predictions['confusion_matrix'] = dataIn['confusion_matrix']
+        predictions['classification_report'] = dataIn['classification_report']
+        predictions['prob_pre'] = dataIn['prob_test']
 
     return predictions
 
@@ -287,8 +293,10 @@ if __name__ == "__main__":  # for command line call
     cfg = fParseConfig('config/param_minimal_tk.yml')
 
     data = Data(cfg)
+
     # patch and split into training, val, test set
-    data.generateDataset()
+    if (cfg['sMode'] == 'training') | (cfg['sMode'] == 'prediction'):
+        data.generateDataset()
 
     # get network parameters
     dlnetwork = Dlnetwork(cfg)

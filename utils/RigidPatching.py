@@ -414,7 +414,7 @@ def fRigidPatching_patchLabeling(dicom_numpy_array, patchSize, patchOverlap, rat
 #########################################################################################################################################
 
 def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, dataset=None, dopatching=True):
-    #ToDo error for patchSizeZ = 5. To different Array sizes (40,40,4) and (40,40,5). Padding problem with uneven z-patch sizes????
+    #ToDo odd patch size not supported!
 
     move_artefact = False
     shim_artefact = False

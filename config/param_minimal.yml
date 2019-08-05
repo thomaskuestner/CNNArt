@@ -66,7 +66,8 @@ plotting:
   plotResults: True
   format : png        # data format of stored file
   alpha: 0.4          # transparency of labels/prediction-masks on MRI
-  colormap: [[0,0,0],[0.2,1,0],[1,1,0.2],[1,0.2,0]] # colormap of overlays
+  colormap: [[(0, 1, 0), (1, 1, 0), (1, 0, 0)]] # colormap of overlays, green -> yellow -> red
+  savePlotMat: False # save pre-processed test outcomes as separate mat file
 
 # scaling range
 range : [0, 1]
@@ -150,4 +151,5 @@ dataAugmentation:
 sOutputPath : '/tmp'
 # path to trained model and weights (same name, just file extension will be different -> handled automatically)
 sSaveModel : '/tmp/trainedMODEL'
-
+# stored mat file with test results: if empty, script automatically determines the default path based on sOutPath
+sTestFile: '/tmp/VResFCN_3D_Upsampling_final_Motion_Binary_3D_64x64x16_2019-07-31_17-22.mat'
