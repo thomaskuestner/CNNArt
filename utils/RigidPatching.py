@@ -524,8 +524,7 @@ def fRigidPatching3D_maskLabeling_tf(dicom_tensor, patchSize, patchOverlap, mask
     dOverlap = tf.math.round(tf.math.multiply(patchSize, patchOverlap))
     dNotOverlap = tf.math.round(tf.math.multiply(patchSize, (1 - patchOverlap)))
 
-    with tf.Session() as sess:
-        imgShape = sess.run(tf.shape(dicom_tensor))
+    imgShape = dicom_tensor.shape.as_list()
 
     size_zero_pad = np.array(([math.ceil((imgShape[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0],
                                  math.ceil((imgShape[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1],
