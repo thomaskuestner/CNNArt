@@ -524,7 +524,8 @@ def fRigidPatching3D_maskLabeling_tf(dicom_tensor, patchSize, patchOverlap, mask
     dOverlap = tf.math.round(tf.math.multiply(patchSize, patchOverlap))
     dNotOverlap = tf.math.round(tf.math.multiply(patchSize, (1 - patchOverlap)))
 
-    imgShape = dicom_tensor.get_shape().as_list()
+    with tf.Session() as sess:
+        imgShape = sess.run(tf.shape(dicom_tensor))
 
     size_zero_pad = np.array(([math.ceil((imgShape[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0],
                                  math.ceil((imgShape[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1],
@@ -538,8 +539,8 @@ def fRigidPatching3D_maskLabeling_tf(dicom_tensor, patchSize, patchOverlap, mask
 
     Img_zero_pad = tf.pad(dicom_tensor,
                           tf.Variable((zero_pad_part[0], zero_pad[0] - zero_pad_part[0]),
-                           (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]),
-                           (zero_pad_part[2], zero_pad[2] - zero_pad_part[2])),
+                                      (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]),
+                                      (zero_pad_part[2], zero_pad[2] - zero_pad_part[2])),
                           mode='constant')
 
     #nbPatches = ((size_zero_pad[0]-patchSize[0])/((1-patchOverlap)*patchSize[0])+1)*((size_zero_pad[1]-patchSize[1])/((1-patchOverlap)*patchSize[1])+1)*((size_zero_pad[2]-patchSize[2])/(tf.math.round((1-patchOverlap)*patchSize[2]))+1)
