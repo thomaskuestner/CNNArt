@@ -542,20 +542,22 @@ def fRigidPatching3D_maskLabeling_tf(dicom_numpy_array, patchSize, patchOverlap,
 
     #nbPatches = ((size_zero_pad[0]-patchSize[0])/((1-patchOverlap)*patchSize[0])+1)*((size_zero_pad[1]-patchSize[1])/((1-patchOverlap)*patchSize[1])+1)*((size_zero_pad[2]-patchSize[2])/(tf.math.round((1-patchOverlap)*patchSize[2]))+1)
 
-    nbPatches_in_Y = int((size_zero_pad[0] - dOverlap[0]) / dNotOverlap[0])
-    nbPatches_in_X = int((size_zero_pad[1] - dOverlap[1]) / dNotOverlap[1])
-    nbPatches_in_Z = int((size_zero_pad[2] - dOverlap[2]) / dNotOverlap[2])
-    nbPatches = nbPatches_in_X * nbPatches_in_Y * nbPatches_in_Z
+    #nbPatches_in_Y = int((size_zero_pad[0] - dOverlap[0]) / dNotOverlap[0])
+    #nbPatches_in_X = int((size_zero_pad[1] - dOverlap[1]) / dNotOverlap[1])
+    #nbPatches_in_Z = int((size_zero_pad[2] - dOverlap[2]) / dNotOverlap[2])
+    #nbPatches = nbPatches_in_X * nbPatches_in_Y * nbPatches_in_Z
 
-    dPatches = tf.zeros((patchSize[0], patchSize[1], patchSize[2], int(nbPatches)), dtype=float)
-    idxPatch = 0
+    #dPatches = tf.zeros((patchSize[0], patchSize[1], patchSize[2], int(nbPatches)), dtype=float)
+    #idxPatch = 0
 
     for iZ in range(0, int(size_zero_pad[2] - dOverlap[2]), int(dNotOverlap[2])):
         for iY in range(0, int(size_zero_pad[0] - dOverlap[0]), int(dNotOverlap[0])):
             for iX in range(0, int(size_zero_pad[1] - dOverlap[1]), int(dNotOverlap[1])):
                 dPatch = Img_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ:iZ + patchSize[2]]
-                dPatches[:, :, :, idxPatch] = dPatch
-                idxPatch += 1
+                if (iZ == 0) & (iY == 0) & (iX == 0):
+                    dPatches = dPatch
+                else:
+                    dPatches = tf.stack([dPatches, dPatch], axis=3)
 
     return dPatches
 
