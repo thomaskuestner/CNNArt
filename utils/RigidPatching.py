@@ -518,24 +518,26 @@ def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, ma
         #print(dLabels)
         return dPatches, dLabels#, nbPatches
 
-def fRigidPatching3D_maskLabeling_tf(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, dataset=None, dopatching=True):
+def fRigidPatching3D_maskLabeling_tf(dicom_tensor, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, dataset=None, dopatching=True):
     #ToDo odd patch size not supported!
 
     dOverlap = tf.math.round(tf.math.multiply(patchSize, patchOverlap))
     dNotOverlap = tf.math.round(tf.math.multiply(patchSize, (1 - patchOverlap)))
 
-    size_zero_pad = tf.Variable(([tf.math.ceil((tf.shape(dicom_numpy_array)[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0],
-                               tf.math.ceil((tf.shape(dicom_numpy_array)[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1],
-                               tf.math.ceil((tf.shape(dicom_numpy_array)[2] - dOverlap[2]) / (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2]]))
-    zero_pad = tf.Variable(([int(size_zero_pad[0]) - dicom_numpy_array.shape[0],
-                          int(size_zero_pad[1]) - dicom_numpy_array.shape[1],
-                          int(size_zero_pad[2]) - dicom_numpy_array.shape[2]]))
-    zero_pad_part = tf.Variable(([int(math.ceil(zero_pad[0] / 2)),
+    imgShape = dicom_tensor.get_shape().as_list()
+
+    size_zero_pad = np.array(([math.ceil((imgShape[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0],
+                                 math.ceil((imgShape[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1],
+                                 math.ceil((imgShape[2] - dOverlap[2]) / (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2]]))
+    zero_pad = np.array(([int(size_zero_pad[0]) - imgShape[0],
+                          int(size_zero_pad[1]) - imgShape[1],
+                          int(size_zero_pad[2]) - imgShape[2]]))
+    zero_pad_part = np.array(([int(math.ceil(zero_pad[0] / 2)),
                                int(math.ceil(zero_pad[1] / 2)),
                                int(math.ceil(zero_pad[2] / 2))]))
 
-    Img_zero_pad = tf.pad(dicom_numpy_array,
-                          ((zero_pad_part[0], zero_pad[0] - zero_pad_part[0]),
+    Img_zero_pad = tf.pad(dicom_tensor,
+                          tf.Variable((zero_pad_part[0], zero_pad[0] - zero_pad_part[0]),
                            (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]),
                            (zero_pad_part[2], zero_pad[2] - zero_pad_part[2])),
                           mode='constant')
