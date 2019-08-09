@@ -550,17 +550,16 @@ def fRigidPatching3D_maskLabeling_tf(dicom_tensor, patchSize, patchOverlap, mask
     #nbPatches = nbPatches_in_X * nbPatches_in_Y * nbPatches_in_Z
 
     #dPatches = tf.zeros((patchSize[0], patchSize[1], patchSize[2], int(nbPatches)), dtype=float)
-    #idxPatch = 0
 
+    patch = [None for _ in range(fcalculatepatches(imgShape, patchSize, patchOverlap))]
+    idxPatch = 0
     for iZ in range(0, int(size_zero_pad[2] - dOverlap[2]), int(dNotOverlap[2])):
         for iY in range(0, int(size_zero_pad[0] - dOverlap[0]), int(dNotOverlap[0])):
             for iX in range(0, int(size_zero_pad[1] - dOverlap[1]), int(dNotOverlap[1])):
-                dPatch = Img_zero_pad[iY:iY + patchSize[0], iX:iX + patchSize[1], iZ:iZ + patchSize[2]]
-                if (iZ == 0) & (iY == 0) & (iX == 0):
-                    dPatches = dPatch
-                else:
-                    dPatches = tf.stack([dPatches, dPatch], axis=3)
+                patch[idxPatch] = tf.slice(Img_zero_pad, begin=[iY, iX, iZ], size=[patchSize[0], patchSize[1], patchSize[2]])
+                idxPatch += 1
 
+    dPatches = tf.stack(patch, axis=3)
     return dPatches
 
 
