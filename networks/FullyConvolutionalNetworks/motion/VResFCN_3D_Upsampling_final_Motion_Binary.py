@@ -372,7 +372,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         if usingClassification:
             result = cnn.fit(X_train,
                              {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
-                             validation_data=(X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}),
+                             validation_data=(X_valid, {'segmentation_output': Y_segMasks_valid, 'classification_output': y_valid}),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -380,7 +380,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         else:
             result = cnn.fit(X_train,
                              Y_segMasks_train,
-                             validation_data=(X_test, Y_segMasks_test),
+                             validation_data=(X_valid, Y_segMasks_valid),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
