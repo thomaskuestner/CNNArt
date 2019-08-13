@@ -591,7 +591,7 @@ class Data:
                     #        np.max(voxel_ndarray) - np.min(voxel_ndarray))
 
                     # sort array
-                    #newnparray = np.zeros(shape=norm_voxel_ndarray.shape)
+                    newnparray = np.zeros(shape=norm_voxel_ndarray.shape)
                     #for i in range(norm_voxel_ndarray.shape[-1]):
                     #    newnparray[:, :, norm_voxel_ndarray.shape[-1] - 1 - i] = norm_voxel_ndarray[:, :, i]
                     for i in range(voxel_ndarray.shape[-1]):
@@ -667,7 +667,7 @@ class Data:
         buffer_size = num_patches
 
         # This function splits a whole image into many splits and return
-        get_patches_fn = lambda image, dataset, segMask: fRigidPatching3D_maskLabeling(image,  # dataset is here returned as int (bodRegion+weighting label) from TFRecord
+        get_patches_fn = lambda image, dataset, segMask: fRigidPatching3D_maskLabeling_tf(image,  # dataset is here returned as int (bodRegion+weighting label) from TFRecord
                                                                               self.patchSize,
                                                                               self.patchOverlap,
                                                                               segMask,
