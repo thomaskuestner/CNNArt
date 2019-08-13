@@ -66,7 +66,7 @@ plotting:
   plotResults: True
   format : png        # data format of stored file
   alpha: 0.4          # transparency of labels/prediction-masks on MRI
-  colormap: [[(0, 1, 0), (1, 1, 0), (1, 0, 0)]] # colormap of overlays, green -> yellow -> red
+  colormap: [[0, 1, 0], [1, 1, 0], [1, 0, 0]] # colormap of overlays, green -> yellow -> red
   savePlotMat: False # save pre-processed test outcomes as separate mat file
 
 # scaling range
