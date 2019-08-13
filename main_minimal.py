@@ -62,7 +62,7 @@ def fArtDetection(data, dlnetwork, sMode):
         y_labels_train[y_labels_train < 0] = 0
         for i in range(y_labels_train.shape[0]):
             Y_train.append([1, 0] if y_labels_train[i].all() == 0 else [0, 1])
-        Y_train = np.asarray(Y_train)
+        Y_train = np.asarray(Y_train, dtype='float32')
 
         y_labels_test = np.expand_dims(data.Y_segMasks_test, axis=-1)
         y_labels_test[y_labels_test == 0] = -1
@@ -75,7 +75,7 @@ def fArtDetection(data, dlnetwork, sMode):
 
         for i in range(y_labels_test.shape[0]):
             Y_test.append([1, 0] if y_labels_test[i].all() == 0 else [0, 1])
-        Y_test = np.asarray(Y_test)
+        Y_test = np.asarray(Y_test, dtype='float32')
 
         # change the shape of the dataset -> at color channel -> here one for grey scale
 
