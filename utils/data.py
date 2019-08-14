@@ -749,7 +749,7 @@ class Data:
 
             if hasattr(self, 'X_test'):
                 self.patchSizePrediction = [self.X_test.shape[1], self.X_test.shape[2], self.X_test.shape[3]]
-                self.patchOverlapPrediction = predictions['overlap']
+                self.patchOverlapPrediction = self.patchOverlap
             else:
                 self.patchSizePrediction = self.patchSize
                 self.patchOverlapPrediction = self.patchOverlap
