@@ -14,6 +14,8 @@ from utils.dlnetwork import *
 from utils.Label import Label
 import datetime
 import yaml
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
 
 
 def fParseConfig(sFile):
@@ -27,6 +29,9 @@ def fParseConfig(sFile):
 def fArtDetection(data, dlnetwork, sMode):
     # set GPU
     os.environ["CUDA_VISIBLE_DEVICES"] = str(data.iGPU)
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    set_session(tf.Session(config=config))
 
     if (data.storeMode != 'STORE_TFRECORD') & (sMode != 'plotting'):
         print('Prepare data')
