@@ -17,6 +17,7 @@ import scipy.io as sio
 from matplotlib import path
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
+plt.use('Agg')
 
 from utils.RigidPatching import *
 from utils.RigidUnpatching import *
@@ -591,7 +592,7 @@ class Data:
                     #        np.max(voxel_ndarray) - np.min(voxel_ndarray))
 
                     # sort array
-                    newnparray = np.zeros(shape=norm_voxel_ndarray.shape)
+                    newnparray = np.zeros(shape=voxel_ndarray.shape)
                     #for i in range(norm_voxel_ndarray.shape[-1]):
                     #    newnparray[:, :, norm_voxel_ndarray.shape[-1] - 1 - i] = norm_voxel_ndarray[:, :, i]
                     for i in range(voxel_ndarray.shape[-1]):
@@ -1008,9 +1009,8 @@ class Data:
                         # load dicom mask
                         currentMarkingsPath = self.getMarkingsPath() + os.sep + str(self.selectedPatients[patient]) + ".json"
                         # get the markings mask
-                        labelMask_ndarray = create_MASK_Array(currentMarkingsPath,
-                                                              patientsOfDataset[0],
-                                                              originalDatasetName,
+                        labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath,
+                                                              patient, dataset.pathdata,
                                                               voxel_ndarray.shape[0],
                                                               voxel_ndarray.shape[1],
                                                               voxel_ndarray.shape[2])
