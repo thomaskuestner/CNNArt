@@ -14,10 +14,11 @@ import nrrd
 import pydicom
 import dicom_numpy as dicom_np
 import scipy.io as sio
+import matplotlib
 from matplotlib import path
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
-plt.use('Agg')
+matplotlib.use('Agg')
 
 from utils.RigidPatching import *
 from utils.RigidUnpatching import *
