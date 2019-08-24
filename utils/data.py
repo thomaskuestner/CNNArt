@@ -156,7 +156,7 @@ class Data:
             # create TFRecord iterator (training data)
             self.datagenerator = self.create_dataset(pathtf)
             # load here test data and patch it
-            selTestPat = self.selectedPatients[self.selectedTestPatients]
+            selTestPat = self.selectedPatients[self.selectedTestPatients[0]]
             self.X_test, _, self.Y_test, self.Y_segMasks_test = self.fload_and_patch(selTestPat, self.selectedDatasets)
             self.X_test, self.Y_test, self.Y_segMasks_test = freshape_numpy(self.X_test, self.Y_segMasks_test)  # only valid with segmentation masks!
             return 0
