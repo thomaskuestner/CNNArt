@@ -207,7 +207,7 @@ def fUnpatchSegmentation(prob_list, patchSize, patchOverlap, actualSize, iClass)
             iCorner[0] = 0
             iCorner[1] = 0
             iCorner[2] = int(iCorner[2] + dNotOverlap[2])
-            print(str(iCorner[2]/actualSize[2]*100)+"%")
+            #print(str(iCorner[2]/actualSize[2]*100)+"%")
 
     unpatchImg = np.divide(unpatchImg, numVal)
 

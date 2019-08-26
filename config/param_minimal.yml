@@ -1,7 +1,7 @@
 # GPU
-iGPU : 2
+iGPU : 3
 
-# set mode: 'training', 'prediction'
+# set mode: 'training', 'prediction', 'plotting'
 sMode : 'training'
 
 # Datasets
@@ -32,9 +32,11 @@ MRPhysics:
       t1_tse_tra_Kopf_Motion_0003 : [None, 'motion', 'head', 't1']
       t1_tse_tra_fs_mbh_Leber_0004 : [None, 'ref', 'abdomen', 't1']
       t1_tse_tra_fs_mbh_Leber_Motion_0005 : [None, 'motion', 'abdomen', 't1' ]
+      t2_tse_tra_fs_navi_Leber_0006 : [None, 'ref', 'abdomen', 't2']
       t2_tse_tra_fs_navi_Leber_Motion_0013 : [None, 'motion', 'abdomen', 't2']
       t1_tse_tra_fs_Becken_0008 : [None, 'ref', 'pelvis', 't1']
       t1_tse_tra_fs_Becken_Motion_0010 : [None, 'motion', 'pelvis', 't1']
+      t2_tse_tra_fs_Becken_0009 : [None, 'ref', 'pelvis', 't2']
       t2_tse_tra_fs_Becken_Motion_0011 : [None, 'motion', 'pelvis', 't2']
       t2_tse_tra_fs_navi_Leber_0006 : [None, 'ref', 'abdomen', 't2']
       t2_tse_tra_fs_navi_Leber_Shim_xz_0007 : [None, 'shim', 'abdomen', 't2']
@@ -57,7 +59,15 @@ NAKO_IQA:
 
 # store mode of data after/during/before patching
 # 'STORE_DISABLED', 'STORE_HDF5', 'STORE_TFRECORD', 'STORE_PATCH_BASED',
-storeMode : 'STORE_TFRECORD'
+storeMode : 'STORE_HDF5'
+
+# plot results
+plotting:
+  plotResults: True
+  format : png        # data format of stored file
+  alpha: 0.4          # transparency of labels/prediction-masks on MRI
+  colormap: [[0, 1, 0], [1, 1, 0], [1, 0, 0]] # colormap of overlays, green -> yellow -> red
+  savePlotMat: False # save pre-processed test outcomes as separate mat file
 
 # scaling range
 range : [0, 1]
@@ -97,19 +107,14 @@ nfolds : 0
 # Single-pathway Multiscale networks are: MS_SPP, MS_FCN_simple, MS_FCN_MultiFM, MS_Inception_Archi1, MS_Inception_Archi2
 # Dual-pathway Multiscale networks are: MS_VNet_MultiPath, MS_SPP_MultiPath, MS_FCN_MultiFM_MultiPath
 network : "VResFCN_3D_Upsampling_final_Motion_Binary"
-
 # use classification output on deepest layer
-usingClassification : False
-
+usingClassification : True
 # optimized parameters
 batchSize : 64
-
 # learning rate
 learningRate : 0.001
-
 # amount of epochs
-epochs : 1
-
+epochs : 100
 # optimizer and associated parameters
 optimizer :
   # algos: 'SGD', 'RMSPROP', 'ADAGRAD', 'ADADELTA', 'ADAM'
@@ -143,8 +148,8 @@ dataAugmentation:
 
 # paths
 # output path
-sOutputPath : '/home/s1304/no_backup/s1304/output/tmp'
-
+sOutputPath : '/home/s1304/no_backup/s1304/output/tmp/'
 # path to trained model and weights (same name, just file extension will be different -> handled automatically)
-sSaveModel : '/home/s1304/no_backup/s1304/output/tmp/trainedMODEL'
-
+sSaveModel : '/home/s1304/no_backup/s1304/output/tmp/VResFCN_3D_Upsampling_final_Motion_Binary_3D_64x64x16_2019-07-31_17-22/VResFCN_3D_Upsampling_final_Motion_Binary_3D_64x64x16_2019-07-31_17-22.json'
+# stored mat file with test results: if empty, script automatically determines the default path based on sOutPath
+sTestFile: '/home/s1304/no_backup/s1304/output/tmp/VResFCN_3D_Upsampling_final_Motion_Binary_3D_64x64x16_2019-07-31_17-22/VResFCN_3D_Upsampling_final_Motion_Binary_3D_64x64x16_2019-07-31_17-22.mat'

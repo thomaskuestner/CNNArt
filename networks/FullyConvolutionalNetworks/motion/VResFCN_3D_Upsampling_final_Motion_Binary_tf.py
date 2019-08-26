@@ -214,10 +214,6 @@ def fTrain(datagenerator, X_test, y_test, Y_segMasks_test, sOutPath=None, patchS
 
     print("No Validation Dataset.")
 
-    # sio.savemat('D:med_data/voxel_and_masks.mat',
-    #                           {'voxel_train': X_train, 'Y_segMasks_train': Y_segMasks_train,
-    #                            'y_train': y_train})
-
     #y_train = np.asarray([y_train[:], np.abs(np.asarray(y_train[:], dtype=np.float32) - 1)]).T
     #y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
 
@@ -231,12 +227,6 @@ def fTrain(datagenerator, X_test, y_test, Y_segMasks_test, sOutPath=None, patchS
 
     print('Training CNN')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
-
-    # sio.savemat('D:med_data/' + 'checkdata_voxel_and_mask.mat',
-    #             {'mask_train': Y_segMasks_train,
-    #              'voxel_train': X_train,
-    #              'mask_test': Y_segMasks_test,
-    #              'voxel_test': X_test})
 
     # save names
     _, sPath = os.path.splitdrive(sOutPath)
@@ -363,8 +353,12 @@ def fTrain(datagenerator, X_test, y_test, Y_segMasks_test, sOutPath=None, patchS
         # matlab
         dice_coef_training = result.history['dice_coef']
         training_loss = result.history['loss']
-        val_dice_coef = result.history['val_dice_coef']
-        val_loss = result.history['val_loss']
+        if X_valid != 0:
+            val_dice_coef = result.history['val_dice_coef']
+            val_loss = result.history['val_loss']
+        else:
+            val_dice_coef = 0
+            val_loss = 0
 
         print('Saving results: ' + model_name)
 
@@ -385,10 +379,16 @@ def fTrain(datagenerator, X_test, y_test, Y_segMasks_test, sOutPath=None, patchS
         segmentation_output_dice_coef_training = result.history['segmentation_output_dice_coef']
         classification_output_acc_training = result.history['classification_output_acc']
 
-        val_segmentation_output_loss = result.history['val_segmentation_output_loss']
-        val_classification_output_loss = result.history['val_classification_output_loss']
-        val_segmentation_output_dice_coef = result.history['val_segmentation_output_dice_coef']
-        val_classification_output_acc = result.history['val_classification_output_acc']
+        if X_valid != 0:
+            val_segmentation_output_loss = result.history['val_segmentation_output_loss']
+            val_classification_output_loss = result.history['val_classification_output_loss']
+            val_segmentation_output_dice_coef = result.history['val_segmentation_output_dice_coef']
+            val_classification_output_acc = result.history['val_classification_output_acc']
+        else:
+            val_segmentation_output_loss = 0
+            val_classification_output_loss = 0
+            val_segmentation_output_dice_coef = 0
+            val_classification_output_acc = 0
 
         print('Saving results: ' + model_name)
 
@@ -423,7 +423,7 @@ def step_decay(epoch, lr):
    return lr
 
 
-'''
+
 def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_size=64, usingClassification=False, usingSegmentationMasks=True, dlnetwork=None):
     """Takes an already trained model and computes the loss and Accuracy over the samples X with their Labels y
         Input:
@@ -508,9 +508,10 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
                 segmentation_output_dice_coef_test) + ' classification accuracy: ' + str(
                 classification_output_acc_test))
 
-            prob_pre = model.predict(X_test, batch_size=batch_size, verbose=1)
+            prob_test = model.predict(X_test, batch_size=batch_size, verbose=1)
 
-            predictions = {'prob_pre': prob_pre,
+            predictions = {'prob_pre': prob_test[0],
+                           'classification_predictions': prob_test[1],
                            'loss_test': loss_test,
                            'segmentation_output_loss_test': segmentation_output_loss_test,
                            'classification_output_loss_test': classification_output_loss_test,
@@ -524,9 +525,9 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
             score_test, acc_test = model.evaluate(X_test, Y_segMasks_test, batch_size=batch_size)
             print('loss: ' + str(score_test) + '   dice coef:' + str(acc_test))
 
-            prob_pre = model.predict(X_test, batch_size=batch_size, verbose=1)
+            prob_test = model.predict(X_test, batch_size=batch_size, verbose=1)
 
-            predictions = {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test}
+            predictions = {'prob_pre': prob_test, 'score_test': score_test, 'acc_test': acc_test}
 
     else:
         model.compile(loss=dice_coef_loss, optimizer=opti, metrics=[dice_coef])
@@ -559,7 +560,7 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
 
     return predictions
 
-'''
+
 
 def dice_coef(y_true, y_pred, epsilon=1e-5):
     dice_numerator = 2.0 * K.sum(y_true*y_pred, axis=[1,2,3,4])

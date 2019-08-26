@@ -136,7 +136,7 @@ class Label:
         :param positionalNumber: positional number of labels, on which the classes are mapped to output vector
         :return: dict with mapped outputvectors
         '''
-
+        classMappings = {}
         if usingArtefacts == True and usingBodyRegion == True and usingTWeightings == True:
             classMappings = {}
             i = 0

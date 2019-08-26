@@ -372,7 +372,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         if usingClassification:
             result = cnn.fit(X_train,
                              {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
-                             validation_data=(X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}),
+                             validation_data=(X_valid, {'segmentation_output': Y_segMasks_valid, 'classification_output': y_valid}),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -380,7 +380,7 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         else:
             result = cnn.fit(X_train,
                              Y_segMasks_train,
-                             validation_data=(X_test, Y_segMasks_test),
+                             validation_data=(X_valid, Y_segMasks_valid),
                              epochs=iEpochs,
                              batch_size=batchSize,
                              callbacks=callbacks,
@@ -427,8 +427,12 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         # matlab
         dice_coef_training = result.history['dice_coef']
         training_loss = result.history['loss']
-        val_dice_coef = result.history['val_dice_coef']
-        val_loss = result.history['val_loss']
+        if X_valid != 0:
+            val_dice_coef = result.history['val_dice_coef']
+            val_loss = result.history['val_loss']
+        else:
+            val_dice_coef = 0
+            val_loss = 0
 
         print('Saving results: ' + model_name)
 
@@ -449,10 +453,16 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
         segmentation_output_dice_coef_training = result.history['segmentation_output_dice_coef']
         classification_output_acc_training = result.history['classification_output_acc']
 
-        val_segmentation_output_loss = result.history['val_segmentation_output_loss']
-        val_classification_output_loss = result.history['val_classification_output_loss']
-        val_segmentation_output_dice_coef = result.history['val_segmentation_output_dice_coef']
-        val_classification_output_acc = result.history['val_classification_output_acc']
+        if X_valid != 0:
+            val_segmentation_output_loss = result.history['val_segmentation_output_loss']
+            val_classification_output_loss = result.history['val_classification_output_loss']
+            val_segmentation_output_dice_coef = result.history['val_segmentation_output_dice_coef']
+            val_classification_output_acc = result.history['val_classification_output_acc']
+        else:
+            val_segmentation_output_loss = 0
+            val_classification_output_loss = 0
+            val_segmentation_output_dice_coef = 0
+            val_classification_output_acc = 0
 
         print('Saving results: ' + model_name)
 
@@ -571,9 +581,10 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
                 segmentation_output_dice_coef_test) + ' classification accuracy: ' + str(
                 classification_output_acc_test))
 
-            prob_pre = model.predict(X_test, batch_size=batch_size, verbose=1)
+            prob_test = model.predict(X_test, batch_size=batch_size, verbose=1)
 
-            predictions = {'prob_pre': prob_pre,
+            predictions = {'prob_pre': prob_test[0],
+                           'classification_predictions': prob_test[1],
                            'loss_test': loss_test,
                            'segmentation_output_loss_test': segmentation_output_loss_test,
                            'classification_output_loss_test': classification_output_loss_test,
@@ -587,9 +598,9 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
             score_test, acc_test = model.evaluate(X_test, Y_segMasks_test, batch_size=batch_size)
             print('loss: ' + str(score_test) + '   dice coef:' + str(acc_test))
 
-            prob_pre = model.predict(X_test, batch_size=batch_size, verbose=1)
+            prob_test = model.predict(X_test, batch_size=batch_size, verbose=1)
 
-            predictions = {'prob_pre': prob_pre, 'score_test': score_test, 'acc_test': acc_test}
+            predictions = {'prob_pre': prob_test, 'score_test': score_test, 'acc_test': acc_test}
 
     else:
         model.compile(loss=dice_coef_loss, optimizer=opti, metrics=[dice_coef])

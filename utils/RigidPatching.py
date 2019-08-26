@@ -4,6 +4,7 @@ Copyright: 2016-2019 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) unde
 '''
 
 import numpy as np
+import tensorflow as tf
 import math
 
 from utils.Label import Label
@@ -413,18 +414,21 @@ def fRigidPatching_patchLabeling(dicom_numpy_array, patchSize, patchOverlap, rat
 #        dLabels ---> 1D-Numpy-Array with all corresponding labels                                                                      #
 #########################################################################################################################################
 
-def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, dataset):
-    #ToDo error for patchSizeZ = 5. To different Array sizes (40,40,4) and (40,40,5). Padding problem with uneven z-patch sizes????
+def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, dataset=None, dopatching=True):
+    #ToDo odd patch size not supported!
 
     move_artefact = False
     shim_artefact = False
     noise_artefact = False
 
-    # body region
-    bodyRegion, bodyRegionLabel = dataset.getBodyRegion()
+    if isinstance(dataset, int):  # already pre-processed label bodyRegionLabel + weightingLabel
+        bodyRegionweightingLabel = dataset
+    else:
+        # body region
+        bodyRegion, bodyRegionLabel = dataset.getBodyRegion()
 
-    # MRT weighting label (T1, T2)
-    weighting, weightingLabel = dataset.getMRTWeighting()
+        # MRT weighting label (T1, T2)
+        weighting, weightingLabel = dataset.getMRTWeighting()
 
     dOverlap = np.round(np.multiply(patchSize, patchOverlap))
     dNotOverlap = np.round(np.multiply(patchSize, (1 - patchOverlap)))
@@ -495,8 +499,10 @@ def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, ma
                 elif move_artefact == True and shim_artefact == True and noise_artefact == True:
                     label = Label.MOTION_AND_SHIM_AND_NOISE
 
-
-                label = weightingLabel + bodyRegionLabel + label
+                if isinstance(dataset, int):
+                    label = bodyRegionweightingLabel + label
+                else:
+                    label = weightingLabel + bodyRegionLabel + label
 
                 dLabels[idxPatch] = label
                 idxPatch += 1
@@ -505,6 +511,72 @@ def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, ma
                 shim_artefact = False
                 noise_artefact = False
 
-    print("Rigid patching done for %s " % dataset.getPathdata())
-    #print(dLabels)
-    return dPatches, dLabels#, nbPatches
+    if isinstance(dataset, int):
+        return dPatches
+    else:
+        print("Rigid patching done for %s " % dataset.getPathdata())
+        #print(dLabels)
+        return dPatches, dLabels#, nbPatches
+
+def fRigidPatching3D_maskLabeling_tf(dicom_tensor, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, dataset=None, dopatching=True):
+    #ToDo odd patch size not supported!
+
+    dOverlap = tf.math.round(tf.math.multiply(patchSize, patchOverlap))
+    dNotOverlap = tf.math.round(tf.math.multiply(patchSize, (1 - patchOverlap)))
+
+    imgShape = dicom_tensor.shape.as_list()
+
+    size_zero_pad = np.array(([math.ceil((imgShape[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0],
+                                 math.ceil((imgShape[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1],
+                                 math.ceil((imgShape[2] - dOverlap[2]) / (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2]]))
+    zero_pad = np.array(([int(size_zero_pad[0]) - imgShape[0],
+                          int(size_zero_pad[1]) - imgShape[1],
+                          int(size_zero_pad[2]) - imgShape[2]]))
+    zero_pad_part = np.array(([int(math.ceil(zero_pad[0] / 2)),
+                               int(math.ceil(zero_pad[1] / 2)),
+                               int(math.ceil(zero_pad[2] / 2))]))
+
+    Img_zero_pad = tf.pad(dicom_tensor,
+                          tf.Variable((zero_pad_part[0], zero_pad[0] - zero_pad_part[0]),
+                                      (zero_pad_part[1], zero_pad[1] - zero_pad_part[1]),
+                                      (zero_pad_part[2], zero_pad[2] - zero_pad_part[2])),
+                          mode='constant')
+
+    #nbPatches = ((size_zero_pad[0]-patchSize[0])/((1-patchOverlap)*patchSize[0])+1)*((size_zero_pad[1]-patchSize[1])/((1-patchOverlap)*patchSize[1])+1)*((size_zero_pad[2]-patchSize[2])/(tf.math.round((1-patchOverlap)*patchSize[2]))+1)
+
+    #nbPatches_in_Y = int((size_zero_pad[0] - dOverlap[0]) / dNotOverlap[0])
+    #nbPatches_in_X = int((size_zero_pad[1] - dOverlap[1]) / dNotOverlap[1])
+    #nbPatches_in_Z = int((size_zero_pad[2] - dOverlap[2]) / dNotOverlap[2])
+    #nbPatches = nbPatches_in_X * nbPatches_in_Y * nbPatches_in_Z
+
+    #dPatches = tf.zeros((patchSize[0], patchSize[1], patchSize[2], int(nbPatches)), dtype=float)
+
+    patch = [None for _ in range(fcalculatepatches(imgShape, patchSize, patchOverlap))]
+    idxPatch = 0
+    for iZ in range(0, int(size_zero_pad[2] - dOverlap[2]), int(dNotOverlap[2])):
+        for iY in range(0, int(size_zero_pad[0] - dOverlap[0]), int(dNotOverlap[0])):
+            for iX in range(0, int(size_zero_pad[1] - dOverlap[1]), int(dNotOverlap[1])):
+                patch[idxPatch] = tf.slice(Img_zero_pad, begin=[iY, iX, iZ], size=[patchSize[0], patchSize[1], patchSize[2]])
+                idxPatch += 1
+
+    dPatches = tf.stack(patch, axis=3)
+    return dPatches
+
+
+def fcalculatepatches(imageSize, patchSize, patchOverlap):
+
+    dOverlap = np.round(np.multiply(patchSize, patchOverlap))
+    dNotOverlap = np.round(np.multiply(patchSize, (1 - patchOverlap)))
+
+    size_zero_pad = np.array(
+        ([math.ceil((imageSize[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0],
+          math.ceil((imageSize[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1],
+          math.ceil((imageSize[2] - dOverlap[2]) / (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2]]))
+
+    idxPatch = 0
+    for iZ in range(0, int(size_zero_pad[2] - dOverlap[2]), int(dNotOverlap[2])):
+        for iY in range(0, int(size_zero_pad[0] - dOverlap[0]), int(dNotOverlap[0])):
+            for iX in range(0, int(size_zero_pad[1] - dOverlap[1]), int(dNotOverlap[1])):
+                idxPatch += 1
+
+    return idxPatch

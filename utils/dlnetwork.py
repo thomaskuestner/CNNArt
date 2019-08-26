@@ -10,7 +10,7 @@ class Dlnetwork:
         # network and parameters
         self.neuralNetworkModel = cfg['network']
         self.usingClassification = cfg['usingClassification']  # use classification output on deepest layer
-        self.savedmodel = cfg['sSaveModel']
+        self.savemodel = cfg['sSaveModel']
         self.batchSize = cfg['batchSize']
         self.learningRate = cfg['learningRate']
         self.epochs = cfg['epochs']
