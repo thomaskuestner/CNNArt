@@ -2,7 +2,7 @@
 iGPU : 0
 
 # set mode: 'training', 'prediction', 'plotting'
-sMode : 'training'
+sMode : 'train'
 
 # Datasets
 sDatabase : 'MRPhysics'
@@ -72,7 +72,7 @@ plotting:
 # scaling range
 range : [0, 1]
 # patches
-patchSize : [64, 64, 16] # [x, y] or [x,y,z], but z should not larger than 10, else too much zero-padding when scaling factor is small
+patchSize : [128, 128, 16] # [x, y] or [x,y,z], but z should not larger than 10, else too much zero-padding when scaling factor is small
 patchOverlap : 0.8 # 50%
 # sLabeling strategy
 # 'volume': volume-wise labeling
