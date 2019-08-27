@@ -10,8 +10,8 @@ Keras implementation of a Squeeze-and-Excitation-Block in accordance with the or
 (Hu 2017, Squeeze and Excitation Networks)
 '''
 
-from tf.keras.layers import GlobalAveragePooling2D, Reshape, Dense, multiply, Permute, GlobalAveragePooling3D
-from tf.keras import backend
+from tensorflow.keras.layers import GlobalAveragePooling2D, Reshape, Dense, multiply, Permute, GlobalAveragePooling3D
+from tensorflow.keras import backend
 
 def squeeze_excitation_block(inputSE, ratio=16):
     '''
