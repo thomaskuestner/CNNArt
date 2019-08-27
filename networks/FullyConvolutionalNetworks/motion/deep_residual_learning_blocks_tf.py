@@ -8,16 +8,16 @@ Deep residual learning blocks
 
 '''
 
-from tf.keras.layers import Conv2D
-from tf.keras.layers import Conv3D
-from tf.keras.layers import Conv3DTranspose
-from tf.keras.layers import BatchNormalization
-from tf.keras.layers import Activation
-from tf.keras.layers import MaxPooling2D
-from tf.keras.layers import Add
-from tf.keras.layers import LeakyReLU
-from tf.keras.layers import Lambda
-import tf.keras.backend as K
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.layers import Conv3D
+from tensorflow.keras.layers import Conv3DTranspose
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.layers import Activation
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.layers import Add
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.layers import Lambda
+import tensorflow.keras.backend as K
 from networks.FullyConvolutionalNetworks.motion.squeeze_excitation_block_tf import *
 
 
