@@ -21,7 +21,7 @@ from tensorflow.keras.layers import BatchNormalization
 #from keras.layers import GlobalAveragePooling2D
 #from keras.activations import softmax
 from tensorflow.keras.layers import concatenate
-from tensorflow.keras.layers.core import Dense, Activation, Flatten
+from tensorflow.keras.layers import Dense, Activation, Flatten
 from tensorflow.keras.models import Model
 #from keras.models import Sequential
 from tensorflow.keras.layers import UpSampling3D
