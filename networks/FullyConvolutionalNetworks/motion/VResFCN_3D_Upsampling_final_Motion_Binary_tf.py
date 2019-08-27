@@ -14,26 +14,26 @@ import os.path
 import numpy as np
 import scipy.io as sio
 import keras
-from tf.keras.layers import Input
-import tf.keras.backend as K
+from tensorflow.keras.layers import Input
+import tensorflow.keras.backend as K
 #from keras.layers import Conv2D
-from tf.keras.layers import BatchNormalization
+from tensorflow.keras.layers import BatchNormalization
 #from keras.layers import GlobalAveragePooling2D
 #from keras.activations import softmax
-from tf.keras.layers import concatenate
-from tf.keras.layers.core import Dense, Activation, Flatten
-from tf.keras.models import Model
+from tensorflow.keras.layers import concatenate
+from tensorflow.keras.layers.core import Dense, Activation, Flatten
+from tensorflow.keras.models import Model
 #from keras.models import Sequential
-from tf.keras.layers import UpSampling3D
+from tensorflow.keras.layers import UpSampling3D
 #from keras.layers.convolutional import Convolution2D
-from tf.keras.layers import LeakyReLU
-from tf.keras.layers import Softmax
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.layers import Softmax
 
-from tf.keras.callbacks import EarlyStopping
-from tf.keras.callbacks import LearningRateScheduler
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import LearningRateScheduler
 #from keras.callbacks import ReduceLROnPlateau
 #from keras.callbacks import ModelCheckpoint
-from tf.keras.models import model_from_json
+from tensorflow.keras.models import model_from_json
 #from keras.regularizers import l2  # , activity_l2
 from sklearn.metrics import classification_report, confusion_matrix
 
