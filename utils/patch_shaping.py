@@ -31,6 +31,7 @@ def freshape_numpy(X_train, Y_segMasks_train):
     y_labels_train = np.sum(y_labels_train, axis=1)
     y_labels_train[y_labels_train >= 0] = 1
     y_labels_train[y_labels_train < 0] = 0
+    Y_train = []
     for i in range(y_labels_train.shape[0]):
         Y_train.append([1, 0] if y_labels_train[i].all() == 0 else [0, 1])
     Y_train = np.asarray(Y_train)
