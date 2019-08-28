@@ -11,7 +11,7 @@ import os
 #import pydicom as dicom_np
 import h5py
 import nrrd
-import pydicom
+import dicom as pydicom
 import dicom_numpy as dicom_np
 import scipy.io as sio
 import matplotlib

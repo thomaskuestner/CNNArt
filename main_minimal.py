@@ -232,10 +232,11 @@ def fArtDetection(data, dlnetwork, sMode):
 
         print('==== Network testing finished ====')
 
-    else:  # plotting
+    elif sMode == 'plotting':  # plotting
         # load from pre-trained network run, the predicted outputs
         predictions = fgetpredictions(data.outPutFolderDataPath, data.usingSegmentationMasks, dlnetwork.usingClassification, data.plotTestFile)
-
+    else:
+        raise NameError(sMode + ' is not recognized mode.')
     # result preparation
     if data.plotresults | (sMode == 'plotting'):
         print('==== Result plotting ====')
