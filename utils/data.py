@@ -573,7 +573,7 @@ class Data:
                     fileNames = [os.path.join(currentDataDir, f) for f in fileNames]
 
                     # read DICOMS
-                    dicomDataset = [pydicom.read_file(f) for f in fileNames]
+                    dicomDataset = [pydicom.read_file(f) for f in fileNames if f.endswith('.IMA')]
                     # TODO: add here reading in of phase images
 
                     # Combine DICOM Slices to a single 3D image (voxel)
@@ -598,6 +598,7 @@ class Data:
                         newnparray[:, :, voxel_ndarray.shape[-1] - 1 - i] = voxel_ndarray[:, :, i]
 
                     path_file = pathtf + os.sep + patient + os.sep + dataset.pathdata + '.tfrecord'
+                    print(pathtf, os.sep, patient)
                     if not os.path.exists(pathtf + os.sep + patient):
                         os.makedirs(pathtf + os.sep + patient)
 

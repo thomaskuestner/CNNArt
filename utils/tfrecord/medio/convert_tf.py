@@ -12,6 +12,7 @@ def im2tfrecord(image, path, metadata=None):
     image_shape = np.array(image.shape, dtype=np.int32).tostring()
     image = image.astype(np.int16).tostring()  # save unscaled image (int) and perform scaling in generator
     if metadata is not None:  # v2
+        metadata = np.array(metadata)
         image_label = metadata.astype(np.int16).tostring()
 
         # create an example protocol buffer
