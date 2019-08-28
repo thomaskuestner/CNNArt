@@ -86,8 +86,9 @@ class Data:
         if cfg['sSelectedPatient'][0] == 'All':
             self.selectedPatients = sorted(os.listdir(self.pathDatabase))
         else:
-            dpat = sorted(os.listdir(self.pathDatabase))
-            self.selectedPatients = [dpat[i] for i in [x-1 for x in cfg['sSelectedPatient']]]
+            # dpat = sorted(os.listdir(self.pathDatabase))
+            dpat = [f.name for f in os.scandir(self.pathDatabase) if f.is_dir()]
+            self.selectedPatients = [dpat[i-1] for i in cfg['sSelectedPatient']]
 
         # parse selected artifacts and datasets
         self.selectedDatasets = []
@@ -154,7 +155,7 @@ class Data:
             # create TFRecord iterator (training data)
             self.datagenerator = self.create_dataset(pathtf)
             # load here test data and patch it
-            selTestPat = self.selectedPatients[self.selectedTestPatients[0]]
+            selTestPat = [self.selectedPatients[self.selectedTestPatients[0]]]
             self.X_test, _, self.Y_test, self.Y_segMasks_test = self.fload_and_patch(selTestPat, self.selectedDatasets)
             self.X_test, self.Y_test, self.Y_segMasks_test = freshape_numpy(self.X_test, self.Y_segMasks_test)  # only valid with segmentation masks!
             return 0
@@ -558,7 +559,8 @@ class Data:
                             if self.usingSegmentationMasks:
                                 dAllSegmentationMaskPatches = np.concatenate(
                                     (dAllSegmentationMaskPatches, dPatchesOfMask), axis=3)
-
+                else:
+                    raise FileExistsError(currentDataDir+' does not exist.')
         return dAllPatches, dAllPats, dAllLabels, dAllSegmentationMaskPatches
 
     def convert2TFrecords(self, pathtf):
