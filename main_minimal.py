@@ -188,7 +188,7 @@ def fArtDetection(data, dlnetwork, sMode):
                                 X_valid=data.X_validation,
                                 y_valid=Y_validation,
                                 X_test=data.X_test,
-                                y_test=Y_test,
+                                y_test=data.Y_test,
                                 sOutPath=data.outPutFolderDataPath,
                                 patchSize=[data.patchSizeX, data.patchSizeY, data.patchSizeZ],
                                 batchSize=dlnetwork.batchSize,
@@ -203,7 +203,7 @@ def fArtDetection(data, dlnetwork, sMode):
                                 y_valid=Y_validation,
                                 Y_segMasks_valid=data.Y_segMasks_validation,
                                 X_test=data.X_test,
-                                y_test=Y_test,
+                                y_test=data.Y_test,
                                 Y_segMasks_test=data.Y_segMasks_test,
                                 sOutPath=data.outPutFolderDataPath,
                                 patchSize=[data.patchSizeX, data.patchSizeY, data.patchSizeZ],
@@ -221,7 +221,7 @@ def fArtDetection(data, dlnetwork, sMode):
 
     elif sMode == 'prediction':  # prediction
         predictions = cnnModel.fPredict(X_test=data.X_test,
-                          Y_test=Y_test,
+                          Y_test=data.Y_test,
                           Y_segMasks_test=data.Y_segMasks_test,
                           sModelPath=dlnetwork.savemodel,
                           batch_size=dlnetwork.batchSize,
