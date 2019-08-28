@@ -11,7 +11,7 @@ import os
 #import pydicom as dicom_np
 import h5py
 import nrrd
-import dicom as pydicom
+import pydicom
 import dicom_numpy as dicom_np
 import scipy.io as sio
 import matplotlib
@@ -101,8 +101,6 @@ class Data:
                     else:
                         self.selectedDatasets.append(Dataset(selData, currdat[0], currdat[1], currdat[2], currdat[3]))
 
-
-
     def generateDataset(self):
         """
         method performs the splitting of the datasets to the learning datasets (training, validation, test)
@@ -162,7 +160,7 @@ class Data:
             return 0
 
         if self.storeMode == 'STORE_PATCH_BASED':
-            self.outPutFolderDataPath = outputFolderPath + os.sep + "data"
+            self.outPutFolderDataPath = os.path.join(outputFolderPath, "data")
             if not os.path.exists(self.outPutFolderDataPath):
                 os.makedirs(self.outPutFolderDataPath)
 
@@ -287,7 +285,7 @@ class Data:
 
             elif self.storeMode == 'STORE_PATCH_BASED':
                 self.datasetOutputPath = outputFolderPath
-                with open(outputFolderPath + os.sep + "labels.json", 'w') as fp:
+                with open(os.path.join(outputFolderPath, "labels.json", 'w')) as fp:
                     json.dump(labelDict, fp)
         else:
             # no storage of patched datasets
@@ -375,7 +373,7 @@ class Data:
         for ipat, patient in enumerate(selectedPatients):
             print('Loading patient %d\%d' % (ipat+1, len(selectedPatients)))
             for idat, dataset in enumerate(selectedDatasets):
-                currentDataDir = self.pathDatabase + os.sep + patient + os.sep + self.modelSubDir + os.sep + dataset.pathdata
+                currentDataDir = os.path.join(self.pathDatabase, patient, self.modelSubDir, dataset.pathdata)
 
                 if os.path.exists(currentDataDir):
                     # get list with all paths of dicoms for current patient and current dataset
@@ -415,7 +413,7 @@ class Data:
                         if self.labelingMode == 'MASK_LABELING':
                             # path to marking file
                             if self.database == 'MRPhysics':
-                                currentMarkingsPath = self.markingsPath + os.sep + patient + ".json"
+                                currentMarkingsPath = os.path.join(self.markingsPath, patient + ".json")
                                 # get the markings mask
                                 labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset.pathdata,
                                                                            voxel_ndarray.shape[0],
@@ -425,11 +423,11 @@ class Data:
                                     labelMask_ndarray = np.zeros((voxel_ndarray.shape[0],
                                                                   voxel_ndarray.shape[1], voxel_ndarray.shape[2]))
                                 elif dataset.pathdata == '3D_GRE_TRA_fb_F_COMPOSED_0028':  # free-breathing mask
-                                    currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_fb.nrrd'
+                                    currentMarkingsPath = os.path.join(self.markingsPath, patient, patient + '_fb.nrrd')
                                     labelMask_ndarray = nrrd.read(
                                         currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
                                 elif dataset.pathdata == '3D_GRE_TRA_fb_deep_F_COMPOSED_0042':  # free-breathing mask
-                                    currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_db.nrrd'
+                                    currentMarkingsPath = os.path.join(self.markingsPath, patient, patient + '_db.nrrd')
                                     labelMask_ndarray = nrrd.read(
                                         currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
 
@@ -477,7 +475,7 @@ class Data:
                         if self.labelingMode == 'MASK_LABELING':
                             # path to marking file
                             if self.database == 'MRPhysics':
-                                currentMarkingsPath = self.markingsPath + os.sep + patient + ".json"
+                                currentMarkingsPath = os.path.join(self.markingsPath, patient + ".json")
                                 # get the markings mask
                                 labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath, patient, dataset.pathdata,
                                                                            voxel_ndarray.shape[0],
@@ -487,11 +485,11 @@ class Data:
                                     labelMask_ndarray = np.zeros((voxel_ndarray.shape[0],
                                                                   voxel_ndarray.shape[1], voxel_ndarray.shape[2]))
                                 elif dataset.pathdata == '3D_GRE_TRA_fb_F_COMPOSED_0028':  # free-breathing mask
-                                    currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_fb.nrrd'
+                                    currentMarkingsPath = os.path.join(self.markingsPath, patient, patient + '_fb.nrrd')
                                     labelMask_ndarray = nrrd.read(
                                         currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
                                 elif dataset.pathdata == '3D_GRE_TRA_fb_deep_F_COMPOSED_0042':  # free-breathing mask
-                                    currentMarkingsPath = self.markingsPath + os.sep + patient + os.sep + patient + '_db.nrrd'
+                                    currentMarkingsPath = os.path.join(self.markingsPath, patient, patient + '_db.nrrd')
                                     labelMask_ndarray = nrrd.read(
                                         currentMarkingsPath)  # TODO: verify, should be 1 at positions with artifact
 
@@ -643,7 +641,6 @@ class Data:
                         convert_tf.im2tfrecord(image=labelMask_ndarray, path=path_file)
 
     def create_dataset(self, data_dir, num_parallel_calls=4, prefetched_buffer_size=8000):
-
         # choose & fetch all required training data / discard subjects missing crucial data
         # TODO: only fetch training data, test data is not used for training: only works for subject leave-out at the moment, no batch-based splitting!
         list_images = parse_tf_cnnart.fetch_paths(data_dir, self.selectedDatasets, self.selectedTestPatients)
@@ -857,7 +854,7 @@ class Data:
                     }
 
                     # plot output overlays
-                    savepath = self.pathOutput + os.sep + self.selectedPatients[patient] + '_' + dataset.pathdata
+                    savepath = os.path.join(self.pathOutput, self.selectedPatients[patient] + '_' + dataset.pathdata)
                     self.plot_patient_mask(voxel_ndarray, unpatched_img_foreground, labelMask_ndarray, savepath, plot_overlay=True)
 
                     allUnpatchedTest.append(unpatched_slices)
@@ -865,7 +862,7 @@ class Data:
         if self.plotSaveMat:
             if self.usingClassification:
                 # save prediction into .mat file
-                modelSave = self.pathOutput + os.sep + 'model_predictions.mat'
+                modelSave = os.path.join(self.pathOutput, 'model_predictions.mat')
                 print('saving Model:{}'.format(modelSave))
 
                 if not self.doUnpatching:
@@ -912,7 +909,7 @@ class Data:
 
             else:
                 # save prediction into .mat file
-                modelSave = self.pathOutput + os.sep + 'model_predictions.mat'
+                modelSave = os.path.join(self.pathOutput, 'model_predictions.mat')
                 print('saving Model:{}'.format(modelSave))
                 if not self.doUnpatching:
                     sio.savemat(modelSave, {'prob_pre': predictions['prob_pre'],
@@ -981,7 +978,7 @@ class Data:
             # load corresponding original dataset
             for ipat, patient in enumerate(self.selectedTestPatients):
                 for idat, dataset in enumerate(self.selectedDatasets):
-                    currentDataDir = self.pathDatabase + os.sep + self.selectedPatients[patient] + os.sep + self.modelSubDir + os.sep + dataset.pathdata
+                    currentDataDir = os.path.join(self.pathDatabase, self.selectedPatients[patient], self.modelSubDir, dataset.pathdata)
 
                     if os.path.exists(currentDataDir):
                         # get list with all paths of dicoms for current patient and current dataset
@@ -1008,7 +1005,7 @@ class Data:
                         voxel_ndarray = newnparray
 
                         # load dicom mask
-                        currentMarkingsPath = self.getMarkingsPath() + os.sep + str(self.selectedPatients[patient]) + ".json"
+                        currentMarkingsPath = os.path.join(self.getMarkingsPath(), str(self.selectedPatients[patient]) + ".json")
                         # get the markings mask
                         labelMask_ndarray = self.create_MASK_Array(currentMarkingsPath,
                                                               patient, dataset.pathdata,
@@ -1116,7 +1113,7 @@ class Data:
                             'IArte': IArte
                         }
                         # plot output overlays
-                        savepath = self.pathOutput + os.sep + patient + '_' + dataset.pathdata
+                        savepath = os.path.join(self.pathOutput, patient + '_' + dataset.pathdata)
                         self.plot_patient_mask(voxel_ndarray, unpatched_img_foreground, labelMask_ndarray, savepath,
                                           plot_overlay=True)
 
@@ -1124,7 +1121,7 @@ class Data:
 
         if self.plotSaveMat:
             # save prediction into .mat file
-            modelSave = self.pathOutput + os.sep + 'model_predictions.mat'
+            modelSave = os.path.join(self.pathOutput, 'model_predictions.mat')
             print('saving Model:{}'.format(modelSave))
             if not self.doUnpatching:
                 sio.savemat(modelSave, {'prob_pre': prediction['prob_pre'],
@@ -1249,7 +1246,7 @@ class Data:
 
         dataDict['ClassMappings'] = classMappingsDict
 
-        with open((outputFolderPath + os.sep + 'cnn_training_info.json'), 'w') as fp:
+        with open((os.path.join(outputFolderPath, 'cnn_training_info.json')), 'w') as fp:
             json.dump(dataDict, fp, indent=4)
 
     def createDatasetInfoSummary(self, name, outputFolderPath):
@@ -1276,7 +1273,7 @@ class Data:
         dataDict['StoreMode'] = self.storeMode
         dataDict['SegmentationMaskUsed'] = self.usingSegmentationMasks
 
-        with open((outputFolderPath + os.sep + 'dataset_info.json'), 'w') as fp:
+        with open((os.path.join(outputFolderPath, 'dataset_info.json')), 'w') as fp:
             json.dump(dataDict, fp, indent=4)
 
     def create_MASK_Array(self, pathMarking, proband, model, mrt_height, mrt_width, mrt_depth):

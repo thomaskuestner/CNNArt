@@ -45,7 +45,6 @@ from utils.image_preprocessing import *
 
 
 def createModel(patchSize, numClasses, usingClassification=False):
-
     if K.image_data_format() == 'channels_last':
         bn_axis = -1
     else:
@@ -204,7 +203,6 @@ def createModel(patchSize, numClasses, usingClassification=False):
 
 
 def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlnetwork = None):
-
     usingClassification = dlnetwork.usingClassification
 
     # grid search on batch_sizes and learning rates
@@ -594,7 +592,7 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
         else:
             model.compile(loss=dice_coef_loss, optimizer=opti, metrics=[dice_coef])
             model.load_weights(sPath + os.sep + sFilename + '_weights.h5')
-
+            
             score_test, acc_test = model.evaluate(X_test, Y_segMasks_test, batch_size=batch_size)
             print('loss: ' + str(score_test) + '   dice coef:' + str(acc_test))
 

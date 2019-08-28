@@ -112,7 +112,6 @@ def fArtDetection(data, dlnetwork, sMode):
 
         data.X_train = np.expand_dims(data.X_train, axis=-1)
         data.Y_segMasks_train = np.expand_dims(data.Y_segMasks_train, axis=-1)
-
         data.X_test = np.expand_dims(data.X_test, axis=-1)
         data.Y_segMasks_test = np.expand_dims(data.Y_segMasks_test, axis=-1)
 
