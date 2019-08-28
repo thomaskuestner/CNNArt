@@ -137,7 +137,7 @@ class Data:
         elif self.splittingMode == 'SIMPLE_RANDOM_SAMPLE_SPLITTING' or self.splittingMode == 'PATIENT_CROSS_VALIDATION_SPLITTING':
             outPutFolder = outPutFolder + "Split-patientCrossVal"
 
-        outputFolderPath = self.pathOutput + os.sep + outPutFolder
+        outputFolderPath = os.path.join(self.pathOutput, outPutFolder)
 
         if not os.path.exists(outputFolderPath):
             os.makedirs(outputFolderPath)
