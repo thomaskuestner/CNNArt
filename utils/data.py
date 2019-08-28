@@ -382,7 +382,7 @@ class Data:
                     fileNames = [os.path.join(currentDataDir, f) for f in fileNames]
 
                     # read DICOMS
-                    dicomDataset = [pydicom.read_file(f) for f in fileNames]
+                    dicomDataset = [pydicom.read_file(f) for f in fileNames if f.endswith('.IMA')]
                     # TODO: add here reading in of phase images
 
                     # Combine DICOM Slices to a single 3D image (voxel)
