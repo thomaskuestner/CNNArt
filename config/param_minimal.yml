@@ -61,6 +61,11 @@ NAKO_IQA:
 # 'STORE_DISABLED', 'STORE_HDF5', 'STORE_TFRECORD', 'STORE_PATCH_BASED',
 storeMode : 'STORE_TFRECORD'
 
+# training with array (ARRAY) or generator (GENERATOR)
+# storeMode = STORE_TFRECORD -> forces GENERATOR
+# storeMode = STORE_HDF5 -> forces ARRAY
+trainMode : 'GENERATOR'
+
 # plot results
 plotting:
   plotResults: True

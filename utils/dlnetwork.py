@@ -15,6 +15,12 @@ class Dlnetwork:
         self.learningRate = cfg['learningRate']
         self.epochs = cfg['epochs']
         self.optimizer = cfg['optimizer']['algorithm']
+        # train with array or as a generator
+        self.trainMode = cfg['trainMode']
+        if cfg['storeMode'] == 'STORE_TFRECORD':  # you need to use generator
+            self.trainMode = 'GENERATOR'
+        if cfg['storeMode'] == 'STORE_HDF5':  # you need to use array processing
+            self.trainMode = 'ARRAY'
         # SGD
         self.momentum = cfg['optimizer']['momentum']
         # SGD, RMSProp, ADAGRAD, ADADELTA, ADAM

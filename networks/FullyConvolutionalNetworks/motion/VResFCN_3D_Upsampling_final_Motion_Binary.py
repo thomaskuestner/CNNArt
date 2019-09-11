@@ -42,6 +42,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 from networks.FullyConvolutionalNetworks.motion.deep_residual_learning_blocks import *
 from utils.dlnetwork import *
 from utils.image_preprocessing import *
+from utils.DataGenerator import *
 
 
 def createModel(patchSize, numClasses, usingClassification=False):
@@ -214,8 +215,8 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
 
 
 
-    if X_valid == 0 and y_valid == 0:
-        print("No Validation Dataset.")
+    #if y_valid is None or y_valid == 0:
+    #    print("No Validation Dataset.")
 
     # sio.savemat('D:med_data/voxel_and_masks.mat',
     #                           {'voxel_train': X_train, 'Y_segMasks_train': Y_segMasks_train,
@@ -225,7 +226,10 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
     #y_test = np.asarray([y_test[:], np.abs(np.asarray(y_test[:], dtype=np.float32) - 1)]).T
 
     # number of classes
-    numClasses = np.shape(y_train)[1]
+    if y_train is not None:
+        numClasses = np.shape(y_train)[1]
+    else:
+        numClasses = 2  # TODO: hard-coded at the moment for generator processing
 
     #create cnn model
     print('Create model')
@@ -366,53 +370,116 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
 
     print('Start training')
 
-    # TODO: add here data augmentation via ImageDataGenerator from utils/image_preprocessing + change to fit_generator
-    if X_valid == 0 and y_valid == 0:
+    # TODO: add here data augmentation via ImageDataGenerator from utils/image_preprocessing
+    if dlnetwork.trainMode == 'GENERATOR':
+        # prepare data generators
+        train_gen = DataGenerator(X_train, batch_size=batchSize, dim=patchSize, usingClassification=usingClassification)
+        val_gen = DataGenerator(X_valid, batch_size=batchSize, dim=patchSize, usingClassification=usingClassification)
+        test_gen = DataGenerator(X_test, batch_size=batchSize, dim=patchSize, usingClassification=usingClassification)
+        existing_validation = True if len(val_gen.list_IDs) > 0 else False
+    else:  # ARRAY
+        existing_validation = (X_valid != 0 and X_valid is not None)
+
+    if existing_validation:
         # using test set for validation
         if usingClassification:
-            result = cnn.fit(X_train,
-                             {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
-                             validation_data=(X_valid, {'segmentation_output': Y_segMasks_valid, 'classification_output': y_valid}),
-                             epochs=iEpochs,
-                             batch_size=batchSize,
-                             callbacks=callbacks,
-                             verbose=1)
+            if dlnetwork.trainMode == 'ARRAY':
+                result = cnn.fit(X_train,
+                                 {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
+                                 validation_data=(X_valid, {'segmentation_output': Y_segMasks_valid, 'classification_output': y_valid}),
+                                 epochs=iEpochs,
+                                 batch_size=batchSize,
+                                 callbacks=callbacks,
+                                 verbose=1)
+            else:
+                result = cnn.fit_generator(train_gen,
+                                           validation_data=val_gen,
+                                           epochs=iEpochs,
+                                           batch_size=batchSize,
+                                           callbacks=callbacks,
+                                           use_multiprocessing=True,
+                                           workers=8,
+                                           max_queue_size=32,
+                                           verbose=1)
         else:
-            result = cnn.fit(X_train,
-                             Y_segMasks_train,
-                             validation_data=(X_valid, Y_segMasks_valid),
-                             epochs=iEpochs,
-                             batch_size=batchSize,
-                             callbacks=callbacks,
-                             verbose=1)
+            if dlnetwork.trainMode == 'ARRAY':
+                result = cnn.fit(X_train,
+                                 Y_segMasks_train,
+                                 validation_data=(X_valid, Y_segMasks_valid),
+                                 epochs=iEpochs,
+                                 batch_size=batchSize,
+                                 callbacks=callbacks,
+                                 verbose=1)
+            else:
+                result = cnn.fit_generator(train_gen,
+                                           validation_data=val_gen,
+                                           epochs=iEpochs,
+                                           batch_size=batchSize,
+                                           callbacks=callbacks,
+                                           use_multiprocessing=True,
+                                           workers=8,
+                                           max_queue_size=32,
+                                           verbose=1)
     else:
         # using validation set for validation
         if usingClassification:
-            result = cnn.fit(X_train,
-                             {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
-                             validation_data=(X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}),
-                             epochs=iEpochs,
-                             batch_size=batchSize,
-                             callbacks=callbacks,
-                             verbose=1)
+            if dlnetwork.trainMode == 'ARRAY':
+                result = cnn.fit(X_train,
+                                 {'segmentation_output': Y_segMasks_train, 'classification_output': y_train},
+                                 validation_data=(X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}),
+                                 epochs=iEpochs,
+                                 batch_size=batchSize,
+                                 callbacks=callbacks,
+                                 verbose=1)
+            else:
+                result = cnn.fit_generator(train_gen,
+                                           validation_data=test_gen,
+                                           epochs=iEpochs,
+                                           batch_size=batchSize,
+                                           callbacks=callbacks,
+                                           use_multiprocessing=True,
+                                           workers=8,
+                                           max_queue_size=32,
+                                           verbose=1)
         else:
-            result = cnn.fit(X_train,
-                             Y_segMasks_train,
-                             validation_data=(X_test, Y_segMasks_test),
-                             epochs=iEpochs,
-                             batch_size=batchSize,
-                             callbacks=callbacks,
-                             verbose=1)
+            if dlnetwork.trainMode == 'ARRAY':
+                result = cnn.fit(X_train,
+                                 Y_segMasks_train,
+                                 validation_data=(X_test, Y_segMasks_test),
+                                 epochs=iEpochs,
+                                 batch_size=batchSize,
+                                 callbacks=callbacks,
+                                 verbose=1)
+            else:
+                result = cnn.fit_generator(train_gen,
+                                           validation_data=test_gen,
+                                           epochs=iEpochs,
+                                           batch_size=batchSize,
+                                           callbacks=callbacks,
+                                           use_multiprocessing=True,
+                                           workers=8,
+                                           max_queue_size=32,
+                                           verbose=1)
 
     # return the loss value and metrics values for the model in test mode
-    if usingClassification:
-        model_metrics = cnn.metrics_names
-        loss_test, segmentation_output_loss_test, classification_output_loss_test, segmentation_output_dice_coef_test, classification_output_acc_test \
-            = cnn.evaluate(X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}, batch_size=batchSize, verbose=1)
-    else:
-        score_test, dice_coef_test = cnn.evaluate(X_test, Y_segMasks_test, batch_size=batchSize, verbose=1)
+    if dlnetwork.trainMode == 'ARRAY':
+        if usingClassification:
+            model_metrics = cnn.metrics_names
+            loss_test, segmentation_output_loss_test, classification_output_loss_test, segmentation_output_dice_coef_test, classification_output_acc_test \
+                = cnn.evaluate(X_test, {'segmentation_output': Y_segMasks_test, 'classification_output': y_test}, batch_size=batchSize, verbose=1)
+        else:
+            score_test, dice_coef_test = cnn.evaluate(X_test, Y_segMasks_test, batch_size=batchSize, verbose=1)
 
-    prob_test = cnn.predict(X_test, batchSize, 0)
+        prob_test = cnn.predict(X_test, batchSize, 0)
+    else:
+        if usingClassification:
+            model_metrics = cnn.metrics_names
+            loss_test, segmentation_output_loss_test, classification_output_loss_test, segmentation_output_dice_coef_test, classification_output_acc_test \
+                = cnn.evaluate_generator(test_gen, batch_size=batchSize, verbose=1)
+        else:
+            score_test, dice_coef_test = cnn.evaluate_generator(test_gen, batch_size=batchSize, verbose=1)
+
+        prob_test = cnn.predict_generator(test_gen, batchSize, 0)
 
     # save model
     json_string = cnn.to_json()
