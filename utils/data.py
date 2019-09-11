@@ -58,6 +58,12 @@ class Data:
             self.storeMode = cfg['storeMode']
         else:
             self.storeMode = 'STORE_HDF5'  # 'STORE_DISABLED', 'STORE_HDF5', 'STORE_TFRECORD', 'STORE_PATCH_BASED'
+
+        self.trainMode = cfg['trainMode']
+        if cfg['storeMode'] == 'STORE_TFRECORD':  # you need to use generator
+            self.trainMode = 'GENERATOR'
+        if cfg['storeMode'] == 'STORE_HDF5':  # you need to use array processing
+            self.trainMode = 'ARRAY'
         self.pathOutput = cfg['sOutputPath']
         self.pathOutputPatching = self.pathOutput  # same for now
         self.database = cfg['sDatabase']
@@ -160,12 +166,14 @@ class Data:
             self.X_test, self.Y_test, self.Y_segMasks_test = freshape_numpy(self.X_test, self.Y_segMasks_test)  # only valid with segmentation masks!
             return 0
 
+        '''
         if self.storeMode == 'STORE_PATCH_BASED':
             self.outPutFolderDataPath = outputFolderPath + os.sep + "data"
             if not os.path.exists(self.outPutFolderDataPath):
                 os.makedirs(self.outPutFolderDataPath)
 
             labelDict = {}
+        '''
 
         if self.storeMode == 'STORE_HDF5':  # shortcut if data already patched and splitted
             if os.path.exists(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5'):
@@ -183,6 +191,13 @@ class Data:
                     self.Y_segMasks_test = np.array(f.get('Y_segMasks_test'))
                 f.close()
                 return 0
+        elif self.storeMode == 'STORE_PATCH_BASED':
+            if os.path.exists(outputFolderPath + os.sep + 'train'):
+                if self.trainMode == 'ARRAY':
+                    print('TODO: reload stored patches')
+                else:  # GENERATOR
+                    print('Using generator with existing pre-processed files')
+                return 0
 
         # load and patch
         dAllPatches, dAllPats, dAllLabels, dAllSegmentationMaskPatches = self.fload_and_patch(self.selectedPatients, self.selectedDatasets)
@@ -191,165 +206,175 @@ class Data:
         self.dAllLabels = dAllLabels  # save all label info
         # dataset splitting
         print('Dataset splitting')
-        # store mode
-        if self.storeMode != 'STORE_DISABLED':
+        if self.patchingMode == 'PATCHING_2D':
+            if not self.usingSegmentationMasks:
+                [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [
+                    self.Y_test] \
+                    = fSplitDataset(dAllPatches, dAllLabels, allPats=dAllPats,
+                                    allTestPats=self.selectedTestPatients,
+                                    sSplitting=self.splittingMode,
+                                    patchSize=[self.patchSizeX, self.patchSizeY],
+                                    patchOverlap=self.patchOverlap,
+                                    testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                    validationTrainRatio=self.trainValidationRatio,
+                                    outPutPath=self.pathOutputPatching,
+                                    nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
+            else:
+                # do segmentation mask split
+                [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
+                [self.X_validation], [self.Y_validation], [self.Y_segMasks_validation], \
+                [self.X_test], [self.Y_test], [self.Y_segMasks_test] \
+                    = fSplitSegmentationDataset(dAllPatches, dAllLabels, dAllSegmentationMaskPatches,
+                                                allPats=dAllPats,
+                                                allTestPats=self.selectedTestPatients,
+                                                sSplitting=self.splittingMode,
+                                                patchSize=[self.patchSizeX, self.patchSizeY],
+                                                patchOverlap=self.patchOverlap,
+                                                testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                                validationTrainRatio=self.trainValidationRatio,
+                                                outPutPath=self.pathOutputPatching,
+                                                nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
+
+            # store datasets with h5py
+            self.Y_train, self.Y_validation, self.Y_test = self.convert_to_network_input()
+            self.datasetOutputPath = outputFolderPath
             # H5py store mode
             if self.storeMode == 'STORE_HDF5':
-
-                if self.patchingMode == 'PATCHING_2D':
-                    if not self.usingSegmentationMasks:
-                        [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [
-                            self.Y_test] \
-                            = fSplitDataset(dAllPatches, dAllLabels, allPats=dAllPats,
-                                            allTestPats=self.selectedTestPatients,
-                                            sSplitting=self.splittingMode,
-                                            patchSize=[self.patchSizeX, self.patchSizeY],
-                                            patchOverlap=self.patchOverlap,
-                                            testTrainingDatasetRatio=self.trainTestDatasetRatio,
-                                            validationTrainRatio=self.trainValidationRatio,
-                                            outPutPath=self.pathOutputPatching,
-                                            nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
-                    else:
-                        # do segmentation mask split
-                        [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
-                        [self.X_validation], [self.Y_validation], [self.Y_segMasks_validation], \
-                        [self.X_test], [self.Y_test], [self.Y_segMasks_test] \
-                            = fSplitSegmentationDataset(dAllPatches, dAllLabels, dAllSegmentationMaskPatches,
-                                                        allPats=dAllPats,
-                                                        allTestPats=self.selectedTestPatients,
-                                                        sSplitting=self.splittingMode,
-                                                        patchSize=[self.patchSizeX, self.patchSizeY],
-                                                        patchOverlap=self.patchOverlap,
-                                                        testTrainingDatasetRatio=self.trainTestDatasetRatio,
-                                                        validationTrainRatio=self.trainValidationRatio,
-                                                        outPutPath=self.pathOutputPatching,
-                                                        nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
-
-                    # store datasets with h5py
-                    self.datasetOutputPath = outputFolderPath
-                    with h5py.File(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5', 'w') as hf:
-                        hf.create_dataset('X_train', data=self.X_train)
-                        hf.create_dataset('X_validation', data=self.X_validation)
-                        hf.create_dataset('X_test', data=self.X_test)
-                        hf.create_dataset('Y_train', data=self.Y_train)
-                        hf.create_dataset('Y_validation', data=self.Y_validation)
-                        hf.create_dataset('Y_test', data=self.Y_test)
-                        if self.usingSegmentationMasks:
-                            hf.create_dataset('Y_segMasks_train', data=self.Y_segMasks_train)
-                            hf.create_dataset('Y_segMasks_validation', data=self.Y_segMasks_validation)
-                            hf.create_dataset('Y_segMasks_test', data=self.Y_segMasks_test)
-
-                elif self.patchingMode == 'PATCHING_3D':
-                    if not self.usingSegmentationMasks:
-                        [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [
-                            self.Y_test] \
-                            = fSplitDataset(dAllPatches, dAllLabels, allPats=dAllPats,
-                                            allTestPats=self.selectedTestPatients,
-                                            sSplitting=self.splittingMode,
-                                            patchSize=[self.patchSizeX, self.patchSizeY, self.patchSizeZ],
-                                            patchOverlap=self.patchOverlap,
-                                            testTrainingDatasetRatio=self.trainTestDatasetRatio,
-                                            validationTrainRatio=self.trainValidationRatio,
-                                            outPutPath=self.pathOutputPatching,
-                                            nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
-                    else:
-                        [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
-                        [self.X_validation], [self.Y_validation], [self.Y_segMasks_validation], \
-                        [self.X_test], [self.Y_test], [self.Y_segMasks_test] \
-                            = fSplitSegmentationDataset(dAllPatches,
-                                                        dAllLabels,
-                                                        dAllSegmentationMaskPatches,
-                                                        allPats=dAllPats,
-                                                        allTestPats=self.selectedTestPatients,
-                                                        sSplitting=self.splittingMode,
-                                                        patchSize=[self.patchSizeX, self.patchSizeY,
-                                                                   self.patchSizeZ],
-                                                        patchOverlap=self.patchOverlap,
-                                                        testTrainingDatasetRatio=self.trainTestDatasetRatio,
-                                                        validationTrainRatio=self.trainValidationRatio,
-                                                        outPutPath=self.pathOutputPatching,
-                                                        nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
-
-                    # store datasets with h5py
-                    self.datasetOutputPath = outputFolderPath
-                    with h5py.File(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + 'hdf5', 'w') as hf:
-                        hf.create_dataset('X_train', data=self.X_train)
-                        hf.create_dataset('X_validation', data=self.X_validation)
-                        hf.create_dataset('X_test', data=self.X_test)
-                        hf.create_dataset('Y_train', data=self.Y_train)
-                        hf.create_dataset('Y_validation', data=self.Y_validation)
-                        hf.create_dataset('Y_test', data=self.Y_test)
-                        if self.usingSegmentationMasks:
-                            hf.create_dataset('Y_segMasks_train', data=self.Y_segMasks_train)
-                            hf.create_dataset('Y_segMasks_validation', data=self.Y_segMasks_validation)
-                            hf.create_dataset('Y_segMasks_test', data=self.Y_segMasks_test)
+                with h5py.File(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5', 'w') as hf:
+                    hf.create_dataset('X_train', data=self.X_train)
+                    hf.create_dataset('X_validation', data=self.X_validation)
+                    hf.create_dataset('X_test', data=self.X_test)
+                    hf.create_dataset('Y_train', data=self.Y_train)
+                    hf.create_dataset('Y_validation', data=self.Y_validation)
+                    hf.create_dataset('Y_test', data=self.Y_test)
+                    if self.usingSegmentationMasks:
+                        hf.create_dataset('Y_segMasks_train', data=self.Y_segMasks_train)
+                        hf.create_dataset('Y_segMasks_validation', data=self.Y_segMasks_validation)
+                        hf.create_dataset('Y_segMasks_test', data=self.Y_segMasks_test)
 
             elif self.storeMode == 'STORE_PATCH_BASED':
-                self.datasetOutputPath = outputFolderPath
-                with open(outputFolderPath + os.sep + "labels.json", 'w') as fp:
-                    json.dump(labelDict, fp)
-        else:
-            # no storage of patched datasets
-            if self.patchingMode == 'PATCHING_2D':
-                if not self.usingSegmentationMasks:
-                    [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [
-                        self.Y_test] \
-                        = fSplitDataset(dAllPatches, dAllLabels, allPats=dAllPats,
-                                            allTestPats=self.selectedTestPatients,
-                                        sSplitting=self.splittingMode,
-                                        patchSize=[self.patchSizeX, self.patchSizeY],
-                                        patchOverlap=self.patchOverlap,
-                                        testTrainingDatasetRatio=self.trainTestDatasetRatio,
-                                        validationTrainRatio=self.trainValidationRatio,
-                                        outPutPath=self.pathOutputPatching,
-                                        nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
-                else:
-                    # do segmentation mask split
-                    [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
-                    [self.X_validation], [self.Y_validation], [self.Y_segMasks_validation], \
-                    [self.X_test], [self.Y_test], [self.Y_segMasks_test] \
-                        = fSplitSegmentationDataset(dAllPatches,
-                                                    dAllLabels,
-                                                    dAllSegmentationMaskPatches,
-                                                    allPats=dAllPats,
-                                                    allTestPats=self.selectedTestPatients,
-                                                    sSplitting=self.splittingMode,
-                                                    patchSize=[self.patchSizeX, self.patchSizeY],
-                                                    patchOverlap=self.patchOverlap,
-                                                    testTrainingDatasetRatio=self.trainTestDatasetRatio,
-                                                    validationTrainRatio=self.trainValidationRatio,
-                                                    outPutPath=self.pathOutputPatching,
-                                                    nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
+                # training patches, labels, segMasks
+                patch_save_path = outputFolderPath + os.sep + 'train'
+                if not os.path.exists(patch_save_path):
+                    os.makedirs(patch_save_path)
 
-            elif self.patchingMode == 'PATCHING_3D':
-                if not self.usingSegmentationMasks:
-                    [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [
-                        self.Y_test] \
-                        = fSplitDataset(dAllPatches, dAllLabels, allPats=dAllPats,
-                                            allTestPats=self.selectedTestPatients,
-                                        sSplitting=self.splittingMode,
-                                        patchSize=[self.patchSizeX, self.patchSizeY, self.patchSizeZ],
-                                        patchOverlap=self.patchOverlap,
-                                        testTrainingDatasetRatio=self.trainTestDatasetRatio,
-                                        validationTrainRatio=self.trainValidationRatio,
-                                        outPutPath=self.pathOutputPatching,
-                                        nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
-                else:
-                    [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
-                    [self.X_validation], [self.Y_validation], [self.Y_segMasks_validation], \
-                    [self.X_test], [self.Y_test], [self.Y_segMasks_test] \
-                        = fSplitSegmentationDataset(dAllPatches,
-                                                    dAllLabels,
-                                                    dAllSegmentationMaskPatches,
-                                                    allPats=dAllPats,
-                                                    allTestPats=self.selectedTestPatients,
-                                                    sSplitting=self.splittingMode,
-                                                    patchSize=[self.patchSizeX, self.patchSizeY, self.patchSizeZ],
-                                                    patchOverlap=self.patchOverlap,
-                                                    testTrainingDatasetRatio=self.trainTestDatasetRatio,
-                                                    validationTrainRatio=self.trainValidationRatio,
-                                                    outPutPath=self.pathOutputPatching,
-                                                    nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
+                for isample in range(np.shape(self.X_train)[0]):
+                    with open(patch_save_path + os.sep + print("%07d" % isample) + ".hdf5", 'w') as hf:
+                        hf.create_dataset('X', data=self.X_train[isample, :, :])
+                        hf.create_dataset('Y', data=self.Y_train[isample,])
+                        if self.usingSegmentationMasks:
+                            hf.create_dataset('Y_segMasks', data=self.Y_segMasks_train[isample, :, :])
+
+                # validation patches, labels, segMasks
+                patch_save_path = outputFolderPath + os.sep + 'validation'
+                if not os.path.exists(patch_save_path):
+                    os.makedirs(patch_save_path)
+
+                for isample in range(np.shape(self.X_train)[0]):
+                    with open(patch_save_path + os.sep + print("%07d" % isample) + ".hdf5", 'w') as hf:
+                        hf.create_dataset('X', data=self.X_validation[isample, :, :])
+                        hf.create_dataset('Y', data=self.Y_validation[isample,])
+                        if self.usingSegmentationMasks:
+                            hf.create_dataset('Y_segMasks', data=self.Y_segMasks_validation[isample, :, :])
+
+                # test patches, labels, segMasks
+                patch_save_path = outputFolderPath + os.sep + 'test'
+                if not os.path.exists(patch_save_path):
+                    os.makedirs(patch_save_path)
+
+                for isample in range(np.shape(self.X_train)[0]):
+                    with open(patch_save_path + os.sep + print("%07d" % isample) + ".hdf5", 'w') as hf:
+                        hf.create_dataset('X', data=self.X_test[isample, :, :])
+                        hf.create_dataset('Y', data=self.Y_test[isample,])
+                        if self.usingSegmentationMasks:
+                            hf.create_dataset('Y_segMasks', data=self.Y_segMasks_test[isample, :, :])
+
+        elif self.patchingMode == 'PATCHING_3D':
+            if not self.usingSegmentationMasks:
+                [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [
+                    self.Y_test] \
+                    = fSplitDataset(dAllPatches, dAllLabels, allPats=dAllPats,
+                                    allTestPats=self.selectedTestPatients,
+                                    sSplitting=self.splittingMode,
+                                    patchSize=[self.patchSizeX, self.patchSizeY, self.patchSizeZ],
+                                    patchOverlap=self.patchOverlap,
+                                    testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                    validationTrainRatio=self.trainValidationRatio,
+                                    outPutPath=self.pathOutputPatching,
+                                    nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
+            else:
+                [self.X_train], [self.Y_train], [self.Y_segMasks_train], \
+                [self.X_validation], [self.Y_validation], [self.Y_segMasks_validation], \
+                [self.X_test], [self.Y_test], [self.Y_segMasks_test] \
+                    = fSplitSegmentationDataset(dAllPatches,
+                                                dAllLabels,
+                                                dAllSegmentationMaskPatches,
+                                                allPats=dAllPats,
+                                                allTestPats=self.selectedTestPatients,
+                                                sSplitting=self.splittingMode,
+                                                patchSize=[self.patchSizeX, self.patchSizeY,
+                                                           self.patchSizeZ],
+                                                patchOverlap=self.patchOverlap,
+                                                testTrainingDatasetRatio=self.trainTestDatasetRatio,
+                                                validationTrainRatio=self.trainValidationRatio,
+                                                outPutPath=self.pathOutputPatching,
+                                                nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
+
+            # prepare for network input
+            self.Y_train, self.Y_validation, self.Y_test = self.convert_to_network_input()
+            # store datasets with h5py
+            self.datasetOutputPath = outputFolderPath
+            if self.storeMode == 'STORE_HDF5':
+                with h5py.File(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + 'hdf5', 'w') as hf:
+                    hf.create_dataset('X_train', data=self.X_train)
+                    hf.create_dataset('X_validation', data=self.X_validation)
+                    hf.create_dataset('X_test', data=self.X_test)
+                    hf.create_dataset('Y_train', data=self.Y_train)
+                    hf.create_dataset('Y_validation', data=self.Y_validation)
+                    hf.create_dataset('Y_test', data=self.Y_test)
+                    if self.usingSegmentationMasks:
+                        hf.create_dataset('Y_segMasks_train', data=self.Y_segMasks_train)
+                        hf.create_dataset('Y_segMasks_validation', data=self.Y_segMasks_validation)
+                        hf.create_dataset('Y_segMasks_test', data=self.Y_segMasks_test)
+
+            elif self.storeMode == 'STORE_PATCH_BASED':
+                # training patches, labels, segMasks
+                patch_save_path = outputFolderPath + os.sep + 'train'
+                if not os.path.exists(patch_save_path):
+                    os.makedirs(patch_save_path)
+
+                for isample in range(np.shape(self.X_train)[0]):
+                    with open(patch_save_path + os.sep + print("%07d" % isample) + ".hdf5", 'w') as hf:
+                        hf.create_dataset('X', data=self.X_train[isample, :, :, :])
+                        hf.create_dataset('Y', data=self.Y_train[isample,])
+                        if self.usingSegmentationMasks:
+                            hf.create_dataset('Y_segMasks', data=self.Y_segMasks_train[isample, :, :, :])
+
+                # validation
+                patch_save_path = outputFolderPath + os.sep + 'validation'
+                if not os.path.exists(patch_save_path):
+                    os.makedirs(patch_save_path)
+
+                for isample in range(np.shape(self.X_train)[0]):
+                    with open(patch_save_path + os.sep + print("%07d" % isample) + ".hdf5", 'w') as hf:
+                        hf.create_dataset('X', data=self.X_validation[isample, :, :, :])
+                        hf.create_dataset('Y', data=self.Y_validation[isample,])
+                        if self.usingSegmentationMasks:
+                            hf.create_dataset('Y_segMasks', data=self.Y_segMasks_validation[isample, :, :, :])
+
+                # test
+                patch_save_path = outputFolderPath + os.sep + 'test'
+                if not os.path.exists(patch_save_path):
+                    os.makedirs(patch_save_path)
+
+                for isample in range(np.shape(self.X_train)[0]):
+                    with open(patch_save_path + os.sep + print("%07d" % isample) + ".hdf5", 'w') as hf:
+                        hf.create_dataset('X', data=self.X_test[isample, :, :, :])
+                        hf.create_dataset('Y', data=self.Y_test[isample,])
+                        if self.usingSegmentationMasks:
+                            hf.create_dataset('Y_segMasks', data=self.Y_segMasks_test[isample, :, :, :])
+
+
 
     def fload_and_patch(self, selectedPatients, selectedDatasets):
         # for storing patch based
@@ -526,6 +551,7 @@ class Data:
                     else:
                         print("We do not know what labeling mode you want to use :p")
 
+                    '''
                     if self.storeMode == 'STORE_PATCH_BASED':
                         # patch based storage
                         if self.patchingMode == 'PATCHING_3D':
@@ -544,23 +570,110 @@ class Data:
                                 iPatchToDisk += 1
 
                     else:
-                        # concatenate all patches in one array
-                        if self.patchingMode == 'PATCHING_2D':
-                            dAllPatches = np.concatenate((dAllPatches, dPatches), axis=2)
-                            dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
-                            dAllPats = np.concatenate((dAllPats, dPats), axis=0)
-                            if self.usingSegmentationMasks:
-                                dAllSegmentationMaskPatches = np.concatenate(
-                                    (dAllSegmentationMaskPatches, dPatchesOfMask), axis=2)
-                        elif self.patchingMode == 'PATCHING_3D':
-                            dAllPatches = np.concatenate((dAllPatches, dPatches), axis=3)
-                            dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
-                            dAllPats = np.concatenate((dAllPats, dPats), axis=0)
-                            if self.usingSegmentationMasks:
-                                dAllSegmentationMaskPatches = np.concatenate(
-                                    (dAllSegmentationMaskPatches, dPatchesOfMask), axis=3)
+                    '''
+                    # concatenate all patches in one array
+                    if self.patchingMode == 'PATCHING_2D':
+                        dAllPatches = np.concatenate((dAllPatches, dPatches), axis=2)
+                        dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
+                        dAllPats = np.concatenate((dAllPats, dPats), axis=0)
+                        if self.usingSegmentationMasks:
+                            dAllSegmentationMaskPatches = np.concatenate(
+                                (dAllSegmentationMaskPatches, dPatchesOfMask), axis=2)
+                    elif self.patchingMode == 'PATCHING_3D':
+                        dAllPatches = np.concatenate((dAllPatches, dPatches), axis=3)
+                        dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
+                        dAllPats = np.concatenate((dAllPats, dPats), axis=0)
+                        if self.usingSegmentationMasks:
+                            dAllSegmentationMaskPatches = np.concatenate(
+                                (dAllSegmentationMaskPatches, dPatchesOfMask), axis=3)
 
         return dAllPatches, dAllPats, dAllLabels, dAllSegmentationMaskPatches
+
+    def convert_to_network_input(self):
+        print('Prepare data')
+        # get output vector for different classes
+        classes = np.asarray(np.unique(self.Y_train, ), dtype=int)
+        self.classMappings = Label.mapClassesToOutputVector(classes=classes, usingArtefacts=self.usingArtifacts,
+                                                            usingBodyRegion=self.usingBodyRegions,
+                                                            usingTWeightings=self.usingTWeighting)
+
+        Y_train = []
+
+        Y_validation = []
+
+        Y_test = []
+
+        self.Y_segMasks_train[self.Y_segMasks_train == 3] = 1
+        self.Y_segMasks_train[self.Y_segMasks_train == 2] = 0
+
+        self.Y_segMasks_test[self.Y_segMasks_test == 3] = 1
+        self.Y_segMasks_test[self.Y_segMasks_test == 2] = 0
+
+        ##########################
+        ###########################
+        # for generating patch labels
+
+        y_labels_train = np.expand_dims(self.Y_segMasks_train, axis=-1)
+        y_labels_train[y_labels_train == 0] = -1
+        y_labels_train[y_labels_train == 1] = 1
+        y_labels_train = np.sum(y_labels_train, axis=1)
+        y_labels_train = np.sum(y_labels_train, axis=1)
+        y_labels_train = np.sum(y_labels_train, axis=1)
+        y_labels_train[y_labels_train >= 0] = 1
+        y_labels_train[y_labels_train < 0] = 0
+        for i in range(y_labels_train.shape[0]):
+            Y_train.append([1, 0] if y_labels_train[i].all() == 0 else [0, 1])
+        Y_train = np.asarray(Y_train, dtype='float32')
+
+        y_labels_test = np.expand_dims(self.Y_segMasks_test, axis=-1)
+        y_labels_test[y_labels_test == 0] = -1
+        y_labels_test[y_labels_test == 1] = 1
+        y_labels_test = np.sum(y_labels_test, axis=1)
+        y_labels_test = np.sum(y_labels_test, axis=1)
+        y_labels_test = np.sum(y_labels_test, axis=1)
+        y_labels_test[y_labels_test >= 0] = 1
+        y_labels_test[y_labels_test < 0] = 0
+
+        for i in range(y_labels_test.shape[0]):
+            Y_test.append([1, 0] if y_labels_test[i].all() == 0 else [0, 1])
+        Y_test = np.asarray(Y_test, dtype='float32')
+
+        # change the shape of the dataset -> at color channel -> here one for grey scale
+
+        # Y_segMasks_train_foreground = np.expand_dims(data.Y_segMasks_train, axis=-1)
+        # Y_segMasks_train_background = np.ones(Y_segMasks_train_foreground.shape) - Y_segMasks_train_foreground
+        # data.Y_segMasks_train = np.concatenate((Y_segMasks_train_background, Y_segMasks_train_foreground),
+        #                                        axis=-1)
+        # data.Y_segMasks_train = np.sum(data.Y_segMasks_train, axis=-1)
+        #
+        # Y_segMasks_test_foreground = np.expand_dims(data.Y_segMasks_test, axis=-1)
+        # Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape) - Y_segMasks_test_foreground
+        # data.Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground),
+        #                                        axis=-1)
+        # data.Y_segMasks_test = np.sum(data.Y_segMasks_test, axis=-1)
+
+        if self.X_validation.size == 0 and self.Y_validation.size == 0:
+            self.X_validation = 0
+            self.Y_segMasks_validation = 0
+            self.Y_validation = 0
+            print("No Validation Dataset.")
+        else:
+            for i in range(self.Y_validation.shape[0]):
+                Y_validation.append(self.classMappings[self.Y_validation[i]])
+            Y_validation = np.asarray(Y_validation)
+            self.Y_segMasks_validation[self.Y_segMasks_validation == 3] = 1
+            self.Y_segMasks_validation[self.Y_segMasks_validation == 2] = 0
+            self.X_validation = np.expand_dims(self.X_validation, axis=-1)
+            self.Y_segMasks_validation = np.expand_dims(self.Y_segMasks_validation, axis=-1)
+
+        self.X_train = np.expand_dims(self.X_train, axis=-1)
+        self.Y_segMasks_train = np.expand_dims(self.Y_segMasks_train, axis=-1)
+
+        self.X_test = np.expand_dims(self.X_test, axis=-1)
+        self.Y_segMasks_test = np.expand_dims(self.Y_segMasks_test, axis=-1)
+
+        return Y_train, Y_validation, Y_test
+
 
     def convert2TFrecords(self, pathtf):
         for ipat, patient in enumerate(self.selectedPatients):

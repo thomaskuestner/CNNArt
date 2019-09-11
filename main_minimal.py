@@ -33,110 +33,28 @@ def fArtDetection(data, dlnetwork, sMode):
     config.gpu_options.allow_growth = True
     set_session(tf.Session(config=config))
 
-    if (data.storeMode != 'STORE_TFRECORD') & (sMode != 'plotting'):
-        print('Prepare data')
-        # get output vector for different classes
-        classes = np.asarray(np.unique(data.Y_train, ), dtype=int)
-        data.classMappings = Label.mapClassesToOutputVector(classes=classes, usingArtefacts=data.usingArtifacts,
-                                                            usingBodyRegion=data.usingBodyRegions,
-                                                            usingTWeightings=data.usingTWeighting)
+    #if (data.storeMode != 'STORE_TFRECORD') & (sMode != 'plotting'):
+            ################################################################################################################
+            # debug!
+            # for i in range(data.X_train.shape[0]):
+            #
+            #     plt.subplot(141)
+            #     plt.imshow(data.X_train[i, :, :, 4, 0])
+            #
+            #     plt.subplot(142)
+            #     plt.imshow(data.Y_segMasks_train[i, :, :, 4, 0])
+            #
+            #     plt.subplot(143)
+            #     plt.imshow(data.Y_segMasks_train[i, :, :, 4, 1])
+            #
+            #     #plt.subplot(144)
+            #     #plt.imshow(data.Y_segMasks_train[i, :, :, 4, 2])
+            #
+            #     plt.show()
+            #
+            #     print(i)
 
-        Y_train = []
-
-        Y_validation = []
-
-        Y_test = []
-
-        data.Y_segMasks_train[data.Y_segMasks_train == 3] = 1
-        data.Y_segMasks_train[data.Y_segMasks_train == 2] = 0
-
-        data.Y_segMasks_test[data.Y_segMasks_test == 3] = 1
-        data.Y_segMasks_test[data.Y_segMasks_test == 2] = 0
-
-        ##########################
-        ###########################
-        # for generating patch labels
-
-        y_labels_train = np.expand_dims(data.Y_segMasks_train, axis=-1)
-        y_labels_train[y_labels_train == 0] = -1
-        y_labels_train[y_labels_train == 1] = 1
-        y_labels_train = np.sum(y_labels_train, axis=1)
-        y_labels_train = np.sum(y_labels_train, axis=1)
-        y_labels_train = np.sum(y_labels_train, axis=1)
-        y_labels_train[y_labels_train >= 0] = 1
-        y_labels_train[y_labels_train < 0] = 0
-        for i in range(y_labels_train.shape[0]):
-            Y_train.append([1, 0] if y_labels_train[i].all() == 0 else [0, 1])
-        Y_train = np.asarray(Y_train, dtype='float32')
-
-        y_labels_test = np.expand_dims(data.Y_segMasks_test, axis=-1)
-        y_labels_test[y_labels_test == 0] = -1
-        y_labels_test[y_labels_test == 1] = 1
-        y_labels_test = np.sum(y_labels_test, axis=1)
-        y_labels_test = np.sum(y_labels_test, axis=1)
-        y_labels_test = np.sum(y_labels_test, axis=1)
-        y_labels_test[y_labels_test >= 0] = 1
-        y_labels_test[y_labels_test < 0] = 0
-
-        for i in range(y_labels_test.shape[0]):
-            Y_test.append([1, 0] if y_labels_test[i].all() == 0 else [0, 1])
-        Y_test = np.asarray(Y_test, dtype='float32')
-
-        # change the shape of the dataset -> at color channel -> here one for grey scale
-
-        # Y_segMasks_train_foreground = np.expand_dims(data.Y_segMasks_train, axis=-1)
-        # Y_segMasks_train_background = np.ones(Y_segMasks_train_foreground.shape) - Y_segMasks_train_foreground
-        # data.Y_segMasks_train = np.concatenate((Y_segMasks_train_background, Y_segMasks_train_foreground),
-        #                                        axis=-1)
-        # data.Y_segMasks_train = np.sum(data.Y_segMasks_train, axis=-1)
-        #
-        # Y_segMasks_test_foreground = np.expand_dims(data.Y_segMasks_test, axis=-1)
-        # Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape) - Y_segMasks_test_foreground
-        # data.Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground),
-        #                                        axis=-1)
-        # data.Y_segMasks_test = np.sum(data.Y_segMasks_test, axis=-1)
-
-        if data.X_validation.size == 0 and data.Y_validation.size == 0:
-            data.X_validation = 0
-            data.Y_segMasks_validation = 0
-            data.Y_validation = 0
-            print("No Validation Dataset.")
-        else:
-            for i in range(data.Y_validation.shape[0]):
-                Y_validation.append(data.classMappings[data.Y_validation[i]])
-            Y_validation = np.asarray(Y_validation)
-            data.Y_segMasks_validation[data.Y_segMasks_validation == 3] = 1
-            data.Y_segMasks_validation[data.Y_segMasks_validation == 2] = 0
-            data.X_validation = np.expand_dims(data.X_validation, axis=-1)
-            data.Y_segMasks_validation = np.expand_dims(data.Y_segMasks_validation, axis=-1)
-
-        data.X_train = np.expand_dims(data.X_train, axis=-1)
-        data.Y_segMasks_train = np.expand_dims(data.Y_segMasks_train, axis=-1)
-
-        data.X_test = np.expand_dims(data.X_test, axis=-1)
-        data.Y_segMasks_test = np.expand_dims(data.Y_segMasks_test, axis=-1)
-
-        ################################################################################################################
-        # debug!
-        # for i in range(data.X_train.shape[0]):
-        #
-        #     plt.subplot(141)
-        #     plt.imshow(data.X_train[i, :, :, 4, 0])
-        #
-        #     plt.subplot(142)
-        #     plt.imshow(data.Y_segMasks_train[i, :, :, 4, 0])
-        #
-        #     plt.subplot(143)
-        #     plt.imshow(data.Y_segMasks_train[i, :, :, 4, 1])
-        #
-        #     #plt.subplot(144)
-        #     #plt.imshow(data.Y_segMasks_train[i, :, :, 4, 2])
-        #
-        #     plt.show()
-        #
-        #     print(i)
-
-        ###################################################################################################################
+            ###################################################################################################################
 
     # output folder
     data.outPutFolderDataPath = data.pathOutput + os.sep + dlnetwork.neuralNetworkModel + "_"
@@ -183,29 +101,26 @@ def fArtDetection(data, dlnetwork, sMode):
                             iEpochs=dlnetwork.epochs,
                             dlnetwork=dlnetwork)
         else:
-            if not data.usingSegmentationMasks:
+            if dlnetwork.trainMode == 'ARRAY':
                 cnnModel.fTrain(X_train=data.X_train,
-                                y_train=Y_train,
+                                y_train=data.Y_train,
+                                Y_segMasks_train=data.Y_segMasks_train,
                                 X_valid=data.X_validation,
-                                y_valid=Y_validation,
+                                y_valid=data.Y_validation,
+                                Y_segMasks_valid=data.Y_segMasks_validation,
                                 X_test=data.X_test,
-                                y_test=Y_test,
+                                y_test=data.Y_test,
+                                Y_segMasks_test=data.Y_segMasks_test,
                                 sOutPath=data.outPutFolderDataPath,
                                 patchSize=[data.patchSizeX, data.patchSizeY, data.patchSizeZ],
                                 batchSize=dlnetwork.batchSize,
                                 learningRate=dlnetwork.learningRate,
                                 iEpochs=dlnetwork.epochs,
                                 dlnetwork=dlnetwork)
-            else:
-                cnnModel.fTrain(X_train=data.X_train,
-                                y_train=Y_train,
-                                Y_segMasks_train=data.Y_segMasks_train,
-                                X_valid=data.X_validation,
-                                y_valid=Y_validation,
-                                Y_segMasks_valid=data.Y_segMasks_validation,
-                                X_test=data.X_test,
-                                y_test=Y_test,
-                                Y_segMasks_test=data.Y_segMasks_test,
+            else: # GENERATOR
+                cnnModel.fTrain(X_train=data.datasetOutputPath + os.sep + 'train',
+                                X_valid=data.datasetOutputPath + os.sep + 'validation',
+                                X_test=data.datasetOutputPath + os.sep + 'test',
                                 sOutPath=data.outPutFolderDataPath,
                                 patchSize=[data.patchSizeX, data.patchSizeY, data.patchSizeZ],
                                 batchSize=dlnetwork.batchSize,
