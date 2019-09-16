@@ -5,7 +5,7 @@ Copyright: 2016-2019 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) unde
 import datetime
 import json
 import os
-
+import gc
 #import dicom
 #import dicom_numpy as dicom_np
 #import pydicom as dicom_np
@@ -168,6 +168,7 @@ class Data:
             labelDict = {}
 
         if self.storeMode == 'STORE_HDF5':  # shortcut if data already patched and splitted
+            print(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5')
             if os.path.exists(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5'):
                 print('Loading data from file: %s' % (outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5'))
                 f = h5py.File(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5', 'r')
@@ -286,10 +287,10 @@ class Data:
 
             elif self.storeMode == 'STORE_PATCH_BASED':
                 self.datasetOutputPath = outputFolderPath
-                with open(os.path.join(outputFolderPath, "labels.json", 'w')) as fp:
+                with open(os.path.join(outputFolderPath, "labels.json"), 'w') as fp:
                     json.dump(labelDict, fp)
         else:
-            # no storage of patched datasets
+            # STORE_DISABLED: no storage of patched datasets
             if self.patchingMode == 'PATCHING_2D':
                 if not self.usingSegmentationMasks:
                     [self.X_train], [self.Y_train], [self.X_validation], [self.Y_validation], [self.X_test], [
@@ -351,6 +352,7 @@ class Data:
                                                     outPutPath=self.pathOutputPatching,
                                                     nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
 
+    @profile
     def fload_and_patch(self, selectedPatients, selectedDatasets):
         # for storing patch based
         iPatchToDisk = 0
@@ -502,6 +504,7 @@ class Data:
                                                                               labelMask_ndarray,
                                                                               0.5,
                                                                               dataset)
+                            del norm_voxel_ndarray
 
                             # convert to float32
                             dPatches = np.asarray(dPatches, dtype=np.float32)
@@ -556,9 +559,11 @@ class Data:
                             dAllPatches = np.concatenate((dAllPatches, dPatches), axis=3)
                             dAllLabels = np.concatenate((dAllLabels, dLabels), axis=0)
                             dAllPats = np.concatenate((dAllPats, dPats), axis=0)
+                            del dPatches, dLabels, dPats
                             if self.usingSegmentationMasks:
                                 dAllSegmentationMaskPatches = np.concatenate(
                                     (dAllSegmentationMaskPatches, dPatchesOfMask), axis=3)
+                                del dPatchesOfMask
                 else:
                     raise FileExistsError(currentDataDir+' does not exist.')
         return dAllPatches, dAllPats, dAllLabels, dAllSegmentationMaskPatches
