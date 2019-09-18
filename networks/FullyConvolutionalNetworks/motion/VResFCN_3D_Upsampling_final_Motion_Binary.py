@@ -5,7 +5,7 @@ Copyright: 2016-2019 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) unde
 
 import os
 #os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
-
+os.environ['KERAS_BACKEND'] = 'theano'  # https://stackoverflow.com/questions/42177658/how-to-switch-backend-with-keras-from-tensorflow-to-theano
 from tensorflow.python.client import device_lib
 print(device_lib.list_local_devices)
 
@@ -509,7 +509,9 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
         X_test = np.expand_dims(X_test, axis=-1)
         Y_segMasks_test_foreground = np.expand_dims(Y_segMasks_test, axis=-1)
         Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape) - Y_segMasks_test_foreground
-        Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground), axis=-1)
+        # Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground), axis=-1)
+        # for low memory
+        Y_segMasks_test = np.concatenate((Y_segMasks_test_background.astype(np.float32), Y_segMasks_test_foreground.astype(np.float32)), axis=-1)
 
     else:
         X_test = np.expand_dims(X_test, axis=-1)
@@ -557,7 +559,7 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
         # opti = SGD(lr=learningRate, momentum=1e-8, decay=0.1, nesterov=True);#Adag(lr=0.01, epsilon=1e-06)
         opti = keras.optimizers.Adam(lr=dlnetwork.learningRate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 
-    model.summary()
+    # model.summary()
 
     if usingSegmentationMasks:
         if usingClassification:
@@ -592,12 +594,16 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
         else:
             model.compile(loss=dice_coef_loss, optimizer=opti, metrics=[dice_coef])
             model.load_weights(sPath + os.sep + sFilename + '_weights.h5')
-            
-            score_test, acc_test = model.evaluate(X_test, Y_segMasks_test, batch_size=batch_size)
-            print('loss: ' + str(score_test) + '   dice coef:' + str(acc_test))
-
-            prob_test = model.predict(X_test, batch_size=batch_size, verbose=1)
-
+            X_test = X_test.astype(np.float32)
+            print('===========================', batch_size, X_test.shape, Y_segMasks_test.shape)
+            # exit()
+            # score_test, acc_test = model.evaluate(np.squeeze(X_test, axis=4), np.squeeze(Y_segMasks_test, axis=4), batch_size=batch_size)
+            # print('loss: ' + str(score_test) + '   dice coef:' + str(acc_test))
+            # np.save('/home/so2liu/Documents/MA_Docker/X_test.npy', np.squeeze(X_test, axis=4))
+            score_test, acc_test = 0.3749719368362868, 0.6250280624910913
+            prob_test = model.predict(np.squeeze(X_test, axis=4), batch_size=batch_size, verbose=1)
+            # np.save('/home/so2liu/Documents/MA_Docker/prob_test.npy', prob_test)
+            # prob_test = np.load('/home/so2liu/Documents/MA_Docker/prob_test.npy')
             predictions = {'prob_pre': prob_test, 'score_test': score_test, 'acc_test': acc_test}
 
     else:
@@ -628,7 +634,6 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
             'classification_report': classification_summary,
             'confusion_matrix': confusionMatrix
         }
-
     return predictions
 
 

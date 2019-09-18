@@ -5,7 +5,7 @@ import sys
 sys.path.append('/opt/data')
 import pickle
 from CNNArt.Gadgetron.fast_test_call_cnnart import gadget_cnnart
-#from CNNArt.Gadgetron.cnnart_for_gadgetron import gadget_cnnart
+from CNNArt.Gadgetron.cnnart_for_gadgetron import gadget_cnnart
 import time
 import os
 
@@ -19,6 +19,8 @@ class GadgetronCNNArt(Gadget):
         np.save('/opt/data/gadgetron/testdata/data/data_in_'+timestamp+'.npy', data)
         with open('/opt/data/gadgetron/testdata/head/head_in_'+timestamp+'.pickle', 'wb') as f:
             pickle.dump(head, f)
+        prediction = gadget_cnnart(data)
+        data = prediction/prediction.max()*data.max()
         # patch_size, overlap_rate = [128, 128, 16], 0.4
         # if len(data.shape) == 4:  # for 3D
         #     # data's constellation is x, y, z, 1

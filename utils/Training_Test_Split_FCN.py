@@ -6,7 +6,7 @@ Created on Thu Mar 02 15:59:36 2017
 
 import dis
 import inspect
-
+import gc
 import math
 import numpy as np
 from sklearn.model_selection import KFold
@@ -333,7 +333,10 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, a
         X_train = allPatches[train_index, :, :, :]
         X_test = allPatches[test_index, :, :, :]
         Y_segMasks_train = allSegmentationMasks[train_index, :, :, :]
-        Y_segMasks_test = allSegmentationMasks[test_index, :, :, :]
+        if np.all(test_index):  # test_index is all-true: this way to save memory
+            Y_segMasks_test = allSegmentationMasks
+        else:
+            Y_segMasks_test = allSegmentationMasks[test_index, :, :, :]
         y_train, y_test = allY[train_index], allY[test_index]
 
         if validationTrainRatio > 0:

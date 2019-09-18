@@ -82,8 +82,9 @@ class Data:
         self.pathDatabase = cfg[self.database]['sPathIn']
         self.modelSubDir = cfg[self.database]['sSubDir']
         self.markingsPath = cfg[self.database]['sPathInLabel']
+        self.useGadgetron = True if 'Gadgetron' in cfg.keys() and cfg['Gadgetron']['useGadgetron'] == True else False
         # parse selected patients
-        if cfg['sSelectedPatient'][0] == 'All':
+        if cfg['sSelectedPatient'] == ['All']:
             self.selectedPatients = sorted(os.listdir(self.pathDatabase))
         else:
             # dpat = sorted(os.listdir(self.pathDatabase))
@@ -352,7 +353,7 @@ class Data:
                                                     outPutPath=self.pathOutputPatching,
                                                     nfolds=self.nfolds, isRandomShuffle=self.isRandomShuffle)
 
-    @profile
+    # @profile
     def fload_and_patch(self, selectedPatients, selectedDatasets):
         # for storing patch based
         iPatchToDisk = 0
@@ -502,8 +503,8 @@ class Data:
                                                                                self.patchSizeZ],
                                                                               self.patchOverlap,
                                                                               labelMask_ndarray,
-                                                                              0.5,
-                                                                              dataset)
+                                                                              ratio_labeling=0.5,
+                                                                              dataset=dataset)
                             del norm_voxel_ndarray
 
                             # convert to float32
@@ -783,7 +784,7 @@ class Data:
                         fileNames = [os.path.join(currentDataDir, f) for f in fileNames]
 
                         # read DICOMS
-                        dicomDataset = [pydicom.read_file(f) for f in fileNames]
+                        dicomDataset = [pydicom.read_file(f) for f in fileNames if f.endswith('IMA')]
                         # reading in of phase images not really needed at this place, because this data is only required for displaying purposes
 
                         # Combine DICOM Slices to a single 3D image (voxel)
