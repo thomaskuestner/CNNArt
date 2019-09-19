@@ -5,13 +5,16 @@ import h5py
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, input_path, batch_size=16, dim=(64, 64, 16), usingClassification=True, n_channels=1, n_classes=2, shuffle=True):
+    def __init__(self, input_path, batch_size=16, dim=(64, 64, 16), usingClassification=True, n_channels=1, n_classes=2, shuffle=True, list_IDs=None):
         'Initialization'
         self.dim = dim
         self.batch_size = batch_size
         self.input_path = input_path
-        # parse input directory
-        self.list_IDs = [f for f in os.listdir(input_path) if f.endswith('.hdf5')]  # only take hdf5 files
+        if list_IDs is None:
+            # parse input directory
+            self.list_IDs = [f for f in os.listdir(input_path) if f.endswith('.hdf5')]  # only take hdf5 files
+        else:
+            self.list_IDs = list_IDs
         self.usingClassification = usingClassification
         self.n_channels = n_channels
         self.n_classes = n_classes

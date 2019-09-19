@@ -187,6 +187,41 @@ def fSplitDataset(allPatches, allY, allPats, allTestPats, sSplitting, patchSize,
         if iReturn > 0:
             return [X_trainFold], [y_trainFold], [X_valFold], [y_valFold], [X_testFold], [y_testFold]
 
+def fSplitSegmentationDataset_generator(datafiles, allPats, allTestPats, sSplitting, testTrainingDatasetRatio=0, validationTrainRatio=0, nfolds=0, isRandomShuffle=True):
+
+    if sSplitting == 'SIMPLE_RANDOM_SAMPLE_SPLITTING':
+        # TODO
+        train_files = []
+        val_files = []
+        test_files = []
+    elif sSplitting == 'CROSS_VALIDATION_SPLITTING':
+        # TODO
+        train_files = []
+        val_files = []
+        test_files = []
+    elif sSplitting == 'PATIENT_CROSS_VALIDATION_SPLITTING':
+        # unique_pats = len(allTestPats)
+
+        # for ind_split in allTestPats:
+        #    train_index = np.where(allPats != ind_split)[0]
+        #    test_index = np.where(allPats == ind_split)[0]
+        test_index = np.in1d(allPats, allTestPats)
+        train_index = [not x for x in test_index]
+
+        train_files = [datafiles[idx] for idx in train_index]
+        test_files = [datafiles[idx] for idx in test_index]
+
+        if validationTrainRatio > 0:
+            iAll = len(train_files)
+            iSel = np.random.choice(len(train_files), np.around(validationTrainRatio * len(train_files)))
+            train_files_all = train_files
+            val_files = [train_files_all[idx] for idx in iSel]
+            iRem = np.delete(iAll, iSel)
+            train_files = [train_files_all[idx] for idx in iRem]
+        else:
+            val_files = []
+
+    return train_files, val_files, test_files
 
 def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, allTestPats, sSplitting, patchSize, patchOverlap,
                               testTrainingDatasetRatio=0, validationTrainRatio=0, outPutPath=None, nfolds=0,

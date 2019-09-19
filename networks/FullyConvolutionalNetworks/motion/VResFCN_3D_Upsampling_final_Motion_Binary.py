@@ -43,6 +43,7 @@ from networks.FullyConvolutionalNetworks.motion.deep_residual_learning_blocks im
 from utils.dlnetwork import *
 from utils.image_preprocessing import *
 from utils.DataGenerator import *
+from utils.Training_Test_Split_FCN import fSplitSegmentationDataset_generator
 
 
 def createModel(patchSize, numClasses, usingClassification=False):
@@ -204,7 +205,9 @@ def createModel(patchSize, numClasses, usingClassification=False):
 
 
 
-def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None, dlnetwork = None):
+def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None, Y_segMasks_valid=None, X_test=None,
+           y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0, batchSize=None, learningRate=None, iEpochs=None,
+           dlnetwork=None, data=None, numClasses=2):
 
     usingClassification = dlnetwork.usingClassification
 
@@ -228,8 +231,6 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
     # number of classes
     if y_train is not None:
         numClasses = np.shape(y_train)[1]
-    else:
-        numClasses = 2  # TODO: hard-coded at the moment for generator processing
 
     #create cnn model
     print('Create model')
@@ -252,7 +253,8 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
                 learningRate=learningRate,
                 iEpochs=iEpochs,
                 usingClassification=usingClassification,
-                dlnetwork=dlnetwork)
+                dlnetwork=dlnetwork,
+                data=data)
 
     K.clear_session()
 
@@ -280,7 +282,7 @@ def fTrain(X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_va
 
 def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=None, X_valid=None, y_valid=None,
                 Y_segMasks_valid=None, X_test=None, y_test=None, Y_segMasks_test=None, sOutPath=None, patchSize=0,
-                batchSize=None, learningRate=None, iEpochs=None, usingClassification=False, dlnetwork = None):
+                batchSize=None, learningRate=None, iEpochs=None, usingClassification=False, dlnetwork=None, data=None):
     print('Training CNN')
     print('with lr = ' + str(learningRate) + ' , batchSize = ' + str(batchSize))
 
@@ -373,9 +375,17 @@ def fTrainInner(cnn, modelName, X_train=None, y_train=None, Y_segMasks_train=Non
     # TODO: add here data augmentation via ImageDataGenerator from utils/image_preprocessing
     if dlnetwork.trainMode == 'GENERATOR':
         # prepare data generators
-        train_gen = DataGenerator(X_train, batch_size=batchSize, dim=patchSize, usingClassification=usingClassification)
-        val_gen = DataGenerator(X_valid, batch_size=batchSize, dim=patchSize, usingClassification=usingClassification)
-        test_gen = DataGenerator(X_test, batch_size=batchSize, dim=patchSize, usingClassification=usingClassification)
+        if os.path.exists(X_train):  # splitting was already done
+            train_gen = DataGenerator(X_train, batch_size=batchSize, dim=patchSize, usingClassification=usingClassification)
+            val_gen = DataGenerator(X_valid, batch_size=batchSize, dim=patchSize, usingClassification=usingClassification)
+            test_gen = DataGenerator(X_test, batch_size=batchSize, dim=patchSize, usingClassification=usingClassification)
+        else:  # splitting needs to be done
+            datapath = os.path.dirname(X_train)
+            datafiles = [f for f in os.listdir(datapath) if (os.path.isfile(os.path.join(datapath, f)) and f.endswith('.hdf5'))]
+            train_files, val_files, test_files = fSplitSegmentationDataset_generator(datafiles, data.allPats, data.allTestPats, data.splittingMode, testTrainingDatasetRatio=data.trainTestDatasetRatio, validationTrainRatio=data.trainValidationRatio, nfolds=data.nfolds, isRandomShuffle=data.isRandomShuffle)
+            train_gen = DataGenerator(datapath, batch_size=batchSize, dim=patchSize, usingClassification=usingClassification, list_IDs=train_files)
+            val_gen = DataGenerator(datapath, batch_size=batchSize, dim=patchSize, usingClassification=usingClassification, list_IDs=val_files)
+            test_gen = DataGenerator(datapath, batch_size=batchSize, dim=patchSize, usingClassification=usingClassification, list_IDs=test_files)
         existing_validation = True if len(val_gen.list_IDs) > 0 else False
     else:  # ARRAY
         existing_validation = (X_valid != 0 and X_valid is not None)

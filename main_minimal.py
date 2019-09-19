@@ -126,7 +126,8 @@ def fArtDetection(data, dlnetwork, sMode):
                                 batchSize=dlnetwork.batchSize,
                                 learningRate=dlnetwork.learningRate,
                                 iEpochs=dlnetwork.epochs,
-                                dlnetwork=dlnetwork)
+                                dlnetwork=dlnetwork,
+                                data=data)
 
         print('==== Network training finished ====')
         if data.plotresults:
