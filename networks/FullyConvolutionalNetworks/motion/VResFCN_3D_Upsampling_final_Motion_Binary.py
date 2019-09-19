@@ -592,17 +592,15 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
                            'classification_output_acc_test': classification_output_acc_test}
 
         else:
+            print('==== FCN, model loaded ====')
             model.compile(loss=dice_coef_loss, optimizer=opti, metrics=[dice_coef])
-            print(sPath + os.sep + sFilename + '_weights.h5')
+            print('==== FCN, model.compile finished ====')
             model.load_weights(sPath + os.sep + sFilename + '_weights.h5')
-            print('==== In fast_call 1 ====')
+            print('==== FCN, weights loaded ====')
             X_test = X_test.astype(np.float32)
-            print('===========================', batch_size, X_test.shape, Y_segMasks_test.shape)
-            # exit()
-            # score_test, acc_test = model.evaluate(np.squeeze(X_test, axis=4), np.squeeze(Y_segMasks_test, axis=4), batch_size=batch_size)
-            # print('loss: ' + str(score_test) + '   dice coef:' + str(acc_test))
+            score_test, acc_test = model.evaluate(np.squeeze(X_test, axis=4), np.squeeze(Y_segMasks_test, axis=4), batch_size=batch_size)
+            print('loss: ' + str(score_test) + '   dice coef:' + str(acc_test))
             # np.save('/home/so2liu/Documents/MA_Docker/X_test.npy', np.squeeze(X_test, axis=4))
-            score_test, acc_test = 0.3749719368362868, 0.6250280624910913
             prob_test = model.predict(np.squeeze(X_test, axis=4), batch_size=batch_size, verbose=1)
             # np.save('/home/so2liu/Documents/MA_Docker/prob_test.npy', prob_test)
             # prob_test = np.load('/home/so2liu/Documents/MA_Docker/prob_test.npy')

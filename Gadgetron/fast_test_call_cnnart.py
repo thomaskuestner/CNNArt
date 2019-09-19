@@ -20,16 +20,13 @@ from utils.RigidPatching import fRigidPatching3D_maskLabeling
 from utils.RigidUnpatching import fUnpatchSegmentation
 from main_minimal import fParseConfig 
 def gadget_cnnart(img_matrix):
-    cfg = fParseConfig('/opt/data/CNNArt/config/param_minimal_tk.yml')
-    print('==== In fast_call 2 ====')
+    cfg = fParseConfig('/opt/data/CNNArt/config/param_minimal_gadgetron.yml')
+    print('==== In fast_call, config loaded ====')
     data = Data(cfg)
     # patch and split into training, val, test set
-    print('==== In fast_call 3 ====')
-    # data.generateDataset()
-
+    print('==== In fast_call, Data() set ====')
     assert 'Gadgetron' in cfg.keys() and cfg['Gadgetron']['useGadgetron'] == True
 
-    print('==== Gadgetron mode ====')
     # img_matrix = np.load(cfg['Gadgetron']['sPathIn'])
     img_matrix = np.squeeze(img_matrix)
     data.X_test = fRigidPatching3D_maskLabeling(
@@ -39,6 +36,7 @@ def gadget_cnnart(img_matrix):
         mask_numpy_array=np.zeros(img_matrix.shape), 
         ratio_labeling=0.5,
         dataset=1)
+    print('==== In fast_call, rigidPatching3D finished ====')
     
     data.X_test = np.moveaxis(data.X_test, -1, 0)
     data.X_test = np.reshape(data.X_test, data.X_test.shape+(1,))

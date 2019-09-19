@@ -1,15 +1,16 @@
 # $ docker build -t cnnart_gadgetron .
 # FROM gadgetron/ubuntu_1804_cuda92_cudnn7:latest
 FROM gadgetron/ubuntu_1804_no_cuda:latest
-RUN rm /usr/bin/python && cp /usr/bin/python3 /usr/bin/python && cp /usr/bin/pip3 /usr/bin/pip \
-    && cd /opt/data && git clone https://github.com/thomaskuestner/CNNArt.git \
-    && cd CNNArt && pip install -r requirement.txt
+# RUN rm /usr/bin/python && cp /usr/bin/python3 /usr/bin/python && cp /usr/bin/pip3 /usr/bin/pip 
+RUN  mkdir /opt/data && cd /opt/data && git clone https://github.com/thomaskuestner/CNNArt.git \
+    && cd CNNArt && git checkout yang_liu
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2 \
     && pip install --upgrade pip \
-    && pip install --upgrade scikit-image pydicom dicom-numpy scikit-learn pyyaml h5py tensorflow keras matplotlib theano\
+    && pip install -r /opt/data/CNNArt/requirements.txt \
+    && pip install scikit-image pydicom dicom-numpy scikit-learn pyyaml h5py tensorflow keras matplotlib theano\
     && mkdir ~/.keras && cp /opt/data/CNNArt/Gadgetron/keras.json ~/.keras \
     && cp /opt/data/CNNArt/Gadgetron/cnnart_h5.xml /usr/local/share/gadgetron/config \
-    && cp /opt/data/CNNArt/Gadgetron/cnnart_dcm.xml /usr/local/share/gadgetron/config
+    && cp /opt/data/CNNArt/Gadgetron/cnnart_dcm3.xml /usr/local/share/gadgetron/config 
 
 # manual move cnnart_trainednets to /opt/CNNArt
 #WORKDIR /opt/data
