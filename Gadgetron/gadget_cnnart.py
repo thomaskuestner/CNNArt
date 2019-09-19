@@ -24,9 +24,9 @@ class GadgetronCNNArt(Gadget):
         with open('/opt/data/gadgetron/testdata/head/head_in_'+timestamp+'.pickle', 'wb') as f:
             pickle.dump(head, f)
 
-with open('/opt/data/cnnart_trainednets/motion/FCN/FCN 3D-VResFCN-Upsampling final Motion Binary_3D_128x128x16_2019-03-28_18-46.json', 'r') as f:
-    model = model_from_json(f.read())
-model.load_weights('/opt/data/cnnart_trainednets/motion/FCN/FCN 3D-VResFCN-Upsampling final Motion Binary_3D_128x128x16_2019-03-28_18-46_weights.h5')
+        with open('/opt/data/cnnart_trainednets/motion/FCN/FCN 3D-VResFCN-Upsampling final Motion Binary_3D_128x128x16_2019-03-28_18-46.json', 'r') as f:
+            model = model_from_json(f.read())
+        model.load_weights('/opt/data/cnnart_trainednets/motion/FCN/FCN 3D-VResFCN-Upsampling final Motion Binary_3D_128x128x16_2019-03-28_18-46_weights.h5')
         print('==== Gadget start ====')
         prediction = gadget_cnnart(data)
         data = prediction/prediction.max()*data.max()

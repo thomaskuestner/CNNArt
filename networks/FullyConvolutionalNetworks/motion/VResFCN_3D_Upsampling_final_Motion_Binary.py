@@ -530,9 +530,8 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
     # load weights and model (new way)
     print('==============', sPath + os.sep + sFilename + '.json')
     with open(sPath + os.sep + sFilename + '.json', 'r') as fp:
-        model_string = fp.read()
+        model = model_from_json(fp.read())
 
-    model = model_from_json(model_string)
     # create optimizer
     if dlnetwork != None:
         if dlnetwork.optimizer == 'SGD':
