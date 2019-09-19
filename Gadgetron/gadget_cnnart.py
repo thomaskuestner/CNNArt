@@ -4,10 +4,14 @@ import pydicom
 import sys
 sys.path.append('/opt/data')
 import pickle
-from CNNArt.Gadgetron.fast_test_call_cnnart import gadget_cnnart
-from CNNArt.Gadgetron.cnnart_for_gadgetron import gadget_cnnart
+import sys, os
+sys.path.append(os.getcwd()) 
+sys.path.append('/opt/data/CNNArt')
+from Gadgetron.fast_test_call_cnnart import gadget_cnnart
+# from Gadgetron.cnnart_for_gadgetron import gadget_cnnart
 import time
 import os
+from keras.models import model_from_json
 
 class GadgetronCNNArt(Gadget):
     def process(self, head, data):
@@ -19,6 +23,11 @@ class GadgetronCNNArt(Gadget):
         np.save('/opt/data/gadgetron/testdata/data/data_in_'+timestamp+'.npy', data)
         with open('/opt/data/gadgetron/testdata/head/head_in_'+timestamp+'.pickle', 'wb') as f:
             pickle.dump(head, f)
+
+with open('/opt/data/cnnart_trainednets/motion/FCN/FCN 3D-VResFCN-Upsampling final Motion Binary_3D_128x128x16_2019-03-28_18-46.json', 'r') as f:
+    model = model_from_json(f.read())
+model.load_weights('/opt/data/cnnart_trainednets/motion/FCN/FCN 3D-VResFCN-Upsampling final Motion Binary_3D_128x128x16_2019-03-28_18-46_weights.h5')
+        print('==== Gadget start ====')
         prediction = gadget_cnnart(data)
         data = prediction/prediction.max()*data.max()
         # patch_size, overlap_rate = [128, 128, 16], 0.4

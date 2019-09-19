@@ -84,8 +84,11 @@ class Data:
         self.markingsPath = cfg[self.database]['sPathInLabel']
         self.useGadgetron = True if 'Gadgetron' in cfg.keys() and cfg['Gadgetron']['useGadgetron'] == True else False
         # parse selected patients
+        print('====================',cfg['sSelectedPatient'])
         if cfg['sSelectedPatient'] == ['All']:
             self.selectedPatients = sorted(os.listdir(self.pathDatabase))
+        elif cfg['sSelectedPatient'] == []:
+            self.selectedPatients = []
         else:
             # dpat = sorted(os.listdir(self.pathDatabase))
             dpat = [f.name for f in os.scandir(self.pathDatabase) if f.is_dir()]

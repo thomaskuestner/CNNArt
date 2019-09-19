@@ -6,7 +6,8 @@ RUN rm /usr/bin/python && cp /usr/bin/python3 /usr/bin/python && cp /usr/bin/pip
     && cd CNNArt && pip install -r requirement.txt
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2 \
     && pip install --upgrade pip \
-    && pip install --upgrade scikit-image pydicom dicom-numpy scikit-learn pyyaml h5py tensorflow keras matplotlib\
+    && pip install --upgrade scikit-image pydicom dicom-numpy scikit-learn pyyaml h5py tensorflow keras matplotlib theano\
+    && mkdir ~/.keras && cp /opt/data/CNNArt/Gadgetron/keras.json ~/.keras \
     && cp /opt/data/CNNArt/Gadgetron/cnnart_h5.xml /usr/local/share/gadgetron/config \
     && cp /opt/data/CNNArt/Gadgetron/cnnart_dcm.xml /usr/local/share/gadgetron/config
 

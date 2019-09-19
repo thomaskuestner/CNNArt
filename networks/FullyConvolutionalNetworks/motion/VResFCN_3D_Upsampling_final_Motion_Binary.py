@@ -528,6 +528,7 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
     #model_all = sModelPath + '_model.h5'
 
     # load weights and model (new way)
+    print('==============', sPath + os.sep + sFilename + '.json')
     with open(sPath + os.sep + sFilename + '.json', 'r') as fp:
         model_string = fp.read()
 
@@ -593,7 +594,9 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
 
         else:
             model.compile(loss=dice_coef_loss, optimizer=opti, metrics=[dice_coef])
+            print(sPath + os.sep + sFilename + '_weights.h5')
             model.load_weights(sPath + os.sep + sFilename + '_weights.h5')
+            print('==== In fast_call 1 ====')
             X_test = X_test.astype(np.float32)
             print('===========================', batch_size, X_test.shape, Y_segMasks_test.shape)
             # exit()

@@ -5,6 +5,9 @@ import h5py
 import scipy.io as sio              # I/O
 import os                      # operating system
 import argparse
+import sys, os
+sys.path.append(os.getcwd()) 
+sys.path.append('/opt/data/CNNArt')
 from utils.data import *
 from utils.dlnetwork import *
 from utils.Label import Label
@@ -12,18 +15,17 @@ import datetime
 import yaml
 import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
-import sys, os
-if os.getcwd() not in sys.path:
-    sys.path.append(os.getcwd()) 
+
 from utils.RigidPatching import fRigidPatching3D_maskLabeling
 from utils.RigidUnpatching import fUnpatchSegmentation
 from main_minimal import fParseConfig 
 def gadget_cnnart(img_matrix):
-    cfg = fParseConfig('config/param_minimal_tk.yml')
+    cfg = fParseConfig('/opt/data/CNNArt/config/param_minimal_tk.yml')
+    print('==== In fast_call 2 ====')
     data = Data(cfg)
     # patch and split into training, val, test set
-    if (cfg['sMode'] == 'training') | (cfg['sMode'] == 'prediction'):
-        data.generateDataset()
+    print('==== In fast_call 3 ====')
+    # data.generateDataset()
 
     assert 'Gadgetron' in cfg.keys() and cfg['Gadgetron']['useGadgetron'] == True
 
