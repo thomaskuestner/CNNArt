@@ -84,7 +84,6 @@ class Data:
         self.markingsPath = cfg[self.database]['sPathInLabel']
         self.useGadgetron = True if 'Gadgetron' in cfg.keys() and cfg['Gadgetron']['useGadgetron'] == True else False
         # parse selected patients
-        print('====================',cfg['sSelectedPatient'])
         if cfg['sSelectedPatient'] == ['All']:
             self.selectedPatients = sorted(os.listdir(self.pathDatabase))
         elif cfg['sSelectedPatient'] == []:
@@ -172,7 +171,6 @@ class Data:
             labelDict = {}
 
         if self.storeMode == 'STORE_HDF5':  # shortcut if data already patched and splitted
-            print(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5')
             if os.path.exists(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5'):
                 print('Loading data from file: %s' % (outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5'))
                 f = h5py.File(outputFolderPath + os.sep + 'datasets_' + ''.join(str(e) for e in self.selectedPatients) + '.hdf5', 'r')
@@ -609,7 +607,6 @@ class Data:
                         newnparray[:, :, voxel_ndarray.shape[-1] - 1 - i] = voxel_ndarray[:, :, i]
 
                     path_file = pathtf + os.sep + patient + os.sep + dataset.pathdata + '.tfrecord'
-                    print(pathtf, os.sep, patient)
                     if not os.path.exists(pathtf + os.sep + patient):
                         os.makedirs(pathtf + os.sep + patient)
 

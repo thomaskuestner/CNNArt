@@ -40,7 +40,6 @@ def gadget_cnnart(img_matrix):
     
     data.X_test = np.moveaxis(data.X_test, -1, 0)
     data.X_test = np.reshape(data.X_test, data.X_test.shape+(1,))
-    print(data.X_test.shape)
     data.Y_test = np.zeros(data.X_test.shape)
 
     print('==== Import Networks ====')
@@ -62,7 +61,7 @@ def gadget_cnnart(img_matrix):
                         usingClassification=dlnetwork.usingClassification,
                         usingSegmentationMasks=data.usingSegmentationMasks,
                         dlnetwork=dlnetwork)
-                        
+    np.save('prediction.npy', predictions['prob_pre'])                    
     print('==== Result plotting ====')
     if hasattr(data, 'X_test'):
         data.patchSizePrediction = [data.X_test.shape[1], data.X_test.shape[2], data.X_test.shape[3]]
@@ -80,8 +79,14 @@ def gadget_cnnart(img_matrix):
                                                     patchOverlap=data.patchOverlapPrediction,
                                                     actualSize=img_matrix.shape,
                                                     iClass=0)
-    # np.save('/home/so2liu/Documents/MA_Docker/unpatched_img_foreground.npy', unpatched_img_foreground)
-    # np.save('/home/so2liu/Documents/MA_Docker/unpatched_img_background.npy', unpatched_img_background)
+
+    unpatched_img_foreground, unpatched_img_background = sign_func(unpatched_img_foreground), sign_func(unpatched_img_background)
+    np.save('unpatched_img_foreground.npy', unpatched_img_foreground)
     np.save('unpatched_img_background.npy', unpatched_img_background)
     print('==== All finished ====')
     return unpatched_img_background
+
+def sign_func(matrix):
+    matrix[matrix > 0.5*matrix.max()] = matrix.max()
+    matrix[matrix <= 0.5*matrix.max()] = matrix.min()
+    return matrix

@@ -7,7 +7,7 @@ import os
 #os.environ["CUDA_DEVICE_ORDER"]="0000:02:00.0"
 os.environ['KERAS_BACKEND'] = 'theano'  # https://stackoverflow.com/questions/42177658/how-to-switch-backend-with-keras-from-tensorflow-to-theano
 from tensorflow.python.client import device_lib
-print(device_lib.list_local_devices)
+print(device_lib.list_local_devices())
 
 import tensorflow as tf
 import os.path
@@ -528,9 +528,9 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
     #model_all = sModelPath + '_model.h5'
 
     # load weights and model (new way)
-    print('==============', sPath + os.sep + sFilename + '.json')
     with open(sPath + os.sep + sFilename + '.json', 'r') as fp:
         model = model_from_json(fp.read())
+    print('==== FCN, model loaded ====')
 
     # create optimizer
     if dlnetwork != None:
@@ -592,15 +592,15 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
                            'classification_output_acc_test': classification_output_acc_test}
 
         else:
-            print('==== FCN, model loaded ====')
             model.compile(loss=dice_coef_loss, optimizer=opti, metrics=[dice_coef])
             print('==== FCN, model.compile finished ====')
             model.load_weights(sPath + os.sep + sFilename + '_weights.h5')
             print('==== FCN, weights loaded ====')
             X_test = X_test.astype(np.float32)
-            score_test, acc_test = model.evaluate(np.squeeze(X_test, axis=4), np.squeeze(Y_segMasks_test, axis=4), batch_size=batch_size)
-            print('loss: ' + str(score_test) + '   dice coef:' + str(acc_test))
+            # score_test, acc_test = model.evaluate(np.squeeze(X_test, axis=4), np.squeeze(Y_segMasks_test, axis=4), batch_size=batch_size)
+            # print('loss: ' + str(score_test) + '   dice coef:' + str(acc_test))
             # np.save('/home/so2liu/Documents/MA_Docker/X_test.npy', np.squeeze(X_test, axis=4))
+            score_test, acc_test = 0, 0
             prob_test = model.predict(np.squeeze(X_test, axis=4), batch_size=batch_size, verbose=1)
             # np.save('/home/so2liu/Documents/MA_Docker/prob_test.npy', prob_test)
             # prob_test = np.load('/home/so2liu/Documents/MA_Docker/prob_test.npy')
