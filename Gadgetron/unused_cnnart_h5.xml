@@ -24,7 +24,7 @@
       <name>RemoveOversamplingPython</name>
       <dll>gadgetron_python</dll>
       <classname>PythonGadget</classname>
-      <property><name>python_path</name>                  <value>/home/myuser/scripts/python</value></property>
+      <property><name>python_path</name>                  <value>/usr/local/share/gadgetron/python/</value></property>
       <property><name>python_module</name>                <value>remove_2x_oversampling</value></property>
       <property><name>python_class</name>                <value>Remove2xOversampling</value></property>
     </gadget>
@@ -33,7 +33,7 @@
       <name>AccReconPython</name>
       <dll>gadgetron_python</dll>
       <classname>PythonGadget</classname>
-      <property><name>python_path</name>                  <value>/home/myuser/scripts/python</value></property>
+      <property><name>python_path</name>                  <value>/usr/local/share/gadgetron/python/</value></property>
       <property><name>python_module</name>                <value>accumulate_and_recon</value></property>
       <property><name>python_class</name>                <value>AccumulateAndRecon</value></property>
     </gadget>
@@ -42,19 +42,28 @@
       <name>CoilCombinePython</name>
       <dll>gadgetron_python</dll>
       <classname>PythonGadget</classname>
-      <property><name>python_path</name>                  <value>/home/myuser/scripts/python</value></property>
+      <property><name>python_path</name>                  <value>/usr/local/share/gadgetron/python/</value></property>
       <property><name>python_module</name>                <value>rms_coil_combine</value></property>
       <property><name>python_class</name>                <value>RMSCoilCombine</value></property>
     </gadget>
 
     <gadget>
-      <name>CNNArt</name>
+      <name>TestPython</name>
       <dll>gadgetron_python</dll>
       <classname>PythonGadget</classname>
-      <property><name>python_path</name>                  <value>/opt/data/CNNArt/Gadgetron</value></property>
+      <property><name>python_path</name>                  <value>/opt/data</value></property>
       <property><name>python_module</name>                <value>gadget_cnnart</value></property>
-      <property><name>python_class</name>                 <value>GadgetronCNNArt</value></property>
+      <property><name>python_class</name>                <value>TestMyPython</value></property>
     </gadget>
+
+    <!-- <gadget>
+      <name>ImageViewPython</name>
+      <dll>gadgetron_python</dll>
+      <classname>PythonGadget</classname>
+      <property><name>python_path</name>                  <value>/usr/local/share/gadgetron/python</value></property>
+      <property><name>python_module</name>                <value>image_viewer</value></property>
+      <property><name>python_class</name>                <value>ImageViewer</value></property>
+    </gadget> -->
 
      <gadget>
       <name>Extract</name>

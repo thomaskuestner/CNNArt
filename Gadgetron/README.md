@@ -1,7 +1,7 @@
 ## Readme for Gadget part
 
 ### Files introduction
-- `cnnart_dcm.xml` can transform `h5` after `CNNArt` to `dicom` files. Saved in `/usr/local/share/gadgetron/config` in Docker.
+<!-- - `cnnart_dcm.xml` can transform `h5` after `CNNArt` to `dicom` files. Saved in `/usr/local/share/gadgetron/config` in Docker. -->
 - `cnnart_h5.xml` can transform `h5` after `CNNArt` to `h5` files. Saved in `/usr/local/share/gadgetron/config` in Docker.
 - `gadget_cnnart.py`:  XML file will call this file first. Then `gadget_cnnart.py` will use CNNArt part.In Docker, this file will be copied to `/opt/data`. Therefore it will be easier to modify it according to the various demands. 
 - `cnnart_for_gadgetron.py`: The file is used to access CNNArt. It's saved in `/opt/CNNArt/Gadgetron`. The user should have no need to change it. So keep it as simple as possible and independent on the different demand. 

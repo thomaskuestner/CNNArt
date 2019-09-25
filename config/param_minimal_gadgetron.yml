@@ -1,61 +1,61 @@
-# GPU
-iGPU : 0
+# # GPU
+# iGPU : 0
 
-# set mode: 'training', 'prediction', 'plotting'
-sMode : 'prediction'
+# # set mode: 'training', 'prediction', 'plotting'
+# sMode : 'prediction'
 
-# Datasets
-sDatabase : 'MRPhysics'
-# selected artifact type: e.g. 'sPairsMotion'
-sSelectedArtifact : ['sPairsMotion']
-# selected datasets: either e.g. ['HeadT1', 'AbdomenT1'] or ['All']
-sSelectedDataset : ['HeadT1']
-# selected patients: either array with numbers of patients to be used [1,2,6] or ['All']
-# variable states all patients (training, validation, test)
-sSelectedPatient : []
+# # Datasets
+# sDatabase : 'MRPhysics'
+# # selected artifact type: e.g. 'sPairsMotion'
+# sSelectedArtifact : ['sPairsMotion']
+# # selected datasets: either e.g. ['HeadT1', 'AbdomenT1'] or ['All']
+# sSelectedDataset : ['HeadT1']
+# # selected patients: either array with numbers of patients to be used [1,2,6] or ['All']
+# # variable states all patients (training, validation, test)
+# sSelectedPatient : []
 
-MRPhysics:
-  sPathIn : "/med_data/ImageSimilarity/Databases/MRPhysics/newProtocol"
-  sSubDir : "dicom_sorted"
-  # first entry is always reference, 2nd entry is artifact-affected one
-  sPairsMotion:
-      HeadT1: ["t1_tse_tra_Kopf_0002", "t1_tse_tra_Kopf_Motion_0003"]
-      AbdomenT1: ["t1_tse_tra_fs_mbh_Leber_0004", "t1_tse_tra_fs_mbh_Leber_Motion_0005"]
-      AbdomenT2: ["t2_tse_tra_fs_navi_Leber_0006", "t2_tse_tra_fs_navi_Leber_Motion_0013"]
-      PelvisT1: ["t1_tse_tra_fs_Becken_0008", "t1_tse_tra_fs_Becken_Motion_0010"]
-      PelvisT2: ["t2_tse_tra_fs_Becken_0009", "t2_tse_tra_fs_Becken_Motion_0011"]
-  sPairsShim:
-      AbdomenT2: ["t2_tse_tra_fs_navi_Leber_0006", "t2_tse_tra_fs_navi_Leber_Shim_xz_0007"]
-      PelvisT2: ["t2_tse_tra_fs_Becken_0009", "t2_tse_tra_fs_Becken_Shim_xz_0012"]
-  MappingData: # map extra meta information into datasets [path labels (if separate file), type of artifact, body region, contrast weighting]
-      t1_tse_tra_Kopf_0002 : [None, 'ref', 'head', 't1']
-      t1_tse_tra_Kopf_Motion_0003 : [None, 'motion', 'head', 't1']
-      t1_tse_tra_fs_mbh_Leber_0004 : [None, 'ref', 'abdomen', 't1']
-      t1_tse_tra_fs_mbh_Leber_Motion_0005 : [None, 'motion', 'abdomen', 't1' ]
-      t2_tse_tra_fs_navi_Leber_0006 : [None, 'ref', 'abdomen', 't2']
-      t2_tse_tra_fs_navi_Leber_Motion_0013 : [None, 'motion', 'abdomen', 't2']
-      t1_tse_tra_fs_Becken_0008 : [None, 'ref', 'pelvis', 't1']
-      t1_tse_tra_fs_Becken_Motion_0010 : [None, 'motion', 'pelvis', 't1']
-      t2_tse_tra_fs_Becken_0009 : [None, 'ref', 'pelvis', 't2']
-      t2_tse_tra_fs_Becken_Motion_0011 : [None, 'motion', 'pelvis', 't2']
-      t2_tse_tra_fs_navi_Leber_0006 : [None, 'ref', 'abdomen', 't2']
-      t2_tse_tra_fs_navi_Leber_Shim_xz_0007 : [None, 'shim', 'abdomen', 't2']
-      t2_tse_tra_fs_Becken_0009 : [None, 'ref', 'pelvis', 't2']
-      t2_tse_tra_fs_Becken_Shim_xz_0012 : [None, 'shim', 'pelvis', 't2']
-  # all classes are marked in JSON file with: 0=no artifact, 1=motion, 2=shim, (-1=unknown artifact)
-  sPathInLabel: "/med_data/ImageSimilarity/Databases/MRPhysics/Paper_Markings"
+# MRPhysics:
+#   sPathIn : "/med_data/ImageSimilarity/Databases/MRPhysics/newProtocol"
+#   sSubDir : "dicom_sorted"
+#   # first entry is always reference, 2nd entry is artifact-affected one
+#   sPairsMotion:
+#       HeadT1: ["t1_tse_tra_Kopf_0002", "t1_tse_tra_Kopf_Motion_0003"]
+#       AbdomenT1: ["t1_tse_tra_fs_mbh_Leber_0004", "t1_tse_tra_fs_mbh_Leber_Motion_0005"]
+#       AbdomenT2: ["t2_tse_tra_fs_navi_Leber_0006", "t2_tse_tra_fs_navi_Leber_Motion_0013"]
+#       PelvisT1: ["t1_tse_tra_fs_Becken_0008", "t1_tse_tra_fs_Becken_Motion_0010"]
+#       PelvisT2: ["t2_tse_tra_fs_Becken_0009", "t2_tse_tra_fs_Becken_Motion_0011"]
+#   sPairsShim:
+#       AbdomenT2: ["t2_tse_tra_fs_navi_Leber_0006", "t2_tse_tra_fs_navi_Leber_Shim_xz_0007"]
+#       PelvisT2: ["t2_tse_tra_fs_Becken_0009", "t2_tse_tra_fs_Becken_Shim_xz_0012"]
+#   MappingData: # map extra meta information into datasets [path labels (if separate file), type of artifact, body region, contrast weighting]
+#       t1_tse_tra_Kopf_0002 : [None, 'ref', 'head', 't1']
+#       t1_tse_tra_Kopf_Motion_0003 : [None, 'motion', 'head', 't1']
+#       t1_tse_tra_fs_mbh_Leber_0004 : [None, 'ref', 'abdomen', 't1']
+#       t1_tse_tra_fs_mbh_Leber_Motion_0005 : [None, 'motion', 'abdomen', 't1' ]
+#       t2_tse_tra_fs_navi_Leber_0006 : [None, 'ref', 'abdomen', 't2']
+#       t2_tse_tra_fs_navi_Leber_Motion_0013 : [None, 'motion', 'abdomen', 't2']
+#       t1_tse_tra_fs_Becken_0008 : [None, 'ref', 'pelvis', 't1']
+#       t1_tse_tra_fs_Becken_Motion_0010 : [None, 'motion', 'pelvis', 't1']
+#       t2_tse_tra_fs_Becken_0009 : [None, 'ref', 'pelvis', 't2']
+#       t2_tse_tra_fs_Becken_Motion_0011 : [None, 'motion', 'pelvis', 't2']
+#       t2_tse_tra_fs_navi_Leber_0006 : [None, 'ref', 'abdomen', 't2']
+#       t2_tse_tra_fs_navi_Leber_Shim_xz_0007 : [None, 'shim', 'abdomen', 't2']
+#       t2_tse_tra_fs_Becken_0009 : [None, 'ref', 'pelvis', 't2']
+#       t2_tse_tra_fs_Becken_Shim_xz_0012 : [None, 'shim', 'pelvis', 't2']
+#   # all classes are marked in JSON file with: 0=no artifact, 1=motion, 2=shim, (-1=unknown artifact)
+#   sPathInLabel: "/med_data/ImageSimilarity/Databases/MRPhysics/Paper_Markings"
 
-NAKO_IQA:
-  sPathIn: "/med_data/ImageSimilarity/Databases/NAKO_IQA"
-  sSubDir: "dicom_sorted"
-  sPairsMotion:
-    WBFBT1: ["3D_GRE_TRA_bh_F_COMPOSED_0014", "3D_GRE_TRA_fb_F_COMPOSED_0028"]
-    WBDBT1: ["3D_GRE_TRA_bh_F_COMPOSED_0014", "3D_GRE_TRA_fb_deep_F_COMPOSED_0042"]
-  MappingData:
-    3D_GRE_TRA_bh_F_COMPOSED_0014 : [None, 'ref', 'abdomen', 't1']
-    3D_GRE_TRA_fb_F_COMPOSED_0028 : [None, 'motion', 'abdomen', 't1']
-    3D_GRE_TRA_fb_deep_F_COMPOSED_0042 : [None, 'motion', 'abdomen', 't1']
-  sPathInLabel: "/med_data/ImageSimilarity/Databases/NAKO_IQA_Label"
+# NAKO_IQA:
+#   sPathIn: "/med_data/ImageSimilarity/Databases/NAKO_IQA"
+#   sSubDir: "dicom_sorted"
+#   sPairsMotion:
+#     WBFBT1: ["3D_GRE_TRA_bh_F_COMPOSED_0014", "3D_GRE_TRA_fb_F_COMPOSED_0028"]
+#     WBDBT1: ["3D_GRE_TRA_bh_F_COMPOSED_0014", "3D_GRE_TRA_fb_deep_F_COMPOSED_0042"]
+#   MappingData:
+#     3D_GRE_TRA_bh_F_COMPOSED_0014 : [None, 'ref', 'abdomen', 't1']
+#     3D_GRE_TRA_fb_F_COMPOSED_0028 : [None, 'motion', 'abdomen', 't1']
+#     3D_GRE_TRA_fb_deep_F_COMPOSED_0042 : [None, 'motion', 'abdomen', 't1']
+#   sPathInLabel: "/med_data/ImageSimilarity/Databases/NAKO_IQA_Label"
 
 Gadgetron:
   useGadgetron: True
@@ -128,27 +128,27 @@ optimizer :
   nesterov : True
 
 # data augmentation
-dataAugmentation:
-  featurewise_center : False
-  samplewise_center : False
-  featurewise_std_normalization : False
-  samplewise_std_normalization : False
-  zca_whitening : False
-  zca_epsilon : 1e-6
-  rotation_range : 0.
-  width_shift_range : 0.
-  height_shift_range : 0.
-  shear_range : 0.
-  zoom_range : 0.
-  channel_shift_range : 0.
-  fill_mode : 'constant'
-  cval : 0.
-  horizontal_flip : False
-  vertical_flip : False
-  rescale : False
-  histogram_equalization : False
-  contrast_stretching : False
-  adaptive_equalization : False
+# dataAugmentation:
+#   featurewise_center : False
+#   samplewise_center : False
+#   featurewise_std_normalization : False
+#   samplewise_std_normalization : False
+#   zca_whitening : False
+#   zca_epsilon : 1e-6
+#   rotation_range : 0.
+#   width_shift_range : 0.
+#   height_shift_range : 0.
+#   shear_range : 0.
+#   zoom_range : 0.
+#   channel_shift_range : 0.
+#   fill_mode : 'constant'
+#   cval : 0.
+#   horizontal_flip : False
+#   vertical_flip : False
+#   rescale : False
+#   histogram_equalization : False
+#   contrast_stretching : False
+#   adaptive_equalization : False
 
 # paths
 # output path
