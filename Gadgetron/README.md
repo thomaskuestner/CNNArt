@@ -22,9 +22,9 @@ For example, in Docker `/opt/data` there is a dicom file `MS_3DTSE_51005_1982188
 ### Output example
 ```
 ==== Gadget start ====
-==== In fast_call, config loaded ====
-==== In fast_call, Data() set ====
-==== In fast_call, rigidPatching3D finished ====
+==== In cnnart_for_gadgetron, config loaded ====
+==== In cnnart_for_gadgetron, Data() set ====
+==== In cnnart_for_gadgetron, rigidPatching3D finished ====
 ==== Import Networks ====
 ==== Artifact detection ====
 ==== FCN, model loaded ====
