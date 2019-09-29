@@ -27,7 +27,7 @@ MRPhysics:
   sPairsShim:
       AbdomenT2: ["t2_tse_tra_fs_navi_Leber_0006", "t2_tse_tra_fs_navi_Leber_Shim_xz_0007"]
       PelvisT2: ["t2_tse_tra_fs_Becken_0009", "t2_tse_tra_fs_Becken_Shim_xz_0012"]
-  MappingData: # map extra meta information into datasets [path labels (if separate file), type of artifact, body region, contrast weighting]
+  MappingData: # map extra meta information into datasets [path, labels (if separate file), type of artifact, body region, contrast weighting]
       t1_tse_tra_Kopf_0002 : [None, 'ref', 'head', 't1']
       t1_tse_tra_Kopf_Motion_0003 : [None, 'motion', 'head', 't1']
       t1_tse_tra_fs_mbh_Leber_0004 : [None, 'ref', 'abdomen', 't1']
@@ -63,7 +63,7 @@ Gadgetron:
 
 # store mode of data after/during/before patching
 # 'STORE_DISABLED', 'STORE_HDF5', 'STORE_TFRECORD', 'STORE_PATCH_BASED',
-storeMode : 'STORE_HDF5'
+storeMode : 'STORE_DISABLED'
 
 # plot results
 plotting:
@@ -77,7 +77,7 @@ plotting:
 range : [0, 1]
 # patches
 patchSize : [128, 128, 16] # [x, y] or [x,y,z], but z should not larger than 10, else too much zero-padding when scaling factor is small
-patchOverlap : 0.8 # 50%
+patchOverlap : 0.4 # 50%
 # sLabeling strategy
 # 'volume': volume-wise labeling
 # 'patch': patch-wise labeling

@@ -349,8 +349,6 @@ def fRigidPatching_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, mask
 
                 # calculate final label
                 label = label + bodyRegionLabel + weightingLabel
-
-                #print(label)
                 dLabels[idxPatch] = label
                 idxPatch += 1
 
@@ -516,7 +514,7 @@ def fRigidPatching3D_maskLabeling(dicom_numpy_array, patchSize, patchOverlap, ma
     else:
         print("Rigid patching done for %s " % dataset.getPathdata())
         #print(dLabels)
-        return dPatches, dLabels#, nbPatches
+        return dPatches, dLabels
 
 def fRigidPatching3D_maskLabeling_tf(dicom_tensor, patchSize, patchOverlap, mask_numpy_array, ratio_labeling, dataset=None, dopatching=True):
     #ToDo odd patch size not supported!

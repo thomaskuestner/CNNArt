@@ -5,7 +5,7 @@ Copyright: 2016-2019 Thomas Kuestner (thomas.kuestner@med.uni-tuebingen.de) unde
 import datetime
 import json
 import os
-import gc
+import gc, time
 #import dicom
 #import dicom_numpy as dicom_np
 #import pydicom as dicom_np
@@ -379,12 +379,12 @@ class Data:
             print('Loading patient %d\%d' % (ipat+1, len(selectedPatients)))
             for idat, dataset in enumerate(selectedDatasets):
                 currentDataDir = os.path.join(self.pathDatabase, patient, self.modelSubDir, dataset.pathdata)
-
+ 
                 if os.path.exists(currentDataDir):
                     # get list with all paths of dicoms for current patient and current dataset
                     fileNames = os.listdir(currentDataDir)
                     fileNames = [os.path.join(currentDataDir, f) for f in fileNames]
-
+                    fileNames.sort()
                     # read DICOMS
                     dicomDataset = [pydicom.read_file(f) for f in fileNames if f.endswith('.IMA')]
                     # TODO: add here reading in of phase images
@@ -404,12 +404,8 @@ class Data:
                             np.max(voxel_ndarray) - np.min(voxel_ndarray))
 
                     # sort array
-                    newnparray = np.zeros(shape=norm_voxel_ndarray.shape)
-                    for i in range(norm_voxel_ndarray.shape[-1]):
-                        newnparray[:, :, norm_voxel_ndarray.shape[-1] - 1 - i] = norm_voxel_ndarray[:, :, i]
-
-                    norm_voxel_ndarray = newnparray
-                    del newnparray
+                    if len(norm_voxel_ndarray.shape) == 3:
+                        norm_voxel_ndarray =  np.flip(norm_voxel_ndarray, -1)
 
                     # 2D or 3D patching?
                     if self.patchingMode == 'PATCHING_2D':
@@ -1331,6 +1327,7 @@ class Data:
                     mask_lay = self.mask_lasso(p, mask_lay, artifact_num)
                 mask[:, :, img_no] = mask[:, :, img_no] + mask_lay
         else:
+            print('Model', model, 'is not in Mask')
             pass
 
         # loadMark.close()  # used for shelve
