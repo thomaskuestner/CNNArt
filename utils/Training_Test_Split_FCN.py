@@ -363,7 +363,7 @@ def fSplitSegmentationDataset(allPatches, allY, allSegmentationMasks, allPats, a
         #    train_index = np.where(allPats != ind_split)[0]
         #    test_index = np.where(allPats == ind_split)[0]
         test_index = np.in1d(allPats, allTestPats)
-        train_index = [not x for x in test_index]
+        train_index = np.asarray([not x for x in test_index])
 
         X_train = allPatches[train_index, :, :, :]
         X_test = allPatches[test_index, :, :, :]
