@@ -504,14 +504,19 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
             sOutPath: (String) full path for the Output. It is a *.mat file with the computed loss and accuracy stored.
                         The Output file has the Path 'sOutPath'+ the filename of sModelPath without the '_json.txt' added the suffix '_pred.mat'
             batchSize: Batchsize, number of samples that are processed at once"""
-
+    try:
+        assert(X_test.shape[1] == X_test.shape[2])
+    except AssertionError:
+        print('X_test should be in (n, x, y, z), but received X_test shape is', X_test.shape)
+        raise ValueError
     if usingSegmentationMasks:
-        X_test = np.expand_dims(X_test, axis=-1)
-        Y_segMasks_test_foreground = np.expand_dims(Y_segMasks_test, axis=-1)
-        Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape) - Y_segMasks_test_foreground
-        # Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground), axis=-1)
-        # for low memory
-        Y_segMasks_test = np.concatenate((Y_segMasks_test_background.astype(np.float32), Y_segMasks_test_foreground.astype(np.float32)), axis=-1)
+        X_test = np.expand_dims(np.squeeze(X_test), axis=-1)
+        if Y_segMasks_test is not None:
+            Y_segMasks_test_foreground = np.expand_dims(Y_segMasks_test, axis=-1)
+            Y_segMasks_test_background = np.ones(Y_segMasks_test_foreground.shape) - Y_segMasks_test_foreground
+            # Y_segMasks_test = np.concatenate((Y_segMasks_test_background, Y_segMasks_test_foreground), axis=-1)
+            # for low memory
+            Y_segMasks_test = np.concatenate((Y_segMasks_test_background.astype(np.float32), Y_segMasks_test_foreground.astype(np.float32)), axis=-1)
 
     else:
         X_test = np.expand_dims(X_test, axis=-1)
@@ -596,12 +601,14 @@ def fPredict(X_test, Y_test=None, Y_segMasks_test=None, sModelPath=None, batch_s
             print('==== FCN, model.compile finished ====')
             model.load_weights(sPath + os.sep + sFilename + '_weights.h5')
             print('==== FCN, weights loaded ====')
-            X_test = X_test.astype(np.float32)
-            # score_test, acc_test = model.evaluate(np.squeeze(X_test, axis=4), np.squeeze(Y_segMasks_test, axis=4), batch_size=batch_size)
-            # print('loss: ' + str(score_test) + '   dice coef:' + str(acc_test))
-            # np.save('/home/so2liu/Documents/MA_Docker/X_test.npy', np.squeeze(X_test, axis=4))
-            score_test, acc_test = 0, 0
-            prob_test = model.predict(np.squeeze(X_test, axis=4), batch_size=batch_size, verbose=1)
+            # X_test = X_test.astype(np.float32)
+            # if Y_segMasks_test is not None:
+            #     score_test, acc_test = model.evaluate(X_test, Y_segMasks_test, batch_size=batch_size)
+            #     print('loss: ' + str(score_test) + '   dice coef:' + str(acc_test))
+            # else:
+            #     score_test, acc_test = None, None
+            score_test, acc_test = None, None
+            prob_test = model.predict(X_test, batch_size=batch_size, verbose=1)
             # np.save('/home/so2liu/Documents/MA_Docker/prob_test.npy', prob_test)
             # prob_test = np.load('/home/so2liu/Documents/MA_Docker/prob_test.npy')
             predictions = {'prob_pre': prob_test, 'score_test': score_test, 'acc_test': acc_test}

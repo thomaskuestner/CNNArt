@@ -295,7 +295,7 @@ if __name__ == "__main__":  # for command line call
 
     # parse input
     #cfg = fParseConfig(args.config[0])
-    cfg = fParseConfig('config/param_minimal_tk.yml')
+    cfg = fParseConfig('../param_gadgetron.yml')
 
     data = Data(cfg)
 

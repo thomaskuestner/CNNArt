@@ -168,7 +168,7 @@ def fUnpatchSegmentation(prob_list, patchSize, patchOverlap, actualSize, iClass)
     dNotOverlap = [patchSize[0] - dOverlap[0], patchSize[1] - dOverlap[1], patchSize[2] - dOverlap[2]]
 
     paddedSize = \
-        [int(math.ceil((actualSize[0]-dOverlap[0])/(dNotOverlap[0]))*dNotOverlap[0]+dOverlap[0]),
+        [int(math.ceil((actualSize[0] - dOverlap[0]) / (dNotOverlap[0])) * dNotOverlap[0] + dOverlap[0]),
          int(math.ceil((actualSize[1] - dOverlap[1]) / (dNotOverlap[1])) * dNotOverlap[1] + dOverlap[1]),
          int(math.ceil((actualSize[2] - dOverlap[2]) / (dNotOverlap[2])) * dNotOverlap[2] + dOverlap[2])]
 

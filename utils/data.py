@@ -86,11 +86,12 @@ class Data:
         # parse selected patients
         if cfg['sSelectedPatient'] == ['All']:
             self.selectedPatients = sorted(os.listdir(self.pathDatabase))
-        elif cfg['sSelectedPatient'] == []:
+        elif cfg['sSelectedPatient'] == []:  # for other dataset instead of MRPhysics and NAKO_IQA
             self.selectedPatients = []
         else:
             # dpat = sorted(os.listdir(self.pathDatabase))
             dpat = [f.name for f in os.scandir(self.pathDatabase) if f.is_dir()]
+            dpat.sort()
             self.selectedPatients = [dpat[i-1] for i in cfg['sSelectedPatient']]
 
         # parse selected artifacts and datasets
@@ -189,7 +190,7 @@ class Data:
 
         # load and patch
         dAllPatches, dAllPats, dAllLabels, dAllSegmentationMaskPatches = self.fload_and_patch(self.selectedPatients, self.selectedDatasets)
-
+        self.dAllSegmentationMaskPatches = np.moveaxis(dAllSegmentationMaskPatches, -1, 0)
         self.dAllPats = dAllPats  # save info of patients
         self.dAllLabels = dAllLabels  # save all label info
         # dataset splitting
