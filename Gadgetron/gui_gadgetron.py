@@ -18,16 +18,16 @@ class Window(object):
         self.dockerPath, self.modelPath, self.weightPath, self.mriPath = "", "", "", ""
 
         self.buildDockerMsg = tkinter.Message(
-            master=self.tk, width=1000, text="CNNArt Path:")
+            master=self.tk, width=1000, text="CNNArt Path:", justify="left")
         self.buildDockerMsg.grid(row=0, column=1)
         self.chooseModelMsg = tkinter.Message(
-            master=self.tk, width=1000, text="Model Path:")
+            master=self.tk, width=1000, text="Model Path:", justify="left")
         self.chooseModelMsg.grid(row=1, column=1)
         self.runGadgetMsg = tkinter.Message(
-            master=self.tk, width=1000, text="MRI H5 Path:")
+            master=self.tk, width=1000, text="MRI H5 Path:", justify="left")
         self.runGadgetMsg.grid(row=2, column=1)
         self.runMsg = tkinter.Message(
-            master=self.tk, width=1000, text="Run Message is in the shell")
+            master=self.tk, width=1000, text="Run Message is in the shell", justify="left")
         self.runMsg.grid(row=3, column=1)
 
         tkinter.Button(master=self.tk, text='Choose CNNArt Path',
